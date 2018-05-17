@@ -115,7 +115,7 @@ bool hashMatchesContent(string const& _hash, string const& _content)
 	{
 		return dev::h256(_hash) == dev::keccak256(_content);
 	}
-	catch (dev::BadHexCharacter)
+	catch (dev::BadHexCharacter const&)
 	{
 		return false;
 	}
