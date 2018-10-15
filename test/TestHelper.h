@@ -25,6 +25,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/version.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace dev
 {
