@@ -560,7 +560,8 @@ bool Parser::isValidNumberLiteral(string const& _literal)
 {
 	try
 	{
-		u256(_literal);
+		u256 v(_literal);
+		(void)v;
 	}
 	catch (...)
 	{
