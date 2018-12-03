@@ -256,7 +256,7 @@ Json::Value Assembly::streamAsmJson(ostream& _out, StringMap const& _sourceCodes
 					createJsonValue("PUSH [ErrorTag]", i.location().start, i.location().end, ""));
 			else
 				collection.append(
-					createJsonValue("PUSH [tag]", i.location().start, i.location().end, string(i.data())));
+					createJsonValue("PUSH [tag]", i.location().start, i.location().end, toString(i.data())));
 			break;
 		case PushSub:
 			collection.append(
@@ -277,7 +277,7 @@ Json::Value Assembly::streamAsmJson(ostream& _out, StringMap const& _sourceCodes
 			break;
 		case Tag:
 			collection.append(
-				createJsonValue("tag", i.location().start, i.location().end, string(i.data())));
+				createJsonValue("tag", i.location().start, i.location().end, toString(i.data())));
 			collection.append(
 				createJsonValue("JUMPDEST", i.location().start, i.location().end));
 			break;
