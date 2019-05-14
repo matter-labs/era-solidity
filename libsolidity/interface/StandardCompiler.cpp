@@ -413,7 +413,7 @@ boost::variant<OptimiserSettings, Json::Value> parseOptimizerSettings(Json::Valu
 				return *error;
 		}
 	}
-	return std::move(settings);
+	return { std::move(settings) };
 }
 
 }
@@ -639,7 +639,7 @@ boost::variant<StandardCompiler::InputsAndSettings, Json::Value> StandardCompile
 
 	ret.outputSelection = std::move(outputSelection);
 
-	return std::move(ret);
+	return { std::move(ret) };
 }
 
 Json::Value StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inputsAndSettings)
