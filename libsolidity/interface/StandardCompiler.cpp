@@ -407,7 +407,7 @@ boost::variant<OptimiserSettings, Json::Value> parseOptimizerSettings(Json::Valu
 				return formatFatalError("JSONError", "The \"yulDetails\" optimizer setting cannot have any settings yet.");
 		}
 	}
-	return std::move(settings);
+	return { std::move(settings) };
 }
 
 }
@@ -634,7 +634,7 @@ boost::variant<StandardCompiler::InputsAndSettings, Json::Value> StandardCompile
 
 	ret.outputSelection = std::move(outputSelection);
 
-	return std::move(ret);
+	return { std::move(ret) };
 }
 
 Json::Value StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inputsAndSettings)
