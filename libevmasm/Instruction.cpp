@@ -76,7 +76,7 @@ std::map<std::string, Instruction> const solidity::evmasm::c_instructions =
 	{ "COINBASE", Instruction::COINBASE },
 	{ "TIMESTAMP", Instruction::TIMESTAMP },
 	{ "NUMBER", Instruction::NUMBER },
-	{ "DIFFICULTY", Instruction::DIFFICULTY },
+	{ "PREVRANDAO", Instruction::PREVRANDAO },
 	{ "GASLIMIT", Instruction::GASLIMIT },
 	{ "CHAINID", Instruction::CHAINID },
 	{ "SELFBALANCE", Instruction::SELFBALANCE },
@@ -223,7 +223,7 @@ static std::map<Instruction, InstructionInfo> const c_instructionInfo =
 	{ Instruction::COINBASE,	{ "COINBASE",		0, 0, 1, false, Tier::Base } },
 	{ Instruction::TIMESTAMP,	{ "TIMESTAMP",		0, 0, 1, false, Tier::Base } },
 	{ Instruction::NUMBER,		{ "NUMBER",			0, 0, 1, false, Tier::Base } },
-	{ Instruction::DIFFICULTY,	{ "DIFFICULTY",		0, 0, 1, false, Tier::Base } },
+	{ Instruction::PREVRANDAO,	{ "PREVRANDAO",		0, 0, 1, false, Tier::Base } },
 	{ Instruction::GASLIMIT,	{ "GASLIMIT",		0, 0, 1, false, Tier::Base } },
 	{ Instruction::CHAINID,		{ "CHAINID",		0, 0, 1, false, Tier::Base } },
 	{ Instruction::SELFBALANCE,	{ "SELFBALANCE",	0, 0, 1, false, Tier::Low } },
@@ -321,10 +321,13 @@ static std::map<Instruction, InstructionInfo> const c_instructionInfo =
 	{ Instruction::SELFDESTRUCT,	{ "SELFDESTRUCT",		0, 1, 0, true, Tier::Special } }
 };
 
-InstructionInfo solidity::evmasm::instructionInfo(Instruction _inst)
+InstructionInfo solidity::evmasm::instructionInfo(Instruction _inst, langutil::EVMVersion _evmVersion)
 {
 	try
 	{
+        if (_inst == Instruction::PREVRANDAO && _evmVersion < langutil::EVMVersion::paris()) {
+            return InstructionInfo({ "DIFFICULTY", 0, 0, 1, false, Tier::Base });
+        }
 		return c_instructionInfo.at(_inst);
 	}
 	catch (...)
