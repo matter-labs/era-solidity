@@ -268,8 +268,8 @@ u256 EVMInstructionInterpreter::eval(
 		return m_state.timestamp;
 	case Instruction::NUMBER:
 		return m_state.blockNumber;
-	case Instruction::DIFFICULTY:
-		return m_state.difficulty;
+	case Instruction::PREVRANDAO:
+		return m_state.prevrandao;
 	case Instruction::GASLIMIT:
 		return m_state.gaslimit;
 	// --------------- memory / storage / logs ---------------
