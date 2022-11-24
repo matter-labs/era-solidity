@@ -97,9 +97,9 @@ GasEstimator::GasConsumption GasEstimator::functionalEstimation(
 	// Store an invalid return value on the stack, so that the path estimator breaks upon reaching
 	// the return jump.
 	AssemblyItem invalidTag(PushTag, u256(-0x10));
-	state->feedItem(invalidTag, true);
+	state->feedItem(invalidTag, m_evmVersion, true);
 	if (parametersSize > 0)
-		state->feedItem(swapInstruction(parametersSize));
+		state->feedItem(swapInstruction(parametersSize), m_evmVersion);
 
 	return PathGasMeter::estimateMax(_items, m_evmVersion, _offset, state);
 }
