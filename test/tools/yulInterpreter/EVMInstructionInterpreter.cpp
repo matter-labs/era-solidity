@@ -98,7 +98,7 @@ u256 EVMInstructionInterpreter::eval(
 	using namespace solidity::evmasm;
 	using evmasm::Instruction;
 
-	auto info = instructionInfo(_instruction);
+	auto info = instructionInfo(_instruction, m_evmVersion);
 	yulAssert(static_cast<size_t>(info.args) == _arguments.size(), "");
 
 	auto const& arg = _arguments;
@@ -543,7 +543,7 @@ void EVMInstructionInterpreter::logTrace(
 )
 {
 	logTrace(
-		evmasm::instructionInfo(_instruction).name,
+		evmasm::instructionInfo(_instruction, m_evmVersion).name,
 		SemanticInformation::memory(_instruction) == SemanticInformation::Effect::Write,
 		_arguments,
 		_data
