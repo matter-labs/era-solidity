@@ -61,7 +61,7 @@ namespace
 	{
 		evmasm::KnownState state;
 		for (auto const& item: addDummyLocations(_input))
-			state.feedItem(item, true);
+			state.feedItem(item, solidity::test::CommonOptions::get().evmVersion(), true);
 		return state;
 	}
 
@@ -72,7 +72,7 @@ namespace
 		bool usesMsize = ranges::any_of(_input, [](AssemblyItem const& _i) {
 			return _i == AssemblyItem{Instruction::MSIZE} || _i.type() == VerbatimBytecode;
 		});
-		evmasm::CommonSubexpressionEliminator cse(_state);
+		evmasm::CommonSubexpressionEliminator cse(_state, solidity::test::CommonOptions::get().evmVersion());
 		BOOST_REQUIRE(cse.feedItems(input.begin(), input.end(), usesMsize) == input.end());
 		AssemblyItems output = cse.getOptimizedItems();
 
@@ -107,7 +107,7 @@ namespace
 		while (iter != _input.end())
 		{
 			KnownState emptyState;
-			CommonSubexpressionEliminator eliminator{emptyState};
+			CommonSubexpressionEliminator eliminator{emptyState, solidity::test::CommonOptions::get().evmVersion()};
 			auto orig = iter;
 			iter = eliminator.feedItems(iter, _input.end(), usesMSize);
 			bool shouldReplace = false;
@@ -138,7 +138,7 @@ namespace
 		// Running it four times should be enough for these tests.
 		for (unsigned i = 0; i < 4; ++i)
 		{
-			ControlFlowGraph cfg(output);
+			ControlFlowGraph cfg(output, solidity::test::CommonOptions::get().evmVersion());
 			AssemblyItems optItems;
 			for (BasicBlock const& block: cfg.optimisedBlocks())
 				copy(output.begin() + static_cast<int>(block.begin), output.begin() + static_cast<int>(block.end),
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(cse_assign_immutable_breaks)
 		Instruction::ORIGIN
 	});
 
-	evmasm::CommonSubexpressionEliminator cse{evmasm::KnownState()};
+	evmasm::CommonSubexpressionEliminator cse{evmasm::KnownState(), solidity::test::CommonOptions::get().evmVersion()};
 	// Make sure CSE breaks after AssignImmutable.
 	BOOST_REQUIRE(cse.feedItems(input.begin(), input.end(), false) == input.begin() + 2);
 }
@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(cse_assign_immutable_breaks)
 BOOST_AUTO_TEST_CASE(cse_intermediate_swap)
 {
 	evmasm::KnownState state;
-	evmasm::CommonSubexpressionEliminator cse(state);
+	evmasm::CommonSubexpressionEliminator cse(state, solidity::test::CommonOptions::get().evmVersion());
 	AssemblyItems input{
 		Instruction::SWAP1, Instruction::POP, Instruction::ADD, u256(0), Instruction::SWAP1,
 		Instruction::SLOAD, Instruction::SWAP1, u256(100), Instruction::EXP, Instruction::SWAP1,
@@ -1001,7 +1001,7 @@ BOOST_AUTO_TEST_CASE(clear_unreachable_code)
 		AssemblyItem(PushTag, 1),
 		Instruction::JUMP
 	};
-	PeepholeOptimiser peepOpt(items);
+	PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 	BOOST_REQUIRE(peepOpt.optimise());
 	BOOST_CHECK_EQUAL_COLLECTIONS(
 		items.begin(), items.end(),
@@ -1027,7 +1027,7 @@ BOOST_AUTO_TEST_CASE(peephole_double_push)
 		u256(4),
 		u256(5)
 	};
-	PeepholeOptimiser peepOpt(items);
+	PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 	BOOST_REQUIRE(peepOpt.optimise());
 	BOOST_CHECK_EQUAL_COLLECTIONS(
 		items.begin(), items.end(),
@@ -1043,7 +1043,7 @@ BOOST_AUTO_TEST_CASE(peephole_pop_calldatasize)
 		Instruction::LT,
 		Instruction::POP
 	};
-	PeepholeOptimiser peepOpt(items);
+	PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 	for (size_t i = 0; i < 3; i++)
 		BOOST_CHECK(peepOpt.optimise());
 	BOOST_CHECK(items.empty());
@@ -1076,7 +1076,7 @@ BOOST_AUTO_TEST_CASE(peephole_commutative_swap1)
 			u256(4),
 			u256(5)
 		};
-		PeepholeOptimiser peepOpt(items);
+		PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 		BOOST_REQUIRE(peepOpt.optimise());
 		BOOST_CHECK_EQUAL_COLLECTIONS(
 			items.begin(), items.end(),
@@ -1114,7 +1114,7 @@ BOOST_AUTO_TEST_CASE(peephole_noncommutative_swap1)
 			u256(4),
 			u256(5)
 		};
-		PeepholeOptimiser peepOpt(items);
+		PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 		BOOST_REQUIRE(!peepOpt.optimise());
 		BOOST_CHECK_EQUAL_COLLECTIONS(
 			items.begin(), items.end(),
@@ -1149,7 +1149,7 @@ BOOST_AUTO_TEST_CASE(peephole_swap_comparison)
 			u256(4),
 			u256(5)
 		};
-		PeepholeOptimiser peepOpt(items);
+		PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 		BOOST_REQUIRE(peepOpt.optimise());
 		BOOST_CHECK_EQUAL_COLLECTIONS(
 			items.begin(), items.end(),
@@ -1175,7 +1175,7 @@ BOOST_AUTO_TEST_CASE(peephole_truthy_and)
 		AssemblyItem(PushTag, 1),
 		Instruction::JUMPI
 	};
-	PeepholeOptimiser peepOpt(items);
+	PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 	BOOST_REQUIRE(peepOpt.optimise());
 	BOOST_CHECK_EQUAL_COLLECTIONS(
 		items.begin(), items.end(),
@@ -1208,7 +1208,7 @@ BOOST_AUTO_TEST_CASE(peephole_iszero_iszero_jumpi)
 		u256(0x20),
 		Instruction::RETURN
 	};
-	PeepholeOptimiser peepOpt(items);
+	PeepholeOptimiser peepOpt(items, solidity::test::CommonOptions::get().evmVersion());
 	BOOST_REQUIRE(peepOpt.optimise());
 	BOOST_CHECK_EQUAL_COLLECTIONS(
 	  items.begin(), items.end(),
@@ -1250,8 +1250,18 @@ BOOST_AUTO_TEST_CASE(jumpdest_removal_subassemblies)
 	// tag unifications (due to block deduplication) is also
 	// visible at the super-assembly.
 
-	Assembly main{false, {}};
-	AssemblyPointer sub = make_shared<Assembly>(true, string{});
+	Assembly::OptimiserSettings settings;
+	settings.runInliner = false;
+	settings.runJumpdestRemover = true;
+	settings.runPeephole = true;
+	settings.runDeduplicate = true;
+	settings.runCSE = true;
+	settings.runConstantOptimiser = true;
+	settings.evmVersion = solidity::test::CommonOptions::get().evmVersion();
+	settings.expectedExecutionsPerDeployment = OptimiserSettings{}.expectedExecutionsPerDeployment;
+
+	Assembly main{settings.evmVersion, false, {}};
+	AssemblyPointer sub = make_shared<Assembly>(settings.evmVersion, true, string{});
 
 	sub->append(u256(1));
 	auto t1 = sub->newTag();
@@ -1276,16 +1286,6 @@ BOOST_AUTO_TEST_CASE(jumpdest_removal_subassemblies)
 	main.append(t1.toSubAssemblyTag(subId));
 	main.append(t1.toSubAssemblyTag(subId));
 	main.append(u256(8));
-
-	Assembly::OptimiserSettings settings;
-	settings.runInliner = false;
-	settings.runJumpdestRemover = true;
-	settings.runPeephole = true;
-	settings.runDeduplicate = true;
-	settings.runCSE = true;
-	settings.runConstantOptimiser = true;
-	settings.evmVersion = solidity::test::CommonOptions::get().evmVersion();
-	settings.expectedExecutionsPerDeployment = OptimiserSettings{}.expectedExecutionsPerDeployment;
 
 	main.optimise(settings);
 
@@ -1440,7 +1440,7 @@ BOOST_AUTO_TEST_CASE(verbatim_knownstate)
 		BOOST_CHECK(stackElements.at(height) == initialElement);
 
 	auto verbatim2i5o = AssemblyItem{bytes{1, 2, 3, 4, 5}, 2, 5};
-	state.feedItem(verbatim2i5o);
+	state.feedItem(verbatim2i5o, solidity::test::CommonOptions::get().evmVersion());
 
 	BOOST_CHECK(state.stackHeight() == 7);
 	// Stack elements
