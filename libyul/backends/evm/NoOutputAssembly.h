@@ -45,7 +45,7 @@ namespace solidity::yul
 class NoOutputAssembly: public AbstractAssembly
 {
 public:
-	explicit NoOutputAssembly() { }
+	explicit NoOutputAssembly(langutil::EVMVersion _evmVersion): m_evmVersion(_evmVersion) { }
 	~NoOutputAssembly() override = default;
 
 	void setSourceLocation(langutil::SourceLocation const&) override {}
@@ -65,7 +65,7 @@ public:
 	void appendJumpToIf(LabelID _labelId, JumpType _jumpType) override;
 
 	void appendAssemblySize() override;
-	std::pair<std::shared_ptr<AbstractAssembly>, SubID> createSubAssembly(bool _creation, std::string _name = "") override;
+	std::pair<std::shared_ptr<AbstractAssembly>, SubID> createSubAssembly(langutil::EVMVersion _evmVersion, bool _creation, std::string _name = "") override;
 	void appendDataOffset(std::vector<SubID> const& _subPath) override;
 	void appendDataSize(std::vector<SubID> const& _subPath) override;
 	SubID appendData(bytes const& _data) override;
@@ -79,6 +79,7 @@ public:
 
 private:
 	int m_stackHeight = 0;
+	langutil::EVMVersion m_evmVersion;
 };
 
 

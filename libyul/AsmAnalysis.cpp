@@ -302,6 +302,9 @@ void AsmAnalyzer::operator()(FunctionDefinition const& _funDef)
 	(*this)(_funDef.body);
 }
 
+// TODO:prevrandao:
+// Allow use prevrandao as identifier for function and as builtin if there is no such identifier in the scope.
+// Emit an warning when using difficulty.
 vector<YulString> AsmAnalyzer::operator()(FunctionCall const& _funCall)
 {
 	yulAssert(!_funCall.functionName.name.empty(), "");
@@ -692,7 +695,7 @@ bool AsmAnalyzer::validateInstructions(evmasm::Instruction _instr, SourceLocatio
 			_location,
 			fmt::format(
 				"The \"{instruction}\" instruction is {kind} VMs (you are currently compiling for \"{version}\").",
-				fmt::arg("instruction", boost::to_lower_copy(instructionInfo(_instr).name)),
+				fmt::arg("instruction", boost::to_lower_copy(instructionInfo(_instr, m_evmVersion).name)),
 				fmt::arg("kind", vmKindMessage),
 				fmt::arg("version", m_evmVersion.name())
 			)

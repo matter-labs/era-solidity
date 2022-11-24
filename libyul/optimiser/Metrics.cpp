@@ -20,6 +20,7 @@
 
 #include <libyul/optimiser/Metrics.h>
 #include <libyul/optimiser/OptimizerUtilities.h>
+#include <libyul/backends/evm/EVMDialect.h>
 
 #include <libyul/AST.h>
 #include <libyul/Exceptions.h>
@@ -180,7 +181,8 @@ void CodeCost::visit(Expression const& _expression)
 
 void CodeCost::addInstructionCost(evmasm::Instruction _instruction)
 {
-	evmasm::Tier gasPriceTier = evmasm::instructionInfo(_instruction).gasPriceTier;
+	EVMDialect const* evmDialect = dynamic_cast<EVMDialect const*>(&m_dialect);
+	evmasm::Tier gasPriceTier = evmasm::instructionInfo(_instruction, evmDialect->evmVersion()).gasPriceTier;
 	if (gasPriceTier < evmasm::Tier::VeryLow)
 		m_cost -= 1;
 	else if (gasPriceTier < evmasm::Tier::High)

@@ -47,16 +47,17 @@ namespace
 {
 
 pair<YulString, BuiltinFunctionForEVM> createEVMFunction(
+	langutil::EVMVersion _evmVersion,
 	string const& _name,
 	evmasm::Instruction _instruction
 )
 {
-	evmasm::InstructionInfo info = evmasm::instructionInfo(_instruction);
+	evmasm::InstructionInfo info = evmasm::instructionInfo(_instruction, _evmVersion);
 	BuiltinFunctionForEVM f;
 	f.name = YulString{_name};
 	f.parameters.resize(static_cast<size_t>(info.args));
 	f.returns.resize(static_cast<size_t>(info.ret));
-	f.sideEffects = EVMDialect::sideEffectsOfInstruction(_instruction);
+	f.sideEffects = EVMDialect::sideEffectsOfInstruction(_instruction, _evmVersion);
 	if (evmasm::SemanticInformation::terminatesControlFlow(_instruction))
 	{
 		f.controlFlowSideEffects.canContinue = false;
@@ -110,6 +111,9 @@ pair<YulString, BuiltinFunctionForEVM> createFunction(
 	return {name, f};
 }
 
+// TODO:prevrandao:
+// Allow prevrandao as Yul identifier for EVM version < paris
+// Allow difficult as Yul identifier for EVM version >= paris
 set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 {
 	// TODO remove this in 0.9.0. We allow creating functions or identifiers in Yul with the name
@@ -154,7 +158,7 @@ map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVe
 			opcode != evmasm::Instruction::JUMPDEST &&
 			_evmVersion.hasOpcode(opcode)
 		)
-			builtins.emplace(createEVMFunction(name, opcode));
+			builtins.emplace(createEVMFunction(_evmVersion, name, opcode));
 	}
 
 	if (_objectAccess)
@@ -336,7 +340,7 @@ EVMDialect const& EVMDialect::strictAssemblyForEVMObjects(langutil::EVMVersion _
 	return *dialects[_version];
 }
 
-SideEffects EVMDialect::sideEffectsOfInstruction(evmasm::Instruction _instruction)
+SideEffects EVMDialect::sideEffectsOfInstruction(evmasm::Instruction _instruction, langutil::EVMVersion _evmVersion)
 {
 	auto translate = [](evmasm::SemanticInformation::Effect _e) -> SideEffects::Effect
 	{
@@ -344,10 +348,10 @@ SideEffects EVMDialect::sideEffectsOfInstruction(evmasm::Instruction _instructio
 	};
 
 	return SideEffects{
-		evmasm::SemanticInformation::movable(_instruction),
-		evmasm::SemanticInformation::movableApartFromEffects(_instruction),
-		evmasm::SemanticInformation::canBeRemoved(_instruction),
-		evmasm::SemanticInformation::canBeRemovedIfNoMSize(_instruction),
+		evmasm::SemanticInformation::movable(_instruction, _evmVersion),
+		evmasm::SemanticInformation::movableApartFromEffects(_instruction, _evmVersion),
+		evmasm::SemanticInformation::canBeRemoved(_instruction, _evmVersion),
+		evmasm::SemanticInformation::canBeRemovedIfNoMSize(_instruction, _evmVersion),
 		true, // cannotLoop
 		translate(evmasm::SemanticInformation::otherState(_instruction)),
 		translate(evmasm::SemanticInformation::storage(_instruction)),

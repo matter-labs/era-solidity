@@ -250,7 +250,8 @@ Expression Pattern::toExpression(shared_ptr<DebugData const> const& _debugData) 
 		for (auto const& arg: m_arguments)
 			arguments.emplace_back(arg.toExpression(_debugData));
 
-		string name = util::toLower(instructionInfo(m_instruction).name);
+		//TODO:prevrandao: check if default EVM version is fine here.
+		string name = util::toLower(instructionInfo(m_instruction, EVMVersion()).name);
 
 		return FunctionCall{_debugData,
 			Identifier{_debugData, YulString{name}},

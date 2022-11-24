@@ -48,28 +48,28 @@ using namespace solidity;
 using namespace solidity::yul;
 using namespace std;
 
-StackLayout StackLayoutGenerator::run(CFG const& _cfg)
+StackLayout StackLayoutGenerator::run(langutil::EVMVersion _evmVersion, CFG const& _cfg)
 {
 	StackLayout stackLayout;
-	StackLayoutGenerator{stackLayout}.processEntryPoint(*_cfg.entry);
+	StackLayoutGenerator{_evmVersion, stackLayout}.processEntryPoint(*_cfg.entry);
 
 	for (auto& functionInfo: _cfg.functionInfo | ranges::views::values)
-		StackLayoutGenerator{stackLayout}.processEntryPoint(*functionInfo.entry, &functionInfo);
+		StackLayoutGenerator{_evmVersion, stackLayout}.processEntryPoint(*functionInfo.entry, &functionInfo);
 
 	return stackLayout;
 }
 
-map<YulString, vector<StackLayoutGenerator::StackTooDeep>> StackLayoutGenerator::reportStackTooDeep(CFG const& _cfg)
+map<YulString, vector<StackLayoutGenerator::StackTooDeep>> StackLayoutGenerator::reportStackTooDeep(langutil::EVMVersion _evmVersion, CFG const& _cfg)
 {
 	map<YulString, vector<StackLayoutGenerator::StackTooDeep>> stackTooDeepErrors;
-	stackTooDeepErrors[YulString{}] = reportStackTooDeep(_cfg, YulString{});
+	stackTooDeepErrors[YulString{}] = reportStackTooDeep(_evmVersion, _cfg, YulString{});
 	for (auto const& function: _cfg.functions)
-		if (auto errors = reportStackTooDeep(_cfg, function->name); !errors.empty())
+		if (auto errors = reportStackTooDeep(_evmVersion, _cfg, function->name); !errors.empty())
 			stackTooDeepErrors[function->name] = std::move(errors);
 	return stackTooDeepErrors;
 }
 
-vector<StackLayoutGenerator::StackTooDeep> StackLayoutGenerator::reportStackTooDeep(CFG const& _cfg, YulString _functionName)
+vector<StackLayoutGenerator::StackTooDeep> StackLayoutGenerator::reportStackTooDeep(langutil::EVMVersion _evmVersion, CFG const& _cfg, YulString _functionName)
 {
 	StackLayout stackLayout;
 	CFG::FunctionInfo const* functionInfo = nullptr;
@@ -83,13 +83,13 @@ vector<StackLayoutGenerator::StackTooDeep> StackLayoutGenerator::reportStackTooD
 		yulAssert(functionInfo, "Function not found.");
 	}
 
-	StackLayoutGenerator generator{stackLayout};
+	StackLayoutGenerator generator{_evmVersion, stackLayout};
 	CFG::BasicBlock const* entry = functionInfo ? functionInfo->entry : _cfg.entry;
 	generator.processEntryPoint(*entry);
 	return generator.reportStackTooDeep(*entry);
 }
 
-StackLayoutGenerator::StackLayoutGenerator(StackLayout& _layout): m_layout(_layout)
+StackLayoutGenerator::StackLayoutGenerator(langutil::EVMVersion _evmVersion, StackLayout& _layout): m_evmVersion(_evmVersion), m_layout(_layout)
 {
 }
 
@@ -740,30 +740,30 @@ void StackLayoutGenerator::fillInJunk(CFG::BasicBlock const& _block, CFG::Functi
 		});
 	};
 	/// @returns the number of operations required to transform @a _source to @a _target.
-	auto evaluateTransform = [](Stack _source, Stack const& _target) -> size_t {
+	auto evaluateTransform = [&](Stack _source, Stack const& _target) -> size_t {
 		size_t opGas = 0;
 		auto swap = [&](unsigned _swapDepth)
 		{
 			if (_swapDepth > 16)
 				opGas += 1000;
 			else
-				opGas += evmasm::GasMeter::runGas(evmasm::swapInstruction(_swapDepth));
+				opGas += evmasm::GasMeter::runGas(evmasm::swapInstruction(_swapDepth), m_evmVersion);
 		};
 		auto dupOrPush = [&](StackSlot const& _slot)
 		{
 			if (canBeFreelyGenerated(_slot))
-				opGas += evmasm::GasMeter::runGas(evmasm::pushInstruction(32));
+				opGas += evmasm::GasMeter::runGas(evmasm::pushInstruction(32), m_evmVersion);
 			else
 			{
 				auto depth = util::findOffset(_source | ranges::views::reverse, _slot);
 				yulAssert(depth);
 				if (*depth < 16)
-					opGas += evmasm::GasMeter::runGas(evmasm::dupInstruction(static_cast<unsigned>(*depth + 1)));
+					opGas += evmasm::GasMeter::runGas(evmasm::dupInstruction(static_cast<unsigned>(*depth + 1)), m_evmVersion);
 				else
 					opGas += 1000;
 			}
 		};
-		auto pop = [&]() { opGas += evmasm::GasMeter::runGas(evmasm::Instruction::POP); };
+		auto pop = [&]() { opGas += evmasm::GasMeter::runGas(evmasm::Instruction::POP,m_evmVersion); };
 		createStackLayout(_source, _target, swap, dupOrPush, pop);
 		return opGas;
 	};

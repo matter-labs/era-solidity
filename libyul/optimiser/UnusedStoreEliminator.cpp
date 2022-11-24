@@ -226,8 +226,11 @@ vector<UnusedStoreEliminator::Operation> UnusedStoreEliminator::operationsFromFu
 
 	using evmasm::SemanticInformation;
 
+	//TODO:prevrandao: can m_dialect not be a evmDialect here?
+	EVMDialect const* evmDialect = dynamic_cast<EVMDialect const*>(&m_dialect);
+
 	return util::applyMap(
-		SemanticInformation::readWriteOperations(*instruction),
+		SemanticInformation::readWriteOperations(*instruction, evmDialect->evmVersion()),
 		[&](SemanticInformation::Operation const& _op) -> Operation
 		{
 			yulAssert(!(_op.lengthParameter && _op.lengthConstant));

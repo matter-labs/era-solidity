@@ -37,7 +37,7 @@ using namespace solidity::langutil;
 
 void NoOutputAssembly::appendInstruction(evmasm::Instruction _instr)
 {
-	m_stackHeight += instructionInfo(_instr).ret - instructionInfo(_instr).args;
+	m_stackHeight += instructionInfo(_instr, m_evmVersion).ret - instructionInfo(_instr, m_evmVersion).args;
 }
 
 void NoOutputAssembly::appendConstant(u256 const&)
@@ -98,7 +98,7 @@ void NoOutputAssembly::appendAssemblySize()
 	appendInstruction(evmasm::Instruction::PUSH1);
 }
 
-pair<shared_ptr<AbstractAssembly>, AbstractAssembly::SubID> NoOutputAssembly::createSubAssembly(bool, std::string)
+pair<shared_ptr<AbstractAssembly>, AbstractAssembly::SubID> NoOutputAssembly::createSubAssembly(langutil::EVMVersion, bool, std::string)
 {
 	yulAssert(false, "Sub assemblies not implemented.");
 	return {};
