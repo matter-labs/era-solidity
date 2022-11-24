@@ -29,7 +29,7 @@ using namespace std;
 using namespace solidity;
 using namespace solidity::evmasm;
 
-vector<SemanticInformation::Operation> SemanticInformation::readWriteOperations(Instruction _instruction)
+vector<SemanticInformation::Operation> SemanticInformation::readWriteOperations(Instruction _instruction, langutil::EVMVersion _evmVersion)
 {
 	switch (_instruction)
 	{
@@ -110,7 +110,7 @@ vector<SemanticInformation::Operation> SemanticInformation::readWriteOperations(
 	case Instruction::CALLCODE:
 	case Instruction::DELEGATECALL:
 	{
-		size_t paramCount = static_cast<size_t>(instructionInfo(_instruction).args);
+		size_t paramCount = static_cast<size_t>(instructionInfo(_instruction, _evmVersion).args);
 		vector<Operation> operations{
 			Operation{Location::Memory, Effect::Read, paramCount - 4, paramCount - 3, {}},
 			Operation{Location::Storage, Effect::Read, {}, {}, {}}
@@ -150,7 +150,7 @@ vector<SemanticInformation::Operation> SemanticInformation::readWriteOperations(
 	return {};
 }
 
-bool SemanticInformation::breaksCSEAnalysisBlock(AssemblyItem const& _item, bool _msizeImportant)
+bool SemanticInformation::breaksCSEAnalysisBlock(AssemblyItem const& _item, bool _msizeImportant, langutil::EVMVersion _evmVersion)
 {
 	switch (_item.type())
 	{
@@ -178,7 +178,7 @@ bool SemanticInformation::breaksCSEAnalysisBlock(AssemblyItem const& _item, bool
 			return true; // GAS and PC assume a specific order of opcodes
 		if (_item.instruction() == Instruction::MSIZE)
 			return true; // msize is modified already by memory access, avoid that for now
-		InstructionInfo info = instructionInfo(_item.instruction());
+		InstructionInfo info = instructionInfo(_item.instruction(), _evmVersion);
 		if (_item.instruction() == Instruction::SSTORE)
 			return false;
 		if (_item.instruction() == Instruction::MSTORE)
@@ -313,12 +313,12 @@ bool SemanticInformation::isDeterministic(AssemblyItem const& _item)
 	}
 }
 
-bool SemanticInformation::movable(Instruction _instruction)
+bool SemanticInformation::movable(Instruction _instruction, langutil::EVMVersion _evmVersion)
 {
 	// These are not really functional.
 	if (isDupInstruction(_instruction) || isSwapInstruction(_instruction))
 		return false;
-	InstructionInfo info = instructionInfo(_instruction);
+	InstructionInfo info = instructionInfo(_instruction, _evmVersion);
 	if (info.sideEffects)
 		return false;
 	switch (_instruction)
@@ -340,20 +340,20 @@ bool SemanticInformation::movable(Instruction _instruction)
 	return true;
 }
 
-bool SemanticInformation::canBeRemoved(Instruction _instruction)
+bool SemanticInformation::canBeRemoved(Instruction _instruction, langutil::EVMVersion _evmVersion)
 {
 	// These are not really functional.
 	assertThrow(!isDupInstruction(_instruction) && !isSwapInstruction(_instruction), AssemblyException, "");
 
-	return !instructionInfo(_instruction).sideEffects;
+	return !instructionInfo(_instruction, _evmVersion).sideEffects;
 }
 
-bool SemanticInformation::canBeRemovedIfNoMSize(Instruction _instruction)
+bool SemanticInformation::canBeRemovedIfNoMSize(Instruction _instruction, langutil::EVMVersion _evmVersion)
 {
 	if (_instruction == Instruction::KECCAK256 || _instruction == Instruction::MLOAD)
 		return true;
 	else
-		return canBeRemoved(_instruction);
+		return canBeRemoved(_instruction, _evmVersion);
 }
 
 SemanticInformation::Effect SemanticInformation::memory(Instruction _instruction)
@@ -391,7 +391,7 @@ SemanticInformation::Effect SemanticInformation::memory(Instruction _instruction
 	}
 }
 
-bool SemanticInformation::movableApartFromEffects(Instruction _instruction)
+bool SemanticInformation::movableApartFromEffects(Instruction _instruction, langutil::EVMVersion _evmVersion)
 {
 	switch (_instruction)
 	{
@@ -406,7 +406,7 @@ bool SemanticInformation::movableApartFromEffects(Instruction _instruction)
 		return true;
 
 	default:
-		return movable(_instruction);
+		return movable(_instruction, _evmVersion);
 	}
 }
 

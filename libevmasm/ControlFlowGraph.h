@@ -101,8 +101,9 @@ public:
 	/// Initializes the control flow graph.
 	/// @a _items has to persist across the usage of this class.
 	/// @a _joinKnowledge if true, reduces state knowledge to common base at the join of two paths
-	explicit ControlFlowGraph(AssemblyItems const& _items, bool _joinKnowledge = true):
+	explicit ControlFlowGraph(AssemblyItems const& _items, langutil::EVMVersion _evmVersion, bool _joinKnowledge = true):
 		m_items(_items),
+		m_evmVersion(_evmVersion),
 		m_joinKnowledge(_joinKnowledge)
 	{}
 	/// @returns vector of basic blocks in the order they should be used in the final code.
@@ -122,6 +123,7 @@ private:
 
 	unsigned m_lastUsedId = 0;
 	AssemblyItems const& m_items;
+	langutil::EVMVersion m_evmVersion;
 	bool m_joinKnowledge = true;
 	std::map<BlockId, BasicBlock> m_blocks;
 };

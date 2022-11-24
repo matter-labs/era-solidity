@@ -105,7 +105,7 @@ public:
 			printLocation(_debugInfoSelection);
 		}
 
-		string expression = _item.toAssemblyText(m_assembly);
+		string expression = _item.toAssemblyText(m_assembly, m_assembly.evmVersion());
 
 		if (!(
 			_item.canBeFunctional() &&
@@ -222,7 +222,7 @@ string Assembly::assemblyString(
 	return tmp.str();
 }
 
-Json::Value Assembly::assemblyJSON(map<string, unsigned> const& _sourceIndices, bool _includeSourceList) const
+Json::Value Assembly::assemblyJSON( map<string, unsigned> const& _sourceIndices, bool _includeSourceList) const
 {
 	Json::Value root;
 	root[".code"] = Json::arrayValue;
@@ -237,7 +237,7 @@ Json::Value Assembly::assemblyJSON(map<string, unsigned> const& _sourceIndices, 
 				sourceIndex = static_cast<int>(iter->second);
 		}
 
-		auto [name, data] = item.nameAndData();
+		auto [name, data] = item.nameAndData(m_evmVersion);
 		Json::Value jsonItem;
 		jsonItem["name"] = name;
 		jsonItem["begin"] = item.location().start;
@@ -384,7 +384,7 @@ map<u256, u256> const& Assembly::optimiseInternal(
 
 		if (_settings.runPeephole)
 		{
-			PeepholeOptimiser peepOpt{m_items};
+			PeepholeOptimiser peepOpt{m_items, _settings.evmVersion};
 			while (peepOpt.optimise())
 			{
 				count++;
@@ -433,7 +433,7 @@ map<u256, u256> const& Assembly::optimiseInternal(
 			while (iter != m_items.end())
 			{
 				KnownState emptyState;
-				CommonSubexpressionEliminator eliminator{emptyState};
+				CommonSubexpressionEliminator eliminator{emptyState, _settings.evmVersion};
 				auto orig = iter;
 				iter = eliminator.feedItems(iter, m_items.end(), usesMSize);
 				bool shouldReplace = false;

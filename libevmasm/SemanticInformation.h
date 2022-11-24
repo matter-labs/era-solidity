@@ -72,11 +72,11 @@ struct SemanticInformation
 	/// Order matters.
 	/// For external calls, there is just one unknown read and one unknown write operation,
 	/// event though there might be multiple.
-	static std::vector<Operation> readWriteOperations(Instruction _instruction);
+	static std::vector<Operation> readWriteOperations(Instruction _instruction, langutil::EVMVersion _evmVersion);
 
 	/// @returns true if the given items starts a new block for common subexpression analysis.
 	/// @param _msizeImportant if false, consider an operation non-breaking if its only side-effect is that it modifies msize.
-	static bool breaksCSEAnalysisBlock(AssemblyItem const& _item, bool _msizeImportant);
+	static bool breaksCSEAnalysisBlock(AssemblyItem const& _item, bool _msizeImportant, langutil::EVMVersion _evmVersion);
 	/// @returns true if the item is a two-argument operation whose value does not depend on the
 	/// order of its arguments.
 	static bool isCommutativeOperation(AssemblyItem const& _item);
@@ -92,21 +92,21 @@ struct SemanticInformation
 	/// @returns true if the instruction can be moved or copied (together with its arguments)
 	/// without altering the semantics. This means it cannot depend on storage or memory,
 	/// cannot have any side-effects, but it can depend on a call-constant state of the blockchain.
-	static bool movable(Instruction _instruction);
+	static bool movable(Instruction _instruction, langutil::EVMVersion _evmVersion);
 	/// If true, the expressions in this code can be moved or copied (together with their arguments)
 	/// across control flow branches and instructions as long as these instructions' 'effects' do
 	/// not influence the 'effects' of the aforementioned expressions.
-	static bool movableApartFromEffects(Instruction _instruction);
+	static bool movableApartFromEffects(Instruction _instruction, langutil::EVMVersion _evmVersion);
 	/// @returns true if the instruction can be removed without changing the semantics.
 	/// This does not mean that it has to be deterministic or retrieve information from
 	/// somewhere else than purely the values of its arguments.
-	static bool canBeRemoved(Instruction _instruction);
+	static bool canBeRemoved(Instruction _instruction, langutil::EVMVersion _evmVersion);
 	/// @returns true if the instruction can be removed without changing the semantics.
 	/// This does not mean that it has to be deterministic or retrieve information from
 	/// somewhere else than purely the values of its arguments.
 	/// If true, the instruction is still allowed to influence the value returned by the
 	/// msize instruction.
-	static bool canBeRemovedIfNoMSize(Instruction _instruction);
+	static bool canBeRemovedIfNoMSize(Instruction _instruction, langutil::EVMVersion _evmVersion);
 	static Effect memory(Instruction _instruction);
 	static Effect storage(Instruction _instruction);
 	static Effect otherState(Instruction _instruction);

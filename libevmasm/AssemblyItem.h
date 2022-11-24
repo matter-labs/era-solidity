@@ -108,10 +108,11 @@ public:
 
 	/// This function is used in `Assembly::assemblyJSON`.
 	/// It returns the name & data of the current assembly item.
+	/// @param _evmVersion the EVM version.
 	/// @returns a pair, where the first element is the json-assembly
 	/// item name, where second element is the string representation
 	/// of it's data.
-	std::pair<std::string, std::string> nameAndData() const;
+	std::pair<std::string, std::string> nameAndData(langutil::EVMVersion _evmVersion) const;
 
 	bytes const& verbatimData() const { assertThrow(m_type == VerbatimBytecode, util::Exception, ""); return std::get<2>(*m_verbatimBytecode); }
 
@@ -179,7 +180,7 @@ public:
 	void setPushedValue(u256 const& _value) const { m_pushedValue = std::make_shared<u256>(_value); }
 	u256 const* pushedValue() const { return m_pushedValue.get(); }
 
-	std::string toAssemblyText(Assembly const& _assembly) const;
+	std::string toAssemblyText(Assembly const& _assembly, langutil::EVMVersion _evmVersion) const;
 
 	size_t m_modifierDepth = 0;
 

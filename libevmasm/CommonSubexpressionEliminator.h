@@ -35,6 +35,7 @@
 #include <libevmasm/ExpressionClasses.h>
 #include <libevmasm/SemanticInformation.h>
 #include <libevmasm/KnownState.h>
+#include <liblangutil/EVMVersion.h>
 
 namespace langutil
 {
@@ -66,7 +67,7 @@ public:
 	using Id = ExpressionClasses::Id;
 	using StoreOperation = KnownState::StoreOperation;
 
-	explicit CommonSubexpressionEliminator(KnownState const& _state): m_initialState(_state), m_state(_state) {}
+	explicit CommonSubexpressionEliminator(KnownState const& _state, langutil::EVMVersion _evmVersion): m_initialState(_state), m_state(_state), m_evmVersion(_evmVersion) {}
 
 	/// Feeds AssemblyItems into the eliminator and @returns the iterator pointing at the first
 	/// item that must be fed into a new instance of the eliminator.
@@ -93,6 +94,8 @@ private:
 	/// The item that breaks the basic block, can be nullptr.
 	/// It is usually appended to the block but can be optimized in some cases.
 	AssemblyItem const* m_breakingItem = nullptr;
+
+	langutil::EVMVersion m_evmVersion;
 };
 
 /**
@@ -120,7 +123,8 @@ public:
 		unsigned _initialSequenceNumber,
 		int _initialStackHeight,
 		std::map<int, Id> const& _initialStack,
-		std::map<int, Id> const& _targetStackContents
+		std::map<int, Id> const& _targetStackContents,
+		langutil::EVMVersion _evmVersion
 	);
 
 private:
@@ -129,7 +133,7 @@ private:
 
 	/// Produce code that generates the given element if it is not yet present.
 	/// @param _allowSequenced indicates that sequence-constrained operations are allowed
-	void generateClassElement(Id _c, bool _allowSequenced = false);
+	void generateClassElement(Id _c, langutil::EVMVersion _evmVersion, bool _allowSequenced = false);
 	/// @returns the position of the representative of the given id on the stack.
 	/// @note throws an exception if it is not on the stack.
 	int classElementPosition(Id _id) const;
@@ -183,7 +187,7 @@ AssemblyItemIterator CommonSubexpressionEliminator::feedItems(
 	unsigned chunkSize = 0;
 	for (
 		;
-		_iterator != _end && !SemanticInformation::breaksCSEAnalysisBlock(*_iterator, _msizeImportant) && chunkSize < maxChunkSize;
+		_iterator != _end && !SemanticInformation::breaksCSEAnalysisBlock(*_iterator, _msizeImportant, m_evmVersion) && chunkSize < maxChunkSize;
 		++_iterator, ++chunkSize
 	)
 		feedItem(*_iterator);

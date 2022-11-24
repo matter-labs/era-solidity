@@ -265,7 +265,7 @@ void ControlFlowGraph::gatherKnowledge()
 		// Feed all items except for the final jump yet because it will erase the target tag.
 		unsigned pc = block.begin;
 		while (pc < block.end && !SemanticInformation::altersControlFlow(m_items.at(pc)))
-			state->feedItem(m_items.at(pc++));
+			state->feedItem(m_items.at(pc++), m_evmVersion);
 
 		if (
 			block.endType == BasicBlock::EndType::JUMP ||
@@ -278,7 +278,7 @@ void ControlFlowGraph::gatherKnowledge()
 			set<u256> tags = state->tagsInExpression(
 				state->stackElement(state->stackHeight(), langutil::SourceLocation{})
 			);
-			state->feedItem(m_items.at(pc++));
+			state->feedItem(m_items.at(pc++), m_evmVersion);
 
 			if (tags.empty())
 			{
@@ -297,7 +297,7 @@ void ControlFlowGraph::gatherKnowledge()
 					addWorkQueueItem(item, BlockId(tag), state);
 		}
 		else if (block.begin <= pc && pc < block.end)
-			state->feedItem(m_items.at(pc++));
+			state->feedItem(m_items.at(pc++), m_evmVersion);
 		assertThrow(block.end <= block.begin || pc == block.end, OptimizerException, "");
 
 		block.endState = state;

@@ -105,7 +105,7 @@ public:
 
 	/// Feeds the item into the system for analysis.
 	/// @returns a possible store operation
-	StoreOperation feedItem(AssemblyItem const& _item, bool _copyItem = false);
+	StoreOperation feedItem(AssemblyItem const& _item, langutil::EVMVersion _evmVersion, bool _copyItem = false);
 
 	/// Resets any knowledge about storage.
 	void resetStorage() { m_storageContent.clear(); }
