@@ -643,6 +643,7 @@ map<string, optional<string>> Predicate::readTxVars(smtutil::Expression const& _
 		{"block.chainid", TypeProvider::uint256()},
 		{"block.coinbase", TypeProvider::address()},
 		{"block.difficulty", TypeProvider::uint256()},
+		{"block.prevrandao", TypeProvider::uint256()},
 		{"block.gaslimit", TypeProvider::uint256()},
 		{"block.number", TypeProvider::uint256()},
 		{"block.timestamp", TypeProvider::uint256()},

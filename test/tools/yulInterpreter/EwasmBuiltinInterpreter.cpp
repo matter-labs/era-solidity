@@ -421,9 +421,9 @@ u256 EwasmBuiltinInterpreter::evalEthBuiltin(string const& _fun, vector<uint64_t
 		writeU128(arg[0], m_state.basefee);
 		return 0;
 	}
-	else if (_fun == "getBlockDifficulty")
+	else if (_fun == "getBlockDifficulty" || _fun == "getBlockPrevrandao")
 	{
-		writeU256(arg[0], m_state.difficulty);
+		writeU256(arg[0], m_state.prevrandao);
 		return 0;
 	}
 	else if (_fun == "externalCodeCopy")
@@ -597,7 +597,8 @@ u256 EwasmBuiltinInterpreter::readU256(uint64_t _offset, size_t _croppedTo)
 
 void EwasmBuiltinInterpreter::logTrace(evmasm::Instruction _instruction, std::vector<u256> const& _arguments, bytes const& _data)
 {
-	logTrace(evmasm::instructionInfo(_instruction).name, _arguments, _data);
+	//TODO:prevrandao: only output prevrandao based on the latest evm version?
+	logTrace(evmasm::instructionInfo(_instruction, langutil::EVMVersion()).name, _arguments, _data);
 }
 
 void EwasmBuiltinInterpreter::logTrace(std::string const& _pseudoInstruction, std::vector<u256> const& _arguments, bytes const& _data)

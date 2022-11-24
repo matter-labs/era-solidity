@@ -208,6 +208,7 @@ void WasmDialect::addExternals()
 		{"eth", "getBlockCoinbase", {i32ptr}, {}},
 		{"eth", "create", {i32ptr, i32ptr, i32, i32ptr}, {i32}},
 		{"eth", "getBlockDifficulty", {i32ptr}, {}},
+		{"eth", "getBlockPrevrandao", {i32ptr}, {}},
 		{"eth", "externalCodeCopy", {i32ptr, i32ptr, i32, i32}, {}},
 		{"eth", "getExternalCodeSize", {i32ptr}, {i32}},
 		{"eth", "getGasLeft", {}, {i64}},
