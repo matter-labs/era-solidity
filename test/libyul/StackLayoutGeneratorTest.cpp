@@ -226,7 +226,7 @@ TestCase::TestResult StackLayoutGeneratorTest::run(ostream& _stream, string cons
 	std::ostringstream output;
 
 	std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(*analysisInfo, *m_dialect, *object->code);
-	StackLayout stackLayout = StackLayoutGenerator::run(*cfg);
+	StackLayout stackLayout = StackLayoutGenerator::run(solidity::test::CommonOptions::get().evmVersion(), *cfg);
 
 	output << "digraph CFG {\nnodesep=0.7;\nnode[shape=box];\n\n";
 	StackLayoutPrinter printer{output, stackLayout};
