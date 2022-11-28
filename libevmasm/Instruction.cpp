@@ -326,9 +326,8 @@ InstructionInfo solidity::evmasm::instructionInfo(Instruction _inst, langutil::E
 {
 	try
 	{
-		if (_inst == Instruction::PREVRANDAO && _evmVersion < langutil::EVMVersion::paris()) {
+		if (_inst == Instruction::PREVRANDAO && _evmVersion < langutil::EVMVersion::paris())
 			return InstructionInfo({ "DIFFICULTY", 0, 0, 1, false, Tier::Base });
-		}
 		return c_instructionInfo.at(_inst);
 	}
 	catch (...)
