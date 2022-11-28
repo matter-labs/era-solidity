@@ -33,6 +33,7 @@ contract C {
             pop(timestamp())
             pop(number())
             pop(difficulty())
+            pop(prevrandao())
             pop(gaslimit())
 
             // These two are disallowed too but the error suppresses other errors.
@@ -42,9 +43,10 @@ contract C {
     }
 }
 // ====
-// EVMVersion: >=london
+// EVMVersion: >=paris
 // ----
-// Warning 5740: (672-1083): Unreachable code.
+// Warning 3242: (1033-1043): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now always returns 0.
+// Warning 5740: (672-1104): Unreachable code.
 // TypeError 2527: (79-87): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
 // TypeError 8961: (101-113): Function cannot be declared as pure because this expression (potentially) modifies the state.
 // TypeError 2527: (130-135): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
@@ -76,5 +78,6 @@ contract C {
 // TypeError 2527: (959-969): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
 // TypeError 2527: (987-998): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
 // TypeError 2527: (1016-1024): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
-// TypeError 2527: (1042-1054): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
-// TypeError 2527: (1072-1082): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
+// TypeError 2527: (1033-1045): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
+// TypeError 2527: (1063-1075): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
+// TypeError 2527: (1093-1103): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".

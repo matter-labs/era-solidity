@@ -74,6 +74,7 @@ contract C {
             pop(timestamp())
             pop(number())
             pop(difficulty())
+            pop(prevrandao())
             pop(gaslimit())
 
             // NOTE: msize() is allowed only with optimizer disabled
@@ -83,10 +84,11 @@ contract C {
     }
 }
 // ====
-// EVMVersion: >=london
+// EVMVersion: >=paris
 // ----
+// Warning 3242: (2174-2184): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now always returns 0.
 // Warning 5740: (89-1716): Unreachable code.
 // Warning 5740: (1729-1741): Unreachable code.
 // Warning 5740: (1754-1769): Unreachable code.
 // Warning 5740: (1782-1791): Unreachable code.
-// Warning 5740: (1804-2215): Unreachable code.
+// Warning 5740: (1804-2245): Unreachable code.
