@@ -17,7 +17,7 @@ Compiler Features:
  * SMTChecker: Support Eldarica as a Horn solver for the CHC engine when using the CLI option ``--model-checker-solvers eld``. The binary `eld` must be available in the system.
  * SMTChecker: Make ``z3`` the default solver for the BMC and CHC engines instead of all solvers.
  * Parser: More detailed error messages about invalid version pragmas.
-
+ * Add support for EIP-4399 replacing ``difficulty`` by the ``prevrandao`` opcode which was introduced in EVM version "Paris".
 
 Bugfixes:
  * Yul Optimizer: Hash hex and decimal literals according to their value instead of their representation, improving the detection of equivalent functions.
