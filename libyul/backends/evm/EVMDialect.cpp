@@ -131,8 +131,7 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 	set<YulString> reserved;
 	for (auto const& instr: evmasm::c_instructions)
 	{
-		evmasm::InstructionInfo info = instructionInfo(instr.second, _evmVersion);
-		string name = toLower(info.name);
+		string name = toLower(instr.first);
 		if (!baseFeeException(instr.second) && !prevRandaoException(name))
 			reserved.emplace(name);
 	}
