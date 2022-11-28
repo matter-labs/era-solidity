@@ -3296,18 +3296,33 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 			(memberName == "min" ||	memberName == "max")
 		)
 			annotation.isPure = true;
-		else if (magicType->kind() == MagicType::Kind::Block && memberName == "chainid" && !m_evmVersion.hasChainID())
-			m_errorReporter.typeError(
-				3081_error,
-				_memberAccess.location(),
-				"\"chainid\" is not supported by the VM version."
-			);
-		else if (magicType->kind() == MagicType::Kind::Block && memberName == "basefee" && !m_evmVersion.hasBaseFee())
-			m_errorReporter.typeError(
-				5921_error,
-				_memberAccess.location(),
-				"\"basefee\" is not supported by the VM version."
-			);
+		else if (magicType->kind() == MagicType::Kind::Block)
+		{
+			if (memberName == "chainid" && !m_evmVersion.hasChainID())
+				m_errorReporter.typeError(
+					3081_error,
+					_memberAccess.location(),
+					"\"chainid\" is not supported by the VM version."
+				);
+			else if (memberName == "basefee" && !m_evmVersion.hasBaseFee())
+				m_errorReporter.typeError(
+					5921_error,
+					_memberAccess.location(),
+					"\"basefee\" is not supported by the VM version."
+				);
+			else if (memberName == "difficulty" && m_evmVersion.supportsPrevRandao())
+				m_errorReporter.warning(
+					8417_error,
+					_memberAccess.location(),
+					"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now always returns 0."
+				);
+			else if (memberName == "prevrandao" && !m_evmVersion.supportsPrevRandao())
+				m_errorReporter.warning(
+					9432_error,
+					_memberAccess.location(),
+					"\"prevrandao\" is not supported by the VM version and will be treated like \"difficulty\"."
+				);
+		}
 	}
 
 	if (

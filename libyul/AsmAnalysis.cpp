@@ -302,9 +302,6 @@ void AsmAnalyzer::operator()(FunctionDefinition const& _funDef)
 	(*this)(_funDef.body);
 }
 
-// TODO:prevrandao:
-// Allow use prevrandao as identifier for function and as builtin if there is no such identifier in the scope.
-// Emit an warning when using difficulty.
 vector<YulString> AsmAnalyzer::operator()(FunctionCall const& _funCall)
 {
 	yulAssert(!_funCall.functionName.name.empty(), "");
@@ -313,31 +310,45 @@ vector<YulString> AsmAnalyzer::operator()(FunctionCall const& _funCall)
 	vector<YulString> const* returnTypes = nullptr;
 	vector<optional<LiteralKind>> const* literalArguments = nullptr;
 
-	if (BuiltinFunction const* f = m_dialect.builtin(_funCall.functionName.name))
+	auto inScope = [&](YulString const& _function)
 	{
-		parameterTypes = &f->parameters;
-		returnTypes = &f->returns;
-		if (!f->literalArguments.empty())
-			literalArguments = &f->literalArguments;
+		return m_currentScope->lookup(_function, GenericVisitor{
+			[&](Scope::Variable const&)
+			{
+				m_errorReporter.typeError(
+					4202_error,
+					nativeLocationOf(_funCall.functionName),
+					"Attempt to call variable instead of function."
+				);
+			},
+			[&](Scope::Function const& _fun)
+			{
+				parameterTypes = &_fun.arguments;
+				returnTypes = &_fun.returns;
+			}
+		});
+	};
 
+	auto prevrandaoInScopeException = [&](YulString const& _instrName) -> bool
+	{
+		return _instrName.str() == "prevrandao"
+			&& !m_evmVersion.supportsPrevRandao()
+			&& inScope(_instrName);
+	};
+
+	YulString const& functionName = _funCall.functionName.name;
+
+	BuiltinFunction const* builtinFunction = m_dialect.builtin(functionName);
+	if (builtinFunction && !prevrandaoInScopeException(functionName))
+	{
+		parameterTypes = &builtinFunction->parameters;
+		returnTypes = &builtinFunction->returns;
+		if (!builtinFunction->literalArguments.empty())
+			literalArguments = &builtinFunction->literalArguments;
 		validateInstructions(_funCall);
-		m_sideEffects += f->sideEffects;
+		m_sideEffects += builtinFunction->sideEffects;
 	}
-	else if (m_currentScope->lookup(_funCall.functionName.name, GenericVisitor{
-		[&](Scope::Variable const&)
-		{
-			m_errorReporter.typeError(
-				4202_error,
-				nativeLocationOf(_funCall.functionName),
-				"Attempt to call variable instead of function."
-			);
-		},
-		[&](Scope::Function const& _fun)
-		{
-			parameterTypes = &_fun.arguments;
-			returnTypes = &_fun.returns;
-		}
-	}))
+	else if (inScope(functionName))
 	{
 		if (m_resolver)
 			// We found a local reference, make sure there is no external reference.
@@ -669,7 +680,21 @@ bool AsmAnalyzer::validateInstructions(std::string const& _instructionIdentifier
 {
 	auto const builtin = EVMDialect::strictAssemblyForEVM(EVMVersion{}).builtin(YulString(_instructionIdentifier));
 	if (builtin && builtin->instruction.has_value())
+	{
+		if (_instructionIdentifier == "difficulty" && m_evmVersion.supportsPrevRandao())
+			m_errorReporter.warning(
+				3242_error,
+				_location,
+				"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now always returns 0."
+			);
+		else if (_instructionIdentifier == "prevrandao" && !m_evmVersion.supportsPrevRandao())
+			m_errorReporter.warning(
+				5761_error,
+				_location,
+				"\"prevrandao\" is not supported by the VM version and will be treated like \"difficulty\"."
+			);
 		return validateInstructions(builtin->instruction.value(), _location);
+	}
 	else
 		return false;
 }

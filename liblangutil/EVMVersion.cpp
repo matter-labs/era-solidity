@@ -49,6 +49,8 @@ bool EVMVersion::hasOpcode(Instruction _opcode) const
 		return hasSelfBalance();
 	case Instruction::BASEFEE:
 		return hasBaseFee();
+	case Instruction::PREVRANDAO:
+		return supportsPrevRandao();
 	default:
 		return true;
 	}

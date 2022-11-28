@@ -111,9 +111,6 @@ pair<YulString, BuiltinFunctionForEVM> createFunction(
 	return {name, f};
 }
 
-// TODO:prevrandao:
-// Allow prevrandao as Yul identifier for EVM version < paris
-// Allow difficult as Yul identifier for EVM version >= paris
 set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 {
 	// TODO remove this in 0.9.0. We allow creating functions or identifiers in Yul with the name
@@ -123,11 +120,20 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 		return _instr == evmasm::Instruction::BASEFEE && _evmVersion < langutil::EVMVersion::london();
 	};
 
+	// TODO remove this in 0.9.0. We allow creating functions or identifiers in Yul with the name
+	// prevrandao for VMs before paris.
+	auto prevRandaoException = [&](string const& _instrName) -> bool
+	{
+		// Using string comparison as the opcode is the same as for "difficulty"
+		return _instrName == "prevrandao" && _evmVersion < langutil::EVMVersion::paris();
+	};
+
 	set<YulString> reserved;
 	for (auto const& instr: evmasm::c_instructions)
 	{
-		string name = toLower(instr.first);
-		if (!baseFeeException(instr.second))
+		evmasm::InstructionInfo info = instructionInfo(instr.second, _evmVersion);
+		string name = toLower(info.name);
+		if (!baseFeeException(instr.second) && !prevRandaoException(name))
 			reserved.emplace(name);
 	}
 	reserved += vector<YulString>{
