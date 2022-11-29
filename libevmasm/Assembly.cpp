@@ -222,7 +222,7 @@ string Assembly::assemblyString(
 	return tmp.str();
 }
 
-Json::Value Assembly::assemblyJSON( map<string, unsigned> const& _sourceIndices, bool _includeSourceList) const
+Json::Value Assembly::assemblyJSON(map<string, unsigned> const& _sourceIndices, bool _includeSourceList) const
 {
 	Json::Value root;
 	root[".code"] = Json::arrayValue;

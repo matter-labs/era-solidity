@@ -141,7 +141,6 @@ string Pattern::toString() const
 	switch (m_type)
 	{
 	case Operation:
-		//TODO:prevrandao: output difficulty or prevrandao? Make evmVersion member of Pattern?
 		s << instructionInfo(m_instruction, EVMVersion()).name;
 		break;
 	case Push:

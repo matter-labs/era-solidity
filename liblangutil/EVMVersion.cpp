@@ -49,11 +49,6 @@ bool EVMVersion::hasOpcode(Instruction _opcode) const
 		return hasSelfBalance();
 	case Instruction::BASEFEE:
 		return hasBaseFee();
-	case Instruction::PREVRANDAO:
-	{
-		std::string name = instructionInfo(Instruction::PREVRANDAO, *this).name;
-		return (name == "PREVRANDAO" && supportsPrevRandao()) || (name == "DIFFICULTY" && !supportsPrevRandao());
-	}
 	default:
 		return true;
 	}
