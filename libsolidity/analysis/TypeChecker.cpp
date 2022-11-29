@@ -3310,12 +3310,6 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 					_memberAccess.location(),
 					"\"basefee\" is not supported by the VM version."
 				);
-			else if (memberName == "difficulty" && m_evmVersion.supportsPrevRandao())
-				m_errorReporter.warning(
-					8417_error,
-					_memberAccess.location(),
-					"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now always returns 0."
-				);
 			else if (memberName == "prevrandao" && !m_evmVersion.supportsPrevRandao())
 				m_errorReporter.warning(
 					9432_error,
