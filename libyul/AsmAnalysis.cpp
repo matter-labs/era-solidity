@@ -678,19 +678,19 @@ void AsmAnalyzer::expectType(YulString _expectedType, YulString _givenType, Sour
 
 bool AsmAnalyzer::validateInstructions(std::string const& _instructionIdentifier, langutil::SourceLocation const& _location)
 {
-	auto const builtin = EVMDialect::strictAssemblyForEVM(EVMVersion{}).builtin(YulString(_instructionIdentifier));
 	if (_instructionIdentifier == "difficulty" && m_evmVersion.supportsPrevRandao())
 		m_errorReporter.warning(
 			3242_error,
 			_location,
 			"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now always returns 0."
-	);
+		);
 	else if (_instructionIdentifier == "prevrandao" && !m_evmVersion.supportsPrevRandao())
 		m_errorReporter.warning(
 			5761_error,
 			_location,
 			"\"prevrandao\" is not supported by the VM version and will be treated like \"difficulty\"."
-	);
+		);
+	auto const builtin = EVMDialect::strictAssemblyForEVM(EVMVersion{}).builtin(YulString(_instructionIdentifier));
 	if (builtin && builtin->instruction.has_value())
 		return validateInstructions(builtin->instruction.value(), _location);
 	else
