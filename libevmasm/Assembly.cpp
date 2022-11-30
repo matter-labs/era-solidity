@@ -105,7 +105,7 @@ public:
 			printLocation(_debugInfoSelection);
 		}
 
-		string expression = _item.toAssemblyText(m_assembly, m_assembly.evmVersion());
+		string expression = _item.toAssemblyText(m_assembly);
 
 		if (!(
 			_item.canBeFunctional() &&

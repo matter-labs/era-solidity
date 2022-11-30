@@ -247,7 +247,7 @@ string AssemblyItem::getJumpTypeAsString() const
 	}
 }
 
-string AssemblyItem::toAssemblyText(Assembly const& _assembly, langutil::EVMVersion _evmVersion) const
+string AssemblyItem::toAssemblyText(Assembly const& _assembly) const
 {
 	string text;
 	switch (type())
@@ -255,7 +255,7 @@ string AssemblyItem::toAssemblyText(Assembly const& _assembly, langutil::EVMVers
 	case Operation:
 	{
 		assertThrow(isValidInstruction(instruction()), AssemblyException, "Invalid instruction.");
-		text = util::toLower(instructionInfo(instruction(), _evmVersion).name);
+		text = util::toLower(instructionInfo(instruction(), _assembly.evmVersion()).name);
 		break;
 	}
 	case Push:
