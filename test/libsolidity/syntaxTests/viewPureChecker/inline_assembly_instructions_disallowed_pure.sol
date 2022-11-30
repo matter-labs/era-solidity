@@ -45,7 +45,7 @@ contract C {
 // ====
 // EVMVersion: >=paris
 // ----
-// Warning 3242: (1042-1052): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now always returns 0.
+// Warning 3242: (1042-1052): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now returns a random number based on the beacon chain.
 // Warning 5740: (672-1113): Unreachable code.
 // TypeError 2527: (79-87): Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires "view".
 // TypeError 8961: (101-113): Function cannot be declared as pure because this expression (potentially) modifies the state.

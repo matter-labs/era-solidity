@@ -86,7 +86,7 @@ contract C {
 // ====
 // EVMVersion: >=paris
 // ----
-// Warning 3242: (2203-2213): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now always returns 0.
+// Warning 3242: (2203-2213): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now returns a random number based on the beacon chain.
 // Warning 5740: (94-1733): Unreachable code.
 // Warning 5740: (1746-1758): Unreachable code.
 // Warning 5740: (1801-1810): Unreachable code.

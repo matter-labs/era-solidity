@@ -3320,7 +3320,7 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 				m_errorReporter.warning(
 					8417_error,
 					_memberAccess.location(),
-					"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now always returns 0."
+					"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now returns a random number based on the beacon chain."
 				);
 		}
 	}

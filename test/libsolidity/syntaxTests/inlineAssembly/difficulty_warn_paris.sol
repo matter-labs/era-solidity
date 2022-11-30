@@ -4,4 +4,4 @@ function f() view returns (uint256) {
 // ====
 // EVMVersion: >=paris
 // ----
-//Warning 8417: (49-65): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now always returns 0.
+// Warning 8417: (49-65): "difficulty" was replaced by "prevrandao" in the VM version paris and does not behave as before. It now returns a random number based on the beacon chain.

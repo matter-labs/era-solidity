@@ -119,7 +119,6 @@ vector<YulString> AsmAnalyzer::operator()(Literal const& _literal)
 			"Invalid type \"" + _literal.type.str() + "\" for literal \"" + _literal.value.str() + "\"."
 		);
 
-
 	return {_literal.type};
 }
 
@@ -633,7 +632,6 @@ Scope& AsmAnalyzer::scope(Block const* _block)
 void AsmAnalyzer::expectValidIdentifier(YulString _identifier, SourceLocation const& _location)
 {
 	// NOTE: the leading dot case is handled by the parser not allowing it.
-
 	if (boost::ends_with(_identifier.str(), "."))
 		m_errorReporter.syntaxError(
 			3384_error,
@@ -682,7 +680,7 @@ bool AsmAnalyzer::validateInstructions(std::string const& _instructionIdentifier
 		m_errorReporter.warning(
 			3242_error,
 			_location,
-			"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now always returns 0."
+			"\"difficulty\" was replaced by \"prevrandao\" in the VM version paris and does not behave as before. It now returns a random number based on the beacon chain."
 		);
 	else if (_instructionIdentifier == "prevrandao" && !m_evmVersion.supportsPrevRandao())
 		m_errorReporter.warning(
