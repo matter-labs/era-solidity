@@ -168,7 +168,7 @@ size_t AssemblyItem::bytesRequired(size_t _addressLength, Precision _precision) 
 size_t AssemblyItem::arguments() const
 {
 	if (type() == Operation)
-		// Note that the latest EVMVersion is used here, since the InstructionInfo is assumed to
+		// The latest EVMVersion is used here, since the InstructionInfo is assumed to
 		// be the same for all EVM versions.
 		return static_cast<size_t>(instructionInfo(instruction(), EVMVersion()).args);
 	else if (type() == VerbatimBytecode)
@@ -184,7 +184,7 @@ size_t AssemblyItem::returnValues() const
 	switch (m_type)
 	{
 	case Operation:
-		// Note that the latest EVMVersion is used here, since the InstructionInfo is assumed to
+		// The latest EVMVersion is used here, since the InstructionInfo is assumed to
 		// be the same for all EVM versions.
 		return static_cast<size_t>(instructionInfo(instruction(), EVMVersion()).ret);
 	case Push:
@@ -332,6 +332,8 @@ ostream& solidity::evmasm::operator<<(ostream& _out, AssemblyItem const& _item)
 	switch (_item.type())
 	{
 	case Operation:
+		// The latest EVMVersion is used here, since the InstructionInfo is assumed to
+		// be the same for all EVM versions.
 		_out << " " << instructionInfo(_item.instruction(), EVMVersion()).name;
 		if (_item.instruction() == Instruction::JUMP || _item.instruction() == Instruction::JUMPI)
 			_out << "\t" << _item.getJumpTypeAsString();

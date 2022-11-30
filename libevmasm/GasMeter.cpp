@@ -211,7 +211,7 @@ GasMeter::GasConsumption GasMeter::estimateMax(AssemblyItem const& _item, bool _
 		break;
 	}
 
-	m_state->feedItem(_item, m_evmVersion);
+	m_state->feedItem(_item);
 	return gas;
 }
 

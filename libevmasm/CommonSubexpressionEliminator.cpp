@@ -41,7 +41,7 @@ vector<AssemblyItem> CommonSubexpressionEliminator::getOptimizedItems()
 
 	KnownState nextInitialState = m_state;
 	if (m_breakingItem)
-		nextInitialState.feedItem(*m_breakingItem, m_evmVersion);
+		nextInitialState.feedItem(*m_breakingItem);
 	KnownState nextState = nextInitialState;
 
 	ScopeGuard reset([&]()
@@ -77,7 +77,7 @@ vector<AssemblyItem> CommonSubexpressionEliminator::getOptimizedItems()
 
 void CommonSubexpressionEliminator::feedItem(AssemblyItem const& _item, bool _copyItem)
 {
-	StoreOperation op = m_state.feedItem(_item, m_evmVersion, _copyItem);
+	StoreOperation op = m_state.feedItem(_item, _copyItem);
 	if (op.isValid())
 		m_storeOperations.push_back(op);
 }

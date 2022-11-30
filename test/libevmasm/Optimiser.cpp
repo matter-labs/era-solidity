@@ -61,7 +61,7 @@ namespace
 	{
 		evmasm::KnownState state;
 		for (auto const& item: addDummyLocations(_input))
-			state.feedItem(item, solidity::test::CommonOptions::get().evmVersion(), true);
+			state.feedItem(item, true);
 		return state;
 	}
 
@@ -138,7 +138,7 @@ namespace
 		// Running it four times should be enough for these tests.
 		for (unsigned i = 0; i < 4; ++i)
 		{
-			ControlFlowGraph cfg(output, solidity::test::CommonOptions::get().evmVersion());
+			ControlFlowGraph cfg(output);
 			AssemblyItems optItems;
 			for (BasicBlock const& block: cfg.optimisedBlocks())
 				copy(output.begin() + static_cast<int>(block.begin), output.begin() + static_cast<int>(block.end),
@@ -1440,7 +1440,7 @@ BOOST_AUTO_TEST_CASE(verbatim_knownstate)
 		BOOST_CHECK(stackElements.at(height) == initialElement);
 
 	auto verbatim2i5o = AssemblyItem{bytes{1, 2, 3, 4, 5}, 2, 5};
-	state.feedItem(verbatim2i5o, solidity::test::CommonOptions::get().evmVersion());
+	state.feedItem(verbatim2i5o);
 
 	BOOST_CHECK(state.stackHeight() == 7);
 	// Stack elements

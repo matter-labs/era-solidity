@@ -85,7 +85,7 @@ ostream& KnownState::stream(ostream& _out) const
 	return _out;
 }
 
-KnownState::StoreOperation KnownState::feedItem(AssemblyItem const& _item, langutil::EVMVersion _evmVersion, bool _copyItem)
+KnownState::StoreOperation KnownState::feedItem(AssemblyItem const& _item, bool _copyItem)
 {
 	StoreOperation op;
 	if (_item.type() == Tag)
@@ -97,8 +97,8 @@ KnownState::StoreOperation KnownState::feedItem(AssemblyItem const& _item, langu
 		// Since AssignImmutable breaks blocks, it should be fine to only consider its changes to the stack, which
 		// is the same as two POPs.
 		// Note that the StoreOperation for POP is generic and _copyItem is ignored.
-		feedItem(AssemblyItem(Instruction::POP), _evmVersion, _copyItem);
-		return feedItem(AssemblyItem(Instruction::POP), _evmVersion, _copyItem);
+		feedItem(AssemblyItem(Instruction::POP), _copyItem);
+		return feedItem(AssemblyItem(Instruction::POP), _copyItem);
 	}
 	else if (_item.type() == VerbatimBytecode)
 	{
@@ -130,7 +130,9 @@ KnownState::StoreOperation KnownState::feedItem(AssemblyItem const& _item, langu
 	else
 	{
 		Instruction instruction = _item.instruction();
-		InstructionInfo info = instructionInfo(instruction, _evmVersion);
+		// The latest EVMVersion is used here, since the InstructionInfo is assumed to
+		// be the same for all EVM versions.
+		InstructionInfo info = instructionInfo(instruction, EVMVersion());
 		if (SemanticInformation::isDupInstruction(_item))
 			setStackElement(
 				m_stackHeight + 1,
