@@ -72,8 +72,8 @@ namespace
 		bool usesMsize = ranges::any_of(_input, [](AssemblyItem const& _i) {
 			return _i == AssemblyItem{Instruction::MSIZE} || _i.type() == VerbatimBytecode;
 		});
-		evmasm::CommonSubexpressionEliminator cse(_state, solidity::test::CommonOptions::get().evmVersion());
-		BOOST_REQUIRE(cse.feedItems(input.begin(), input.end(), usesMsize) == input.end());
+		evmasm::CommonSubexpressionEliminator cse(_state);
+		BOOST_REQUIRE(cse.feedItems(solidity::test::CommonOptions::get().evmVersion(), input.begin(), input.end(), usesMsize) == input.end());
 		AssemblyItems output = cse.getOptimizedItems();
 
 		for (AssemblyItem const& item: output)
@@ -107,9 +107,9 @@ namespace
 		while (iter != _input.end())
 		{
 			KnownState emptyState;
-			CommonSubexpressionEliminator eliminator{emptyState, solidity::test::CommonOptions::get().evmVersion()};
+			CommonSubexpressionEliminator eliminator{emptyState};
 			auto orig = iter;
-			iter = eliminator.feedItems(iter, _input.end(), usesMSize);
+			iter = eliminator.feedItems(solidity::test::CommonOptions::get().evmVersion(), iter, _input.end(), usesMSize);
 			bool shouldReplace = false;
 			AssemblyItems optimisedChunk;
 			optimisedChunk = eliminator.getOptimizedItems();
@@ -190,21 +190,21 @@ BOOST_AUTO_TEST_CASE(cse_assign_immutable_breaks)
 		Instruction::ORIGIN
 	});
 
-	evmasm::CommonSubexpressionEliminator cse{evmasm::KnownState(), solidity::test::CommonOptions::get().evmVersion()};
+	evmasm::CommonSubexpressionEliminator cse{evmasm::KnownState()};
 	// Make sure CSE breaks after AssignImmutable.
-	BOOST_REQUIRE(cse.feedItems(input.begin(), input.end(), false) == input.begin() + 2);
+	BOOST_REQUIRE(cse.feedItems(solidity::test::CommonOptions::get().evmVersion(), input.begin(), input.end(), false) == input.begin() + 2);
 }
 
 BOOST_AUTO_TEST_CASE(cse_intermediate_swap)
 {
 	evmasm::KnownState state;
-	evmasm::CommonSubexpressionEliminator cse(state, solidity::test::CommonOptions::get().evmVersion());
+	evmasm::CommonSubexpressionEliminator cse(state);
 	AssemblyItems input{
 		Instruction::SWAP1, Instruction::POP, Instruction::ADD, u256(0), Instruction::SWAP1,
 		Instruction::SLOAD, Instruction::SWAP1, u256(100), Instruction::EXP, Instruction::SWAP1,
 		Instruction::DIV, u256(0xff), Instruction::AND
 	};
-	BOOST_REQUIRE(cse.feedItems(input.begin(), input.end(), false) == input.end());
+	BOOST_REQUIRE(cse.feedItems(solidity::test::CommonOptions::get().evmVersion(), input.begin(), input.end(), false) == input.end());
 	AssemblyItems output = cse.getOptimizedItems();
 	BOOST_CHECK(!output.empty());
 }

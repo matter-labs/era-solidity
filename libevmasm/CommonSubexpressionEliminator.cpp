@@ -66,8 +66,7 @@ vector<AssemblyItem> CommonSubexpressionEliminator::getOptimizedItems()
 		m_initialState.sequenceNumber(),
 		m_initialState.stackHeight(),
 		initialStackContents,
-		targetStackContents,
-		m_evmVersion
+		targetStackContents
 	);
 	if (m_breakingItem)
 		items.push_back(*m_breakingItem);
@@ -138,8 +137,7 @@ AssemblyItems CSECodeGenerator::generateCode(
 	unsigned _initialSequenceNumber,
 	int _initialStackHeight,
 	map<int, Id> const& _initialStack,
-	map<int, Id> const& _targetStackContents,
-	EVMVersion _evmVersion
+	map<int, Id> const& _targetStackContents
 )
 {
 	m_stackHeight = _initialStackHeight;
@@ -173,14 +171,14 @@ AssemblyItems CSECodeGenerator::generateCode(
 	// Perform all operations on storage and memory in order, if they are needed.
 	for (auto const& seqAndId: sequencedExpressions)
 		if (!m_classPositions.count(seqAndId.second))
-			generateClassElement(seqAndId.second, _evmVersion, true);
+			generateClassElement(seqAndId.second, true);
 
 	// generate the target stack elements
 	for (auto const& targetItem: m_targetStack)
 	{
 		if (m_stack.count(targetItem.first) && m_stack.at(targetItem.first) == targetItem.second)
 			continue; // already there
-		generateClassElement(targetItem.second, _evmVersion);
+		generateClassElement(targetItem.second);
 		assertThrow(!m_classPositions[targetItem.second].empty(), OptimizerException, "");
 		if (m_classPositions[targetItem.second].count(targetItem.first))
 			continue;
@@ -301,7 +299,7 @@ void CSECodeGenerator::addDependencies(Id _c)
 	}
 }
 
-void CSECodeGenerator::generateClassElement(Id _c, langutil::EVMVersion _evmVersion, bool _allowSequenced)
+void CSECodeGenerator::generateClassElement(Id _c, bool _allowSequenced)
 {
 	for (auto const& it: m_classPositions)
 		for (int p: it.second)
@@ -335,7 +333,7 @@ void CSECodeGenerator::generateClassElement(Id _c, langutil::EVMVersion _evmVers
 	);
 	vector<Id> const& arguments = expr.arguments;
 	for (Id arg: arguments | ranges::views::reverse)
-		generateClassElement(arg, _evmVersion);
+		generateClassElement(arg);
 
 	SourceLocation const& itemLocation = expr.item->location();
 	// The arguments are somewhere on the stack now, so it remains to move them at the correct place.
@@ -408,7 +406,7 @@ void CSECodeGenerator::generateClassElement(Id _c, langutil::EVMVersion _evmVers
 		m_stack.erase(m_stackHeight - static_cast<int>(i));
 	}
 	appendItem(*expr.item);
-	if (expr.item->type() != Operation || instructionInfo(expr.item->instruction(), _evmVersion).ret == 1)
+	if (expr.item->type() != Operation || instructionInfo(expr.item->instruction(), EVMVersion()).ret == 1)
 	{
 		m_stack[m_stackHeight] = _c;
 		m_classPositions[_c].insert(m_stackHeight);
@@ -416,7 +414,7 @@ void CSECodeGenerator::generateClassElement(Id _c, langutil::EVMVersion _evmVers
 	else
 	{
 		assertThrow(
-			instructionInfo(expr.item->instruction(), _evmVersion).ret == 0,
+			instructionInfo(expr.item->instruction(), EVMVersion()).ret == 0,
 			OptimizerException,
 			"Invalid number of return values."
 		);
