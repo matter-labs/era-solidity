@@ -332,8 +332,8 @@ ostream& solidity::evmasm::operator<<(ostream& _out, AssemblyItem const& _item)
 	switch (_item.type())
 	{
 	case Operation:
-		// The latest EVMVersion is used here, since the InstructionInfo is assumed to
-		// be the same for all EVM versions.
+		// TODO:prevrandao: can we always use the latest EVM version here?
+		// Depending on the evm version the name of the instruction will differ.
 		_out << " " << instructionInfo(_item.instruction(), EVMVersion()).name;
 		if (_item.instruction() == Instruction::JUMP || _item.instruction() == Instruction::JUMPI)
 			_out << "\t" << _item.getJumpTypeAsString();
