@@ -6,7 +6,7 @@ Language Features:
 Compiler Features:
  * Commandline Interface: Return exit code ``2`` on uncaught exceptions.
  * Commandline Interface: Add `--no-cbor-metadata` that skips CBOR metadata from getting appended at the end of the bytecode.
- * EVM: Basic support for the EVM version "Paris". The ``difficulty`` opcode was replaced by ``prevrandao`` and does not behave as before. It now returns a random number based on the randomness beacon provided by the beacon chain. For details, please see [EIP-4399](https://eips.ethereum.org/EIPS/eip-4399).
+ * EVM: Basic support for the EVM version "Paris". Added ``prevrandao`` opcode, which returns a random number based on the randomness beacon provided by the beacon chain. The semantic of the ``difficulty`` opcode changed, and it now behaves as ``prevrandao``. For details, please see [EIP-4399](https://eips.ethereum.org/EIPS/eip-4399).
  * Natspec: Add event Natspec inheritance for devdoc.
  * Standard JSON: Add a boolean field `settings.metadata.appendCBOR` that skips CBOR metadata from getting appended at the end of the bytecode.
  * Yul EVM Code Transform: Generate more optimal code for user-defined functions that always terminate a transaction. No return labels will be pushed for calls to functions that always terminate.
@@ -17,6 +17,7 @@ Compiler Features:
  * SMTChecker: Support Eldarica as a Horn solver for the CHC engine when using the CLI option ``--model-checker-solvers eld``. The binary `eld` must be available in the system.
  * SMTChecker: Make ``z3`` the default solver for the BMC and CHC engines instead of all solvers.
  * Parser: More detailed error messages about invalid version pragmas.
+
 
 Bugfixes:
  * Yul Optimizer: Hash hex and decimal literals according to their value instead of their representation, improving the detection of equivalent functions.
