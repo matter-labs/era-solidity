@@ -6,7 +6,7 @@ Language Features:
 Compiler Features:
  * Commandline Interface: Return exit code ``2`` on uncaught exceptions.
  * Commandline Interface: Add `--no-cbor-metadata` that skips CBOR metadata from getting appended at the end of the bytecode.
- * EVM: Basic support for the EVM version "Paris". Added ``prevrandao`` opcode, which returns a random number based on the randomness beacon provided by the beacon chain. The semantic of the ``difficulty`` opcode changed, and it now behaves as ``prevrandao``. For details, please see [EIP-4399](https://eips.ethereum.org/EIPS/eip-4399).
+ * EVM: Basic support for the EVM version "Paris". Make ``prevrandao`` a valid opcode name that refers to the same opcode as the existing ``difficulty``. Emit the new name when the code targets "Paris" and later EVM versions. The change is due to the renaming introduced by [EIP-4399](https://eips.ethereum.org/EIPS/eip-4399).
  * Natspec: Add event Natspec inheritance for devdoc.
  * Standard JSON: Add a boolean field `settings.metadata.appendCBOR` that skips CBOR metadata from getting appended at the end of the bytecode.
  * Yul EVM Code Transform: Generate more optimal code for user-defined functions that always terminate a transaction. No return labels will be pushed for calls to functions that always terminate.
