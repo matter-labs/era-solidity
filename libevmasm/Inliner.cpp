@@ -113,7 +113,7 @@ map<size_t, Inliner::InlinableBlock> Inliner::determineInlinableBlocks(AssemblyI
 
 		// We can only inline blocks with straight control flow that end in a jump.
 		// Using breaksCSEAnalysisBlock will hopefully allow the return jump to be optimized after inlining.
-		if (lastTag && SemanticInformation::breaksCSEAnalysisBlock(item, false, m_evmVersion))
+		if (lastTag && SemanticInformation::breaksCSEAnalysisBlock(item, false))
 		{
 			ranges::span<AssemblyItem const> block = _items | ranges::views::slice(*lastTag + 1, index + 1);
 			if (optional<size_t> tag = getLocalTag(_items[*lastTag]))

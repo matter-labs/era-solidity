@@ -21,8 +21,6 @@
  */
 #pragma once
 
-#include <liblangutil/EVMVersion.h>
-
 #include <vector>
 #include <cstddef>
 #include <iterator>
@@ -43,7 +41,7 @@ public:
 class PeepholeOptimiser
 {
 public:
-	explicit PeepholeOptimiser(AssemblyItems& _items, langutil::EVMVersion _evmVersion): m_items(_items), m_evmVersion(_evmVersion) {}
+	explicit PeepholeOptimiser(AssemblyItems& _items): m_items(_items) {}
 	virtual ~PeepholeOptimiser() = default;
 
 	bool optimise();
@@ -51,7 +49,6 @@ public:
 private:
 	AssemblyItems& m_items;
 	AssemblyItems m_optimisedItems;
-	langutil::EVMVersion m_evmVersion;
 };
 
 }

@@ -72,7 +72,7 @@ public:
 	/// item that must be fed into a new instance of the eliminator.
 	/// @param _msizeImportant if false, do not consider modification of MSIZE a side-effect
 	template <class AssemblyItemIterator>
-	AssemblyItemIterator feedItems(langutil::EVMVersion _evmVersion, AssemblyItemIterator _iterator, AssemblyItemIterator _end, bool _msizeImportant);
+	AssemblyItemIterator feedItems(AssemblyItemIterator _iterator, AssemblyItemIterator _end, bool _msizeImportant);
 
 	/// @returns the resulting items after optimization.
 	AssemblyItems getOptimizedItems();
@@ -173,7 +173,6 @@ private:
 
 template <class AssemblyItemIterator>
 AssemblyItemIterator CommonSubexpressionEliminator::feedItems(
-	langutil::EVMVersion _evmVersion,
 	AssemblyItemIterator _iterator,
 	AssemblyItemIterator _end,
 	bool _msizeImportant
@@ -184,7 +183,7 @@ AssemblyItemIterator CommonSubexpressionEliminator::feedItems(
 	unsigned chunkSize = 0;
 	for (
 		;
-		_iterator != _end && !SemanticInformation::breaksCSEAnalysisBlock(*_iterator, _msizeImportant, _evmVersion) && chunkSize < maxChunkSize;
+		_iterator != _end && !SemanticInformation::breaksCSEAnalysisBlock(*_iterator, _msizeImportant) && chunkSize < maxChunkSize;
 		++_iterator, ++chunkSize
 	)
 		feedItem(*_iterator);

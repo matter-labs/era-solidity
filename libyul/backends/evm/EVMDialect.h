@@ -91,7 +91,7 @@ struct EVMDialect: public Dialect
 
 	bool providesObjectAccess() const { return m_objectAccess; }
 
-	static SideEffects sideEffectsOfInstruction(evmasm::Instruction _instruction, langutil::EVMVersion _evmVersion);
+	static SideEffects sideEffectsOfInstruction(evmasm::Instruction _instruction);
 
 protected:
 	BuiltinFunctionForEVM const* verbatimFunction(size_t _arguments, size_t _returnVariables) const;

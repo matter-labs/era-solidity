@@ -384,7 +384,7 @@ map<u256, u256> const& Assembly::optimiseInternal(
 
 		if (_settings.runPeephole)
 		{
-			PeepholeOptimiser peepOpt{m_items, _settings.evmVersion};
+			PeepholeOptimiser peepOpt{m_items};
 			while (peepOpt.optimise())
 			{
 				count++;
@@ -435,7 +435,7 @@ map<u256, u256> const& Assembly::optimiseInternal(
 				KnownState emptyState;
 				CommonSubexpressionEliminator eliminator{emptyState};
 				auto orig = iter;
-				iter = eliminator.feedItems(_settings.evmVersion, iter, m_items.end(), usesMSize);
+				iter = eliminator.feedItems(iter, m_items.end(), usesMSize);
 				bool shouldReplace = false;
 				AssemblyItems optimisedChunk;
 				try

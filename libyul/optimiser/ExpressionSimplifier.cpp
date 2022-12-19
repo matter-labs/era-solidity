@@ -53,8 +53,7 @@ void ExpressionSimplifier::visit(Expression& _expression)
 	if (auto* functionCall = get_if<FunctionCall>(&_expression))
 		if (optional<evmasm::Instruction> instruction = toEVMInstruction(m_dialect, functionCall->functionName.name))
 		{
-			EVMDialect const* evmDialect = dynamic_cast<EVMDialect const*>(&m_dialect);
-			for (auto op: evmasm::SemanticInformation::readWriteOperations(*instruction, evmDialect->evmVersion()))
+			for (auto op: evmasm::SemanticInformation::readWriteOperations(*instruction))
 				if (op.startParameter && op.lengthParameter)
 				{
 					Expression& startArgument = functionCall->arguments.at(*op.startParameter);

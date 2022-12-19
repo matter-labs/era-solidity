@@ -56,18 +56,17 @@ struct SimplePeepholeOptimizerMethod
 	static bool applyRule(
 		AssemblyItems::const_iterator _in,
 		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion _evmVersion,
 		index_sequence<Indices...>
 	)
 	{
-		return Method::applySimple(_in[Indices]..., _out, _evmVersion);
+		return Method::applySimple(_in[Indices]..., _out);
 	}
-	static bool apply(langutil::EVMVersion _evmVersion, OptimiserState& _state)
+	static bool apply(OptimiserState& _state)
 	{
-		static constexpr size_t WindowSize = FunctionParameterCount<decltype(Method::applySimple)>::value - 2;
+		static constexpr size_t WindowSize = FunctionParameterCount<decltype(Method::applySimple)>::value - 1;
 		if (
 			_state.i + WindowSize <= _state.items.size() &&
-			applyRule(_state.items.begin() + static_cast<ptrdiff_t>(_state.i), _state.out, _evmVersion, make_index_sequence<WindowSize>{})
+			applyRule(_state.items.begin() + static_cast<ptrdiff_t>(_state.i), _state.out, make_index_sequence<WindowSize>{})
 		)
 		{
 			_state.i += WindowSize;
@@ -82,8 +81,7 @@ struct Identity: SimplePeepholeOptimizerMethod<Identity>
 {
 	static bool applySimple(
 		AssemblyItem const& _item,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		*_out = _item;
@@ -96,8 +94,7 @@ struct PushPop: SimplePeepholeOptimizerMethod<PushPop>
 	static bool applySimple(
 		AssemblyItem const& _push,
 		AssemblyItem const& _pop,
-		back_insert_iterator<AssemblyItems>,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems>
 	)
 	{
 		auto t = _push.type();
@@ -114,16 +111,15 @@ struct OpPop: SimplePeepholeOptimizerMethod<OpPop>
 	static bool applySimple(
 		AssemblyItem const& _op,
 		AssemblyItem const& _pop,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion _evmVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (_pop == Instruction::POP && _op.type() == Operation)
 		{
 			Instruction instr = _op.instruction();
-			if (instructionInfo(instr, _evmVersion).ret == 1 && !instructionInfo(instr, _evmVersion).sideEffects)
+			if (instructionInfo(instr, langutil::EVMVersion()).ret == 1 && !instructionInfo(instr, langutil::EVMVersion()).sideEffects)
 			{
-				for (int j = 0; j < instructionInfo(instr, _evmVersion).args; j++)
+				for (int j = 0; j < instructionInfo(instr, langutil::EVMVersion()).args; j++)
 					*_out = {Instruction::POP, _op.location()};
 				return true;
 			}
@@ -137,8 +133,7 @@ struct OpStop: SimplePeepholeOptimizerMethod<OpStop>
 	static bool applySimple(
 		AssemblyItem const& _op,
 		AssemblyItem const& _stop,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion _evmVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (_stop == Instruction::STOP)
@@ -146,7 +141,7 @@ struct OpStop: SimplePeepholeOptimizerMethod<OpStop>
 			if (_op.type() == Operation)
 			{
 				Instruction instr = _op.instruction();
-				if (!instructionInfo(instr, _evmVersion).sideEffects)
+				if (!instructionInfo(instr, langutil::EVMVersion()).sideEffects)
 				{
 					*_out = {Instruction::STOP, _op.location()};
 					return true;
@@ -169,8 +164,7 @@ struct OpReturnRevert: SimplePeepholeOptimizerMethod<OpReturnRevert>
 		AssemblyItem const& _push,
 		AssemblyItem const& _pushOrDup,
 		AssemblyItem const& _returnRevert,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion _evmVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (
@@ -179,7 +173,7 @@ struct OpReturnRevert: SimplePeepholeOptimizerMethod<OpReturnRevert>
 			(_pushOrDup.type() == Push || _pushOrDup == dupInstruction(1))
 		)
 			if (
-				(_op.type() == Operation && !instructionInfo(_op.instruction(), _evmVersion).sideEffects) ||
+				(_op.type() == Operation && !instructionInfo(_op.instruction(), langutil::EVMVersion()).sideEffects) ||
 				_op.type() == Push
 			)
 			{
@@ -197,8 +191,7 @@ struct DoubleSwap: SimplePeepholeOptimizerMethod<DoubleSwap>
 	static size_t applySimple(
 		AssemblyItem const& _s1,
 		AssemblyItem const& _s2,
-		back_insert_iterator<AssemblyItems>,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems>
 	)
 	{
 		return _s1 == _s2 && SemanticInformation::isSwapInstruction(_s1);
@@ -210,8 +203,7 @@ struct DoublePush: SimplePeepholeOptimizerMethod<DoublePush>
 	static bool applySimple(
 		AssemblyItem const& _push1,
 		AssemblyItem const& _push2,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (_push1.type() == Push && _push2.type() == Push && _push1.data() == _push2.data())
@@ -230,8 +222,7 @@ struct CommutativeSwap: SimplePeepholeOptimizerMethod<CommutativeSwap>
 	static bool applySimple(
 		AssemblyItem const& _swap,
 		AssemblyItem const& _op,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		// Remove SWAP1 if following instruction is commutative
@@ -253,8 +244,7 @@ struct SwapComparison: SimplePeepholeOptimizerMethod<SwapComparison>
 	static bool applySimple(
 		AssemblyItem const& _swap,
 		AssemblyItem const& _op,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		static map<Instruction, Instruction> const swappableOps{
@@ -284,8 +274,7 @@ struct DupSwap: SimplePeepholeOptimizerMethod<DupSwap>
 	static size_t applySimple(
 		AssemblyItem const& _dupN,
 		AssemblyItem const& _swapN,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (
@@ -310,8 +299,7 @@ struct IsZeroIsZeroJumpI: SimplePeepholeOptimizerMethod<IsZeroIsZeroJumpI>
 		AssemblyItem const& _iszero2,
 		AssemblyItem const& _pushTag,
 		AssemblyItem const& _jumpi,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (
@@ -337,8 +325,7 @@ struct EqIsZeroJumpI: SimplePeepholeOptimizerMethod<EqIsZeroJumpI>
 		AssemblyItem const& _iszero,
 		AssemblyItem const& _pushTag,
 		AssemblyItem const& _jumpi,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (
@@ -367,8 +354,7 @@ struct DoubleJump: SimplePeepholeOptimizerMethod<DoubleJump>
 		AssemblyItem const& _pushTag2,
 		AssemblyItem const& _jump,
 		AssemblyItem const& _tag1,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (
@@ -397,8 +383,7 @@ struct JumpToNext: SimplePeepholeOptimizerMethod<JumpToNext>
 		AssemblyItem const& _pushTag,
 		AssemblyItem const& _jump,
 		AssemblyItem const& _tag,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (
@@ -424,8 +409,7 @@ struct TagConjunctions: SimplePeepholeOptimizerMethod<TagConjunctions>
 		AssemblyItem const& _pushTag,
 		AssemblyItem const& _pushConstant,
 		AssemblyItem const& _and,
-		back_insert_iterator<AssemblyItems> _out,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems> _out
 	)
 	{
 		if (_and != Instruction::AND)
@@ -460,8 +444,7 @@ struct TruthyAnd: SimplePeepholeOptimizerMethod<TruthyAnd>
 		AssemblyItem const& _push,
 		AssemblyItem const& _not,
 		AssemblyItem const& _and,
-		back_insert_iterator<AssemblyItems>,
-		langutil::EVMVersion
+		back_insert_iterator<AssemblyItems>
 	)
 	{
 		return (
@@ -475,7 +458,7 @@ struct TruthyAnd: SimplePeepholeOptimizerMethod<TruthyAnd>
 /// Removes everything after a JUMP (or similar) until the next JUMPDEST.
 struct UnreachableCode
 {
-	static bool apply(langutil::EVMVersion, OptimiserState& _state)
+	static bool apply(OptimiserState& _state)
 	{
 		auto it = _state.items.begin() + static_cast<ptrdiff_t>(_state.i);
 		auto end = _state.items.end();
@@ -505,16 +488,16 @@ struct UnreachableCode
 	}
 };
 
-void applyMethods(langutil::EVMVersion, OptimiserState&)
+void applyMethods(OptimiserState&)
 {
 	assertThrow(false, OptimizerException, "Peephole optimizer failed to apply identity.");
 }
 
 template <typename Method, typename... OtherMethods>
-void applyMethods(langutil::EVMVersion _evmVersion, OptimiserState& _state, Method, OtherMethods... _other)
+void applyMethods(OptimiserState& _state, Method, OtherMethods... _other)
 {
-	if (!Method::apply(_evmVersion, _state))
-		applyMethods(_evmVersion, _state, _other...);
+	if (!Method::apply(_state))
+		applyMethods(_state, _other...);
 }
 
 size_t numberOfPops(AssemblyItems const& _items)
@@ -531,7 +514,6 @@ bool PeepholeOptimiser::optimise()
 	OptimiserState state {m_items, 0, back_inserter(m_optimisedItems)};
 	while (state.i < m_items.size())
 		applyMethods(
-			m_evmVersion,
 			state,
 			PushPop(), OpPop(), OpStop(), OpReturnRevert(), DoublePush(), DoubleSwap(), CommutativeSwap(), SwapComparison(),
 			DupSwap(), IsZeroIsZeroJumpI(), EqIsZeroJumpI(), DoubleJump(), JumpToNext(), UnreachableCode(),
