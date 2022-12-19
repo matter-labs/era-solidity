@@ -20,7 +20,6 @@
  */
 
 #include <libyul/optimiser/ExpressionSimplifier.h>
-#include <libyul/backends/evm/EVMDialect.h>
 
 #include <libyul/optimiser/SimplificationRules.h>
 #include <libyul/optimiser/OptimiserStep.h>
@@ -52,7 +51,6 @@ void ExpressionSimplifier::visit(Expression& _expression)
 
 	if (auto* functionCall = get_if<FunctionCall>(&_expression))
 		if (optional<evmasm::Instruction> instruction = toEVMInstruction(m_dialect, functionCall->functionName.name))
-		{
 			for (auto op: evmasm::SemanticInformation::readWriteOperations(*instruction))
 				if (op.startParameter && op.lengthParameter)
 				{
@@ -65,7 +63,6 @@ void ExpressionSimplifier::visit(Expression& _expression)
 					)
 						startArgument = Literal{debugDataOf(startArgument), LiteralKind::Number, "0"_yulstring, {}};
 				}
-		}
 }
 
 bool ExpressionSimplifier::knownToBeZero(Expression const& _expression) const
