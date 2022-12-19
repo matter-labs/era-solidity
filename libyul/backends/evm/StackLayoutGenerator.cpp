@@ -740,7 +740,7 @@ void StackLayoutGenerator::fillInJunk(CFG::BasicBlock const& _block, CFG::Functi
 		});
 	};
 	/// @returns the number of operations required to transform @a _source to @a _target.
-	auto evaluateTransform = [&](Stack _source, Stack const& _target) -> size_t {
+	auto evaluateTransform = [](Stack _source, Stack const& _target) -> size_t {
 		size_t opGas = 0;
 		auto swap = [&](unsigned _swapDepth)
 		{
