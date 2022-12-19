@@ -22,7 +22,6 @@
 #pragma once
 
 #include <libyul/backends/evm/ControlFlowGraph.h>
-#include <liblangutil/EVMVersion.h>
 
 #include <map>
 
@@ -56,18 +55,18 @@ public:
 		std::vector<YulString> variableChoices;
 	};
 
-	static StackLayout run(langutil::EVMVersion _evmVersion, CFG const& _cfg);
+	static StackLayout run(CFG const& _cfg);
 	/// @returns a map from function names to the stack too deep errors occurring in that function.
 	/// Requires @a _cfg to be a control flow graph generated from disambiguated Yul.
 	/// The empty string is mapped to the stack too deep errors of the main entry point.
-	static std::map<YulString, std::vector<StackTooDeep>> reportStackTooDeep(langutil::EVMVersion _evmVersion, CFG const& _cfg);
+	static std::map<YulString, std::vector<StackTooDeep>> reportStackTooDeep(CFG const& _cfg);
 	/// @returns all stack too deep errors in the function named @a _functionName.
 	/// Requires @a _cfg to be a control flow graph generated from disambiguated Yul.
 	/// If @a _functionName is empty, the stack too deep errors of the main entry point are reported instead.
-	static std::vector<StackTooDeep> reportStackTooDeep(langutil::EVMVersion _evmVersion, CFG const& _cfg, YulString _functionName);
+	static std::vector<StackTooDeep> reportStackTooDeep(CFG const& _cfg, YulString _functionName);
 
 private:
-	StackLayoutGenerator(langutil::EVMVersion _evmVersion, StackLayout& _context);
+	StackLayoutGenerator(StackLayout& _context);
 
 	/// @returns the optimal entry stack layout, s.t. @a _operation can be applied to it and
 	/// the result can be transformed to @a _exitStack with minimal stack shuffling.
@@ -115,7 +114,6 @@ private:
 	//// Fills in junk when entering branches that do not need a clean stack in case the result is cheaper.
 	void fillInJunk(CFG::BasicBlock const& _block, CFG::FunctionInfo const* _functionInfo = nullptr);
 
-	langutil::EVMVersion m_evmVersion;
 	StackLayout& m_layout;
 };
 

@@ -263,7 +263,7 @@ bool StackCompressor::run(
 		eliminateVariablesOptimizedCodegen(
 			_dialect,
 			*_object.code,
-			StackLayoutGenerator::reportStackTooDeep(evmDialect->evmVersion(), *cfg),
+			StackLayoutGenerator::reportStackTooDeep(*cfg),
 			allowMSizeOptimzation
 		);
 	}

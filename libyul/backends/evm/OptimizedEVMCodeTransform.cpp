@@ -50,7 +50,7 @@ vector<StackTooDeepError> OptimizedEVMCodeTransform::run(
 )
 {
 	std::unique_ptr<CFG> dfg = ControlFlowGraphBuilder::build(_analysisInfo, _dialect, _block);
-	StackLayout stackLayout = StackLayoutGenerator::run(_dialect.evmVersion(), *dfg);
+	StackLayout stackLayout = StackLayoutGenerator::run(*dfg);
 	OptimizedEVMCodeTransform optimizedCodeTransform(
 		_assembly,
 		_builtinContext,
