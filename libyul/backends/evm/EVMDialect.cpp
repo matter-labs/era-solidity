@@ -137,6 +137,18 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 	return reserved;
 }
 
+pair<YulString, BuiltinFunctionForEVM> createVerbatimWrapper(const std::string& _name, size_t _params, size_t _returns)
+{
+	return createFunction(
+		_name,
+		_params,
+		_returns,
+		SideEffects{},
+		{},
+		[=](FunctionCall const&, AbstractAssembly& _assembly, BuiltinContext&)
+		{ _assembly.appendVerbatim(asBytes(_name), _params, _returns); });
+}
+
 map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVersion, bool _objectAccess)
 {
 	map<YulString, BuiltinFunctionForEVM> builtins;
@@ -156,6 +168,9 @@ map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVe
 		)
 			builtins.emplace(createEVMFunction(name, opcode));
 	}
+
+	builtins.emplace(createVerbatimWrapper("to_l1", 3, 0));
+	builtins.emplace(createVerbatimWrapper("code_source", 0, 1));
 
 	if (_objectAccess)
 	{
