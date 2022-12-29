@@ -137,7 +137,58 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 	return reserved;
 }
 
-pair<YulString, BuiltinFunctionForEVM> createVerbatimWrapper(const std::string& _name, size_t _params, size_t _returns)
+[[maybe_unused]] pair<YulString, BuiltinFunctionForEVM> createOpcodeSimulationCall(
+	const std::string& _name,
+	unsigned _addr,
+	const std::vector<unsigned> _paramIndices,
+	size_t _returns,
+	evmasm::Instruction _callOpcode)
+{
+	int maxParams = _callOpcode == evmasm::Instruction::STATICCALL ? 6 : 7;
+	return createFunction(
+		_name,
+		_paramIndices.size(),
+		_returns,
+		SideEffects{},
+		{},
+		[=](FunctionCall const& _call, AbstractAssembly& _assembly, BuiltinContext&)
+		{
+			// Push args in the reverse order
+			auto currArgPos = _paramIndices.rbegin();
+			auto currArg = _call.arguments.rbegin();
+			for (int i = maxParams - 1; i >= 0; --i)
+			{
+				if (_paramIndices.size() && *currArgPos == (unsigned) i)
+				{
+					Literal const* literal = get_if<Literal>(&*currArg++);
+					yulAssert(literal, "");
+					// FIXME: This causes an invalid stack height in EVMCodeTransform
+					_assembly.appendConstant(valueOfLiteral(*literal));
+					++currArgPos;
+
+					// Address
+				}
+				else if (i == 1)
+				{
+					_assembly.appendConstant(_addr);
+
+					// Set input length to 0xffff to prevent this call to be optimized away
+				}
+				else if (i == 4)
+				{
+					_assembly.appendConstant(0xffff);
+				}
+				else
+				{
+					_assembly.appendConstant(0);
+				}
+			}
+			_assembly.appendInstruction(_callOpcode);
+		});
+}
+
+[[maybe_unused]] pair<YulString, BuiltinFunctionForEVM>
+createVerbatimWrapper(const std::string& _name, size_t _params, size_t _returns)
 {
 	return createFunction(
 		_name,
@@ -169,8 +220,10 @@ map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVe
 			builtins.emplace(createEVMFunction(name, opcode));
 	}
 
-	builtins.emplace(createVerbatimWrapper("to_l1", 3, 0));
-	builtins.emplace(createVerbatimWrapper("code_source", 0, 1));
+	// builtins.emplace(createVerbatimWrapper("to_l1", 3, 0));
+	// builtins.emplace(createVerbatimWrapper("code_source", 0, 1));
+	builtins.emplace(createOpcodeSimulationCall("to_l1", 0xffff, {0, 2, 3}, 0, evmasm::Instruction::CALL));
+	builtins.emplace(createOpcodeSimulationCall("code_source", 0xfffe, {}, 1, evmasm::Instruction::STATICCALL));
 
 	if (_objectAccess)
 	{
