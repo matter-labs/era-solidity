@@ -80,6 +80,8 @@ add_library(yul
 	backends/evm/StackLayoutGenerator.h
 	backends/evm/VariableReferenceCounter.h
 	backends/evm/VariableReferenceCounter.cpp
+	backends/evm/ZKEVMIntrinsics.cpp
+	backends/evm/ZKEVMIntrinsics.h
 	backends/wasm/EVMToEwasmTranslator.cpp
 	backends/wasm/EVMToEwasmTranslator.h
 	backends/wasm/BinaryTransform.cpp
