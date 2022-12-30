@@ -37,6 +37,8 @@ set(sources
 	SimplificationRule.h
 	SimplificationRules.cpp
 	SimplificationRules.h
+	ZKEVMInstruction.cpp
+	ZKEVMInstruction.h
 )
 
 add_library(evmasm ${sources})

@@ -1,0 +1,7 @@
+{
+	let a := $zk_raw_call(0xa, 0xb, 0xc, 0xd)
+	let b := $zk_raw_call_byref(0xa, 0xb, 0xc)
+}
+// ====
+// dialect: evm
+// ----

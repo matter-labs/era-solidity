@@ -23,6 +23,7 @@
 
 #include <libevmasm/Instruction.h>
 #include <libevmasm/SemanticInformation.h>
+#include <libevmasm/ZKEVMInstruction.h>
 #include <liblangutil/Exceptions.h>
 #include <libsolutil/StringUtils.h>
 #include <libyul/AST.h>
@@ -126,6 +127,10 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 		if (!baseFeeException(instr.second))
 			reserved.emplace(name);
 	}
+	for (auto const& instr: solidity::zkevm::instructionInfos)
+	{
+		reserved.emplace(instr.name);
+	}
 	reserved += vector<YulString>{
 		"linkersymbol"_yulstring,
 		"datasize"_yulstring,
@@ -135,6 +140,33 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 		"loadimmutable"_yulstring,
 	};
 	return reserved;
+}
+
+pair<YulString, BuiltinFunctionForEVM>
+createVerbatimWrapper(const std::string& _name, size_t _params, size_t _returns, bool _sideEffects)
+{
+	SideEffects sideEffects{};
+	if (_sideEffects)
+	{
+		sideEffects
+			= {/*movable=*/false,
+			   /*movableApartFromEffects=*/false,
+			   /*canBeRemoved=*/false,
+			   /*canBeRemovedIfNoMSize=*/false,
+			   /*cannotLoop=*/true,
+			   /*otherState=*/SideEffects::Effect::Write,
+			   /*storage=*/SideEffects::Effect::Write,
+			   /*memory=*/SideEffects::Effect::Write};
+	}
+
+	return createFunction(
+		_name,
+		_params,
+		_returns,
+		sideEffects,
+		{},
+		[=](FunctionCall const&, AbstractAssembly& _assembly, BuiltinContext&)
+		{ _assembly.appendVerbatim(asBytes(_name), _params, _returns); });
 }
 
 map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVersion, bool _objectAccess)
@@ -155,6 +187,11 @@ map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVe
 			_evmVersion.hasOpcode(opcode)
 		)
 			builtins.emplace(createEVMFunction(name, opcode));
+	}
+
+	for (auto const& instr: solidity::zkevm::instructionInfos)
+	{
+		builtins.emplace(createVerbatimWrapper(instr.name, instr.args, instr.ret, instr.sideEffects));
 	}
 
 	if (_objectAccess)
