@@ -184,6 +184,23 @@ set(sources
 	parsing/Token.h
 )
 
-add_library(solidity ${sources})
-target_link_libraries(solidity PUBLIC yul evmasm langutil smtutil solutil Boost::boost fmt::fmt-header-only Threads::Threads)
+set(mlir_sources
+	codegen/mlir/Test.cpp
+)
+
+# Solidity build warning flags conflict with that of llvm (mostly `PEDANTIC`
+# ones).
+set_source_files_properties(${mlir_sources} PROPERTIES COMPILE_OPTIONS "-Wno-sign-conversion;-Wno-unused-parameter;-Wno-shorten-64-to-32;-Wno-extra-semi;-Wno-implicit-int-conversion")
+
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+set(LIBS
+	${dialect_libs}
+	${conversion_libs}
+	MLIRArithmeticDialect
+	MLIROptLib
+)
+
+add_library(solidity ${sources} ${mlir_sources})
+target_link_libraries(solidity PUBLIC yul evmasm langutil smtutil solutil Boost::boost fmt::fmt-header-only Threads::Threads ${LIBS})
 
