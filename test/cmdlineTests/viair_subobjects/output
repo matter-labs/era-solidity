@@ -10,9 +10,9 @@ object "C_3" {
     code {
         {
             /// @src 0:82:95  "contract C {}"
-            let _1 := memoryguard(0x80)
-            mstore(64, _1)
+            $zk_global_store("memory_pointer", memoryguard(0x80))
             if callvalue() { revert(0, 0) }
+            let _1 := $zk_global_load("memory_pointer")
             let _2 := datasize("C_3_deployed")
             codecopy(_1, dataoffset("C_3_deployed"), _2)
             return(_1, _2)
@@ -23,6 +23,7 @@ object "C_3" {
         code {
             {
                 /// @src 0:82:95  "contract C {}"
+                $zk_global_store("memory_pointer", memoryguard(0x80))
                 revert(0, 0)
             }
         }
@@ -42,9 +43,9 @@ object "D_16" {
     code {
         {
             /// @src 0:96:165  "contract D {..."
-            let _1 := memoryguard(0x80)
-            mstore(64, _1)
+            $zk_global_store("memory_pointer", memoryguard(0x80))
             if callvalue() { revert(0, 0) }
+            let _1 := $zk_global_load("memory_pointer")
             let _2 := datasize("D_16_deployed")
             codecopy(_1, dataoffset("D_16_deployed"), _2)
             return(_1, _2)
@@ -55,35 +56,35 @@ object "D_16" {
         code {
             {
                 /// @src 0:96:165  "contract D {..."
-                let _1 := memoryguard(0x80)
-                mstore(64, _1)
+                $zk_global_store("memory_pointer", memoryguard(0x80))
                 if iszero(lt(calldatasize(), 4))
                 {
-                    let _2 := 0
-                    if eq(0x26121ff0, shr(224, calldataload(_2)))
+                    let _1 := 0
+                    if eq(0x26121ff0, shr(224, calldataload(_1)))
                     {
-                        if callvalue() { revert(_2, _2) }
-                        if slt(add(calldatasize(), not(3)), _2) { revert(_2, _2) }
+                        if callvalue() { revert(_1, _1) }
+                        if slt(add(calldatasize(), not(3)), _1) { revert(_1, _1) }
+                        /// @src 0:149:156  "new C()"
+                        let _2 := /** @src 0:96:165  "contract D {..." */ $zk_global_load("memory_pointer")
                         /// @src 0:149:156  "new C()"
                         let _3 := datasize("C_3")
-                        let _4 := add(_1, _3)
-                        if or(gt(_4, 0xffffffffffffffff), lt(_4, _1))
+                        let _4 := add(_2, _3)
+                        if or(gt(_4, 0xffffffffffffffff), lt(_4, _2))
                         {
                             /// @src 0:96:165  "contract D {..."
-                            mstore(_2, shl(224, 0x4e487b71))
+                            mstore(_1, shl(224, 0x4e487b71))
                             mstore(4, 0x41)
-                            revert(_2, 0x24)
+                            revert(_1, 0x24)
                         }
                         /// @src 0:149:156  "new C()"
-                        datacopy(_1, dataoffset("C_3"), _3)
-                        if iszero(create(/** @src 0:96:165  "contract D {..." */ _2, /** @src 0:149:156  "new C()" */ _1, sub(_4, _1)))
+                        datacopy(_2, dataoffset("C_3"), _3)
+                        if iszero(create(/** @src 0:96:165  "contract D {..." */ _1, /** @src 0:149:156  "new C()" */ _2, sub(_4, _2)))
                         {
                             /// @src 0:96:165  "contract D {..."
-                            let pos := mload(64)
-                            returndatacopy(pos, _2, returndatasize())
-                            revert(pos, returndatasize())
+                            returndatacopy(_2, _1, returndatasize())
+                            revert(_2, returndatasize())
                         }
-                        return(_2, _2)
+                        return(_1, _1)
                     }
                 }
                 revert(0, 0)
@@ -94,9 +95,9 @@ object "D_16" {
             code {
                 {
                     /// @src 0:82:95  "contract C {}"
-                    let _1 := memoryguard(0x80)
-                    mstore(64, _1)
+                    $zk_global_store("memory_pointer", memoryguard(0x80))
                     if callvalue() { revert(0, 0) }
+                    let _1 := $zk_global_load("memory_pointer")
                     let _2 := datasize("C_3_deployed")
                     codecopy(_1, dataoffset("C_3_deployed"), _2)
                     return(_1, _2)
@@ -107,6 +108,7 @@ object "D_16" {
                 code {
                     {
                         /// @src 0:82:95  "contract C {}"
+                        $zk_global_store("memory_pointer", memoryguard(0x80))
                         revert(0, 0)
                     }
                 }

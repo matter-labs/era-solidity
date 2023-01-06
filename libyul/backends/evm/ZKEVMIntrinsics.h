@@ -19,6 +19,8 @@
 #pragma once
 
 #include <libyul/AST.h>
+#include <libyul/backends/evm/AbstractAssembly.h>
+#include <libyul/backends/evm/EVMDialect.h>
 
 namespace solidity::zkevm
 {
@@ -26,11 +28,13 @@ namespace solidity::zkevm
 struct IntrInfo
 {
 	using LiteralKinds = const std::vector<std::optional<solidity::yul::LiteralKind>>;
+	using GenFunc = std::function<void(yul::FunctionCall const&, yul::AbstractAssembly&, yul::BuiltinContext&)>;
 	const std::string name;
 	const size_t args;
 	const size_t ret;
 	const bool sideEffects;
 	LiteralKinds literalKinds = {};
+	GenFunc genCode = {};
 };
 
 extern const std::array<IntrInfo, 34> intrInfos;

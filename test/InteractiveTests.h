@@ -78,5 +78,4 @@ Testsuite const g_interactiveTestsuites[] = {
 	{"Memory Guard Tests",     "libsolidity", "memoryGuardTests",     false, false, &MemoryGuardTest::create},
 	{"Ewasm Translation",      "libyul",      "ewasmTranslationTests", false, false, &yul::test::EwasmTranslationTest::create}
 };
-
 }

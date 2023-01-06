@@ -4,9 +4,9 @@ object "C_7" {
     code {
         {
             /// @src 0:62:285  "contract C {..."
-            let _1 := memoryguard(0x80)
-            mstore(64, _1)
+            $zk_global_store("memory_pointer", memoryguard(0x80))
             if callvalue() { revert(0, 0) }
+            let _1 := $zk_global_load("memory_pointer")
             let _2 := datasize("C_7_deployed")
             codecopy(_1, dataoffset("C_7_deployed"), _2)
             return(_1, _2)
@@ -17,6 +17,7 @@ object "C_7" {
         code {
             {
                 /// @src 0:62:285  "contract C {..."
+                $zk_global_store("memory_pointer", 128)
                 if callvalue() { revert(0, 0) }
                 /// @src 0:109:277  "assembly {..."
                 mstore(0, 100)

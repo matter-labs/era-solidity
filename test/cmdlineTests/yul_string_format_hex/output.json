@@ -10,7 +10,7 @@
 object \"C_11\" {
     code {
         /// @src 0:78:159  \"contract C { function f() external pure returns (bytes4) { return 0xaabbccdd; } }\"
-        mstore(64, memoryguard(128))
+        $zk_global_store(\"memory_pointer\", memoryguard(128))
         if callvalue() { revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb() }
 
         constructor_C_11()
@@ -21,7 +21,7 @@ object \"C_11\" {
         return(_1, datasize(\"C_11_deployed\"))
 
         function allocate_unbounded() -> memPtr {
-            memPtr := mload(64)
+            memPtr := $zk_global_load(\"memory_pointer\")
         }
 
         function revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb() {
@@ -41,7 +41,7 @@ object \"C_11\" {
     object \"C_11_deployed\" {
         code {
             /// @src 0:78:159  \"contract C { function f() external pure returns (bytes4) { return 0xaabbccdd; } }\"
-            mstore(64, memoryguard(128))
+            $zk_global_store(\"memory_pointer\", memoryguard(128))
 
             if iszero(lt(calldatasize(), 4))
             {
@@ -68,7 +68,7 @@ object \"C_11\" {
             }
 
             function allocate_unbounded() -> memPtr {
-                memPtr := mload(64)
+                memPtr := $zk_global_load(\"memory_pointer\")
             }
 
             function revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb() {

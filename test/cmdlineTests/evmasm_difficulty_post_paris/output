@@ -1,13 +1,15 @@
 
 ======= evmasm_difficulty_post_paris/input.sol:C =======
 EVM assembly:
+  mstore(0x40, 0x80)
   sstore(0x00, prevrandao)
   stop
 stop
 
 sub_0: assembly {
+      mstore(0x40, 0x80)
       stop
 }
 
 Opcodes:
-PREVRANDAO PUSH1 0x0 SSTORE STOP INVALID 
+PUSH1 0x80 PUSH1 0x40 MSTORE PREVRANDAO PUSH1 0x0 SSTORE STOP INVALID 

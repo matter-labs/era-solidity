@@ -4,9 +4,9 @@ object "Arraysum_34" {
     code {
         {
             /// @src 0:80:429  "contract Arraysum {..."
-            let _1 := memoryguard(0x80)
-            mstore(64, _1)
+            $zk_global_store("memory_pointer", memoryguard(0x80))
             if callvalue() { revert(0, 0) }
+            let _1 := $zk_global_load("memory_pointer")
             let _2 := datasize("Arraysum_34_deployed")
             codecopy(_1, dataoffset("Arraysum_34_deployed"), _2)
             return(_1, _2)
@@ -17,7 +17,7 @@ object "Arraysum_34" {
         code {
             {
                 /// @src 0:80:429  "contract Arraysum {..."
-                mstore(64, memoryguard(0x80))
+                $zk_global_store("memory_pointer", memoryguard(0x80))
                 let _1 := 4
                 if iszero(lt(calldatasize(), _1))
                 {
@@ -60,7 +60,7 @@ object "Arraysum_34" {
                             var_sum := sum
                         }
                         /// @src 0:80:429  "contract Arraysum {..."
-                        let memPos := mload(64)
+                        let memPos := $zk_global_load("memory_pointer")
                         mstore(memPos, var_sum)
                         return(memPos, 32)
                     }

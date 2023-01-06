@@ -232,8 +232,27 @@ map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVe
 
 	for (auto const& intr: solidity::zkevm::intrInfos)
 	{
-		builtins.emplace(
-			createVerbatimWrapper(intr.name, intr.args, intr.ret, intr.sideEffects, intr.literalKinds));
+		if (intr.genCode)
+		{
+			SideEffects sideEffects{};
+			if (intr.sideEffects)
+			{
+				sideEffects
+					= {/*movable=*/false,
+					   /*movableApartFromEffects=*/false,
+					   /*canBeRemoved=*/false,
+					   /*canBeRemovedIfNoMSize=*/false,
+					   /*cannotLoop=*/true,
+					   /*otherState=*/SideEffects::Effect::Write,
+					   /*storage=*/SideEffects::Effect::Write,
+					   /*memory=*/SideEffects::Effect::Write};
+			}
+			builtins.emplace(
+				createFunction(intr.name, intr.args, intr.ret, sideEffects, intr.literalKinds, intr.genCode));
+		}
+		else
+			builtins.emplace(
+				createVerbatimWrapper(intr.name, intr.args, intr.ret, intr.sideEffects, intr.literalKinds));
 	}
 
 	if (_objectAccess)

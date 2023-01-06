@@ -3071,10 +3071,9 @@ string YulUtilFunctions::allocateUnboundedFunction()
 	return m_functionCollector.createFunction(functionName, [&]() {
 		return Whiskers(R"(
 			function <functionName>() -> memPtr {
-				memPtr := mload(<freeMemoryPointer>)
+				memPtr := $zk_global_load("memory_pointer")
 			}
 		)")
-		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
 		("functionName", functionName)
 		.render();
 	});
@@ -3089,11 +3088,10 @@ string YulUtilFunctions::finalizeAllocationFunction()
 				let newFreePtr := add(memPtr, <roundUp>(size))
 				// protect against overflow
 				if or(gt(newFreePtr, 0xffffffffffffffff), lt(newFreePtr, memPtr)) { <panic>() }
-				mstore(<freeMemoryPointer>, newFreePtr)
+				$zk_global_store("memory_pointer", newFreePtr)
 			}
 		)")
 		("functionName", functionName)
-		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
 		("roundUp", roundUpFunction())
 		("panic", panicFunction(PanicCode::ResourceError))
 		.render();

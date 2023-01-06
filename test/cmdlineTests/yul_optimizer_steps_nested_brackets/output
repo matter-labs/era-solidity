@@ -4,7 +4,7 @@ object "C_6" {
     code {
         {
             /// @src 0:60:103  "contract C..."
-            mstore(64, memoryguard(0x80))
+            $zk_global_store("memory_pointer", memoryguard(0x80))
             if callvalue()
             {
                 revert_error_ca66f745a3ce8ff40e2ccaf1ad45db7774001b90d25810abd9040049be7bf4bb()
@@ -16,7 +16,7 @@ object "C_6" {
         }
         function allocate_unbounded() -> memPtr
         {
-            let memPtr_1 := mload(64)
+            let memPtr_1 := $zk_global_load("memory_pointer")
             let memPtr_2 := memPtr_1
             let memPtr_3 := memPtr_1
             let memPtr_4 := memPtr_1
@@ -114,7 +114,7 @@ object "C_6" {
         code {
             {
                 /// @src 0:60:103  "contract C..."
-                mstore(64, memoryguard(0x80))
+                $zk_global_store("memory_pointer", memoryguard(0x80))
                 if iszero(lt(calldatasize(), 4))
                 {
                     let selector := shift_right_unsigned(calldataload(0))
@@ -214,7 +214,7 @@ object "C_6" {
             }
             function allocate_unbounded() -> memPtr
             {
-                let memPtr_1 := mload(64)
+                let memPtr_1 := $zk_global_load("memory_pointer")
                 let memPtr_2 := memPtr_1
                 let memPtr_3 := memPtr_1
                 let memPtr_4 := memPtr_1

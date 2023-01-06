@@ -4,9 +4,9 @@ object "C_59" {
     code {
         {
             /// @src 0:346:625  "contract C {..."
-            let _1 := memoryguard(0x80)
-            mstore(64, _1)
+            $zk_global_store("memory_pointer", memoryguard(0x80))
             if callvalue() { revert(0, 0) }
+            let _1 := $zk_global_load("memory_pointer")
             let _2 := datasize("C_59_deployed")
             codecopy(_1, dataoffset("C_59_deployed"), _2)
             return(_1, _2)
@@ -17,105 +17,101 @@ object "C_59" {
         code {
             {
                 /// @src 0:346:625  "contract C {..."
-                let _1 := memoryguard(0x80)
-                let _2 := 4
-                if iszero(lt(calldatasize(), _2))
+                $zk_global_store("memory_pointer", memoryguard(0x80))
+                let _1 := 4
+                if iszero(lt(calldatasize(), _1))
                 {
-                    let _3 := 0
-                    if eq(0xf8eddcc6, shr(224, calldataload(_3)))
+                    let _2 := 0
+                    if eq(0xf8eddcc6, shr(224, calldataload(_2)))
                     {
-                        if callvalue() { revert(_3, _3) }
-                        let _4 := 32
-                        if slt(add(calldatasize(), not(3)), _4) { revert(_3, _3) }
-                        let offset := calldataload(_2)
-                        let _5 := 0xffffffffffffffff
-                        if gt(offset, _5) { revert(_3, _3) }
-                        if iszero(slt(add(offset, 35), calldatasize())) { revert(_3, _3) }
-                        let _6 := calldataload(add(_2, offset))
-                        let _7 := 36
-                        if gt(_6, _5)
+                        if callvalue() { revert(_2, _2) }
+                        let _3 := 32
+                        if slt(add(calldatasize(), not(3)), _3) { revert(_2, _2) }
+                        let offset := calldataload(_1)
+                        let _4 := 0xffffffffffffffff
+                        if gt(offset, _4) { revert(_2, _2) }
+                        if iszero(slt(add(offset, 35), calldatasize())) { revert(_2, _2) }
+                        let _5 := calldataload(add(_1, offset))
+                        let _6 := 36
+                        if gt(_5, _4)
                         {
-                            mstore(_3, shl(224, 0x4e487b71))
-                            mstore(_2, 0x41)
-                            revert(_3, _7)
+                            mstore(_2, shl(224, 0x4e487b71))
+                            mstore(_1, 0x41)
+                            revert(_2, _6)
                         }
-                        let _8 := shl(5, _6)
-                        let _9 := not(31)
-                        let newFreePtr := add(_1, and(add(_8, 63), _9))
-                        if or(gt(newFreePtr, _5), lt(newFreePtr, _1))
+                        let _7 := shl(5, _5)
+                        let memPtr := $zk_global_load("memory_pointer")
+                        let _8 := not(31)
+                        let newFreePtr := add(memPtr, and(add(_7, 63), _8))
+                        if or(gt(newFreePtr, _4), lt(newFreePtr, memPtr))
                         {
-                            mstore(_3, shl(224, 0x4e487b71))
-                            mstore(_2, 0x41)
-                            revert(_3, _7)
+                            mstore(_2, shl(224, 0x4e487b71))
+                            mstore(_1, 0x41)
+                            revert(_2, _6)
                         }
-                        let _10 := 64
-                        mstore(_10, newFreePtr)
-                        let dst := _1
-                        mstore(_1, _6)
-                        dst := add(_1, _4)
+                        $zk_global_store("memory_pointer", newFreePtr)
+                        let dst := memPtr
+                        mstore(memPtr, _5)
+                        dst := add(memPtr, _3)
                         let dst_1 := dst
-                        let srcEnd := add(add(offset, _8), _7)
-                        if gt(srcEnd, calldatasize()) { revert(_3, _3) }
-                        let src := add(offset, _7)
-                        for { } lt(src, srcEnd) { src := add(src, _4) }
+                        let srcEnd := add(add(offset, _7), _6)
+                        if gt(srcEnd, calldatasize()) { revert(_2, _2) }
+                        let src := add(offset, _6)
+                        let _9 := or(gt(dst, _4), lt(dst, memPtr))
+                        for { } lt(src, srcEnd) { src := add(src, _3) }
                         {
-                            if slt(sub(calldatasize(), src), _4) { revert(_3, _3) }
-                            let memPtr := mload(_10)
-                            let newFreePtr_1 := add(memPtr, _4)
-                            if or(gt(newFreePtr_1, _5), lt(newFreePtr_1, memPtr))
+                            if slt(sub(calldatasize(), src), _3) { revert(_2, _2) }
+                            if _9
                             {
-                                mstore(_3, shl(224, 0x4e487b71))
-                                mstore(_2, 0x41)
-                                revert(_3, _7)
+                                mstore(_2, shl(224, 0x4e487b71))
+                                mstore(_1, 0x41)
+                                revert(_2, _6)
                             }
-                            mstore(_10, newFreePtr_1)
+                            $zk_global_store("memory_pointer", dst_1)
                             mstore(memPtr, calldataload(src))
                             mstore(dst, memPtr)
-                            dst := add(dst, _4)
+                            dst := add(dst, _3)
                         }
-                        if iszero(mload(_1))
+                        if iszero(mload(memPtr))
                         {
-                            mstore(_3, shl(224, 0x4e487b71))
-                            mstore(_2, 0x32)
-                            revert(_3, _7)
+                            mstore(_2, shl(224, 0x4e487b71))
+                            mstore(_1, 0x32)
+                            revert(_2, _6)
                         }
-                        sstore(_3, mload(/** @src 0:469:474  "_s[0]" */ mload(dst_1)))
+                        sstore(_2, mload(/** @src 0:469:474  "_s[0]" */ mload(dst_1)))
                         /// @src 0:346:625  "contract C {..."
-                        if iszero(lt(/** @src 0:492:493  "1" */ 0x01, /** @src 0:346:625  "contract C {..." */ mload(_1)))
+                        if iszero(lt(/** @src 0:492:493  "1" */ 0x01, /** @src 0:346:625  "contract C {..." */ mload(memPtr)))
                         {
-                            mstore(_3, shl(224, 0x4e487b71))
-                            mstore(_2, 0x32)
-                            revert(_3, _7)
+                            mstore(_2, shl(224, 0x4e487b71))
+                            mstore(_1, 0x32)
+                            revert(_2, _6)
                         }
-                        let _11 := mload(/** @src 0:489:494  "_s[1]" */ mload(/** @src 0:346:625  "contract C {..." */ add(_1, _10)))
-                        sstore(0x02, _11)
-                        let memPtr_1 := mload(_10)
-                        let newFreePtr_2 := add(memPtr_1, 160)
-                        if or(gt(newFreePtr_2, _5), lt(newFreePtr_2, memPtr_1))
+                        let addr := add(memPtr, 64)
+                        let _10 := mload(/** @src 0:489:494  "_s[1]" */ mload(addr))
+                        /// @src 0:346:625  "contract C {..."
+                        sstore(0x02, _10)
+                        let newFreePtr_1 := add(memPtr, 160)
+                        if or(gt(newFreePtr_1, _4), lt(newFreePtr_1, memPtr))
                         {
-                            mstore(_3, shl(224, 0x4e487b71))
-                            mstore(_2, 0x41)
-                            revert(_3, _7)
+                            mstore(_2, shl(224, 0x4e487b71))
+                            mstore(_1, 0x41)
+                            revert(_2, _6)
                         }
-                        mstore(_10, newFreePtr_2)
-                        mstore(memPtr_1, 100)
-                        mstore(add(memPtr_1, _4), "longstringlongstringlongstringlo")
-                        mstore(add(memPtr_1, _10), "ngstringlongstringlongstringlong")
-                        let _12 := 96
-                        mstore(add(memPtr_1, _12), "stringlongstringlongstringlongst")
-                        mstore(add(memPtr_1, 128), "ring")
-                        let memPos := mload(_10)
-                        mstore(memPos, _11)
-                        mstore(add(memPos, _4), _10)
-                        let length := mload(memPtr_1)
-                        mstore(add(memPos, _10), length)
-                        let i := _3
-                        for { } lt(i, length) { i := add(i, _4) }
+                        $zk_global_store("memory_pointer", newFreePtr_1)
+                        let _11 := 96
+                        mstore(add(memPtr, _11), "stringlongstringlongstringlongst")
+                        mstore(add(memPtr, 128), "ring")
+                        mstore(memPtr, _10)
+                        mstore(dst_1, 64)
+                        mstore(addr, _10)
+                        let i := _2
+                        for { } lt(i, _10) { i := add(i, _3) }
                         {
-                            mstore(add(add(memPos, i), _12), mload(add(add(memPtr_1, i), _4)))
+                            let _12 := add(memPtr, i)
+                            mstore(add(_12, _11), mload(add(_12, _3)))
                         }
-                        mstore(add(add(memPos, length), _12), _3)
-                        return(memPos, add(sub(add(memPos, and(add(length, 31), _9)), memPos), _12))
+                        mstore(add(add(memPtr, _10), _11), _2)
+                        return(memPtr, add(sub(add(memPtr, and(add(_10, 31), _8)), memPtr), _11))
                     }
                 }
                 revert(0, 0)

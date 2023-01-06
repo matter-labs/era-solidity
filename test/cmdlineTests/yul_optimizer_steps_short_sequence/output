@@ -4,7 +4,7 @@ object "C_8" {
     code {
         {
             /// @src 0:80:221  "contract C {..."
-            mstore(64, memoryguard(0x80))
+            $zk_global_store("memory_pointer", memoryguard(0x80))
             /// @src 0:129:213  "assembly (\"memory-safe\") {..."
             let usr$a := 0
             revert(usr$a, usr$a)
@@ -15,7 +15,7 @@ object "C_8" {
         code {
             {
                 /// @src 0:80:221  "contract C {..."
-                mstore(64, memoryguard(0x80))
+                $zk_global_store("memory_pointer", memoryguard(0x80))
                 revert(0, 0)
             }
         }
