@@ -25,6 +25,8 @@
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/codegen/CompilerUtils.h>
 
+#include <libyul/Dialect.h>
+
 #include <libsolutil/CommonData.h>
 #include <libsolutil/FunctionSelector.h>
 #include <libsolutil/Whiskers.h>
@@ -3068,13 +3070,16 @@ string YulUtilFunctions::allocationFunction()
 string YulUtilFunctions::allocateUnboundedFunction()
 {
 	string functionName = "allocate_unbounded";
+	string getFreePtrInst = yul::g_useZKEVMExt ? R"($zk_get_global("memory_pointer"))"
+											   : "mload(" + to_string(CompilerUtils::freeMemoryPointer) + ")";
+
 	return m_functionCollector.createFunction(functionName, [&]() {
 		return Whiskers(R"(
 			function <functionName>() -> memPtr {
-				memPtr := mload(<freeMemoryPointer>)
+				memPtr := <getFreePtrInst>
 			}
 		)")
-		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
+		("getFreePtrInst", getFreePtrInst)
 		("functionName", functionName)
 		.render();
 	});
@@ -3083,17 +3088,21 @@ string YulUtilFunctions::allocateUnboundedFunction()
 string YulUtilFunctions::finalizeAllocationFunction()
 {
 	string functionName = "finalize_allocation";
+	string setFreePtrInst = yul::g_useZKEVMExt
+								? R"($zk_set_global("memory_pointer", newFreePtr))"
+								: "mstore(" + to_string(CompilerUtils::freeMemoryPointer) + ", newFreePtr)";
+
 	return m_functionCollector.createFunction(functionName, [&]() {
 		return Whiskers(R"(
 			function <functionName>(memPtr, size) {
 				let newFreePtr := add(memPtr, <roundUp>(size))
 				// protect against overflow
 				if or(gt(newFreePtr, 0xffffffffffffffff), lt(newFreePtr, memPtr)) { <panic>() }
-				mstore(<freeMemoryPointer>, newFreePtr)
+				<setFreePtrInst>
 			}
 		)")
 		("functionName", functionName)
-		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
+		("setFreePtrInst", setFreePtrInst)
 		("roundUp", roundUpFunction())
 		("panic", panicFunction(PanicCode::ResourceError))
 		.render();

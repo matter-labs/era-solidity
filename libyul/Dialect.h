@@ -37,6 +37,10 @@ using Type = YulString;
 enum class LiteralKind;
 struct Literal;
 
+// FIXME: I think we should have a separate dialect in yul for ZKEVM
+// Enable ZKEVM extensions in the yul codegen
+extern bool g_useZKEVMExt;
+
 struct BuiltinFunction
 {
 	YulString name;

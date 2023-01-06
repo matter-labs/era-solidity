@@ -48,6 +48,7 @@ static string const g_strEVM = "evm";
 static string const g_strEVMVersion = "evm-version";
 static string const g_strEwasm = "ewasm";
 static string const g_strViaIR = "via-ir";
+static string const g_strZKEVMExt = "zkevm-ext";
 static string const g_strExperimentalViaIR = "experimental-via-ir";
 static string const g_strGas = "gas";
 static string const g_strHelp = "help";
@@ -657,6 +658,10 @@ General Information)").c_str(),
 			"Target machine in assembly or Yul mode."
 		)
 		(
+			g_strZKEVMExt.c_str(),
+			"Enable ZKEVM extensions in the yul codegen"
+		)
+		(
 			g_strYulDialect.c_str(),
 			po::value<string>()->value_name(util::joinHumanReadable(g_yulDialectArgs, ",")),
 			"Input dialect to use in assembly or yul mode."
@@ -912,6 +917,7 @@ void CommandLineParser::processArgs()
 		{g_strErrorRecovery, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strExperimentalViaIR, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strViaIR, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
+		{g_strZKEVMExt, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strMetadataLiteral, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strMetadataHash, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strModelCheckerShowUnproved, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
@@ -1277,6 +1283,7 @@ void CommandLineParser::processArgs()
 		m_args.count(g_strModelCheckerTargets) ||
 		m_args.count(g_strModelCheckerTimeout);
 	m_options.output.viaIR = (m_args.count(g_strExperimentalViaIR) > 0 || m_args.count(g_strViaIR) > 0);
+	m_options.useZKEVMExt = (m_args.count(g_strZKEVMExt) > 0);
 	if (m_options.input.mode == InputMode::Compiler)
 		m_options.input.errorRecovery = (m_args.count(g_strErrorRecovery) > 0);
 

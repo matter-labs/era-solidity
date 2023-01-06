@@ -27,6 +27,7 @@
 #include <libsolidity/interface/CompilerStack.h>
 #include <libsolidity/interface/DebugSettings.h>
 #include <libsolidity/interface/FileReader.h>
+#include <libyul/Dialect.h>
 #include <libyul/YulStack.h>
 
 #include <iostream>

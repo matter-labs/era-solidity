@@ -32,6 +32,7 @@ add_executable(isoltest
 	../libsolidity/ABIJsonTest.cpp
 	../libsolidity/ASTJSONTest.cpp
 	../libsolidity/SMTCheckerTest.cpp
+	../libsolidity/ZKEVMExtTest.cpp
 	../libyul/Common.cpp
 	../libyul/ControlFlowGraphTest.cpp
 	../libyul/ControlFlowSideEffectsTest.cpp

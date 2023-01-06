@@ -188,6 +188,10 @@ struct CommandLineOptions
 		CompilerStack::State stopAfter = CompilerStack::State::CompilationSuccessful;
 	} output;
 
+	// FIXME: I think we should have a separate dialect in yul for ZKEVM
+	// Enable ZKEVM extensions in the yul codegen
+	bool useZKEVMExt = false;
+
 	struct
 	{
 		yul::YulStack::Machine targetMachine = yul::YulStack::Machine::EVM;

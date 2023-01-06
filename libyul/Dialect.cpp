@@ -26,6 +26,8 @@ using namespace solidity::yul;
 using namespace std;
 using namespace solidity::langutil;
 
+bool solidity::yul::g_useZKEVMExt = false;
+
 Literal Dialect::zeroLiteralForType(solidity::yul::YulString _type) const
 {
 	if (_type == boolType && _type != defaultType)

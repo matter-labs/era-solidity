@@ -103,6 +103,8 @@ set(libsolidity_sources
     libsolidity/StandardCompiler.cpp
     libsolidity/SyntaxTest.cpp
     libsolidity/SyntaxTest.h
+    libsolidity/ZKEVMExtTest.cpp
+    libsolidity/ZKEVMExtTest.h
     libsolidity/ViewPureChecker.cpp
     libsolidity/analysis/FunctionCallGraph.cpp
     libsolidity/interface/FileReader.cpp
