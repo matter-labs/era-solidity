@@ -185,7 +185,8 @@ set(sources
 )
 
 set(mlir_sources
-	codegen/mlir/Test.cpp
+	codegen/mlir/Gen.cpp
+	codegen/mlir/Gen.h
 )
 
 # Solidity build warning flags conflict with that of llvm (mostly `PEDANTIC`
