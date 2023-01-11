@@ -16,25 +16,9 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
-#include "Solidity/SolidityDialect.h"
-#include <libsolidity/codegen/mlir/Gen.h>
+#include "SolidityOps.h"
+#include "SolidityDialect.h"
+#include "mlir/IR/OpImplementation.h"
 
-using namespace solidity::frontend;
-
-bool MLIRGen::visit(BinaryOperation const& _binOp) { return true; }
-
-bool MLIRGen::visit(Block const& _block) { return true; }
-
-bool MLIRGen::visit(Assignment const& _assignment) { return true; }
-
-void MLIRGen::run(Block const& _block) { _block.accept(*this); }
-
-void MLIRGen::run(FunctionDefinition const& _function) { run(_function.body()); }
-
-void MLIRGen::run(ContractDefinition const& _contract)
-{
-	for (auto* f: _contract.definedFunctions())
-	{
-		run(*f);
-	}
-}
+#define GET_OP_CLASSES
+#include "Solidity/SolidityOps.cpp.inc"

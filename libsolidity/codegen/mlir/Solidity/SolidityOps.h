@@ -15,26 +15,17 @@
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 // SPDX-License-Identifier: GPL-3.0
+/**
+ * Solidity operations
+ */
 
-#include "Solidity/SolidityDialect.h"
-#include <libsolidity/codegen/mlir/Gen.h>
+#pragma once
 
-using namespace solidity::frontend;
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
-bool MLIRGen::visit(BinaryOperation const& _binOp) { return true; }
-
-bool MLIRGen::visit(Block const& _block) { return true; }
-
-bool MLIRGen::visit(Assignment const& _assignment) { return true; }
-
-void MLIRGen::run(Block const& _block) { _block.accept(*this); }
-
-void MLIRGen::run(FunctionDefinition const& _function) { run(_function.body()); }
-
-void MLIRGen::run(ContractDefinition const& _contract)
-{
-	for (auto* f: _contract.definedFunctions())
-	{
-		run(*f);
-	}
-}
+#define GET_OP_CLASSES
+#include "Solidity/SolidityOps.h.inc"

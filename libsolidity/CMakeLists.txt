@@ -189,9 +189,29 @@ set(mlir_sources
 	codegen/mlir/Gen.h
 )
 
+set(mlir_solidity_dialect_sources
+	codegen/mlir/Solidity/SolidityDialect.cpp
+	codegen/mlir/Solidity/SolidityOps.cpp
+)
+
 # Solidity build warning flags conflict with that of llvm (mostly `PEDANTIC`
 # ones).
-set_source_files_properties(${mlir_sources} PROPERTIES COMPILE_OPTIONS "-Wno-sign-conversion;-Wno-unused-parameter;-Wno-shorten-64-to-32;-Wno-extra-semi;-Wno-implicit-int-conversion")
+set_source_files_properties(${mlir_sources} ${mlir_solidity_dialect_sources} PROPERTIES COMPILE_OPTIONS "-Wno-sign-conversion;-Wno-unused-parameter;-Wno-shorten-64-to-32;-Wno-extra-semi;-Wno-implicit-int-conversion")
+
+include_directories(${PROJECT_BINARY_DIR}/libsolidity/codegen/mlir)
+
+add_subdirectory(codegen/mlir/Solidity)
+
+add_mlir_dialect_library(MLIRSolidity
+	${mlir_solidity_dialect_sources}
+
+	DEPENDS
+	MLIRSolidityOpsIncGen
+
+	LINK_LIBS PUBLIC
+	MLIRIR
+	MLIRInferTypeOpInterface
+)
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
@@ -200,6 +220,7 @@ set(LIBS
 	${conversion_libs}
 	MLIRArithmeticDialect
 	MLIROptLib
+	MLIRSolidity
 )
 
 add_library(solidity ${sources} ${mlir_sources})
