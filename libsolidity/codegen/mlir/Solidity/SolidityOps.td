@@ -19,12 +19,27 @@
  * Solidity operations
  */
 
-#ifndef SOLIDITY_OPS
-#define SOLIDITY_OPS
+#ifndef MLIR_SOLIDITY_SOLIDITYOPS_TD
+#define MLIR_SOLIDITY_SOLIDITYOPS_TD
 
-include "SolidityDialect.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpBase.td"
+
+def Solidity_Dialect : Dialect {
+    let name = "solidity";
+    let summary = "Solidity dialect";
+    let description = [{
+		This dialect has high level ops for representing solidity.
+    }];
+    let cppNamespace = "::mlir::solidity";
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+}
+
+class Solidity_Op<string mnemonic, list<Trait> traits = []> :
+        Op<Solidity_Dialect, mnemonic, traits>;
+
 
 def Solidity_FooOp : Solidity_Op<"foo", [NoSideEffect,
                                              SameOperandsAndResultType]> {
@@ -48,4 +63,4 @@ def Solidity_FooOp : Solidity_Op<"foo", [NoSideEffect,
     }];
 }
 
-#endif // SOLIDITY_OPS
+#endif // MLIR_SOLIDITY_SOLIDITYOPS_TD

@@ -27,5 +27,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "Solidity/SolidityOpsDialect.h.inc"
+
 #define GET_OP_CLASSES
 #include "Solidity/SolidityOps.h.inc"

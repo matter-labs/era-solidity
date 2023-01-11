@@ -17,8 +17,20 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include "SolidityOps.h"
-#include "SolidityDialect.h"
 #include "mlir/IR/OpImplementation.h"
 
 #define GET_OP_CLASSES
 #include "Solidity/SolidityOps.cpp.inc"
+
+#include "Solidity/SolidityOpsDialect.cpp.inc"
+
+using namespace mlir;
+using namespace mlir::solidity;
+
+void SolidityDialect::initialize()
+{
+	addOperations<
+#define GET_OP_LIST
+#include "Solidity/SolidityOps.cpp.inc"
+		>();
+}

@@ -190,7 +190,6 @@ set(mlir_sources
 )
 
 set(mlir_solidity_dialect_sources
-	codegen/mlir/Solidity/SolidityDialect.cpp
 	codegen/mlir/Solidity/SolidityOps.cpp
 )
 
