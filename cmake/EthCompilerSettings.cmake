@@ -74,6 +74,11 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 		eth_add_cxx_compiler_flag_if_supported(-Wno-unknown-attributes)
 	endif()
 
+	# FIXME: -gsplit-dwarf binaries causes gdb 12.1 to miss debugging symbols
+	# with the following error message:
+	# "DW_FORM_rnglistx index pointing outside of .debug_rnglists offset array"
+	# So, integrating llvm builds configured with -DLLVM_USE_SPLIT_DWARF will
+	# cause gdb to misbehave.
 	# Configuration-specific compiler settings.
 	set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g3 -DETH_DEBUG")
 	set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
