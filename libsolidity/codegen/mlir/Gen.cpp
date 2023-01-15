@@ -19,6 +19,7 @@
 #include <libsolidity/codegen/mlir/Gen.h>
 
 #include "Solidity/SolidityOps.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace solidity::frontend;
 
@@ -34,8 +35,13 @@ void MLIRGen::run(FunctionDefinition const& _function) { run(_function.body()); 
 
 void MLIRGen::run(ContractDefinition const& _contract)
 {
+	m_mod = mlir::ModuleOp::create(m_b.getUnknownLoc());
+	m_b.setInsertionPointToEnd(m_mod.getBody());
+	m_b.create<mlir::solidity::ContractOp>(m_b.getUnknownLoc(), _contract.name());
+
 	for (auto* f: _contract.definedFunctions())
 	{
 		run(*f);
 	}
+	llvm::errs() << m_mod << "\n\n\n";
 }

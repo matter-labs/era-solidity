@@ -24,6 +24,7 @@
 #include <libsolidity/ast/ASTVisitor.h>
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 
 namespace solidity::frontend
 {
@@ -37,6 +38,7 @@ public:
 
 private:
 	mlir::OpBuilder m_b;
+	mlir::ModuleOp m_mod;
 
 	void run(FunctionDefinition const& _function);
 	void run(Block const& _block);

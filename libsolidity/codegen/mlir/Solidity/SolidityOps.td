@@ -22,9 +22,8 @@
 #ifndef MLIR_SOLIDITY_SOLIDITYOPS_TD
 #define MLIR_SOLIDITY_SOLIDITYOPS_TD
 
-include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 def Solidity_Dialect : Dialect {
     let name = "solidity";
@@ -40,27 +39,17 @@ def Solidity_Dialect : Dialect {
 class Solidity_Op<string mnemonic, list<Trait> traits = []> :
         Op<Solidity_Dialect, mnemonic, traits>;
 
-
-def Solidity_FooOp : Solidity_Op<"foo", [NoSideEffect,
-                                             SameOperandsAndResultType]> {
-    let summary = "Foo operation";
+def Solidity_ContractOp : Solidity_Op<"contract", [Symbol]> {
+    let summary = "An operation that represents a contract";
     let description = [{
-        This operation takes an integer argument and returns an integer.
-
-        Example:
-
-        ```mlir
-        %0 = arith.constant 2 : i32
-        %1 = solidity.foo %0 : i32
-        ```
+		Example:
+		"solidity.contract"() ({
+			...
+		}) {sym_name = "C"} : () -> ()
     }];
 
-    let arguments = (ins I32:$input);
-    let results = (outs I32:$res);
-
-    let assemblyFormat = [{
-        $input attr-dict `:` type($input)
-    }];
+	let arguments = (ins SymbolNameAttr:$sym_name);
+	let regions = (region AnyRegion:$body);
 }
 
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD
