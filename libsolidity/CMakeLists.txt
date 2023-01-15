@@ -187,6 +187,8 @@ set(sources
 set(mlir_sources
 	codegen/mlir/Gen.cpp
 	codegen/mlir/Gen.h
+	codegen/mlir/Run.cpp
+	codegen/mlir/Run.h
 )
 
 set(mlir_solidity_dialect_sources

@@ -15,35 +15,20 @@
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 // SPDX-License-Identifier: GPL-3.0
-/**
- * MLIR generator
- */
 
-#pragma once
+#include <libsolidity/ast/AST.h>
+#include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/Run.h>
 
-#include <libsolidity/ast/ASTVisitor.h>
+#include "Solidity/SolidityOps.h"
+#include "mlir/IR/MLIRContext.h"
 
-#include "mlir/IR/Builders.h"
+using namespace solidity::frontend;
 
-namespace solidity::frontend
+void solidity::frontend::runMLIRGen(ContractDefinition const& _contract)
 {
-
-class MLIRGen: public ASTConstVisitor
-{
-public:
-	explicit MLIRGen(mlir::MLIRContext& _ctx): m_b(&_ctx) {}
-
-	void run(ContractDefinition const& _contract);
-
-private:
-	mlir::OpBuilder m_b;
-
-	void run(FunctionDefinition const& _function);
-	void run(Block const& _block);
-
-	bool visit(Block const& _block) override;
-	bool visit(Assignment const& _assignment) override;
-	bool visit(BinaryOperation const& _binOp) override;
-};
-
+	mlir::MLIRContext ctx;
+	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
+	MLIRGen gen(ctx);
+	gen.run(_contract);
 }

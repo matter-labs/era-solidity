@@ -16,8 +16,9 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
-#include "Solidity/SolidityOps.h"
 #include <libsolidity/codegen/mlir/Gen.h>
+
+#include "Solidity/SolidityOps.h"
 
 using namespace solidity::frontend;
 

@@ -58,7 +58,7 @@
 
 #include <libsolidity/codegen/ir/Common.h>
 #include <libsolidity/codegen/ir/IRGenerator.h>
-#include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/Run.h>
 
 #include <libyul/YulString.h>
 #include <libyul/AsmPrinter.h>
@@ -1386,8 +1386,7 @@ void CompilerStack::generateIR(ContractDefinition const& _contract)
 
 	if (0)
 	{
-		MLIRGen gen;
-		gen.run(_contract);
+		runMLIRGen(_contract);
 	}
 
 	IRGenerator generator(
