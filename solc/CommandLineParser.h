@@ -78,6 +78,7 @@ struct CompilerOutputs
 			{"abi", &CompilerOutputs::abi},
 			{"ir", &CompilerOutputs::ir},
 			{"ir-optimized", &CompilerOutputs::irOptimized},
+			{"mlir", &CompilerOutputs::mlir},
 			{"ewasm", &CompilerOutputs::ewasm},
 			{"ewasm-ir", &CompilerOutputs::ewasmIR},
 			{"hashes", &CompilerOutputs::signatureHashes},
@@ -97,6 +98,7 @@ struct CompilerOutputs
 	bool binaryRuntime = false;
 	bool abi = false;
 	bool ir = false;
+	bool mlir = false;
 	bool irOptimized = false;
 	bool ewasm = false;
 	bool ewasmIR = false;

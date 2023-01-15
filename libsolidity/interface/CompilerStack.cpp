@@ -1384,7 +1384,7 @@ void CompilerStack::generateIR(ContractDefinition const& _contract)
 	for (auto const& pair: m_contracts)
 		otherYulSources.emplace(pair.second.contract, pair.second.yulIR);
 
-	if (0)
+	if (m_generateMLIR)
 	{
 		runMLIRGen(_contract);
 	}

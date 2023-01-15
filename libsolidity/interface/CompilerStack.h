@@ -203,6 +203,8 @@ public:
 	/// Enable generation of Yul IR code.
 	void enableIRGeneration(bool _enable = true) { m_generateIR = _enable; }
 
+	void enableMLIRGeneration(bool _enable = true) { m_generateMLIR = _enable; }
+
 	/// Enable experimental generation of Ewasm code. If enabled, IR is also generated.
 	void enableEwasmGeneration(bool _enable = true) { m_generateEwasm = _enable; }
 
@@ -507,6 +509,7 @@ private:
 	std::map<std::string, std::set<std::string>> m_requestedContractNames;
 	bool m_generateEvmBytecode = true;
 	bool m_generateIR = false;
+	bool m_generateMLIR = false;
 	bool m_generateEwasm = false;
 	std::map<std::string, util::h160> m_libraries;
 	ImportRemapper m_importRemapper;
