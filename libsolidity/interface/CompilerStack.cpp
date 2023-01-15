@@ -58,7 +58,7 @@
 
 #include <libsolidity/codegen/ir/Common.h>
 #include <libsolidity/codegen/ir/IRGenerator.h>
-#include <libsolidity/codegen/mlir/Run.h>
+#include <libsolidity/codegen/mlir/Gen.h>
 
 #include <libyul/YulString.h>
 #include <libyul/AsmPrinter.h>

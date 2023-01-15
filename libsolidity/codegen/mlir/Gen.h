@@ -21,31 +21,9 @@
 
 #pragma once
 
-#include <libsolidity/ast/ASTVisitor.h>
-
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-
 namespace solidity::frontend
 {
 
-class MLIRGen: public ASTConstVisitor
-{
-public:
-	explicit MLIRGen(mlir::MLIRContext& _ctx): m_b(&_ctx) {}
-
-	void run(ContractDefinition const& _contract);
-
-private:
-	mlir::OpBuilder m_b;
-	mlir::ModuleOp m_mod;
-
-	void run(FunctionDefinition const& _function);
-	void run(Block const& _block);
-
-	bool visit(Block const& _block) override;
-	bool visit(Assignment const& _assignment) override;
-	bool visit(BinaryOperation const& _binOp) override;
-};
-
+class ContractDefinition;
+extern void runMLIRGen(ContractDefinition const& _contract);
 }
