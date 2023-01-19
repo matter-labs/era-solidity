@@ -43,13 +43,14 @@ def Solidity_ContractOp : Solidity_Op<"contract", [Symbol]> {
     let summary = "An operation that represents a contract";
     let description = [{
 		Example:
-		"solidity.contract"() ({
+		solidity.contract @C {
 			...
-		}) {sym_name = "C"} : () -> ()
+		}
     }];
 
 	let arguments = (ins SymbolNameAttr:$sym_name);
 	let regions = (region AnyRegion:$body);
+	let assemblyFormat = "$sym_name $body attr-dict";
 }
 
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD
