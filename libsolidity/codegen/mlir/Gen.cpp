@@ -16,15 +16,24 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
+#include <libsolidity/codegen/mlir/Gen.h>
+
+#include <liblangutil/CharStream.h>
+#include <liblangutil/SourceLocation.h>
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTVisitor.h>
-#include <libsolidity/codegen/mlir/Gen.h>
 
 #include "Solidity/SolidityOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
 #include "llvm/Support/raw_ostream.h"
+
+using namespace solidity::langutil;
+using namespace solidity::frontend;
 
 namespace solidity::frontend
 {
@@ -32,7 +41,10 @@ namespace solidity::frontend
 class MLIRGen: public ASTConstVisitor
 {
 public:
-	explicit MLIRGen(mlir::MLIRContext& _ctx): m_b(&_ctx) { mod = mlir::ModuleOp::create(m_b.getUnknownLoc()); }
+	explicit MLIRGen(mlir::MLIRContext& _ctx, CharStream const& _stream): m_b(&_ctx), m_stream(_stream)
+	{
+		mod = mlir::ModuleOp::create(m_b.getUnknownLoc());
+	}
 
 	void run(ContractDefinition const& _contract);
 
@@ -40,6 +52,13 @@ public:
 
 private:
 	mlir::OpBuilder m_b;
+	CharStream const& m_stream;
+
+	mlir::Location loc(int _loc)
+	{
+		LineColumn lineCol = m_stream.translatePositionToLineColumn(_loc);
+		return mlir::FileLineColLoc::get(m_b.getStringAttr(m_stream.name()), lineCol.line, lineCol.column);
+	}
 
 	void run(FunctionDefinition const& _function);
 	void run(Block const& _block);
@@ -50,8 +69,6 @@ private:
 };
 
 }
-
-using namespace solidity::frontend;
 
 bool MLIRGen::visit(BinaryOperation const& _binOp) { return true; }
 
@@ -66,7 +83,7 @@ void MLIRGen::run(FunctionDefinition const& _function) { run(_function.body()); 
 void MLIRGen::run(ContractDefinition const& _contract)
 {
 	m_b.setInsertionPointToEnd(mod.getBody());
-	m_b.create<mlir::solidity::ContractOp>(m_b.getUnknownLoc(), _contract.name());
+	m_b.create<mlir::solidity::ContractOp>(loc(_contract.location().start), _contract.name());
 
 	for (auto* f: _contract.definedFunctions())
 	{
@@ -74,16 +91,16 @@ void MLIRGen::run(ContractDefinition const& _contract)
 	}
 }
 
-void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts)
+void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, CharStream const& _stream)
 {
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
 
-	MLIRGen gen(ctx);
+	MLIRGen gen(ctx, _stream);
 	for (auto* contract: _contracts)
 	{
 		gen.run(*contract);
 	}
 
-	llvm::errs() << gen.mod << "\n\n\n";
+	gen.mod.print(llvm::errs(), mlir::OpPrintingFlags().enableDebugInfo());
 }

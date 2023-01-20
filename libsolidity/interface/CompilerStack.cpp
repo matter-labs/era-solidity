@@ -677,12 +677,14 @@ bool CompilerStack::compile(State _stopAfter)
 	{
 		vector<ContractDefinition const*> contracts;
 		for (Source const* source: m_sourceOrder)
+		{
+			contracts.clear();
 			for (ASTPointer<ASTNode> const& node: source->ast->nodes())
 				if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
 					if (isRequestedContract(*contract))
 						contracts.push_back(contract);
-
-		runMLIRGen(contracts);
+			runMLIRGen(contracts, *source->charStream);
+		}
 	}
 
 	for (Source const* source: m_sourceOrder)
