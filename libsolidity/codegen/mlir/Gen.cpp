@@ -32,13 +32,14 @@ namespace solidity::frontend
 class MLIRGen: public ASTConstVisitor
 {
 public:
-	explicit MLIRGen(mlir::MLIRContext& _ctx): m_b(&_ctx) {}
+	explicit MLIRGen(mlir::MLIRContext& _ctx): m_b(&_ctx) { mod = mlir::ModuleOp::create(m_b.getUnknownLoc()); }
 
 	void run(ContractDefinition const& _contract);
 
+	mlir::ModuleOp mod;
+
 private:
 	mlir::OpBuilder m_b;
-	mlir::ModuleOp m_mod;
 
 	void run(FunctionDefinition const& _function);
 	void run(Block const& _block);
@@ -64,21 +65,25 @@ void MLIRGen::run(FunctionDefinition const& _function) { run(_function.body()); 
 
 void MLIRGen::run(ContractDefinition const& _contract)
 {
-	m_mod = mlir::ModuleOp::create(m_b.getUnknownLoc());
-	m_b.setInsertionPointToEnd(m_mod.getBody());
+	m_b.setInsertionPointToEnd(mod.getBody());
 	m_b.create<mlir::solidity::ContractOp>(m_b.getUnknownLoc(), _contract.name());
 
 	for (auto* f: _contract.definedFunctions())
 	{
 		run(*f);
 	}
-	llvm::errs() << m_mod << "\n\n\n";
 }
 
-void solidity::frontend::runMLIRGen(ContractDefinition const& _contract)
+void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts)
 {
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
+
 	MLIRGen gen(ctx);
-	gen.run(_contract);
+	for (auto* contract: _contracts)
+	{
+		gen.run(*contract);
+	}
+
+	llvm::errs() << gen.mod << "\n\n\n";
 }

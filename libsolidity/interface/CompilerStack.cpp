@@ -673,6 +673,18 @@ bool CompilerStack::compile(State _stopAfter)
 	// Only compile contracts individually which have been requested.
 	map<ContractDefinition const*, shared_ptr<Compiler const>> otherCompilers;
 
+	if (m_generateMLIR)
+	{
+		vector<ContractDefinition const*> contracts;
+		for (Source const* source: m_sourceOrder)
+			for (ASTPointer<ASTNode> const& node: source->ast->nodes())
+				if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
+					if (isRequestedContract(*contract))
+						contracts.push_back(contract);
+
+		runMLIRGen(contracts);
+	}
+
 	for (Source const* source: m_sourceOrder)
 		for (ASTPointer<ASTNode> const& node: source->ast->nodes())
 			if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
@@ -1383,11 +1395,6 @@ void CompilerStack::generateIR(ContractDefinition const& _contract)
 	map<ContractDefinition const*, string_view const> otherYulSources;
 	for (auto const& pair: m_contracts)
 		otherYulSources.emplace(pair.second.contract, pair.second.yulIR);
-
-	if (m_generateMLIR)
-	{
-		runMLIRGen(_contract);
-	}
 
 	IRGenerator generator(
 		m_evmVersion,

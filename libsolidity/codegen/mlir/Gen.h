@@ -21,9 +21,10 @@
 
 #pragma once
 
+#include <vector>
+
 namespace solidity::frontend
 {
-
 class ContractDefinition;
-extern void runMLIRGen(ContractDefinition const& _contract);
+extern void runMLIRGen(std::vector<ContractDefinition const*> const& _contracts);
 }
