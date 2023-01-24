@@ -24,6 +24,7 @@
 #include <libsolidity/ast/ASTVisitor.h>
 
 #include "Solidity/SolidityOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -60,6 +61,15 @@ private:
 		return mlir::FileLineColLoc::get(m_b.getStringAttr(m_stream.name()), lineCol.line, lineCol.column);
 	}
 
+	mlir::Type type(Type const* ty)
+	{
+		if (auto* i = dynamic_cast<IntegerType const*>(ty))
+		{
+			return m_b.getIntegerType(i->numBits());
+		}
+		solUnimplemented("Unhandled type\n");
+	}
+
 	void run(FunctionDefinition const& _function);
 	void run(Block const& _block);
 
@@ -78,12 +88,30 @@ bool MLIRGen::visit(Assignment const& _assignment) { return true; }
 
 void MLIRGen::run(Block const& _block) { _block.accept(*this); }
 
-void MLIRGen::run(FunctionDefinition const& _function) { run(_function.body()); }
+void MLIRGen::run(FunctionDefinition const& _function)
+{
+	std::vector<mlir::Type> inpTys, outTys;
+
+	for (auto const& param: _function.parameters())
+	{
+		inpTys.push_back(type(param->annotation().type));
+	}
+	for (auto const& param: _function.returnParameters())
+	{
+		outTys.push_back(type(param->annotation().type));
+	}
+
+	auto funcType = m_b.getFunctionType(inpTys, outTys);
+	m_b.create<mlir::func::FuncOp>(loc(_function.location().start), _function.name(), funcType);
+	run(_function.body());
+}
 
 void MLIRGen::run(ContractDefinition const& _contract)
 {
 	m_b.setInsertionPointToEnd(mod.getBody());
-	m_b.create<mlir::solidity::ContractOp>(loc(_contract.location().start), _contract.name());
+	auto cont = m_b.create<mlir::solidity::ContractOp>(loc(_contract.location().start), _contract.name());
+	auto blk = m_b.createBlock(&cont.getBody());
+	m_b.setInsertionPointToStart(blk);
 
 	for (auto* f: _contract.definedFunctions())
 	{
@@ -95,6 +123,7 @@ void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 {
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
+	ctx.getOrLoadDialect<mlir::func::FuncDialect>();
 
 	MLIRGen gen(ctx, _stream);
 	for (auto* contract: _contracts)
