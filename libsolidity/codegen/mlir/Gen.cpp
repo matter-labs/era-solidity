@@ -110,8 +110,7 @@ void MLIRGen::run(ContractDefinition const& _contract)
 {
 	m_b.setInsertionPointToEnd(mod.getBody());
 	auto cont = m_b.create<mlir::solidity::ContractOp>(loc(_contract.location().start), _contract.name());
-	auto blk = m_b.createBlock(&cont.getBody());
-	m_b.setInsertionPointToStart(blk);
+	m_b.setInsertionPointToStart(cont.getBody());
 
 	for (auto* f: _contract.definedFunctions())
 	{

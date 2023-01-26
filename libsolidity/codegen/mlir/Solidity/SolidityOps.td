@@ -39,7 +39,7 @@ def Solidity_Dialect : Dialect {
 class Solidity_Op<string mnemonic, list<Trait> traits = []> :
         Op<Solidity_Dialect, mnemonic, traits>;
 
-def Solidity_ContractOp : Solidity_Op<"contract", [Symbol]> {
+def Solidity_ContractOp : Solidity_Op<"contract", [Symbol, SingleBlock]> {
     let summary = "An operation that represents a contract";
     let description = [{
 		Example:
@@ -49,8 +49,11 @@ def Solidity_ContractOp : Solidity_Op<"contract", [Symbol]> {
     }];
 
 	let arguments = (ins SymbolNameAttr:$sym_name);
-	let regions = (region AnyRegion:$body);
-	let assemblyFormat = "$sym_name $body attr-dict";
+	let regions = (region SizedRegion<1>:$bodyRegion);
+	let assemblyFormat = "$sym_name $bodyRegion attr-dict";
+
+	let skipDefaultBuilders = 1;
+	let builders = [OpBuilder<(ins CArg<"StringRef", "{}">:$name)>];
 }
 
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD

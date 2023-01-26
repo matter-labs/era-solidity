@@ -19,9 +19,6 @@
 #include "SolidityOps.h"
 #include "mlir/IR/OpImplementation.h"
 
-#define GET_OP_CLASSES
-#include "Solidity/SolidityOps.cpp.inc"
-
 #include "Solidity/SolidityOpsDialect.cpp.inc"
 
 using namespace mlir;
@@ -34,3 +31,13 @@ void SolidityDialect::initialize()
 #include "Solidity/SolidityOps.cpp.inc"
 		>();
 }
+
+void ContractOp::build(OpBuilder& builder, OperationState& state, StringRef name)
+{
+	state.addRegion()->emplaceBlock();
+	state.attributes.push_back(
+		builder.getNamedAttr(mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+}
+
+#define GET_OP_CLASSES
+#include "Solidity/SolidityOps.cpp.inc"
