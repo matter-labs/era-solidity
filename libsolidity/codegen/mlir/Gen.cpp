@@ -45,6 +45,7 @@ public:
 	explicit MLIRGen(mlir::MLIRContext& _ctx, CharStream const& _stream): m_b(&_ctx), m_stream(_stream)
 	{
 		mod = mlir::ModuleOp::create(m_b.getUnknownLoc());
+		m_b.setInsertionPointToEnd(mod.getBody());
 	}
 
 	void run(ContractDefinition const& _contract);
@@ -108,7 +109,6 @@ void MLIRGen::run(FunctionDefinition const& _function)
 
 void MLIRGen::run(ContractDefinition const& _contract)
 {
-	m_b.setInsertionPointToEnd(mod.getBody());
 	auto cont = m_b.create<mlir::solidity::ContractOp>(loc(_contract.location().start), _contract.name());
 	m_b.setInsertionPointToStart(cont.getBody());
 
