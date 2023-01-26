@@ -31,6 +31,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace solidity::langutil;
@@ -131,4 +132,9 @@ void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 	}
 
 	gen.mod.print(llvm::errs(), mlir::OpPrintingFlags().enableDebugInfo());
+
+	if (failed(mlir::verify(gen.mod)))
+	{
+		gen.mod.emitError("Module verification error");
+	}
 }
