@@ -26,23 +26,23 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 def Solidity_Dialect : Dialect {
-    let name = "solidity";
-    let summary = "Solidity dialect";
-    let description = [{
+	let name = "solidity";
+	let summary = "Solidity dialect";
+	let description = [{
 		This dialect has high level ops for representing solidity.
-    }];
-    let cppNamespace = "::mlir::solidity";
+	}];
+	let cppNamespace = "::mlir::solidity";
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+	let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 class Solidity_Op<string mnemonic, list<Trait> traits = []> :
-        Op<Solidity_Dialect, mnemonic, traits>;
+	  Op<Solidity_Dialect, mnemonic, traits>;
 
 def Solidity_ContractOp : Solidity_Op<"contract", [Symbol, SingleBlock,
 									  NoTerminator]> {
-    let summary = "An operation that represents a contract";
-    let description = [{
+	let summary = "An operation that represents a contract";
+	let description = [{
 		Example:
 		solidity.contract @C {
 			...
