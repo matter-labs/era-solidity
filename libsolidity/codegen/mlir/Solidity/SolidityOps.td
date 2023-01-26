@@ -39,7 +39,8 @@ def Solidity_Dialect : Dialect {
 class Solidity_Op<string mnemonic, list<Trait> traits = []> :
         Op<Solidity_Dialect, mnemonic, traits>;
 
-def Solidity_ContractOp : Solidity_Op<"contract", [Symbol, SingleBlock]> {
+def Solidity_ContractOp : Solidity_Op<"contract", [Symbol, SingleBlock,
+									  NoTerminator]> {
     let summary = "An operation that represents a contract";
     let description = [{
 		Example:
