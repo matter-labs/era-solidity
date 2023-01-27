@@ -106,6 +106,7 @@ void MLIRGen::run(FunctionDefinition const& _function)
 	auto funcType = m_b.getFunctionType(inpTys, outTys);
 	auto op = m_b.create<mlir::func::FuncOp>(loc(_function.location().start), _function.name(), funcType);
 
+	solUnimplementedAssert(inpTys.empty(), "TODO: Add inp args to entry block");
 	mlir::Block* entryBlk = m_b.createBlock(&op.getRegion());
 	m_b.setInsertionPointToStart(entryBlk);
 
