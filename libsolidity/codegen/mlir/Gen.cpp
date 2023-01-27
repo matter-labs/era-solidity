@@ -123,16 +123,16 @@ void MLIRGen::run(FunctionDefinition const& _function)
 	}
 }
 
-void MLIRGen::run(ContractDefinition const& _contract)
+void MLIRGen::run(ContractDefinition const& _cont)
 {
-	auto cont = m_b.create<mlir::solidity::ContractOp>(loc(_contract.location().start), _contract.name());
-	m_b.setInsertionPointToStart(cont.getBody());
+	auto op = m_b.create<mlir::solidity::ContractOp>(loc(_cont.location().start), _cont.name());
+	m_b.setInsertionPointToStart(op.getBody());
 
-	for (auto* f: _contract.definedFunctions())
+	for (auto* f: _cont.definedFunctions())
 	{
 		run(*f);
 	}
-	m_b.setInsertionPointAfter(cont);
+	m_b.setInsertionPointAfter(op);
 }
 
 void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, CharStream const& _stream)
