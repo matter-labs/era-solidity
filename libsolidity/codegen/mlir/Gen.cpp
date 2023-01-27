@@ -49,7 +49,7 @@ public:
 		m_b.setInsertionPointToEnd(mod.getBody());
 	}
 
-	void run(ContractDefinition const& _contract);
+	void run(ContractDefinition const&);
 
 	mlir::ModuleOp mod;
 
@@ -72,49 +72,49 @@ private:
 		solUnimplemented("Unhandled type\n");
 	}
 
-	void run(FunctionDefinition const& _function);
-	void run(Block const& _block);
+	void run(FunctionDefinition const&);
+	void run(Block const&);
 
-	bool visit(Block const& _block) override;
-	bool visit(Assignment const& _assignment) override;
-	bool visit(BinaryOperation const& _binOp) override;
+	bool visit(Block const&) override;
+	bool visit(Assignment const&) override;
+	bool visit(BinaryOperation const&) override;
 };
 
 }
 
 bool MLIRGen::visit(BinaryOperation const& _binOp) { return true; }
 
-bool MLIRGen::visit(Block const& _block) { return true; }
+bool MLIRGen::visit(Block const& _blk) { return true; }
 
-bool MLIRGen::visit(Assignment const& _assignment) { return true; }
+bool MLIRGen::visit(Assignment const& _assgn) { return true; }
 
-void MLIRGen::run(Block const& _block) { _block.accept(*this); }
+void MLIRGen::run(Block const& _blk) { _blk.accept(*this); }
 
-void MLIRGen::run(FunctionDefinition const& _function)
+void MLIRGen::run(FunctionDefinition const& _func)
 {
 	std::vector<mlir::Type> inpTys, outTys;
 
-	for (auto const& param: _function.parameters())
+	for (auto const& param: _func.parameters())
 	{
 		inpTys.push_back(type(param->annotation().type));
 	}
-	for (auto const& param: _function.returnParameters())
+	for (auto const& param: _func.returnParameters())
 	{
 		outTys.push_back(type(param->annotation().type));
 	}
 
 	auto funcType = m_b.getFunctionType(inpTys, outTys);
-	auto op = m_b.create<mlir::func::FuncOp>(loc(_function.location().start), _function.name(), funcType);
+	auto op = m_b.create<mlir::func::FuncOp>(loc(_func.location().start), _func.name(), funcType);
 
 	solUnimplementedAssert(inpTys.empty(), "TODO: Add inp args to entry block");
 	mlir::Block* entryBlk = m_b.createBlock(&op.getRegion());
 	m_b.setInsertionPointToStart(entryBlk);
 
-	run(_function.body());
+	run(_func.body());
 
 	if (outTys.empty())
 	{
-		m_b.create<mlir::func::ReturnOp>(loc(_function.location().end));
+		m_b.create<mlir::func::ReturnOp>(loc(_func.location().end));
 		m_b.setInsertionPointAfter(op);
 	}
 	else
