@@ -104,8 +104,22 @@ void MLIRGen::run(FunctionDefinition const& _function)
 	}
 
 	auto funcType = m_b.getFunctionType(inpTys, outTys);
-	m_b.create<mlir::func::FuncOp>(loc(_function.location().start), _function.name(), funcType);
+	auto op = m_b.create<mlir::func::FuncOp>(loc(_function.location().start), _function.name(), funcType);
+
+	mlir::Block* entryBlk = m_b.createBlock(&op.getRegion());
+	m_b.setInsertionPointToStart(entryBlk);
+
 	run(_function.body());
+
+	if (outTys.empty())
+	{
+		m_b.create<mlir::func::ReturnOp>(loc(_function.location().end));
+		m_b.setInsertionPointAfter(op);
+	}
+	else
+	{
+		solUnimplemented("TODO: Return codegen\n");
+	}
 }
 
 void MLIRGen::run(ContractDefinition const& _contract)
