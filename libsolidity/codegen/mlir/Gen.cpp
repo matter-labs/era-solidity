@@ -132,6 +132,7 @@ void MLIRGen::run(ContractDefinition const& _contract)
 	{
 		run(*f);
 	}
+	m_b.setInsertionPointAfter(cont);
 }
 
 void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, CharStream const& _stream)
