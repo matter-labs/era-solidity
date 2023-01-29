@@ -24,6 +24,7 @@
 #include <libsolidity/ast/ASTVisitor.h>
 
 #include "Solidity/SolidityOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -63,28 +64,147 @@ private:
 		return mlir::FileLineColLoc::get(m_b.getStringAttr(m_stream.name()), lineCol.line, lineCol.column);
 	}
 
-	mlir::Type type(Type const* ty)
-	{
-		if (auto* i = dynamic_cast<IntegerType const*>(ty))
-		{
-			return m_b.getIntegerType(i->numBits());
-		}
-		solUnimplemented("Unhandled type\n");
-	}
+	// Returns the corresponding mlir type for the solidity type `_ty`
+	mlir::Type type(Type const* _ty);
+
+	// Returns the cast from `_val` to a value having type `_dstTy`
+	mlir::Value genCast(mlir::Value _val, mlir::Type _dstTy);
+
+	// Returns the mlir expression for the literal `_lit`
+	mlir::Value genExpr(Literal const* _lit);
+
+	// Returns the mlir expression from `_expr` and optionally casts it to `_resTy`
+	mlir::Value genExpr(Expression const* _expr, std::optional<mlir::Type const> _resTy = std::nullopt);
 
 	void run(FunctionDefinition const&);
 	void run(Block const&);
 
 	bool visit(Block const&) override;
+	bool visit(Return const&) override;
 	bool visit(Assignment const&) override;
 	bool visit(BinaryOperation const&) override;
 };
 
 }
 
+mlir::Type MLIRGen::type(Type const* _ty)
+{
+	// Integer type
+	if (auto* i = dynamic_cast<IntegerType const*>(_ty))
+	{
+		return m_b.getIntegerType(i->numBits());
+	}
+	// Rational number type
+	else if (auto* ratNumTy = dynamic_cast<RationalNumberType const*>(_ty))
+	{
+		// TODO:
+		if (ratNumTy->isFractional())
+			solUnimplemented("Unhandled type\n");
+
+		// Integral rational number type
+		const IntegerType* intTy = ratNumTy->integerType();
+		return m_b.getIntegerType(intTy->numBits());
+	}
+	// TODO:
+	solUnimplemented("Unhandled type\n");
+}
+
+mlir::Value MLIRGen::genCast(mlir::Value _val, mlir::Type _dstTy)
+{
+	mlir::Type srcTy = _val.getType();
+
+	// Don't cast if we're casting to the same type
+	if (srcTy == _dstTy)
+		return _val;
+
+	// Casting between integers
+	auto srcIntTy = srcTy.dyn_cast<mlir::IntegerType>();
+	auto dstIntTy = _dstTy.dyn_cast<mlir::IntegerType>();
+	if (srcIntTy && dstIntTy)
+	{
+		// Generate extends
+		if (dstIntTy.getWidth() > srcIntTy.getWidth())
+		{
+			return dstIntTy.isSigned() ? m_b.create<mlir::arith::ExtSIOp>(_val.getLoc(), dstIntTy, _val)->getResult(0)
+									   : m_b.create<mlir::arith::ExtUIOp>(_val.getLoc(), dstIntTy, _val)->getResult(0);
+		}
+		else
+		{
+			// TODO:
+			solUnimplemented("Unhandled cast\n");
+		}
+	}
+
+	// TODO:
+	solUnimplemented("Unhandled cast\n");
+}
+
+mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<mlir::Type const> _resTy)
+{
+	mlir::Value val;
+
+	// Generate literals
+	if (auto* lit = dynamic_cast<Literal const*>(_expr))
+	{
+		val = genExpr(lit);
+	}
+
+	// Generate cast (Optional)
+	if (_resTy)
+	{
+		return genCast(val, *_resTy);
+	}
+
+	return val;
+}
+
+mlir::Value MLIRGen::genExpr(Literal const* _lit)
+{
+	mlir::Location lc = loc(_lit->location().start);
+	Type const* ty = _lit->annotation().type;
+
+	// Rational number literal
+	if (auto* ratNumTy = dynamic_cast<RationalNumberType const*>(ty))
+	{
+		// TODO:
+		if (ratNumTy->isFractional())
+			solUnimplemented("Unhandled literal\n");
+
+		auto* intTy = ratNumTy->integerType();
+		u256 val = ty->literalValue(_lit);
+		// TODO: Is there a faster way to convert boost::multiprecision::number to llvm::APInt?
+		return m_b.create<
+			mlir::arith::
+				ConstantOp>(lc, m_b.getIntegerAttr(type(ty), llvm::APInt(intTy->numBits(), val.str(), /*radix=*/10)));
+	}
+	else
+	{
+		// TODO:
+		solUnimplemented("Unhandled literal\n");
+	}
+}
+
 bool MLIRGen::visit(BinaryOperation const& _binOp) { return true; }
 
 bool MLIRGen::visit(Block const& _blk) { return true; }
+
+bool MLIRGen::visit(Return const& _ret)
+{
+	auto currFunc = m_b.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
+
+	// The function generator emits `ReturnOp` for empty result
+	if (currFunc.getNumResults() == 0)
+		return true;
+
+	// Get the return type of the current function so that we can apply any
+	// necessary cast operations
+	mlir::Type currFuncResTy = currFunc.getFunctionType().getResult(0);
+	mlir::Value expr = genExpr(_ret.expression(), currFuncResTy);
+
+	m_b.create<mlir::func::ReturnOp>(loc(_ret.location().start), expr);
+
+	return true;
+}
 
 bool MLIRGen::visit(Assignment const& _assgn) { return true; }
 
@@ -98,10 +218,14 @@ void MLIRGen::run(FunctionDefinition const& _func)
 	{
 		inpTys.push_back(type(param->annotation().type));
 	}
+
 	for (auto const& param: _func.returnParameters())
 	{
 		outTys.push_back(type(param->annotation().type));
 	}
+
+	// TODO:
+	solUnimplementedAssert(outTys.size() <= 1, "TODO: Impl multivalued return");
 
 	auto funcType = m_b.getFunctionType(inpTys, outTys);
 	auto op = m_b.create<mlir::func::FuncOp>(loc(_func.location().start), _func.name(), funcType);
@@ -112,15 +236,11 @@ void MLIRGen::run(FunctionDefinition const& _func)
 
 	run(_func.body());
 
+	// Generate empty return
 	if (outTys.empty())
-	{
 		m_b.create<mlir::func::ReturnOp>(loc(_func.location().end));
-		m_b.setInsertionPointAfter(op);
-	}
-	else
-	{
-		solUnimplemented("TODO: Return codegen\n");
-	}
+
+	m_b.setInsertionPointAfter(op);
 }
 
 void MLIRGen::run(ContractDefinition const& _cont)
@@ -140,6 +260,7 @@ void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
 	ctx.getOrLoadDialect<mlir::func::FuncDialect>();
+	ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
 
 	MLIRGen gen(ctx, _stream);
 	for (auto* contract: _contracts)
