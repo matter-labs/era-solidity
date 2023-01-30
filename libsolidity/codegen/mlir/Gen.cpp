@@ -78,13 +78,8 @@ private:
 	// Returns the mlir expression from `_expr` and optionally casts it to `_resTy`
 	mlir::Value genExpr(Expression const* _expr, std::optional<mlir::Type const> _resTy = std::nullopt);
 
-	void run(FunctionDefinition const&);
-	void run(Block const&);
-
-	bool visit(Block const&) override;
 	bool visit(Return const&) override;
-	bool visit(Assignment const&) override;
-	bool visit(BinaryOperation const&) override;
+	void run(FunctionDefinition const&);
 };
 
 }
@@ -186,10 +181,6 @@ mlir::Value MLIRGen::genExpr(Literal const* _lit)
 	}
 }
 
-bool MLIRGen::visit(BinaryOperation const& _binOp) { return true; }
-
-bool MLIRGen::visit(Block const& _blk) { return true; }
-
 bool MLIRGen::visit(Return const& _ret)
 {
 	auto currFunc = m_b.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
@@ -207,10 +198,6 @@ bool MLIRGen::visit(Return const& _ret)
 
 	return true;
 }
-
-bool MLIRGen::visit(Assignment const& _assgn) { return true; }
-
-void MLIRGen::run(Block const& _blk) { _blk.accept(*this); }
 
 void MLIRGen::run(FunctionDefinition const& _func)
 {
@@ -236,7 +223,7 @@ void MLIRGen::run(FunctionDefinition const& _func)
 	mlir::Block* entryBlk = m_b.createBlock(&op.getRegion());
 	m_b.setInsertionPointToStart(entryBlk);
 
-	run(_func.body());
+	_func.accept(*this);
 
 	// Generate empty return
 	if (outTys.empty())
