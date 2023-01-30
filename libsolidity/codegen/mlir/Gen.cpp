@@ -58,9 +58,11 @@ private:
 	mlir::OpBuilder m_b;
 	CharStream const& m_stream;
 
-	mlir::Location loc(int _loc)
+	// Returns the mlir location for the solidity source location `_loc`
+	mlir::Location loc(SourceLocation _loc)
 	{
-		LineColumn lineCol = m_stream.translatePositionToLineColumn(_loc);
+		// FIXME: Track _loc.end as well
+		LineColumn lineCol = m_stream.translatePositionToLineColumn(_loc.start);
 		return mlir::FileLineColLoc::get(m_b.getStringAttr(m_stream.name()), lineCol.line, lineCol.column);
 	}
 
@@ -160,7 +162,7 @@ mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<mlir::Type c
 
 mlir::Value MLIRGen::genExpr(Literal const* _lit)
 {
-	mlir::Location lc = loc(_lit->location().start);
+	mlir::Location lc = loc(_lit->location());
 	Type const* ty = _lit->annotation().type;
 
 	// Rational number literal
@@ -201,7 +203,7 @@ bool MLIRGen::visit(Return const& _ret)
 	mlir::Type currFuncResTy = currFunc.getFunctionType().getResult(0);
 	mlir::Value expr = genExpr(_ret.expression(), currFuncResTy);
 
-	m_b.create<mlir::func::ReturnOp>(loc(_ret.location().start), expr);
+	m_b.create<mlir::func::ReturnOp>(loc(_ret.location()), expr);
 
 	return true;
 }
@@ -228,7 +230,7 @@ void MLIRGen::run(FunctionDefinition const& _func)
 	solUnimplementedAssert(outTys.size() <= 1, "TODO: Impl multivalued return");
 
 	auto funcType = m_b.getFunctionType(inpTys, outTys);
-	auto op = m_b.create<mlir::func::FuncOp>(loc(_func.location().start), _func.name(), funcType);
+	auto op = m_b.create<mlir::func::FuncOp>(loc(_func.location()), _func.name(), funcType);
 
 	solUnimplementedAssert(inpTys.empty(), "TODO: Add inp args to entry block");
 	mlir::Block* entryBlk = m_b.createBlock(&op.getRegion());
@@ -238,14 +240,14 @@ void MLIRGen::run(FunctionDefinition const& _func)
 
 	// Generate empty return
 	if (outTys.empty())
-		m_b.create<mlir::func::ReturnOp>(loc(_func.location().end));
+		m_b.create<mlir::func::ReturnOp>(loc(_func.location()));
 
 	m_b.setInsertionPointAfter(op);
 }
 
 void MLIRGen::run(ContractDefinition const& _cont)
 {
-	auto op = m_b.create<mlir::solidity::ContractOp>(loc(_cont.location().start), _cont.name());
+	auto op = m_b.create<mlir::solidity::ContractOp>(loc(_cont.location()), _cont.name());
 	m_b.setInsertionPointToStart(op.getBody());
 
 	for (auto* f: _cont.definedFunctions())
