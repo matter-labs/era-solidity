@@ -2281,6 +2281,22 @@ void IRGeneratorForStatements::endVisit(IndexAccess const& _indexAccess)
 					define(_indexAccess) << indexAccessFunctionCall << "\n";
 				break;
 			}
+			case DataLocation::Stack:
+			{
+				string const stkAddr =
+					m_utils.memoryArrayIndexAccessFunction(arrayType) +
+					"(" +
+					IRVariable(_indexAccess.baseExpression()).part("mpos").name() +
+					", " +
+					expressionAsType(*_indexAccess.indexExpression(), *TypeProvider::uint256()) +
+					")";
+
+				setLValue(_indexAccess, IRLValue{
+					*arrayType.baseType(),
+					IRLValue::Memory{stkAddr, arrayType.isByteArrayOrString(), /*inStack=*/true}
+				});
+				break;
+			}
 		}
 	}
 	else if (baseType.category() == Type::Category::FixedBytes)
@@ -2999,18 +3015,30 @@ void IRGeneratorForStatements::writeToLValue(IRLValue const& _lvalue, IRVariable
 					IRVariable prepared(m_context.newYulVariable(), _lvalue.type);
 					define(prepared, _value);
 
-					if (_memory.byteArrayElement)
+					if (_memory.inStack)
 					{
-						solAssert(_lvalue.type == *TypeProvider::byte());
-						appendCode() << "mstore8(" + _memory.address + ", byte(0, " + prepared.commaSeparatedList() + "))\n";
-					}
-					else
-						appendCode() << m_utils.writeToMemoryFunction(_lvalue.type) <<
+						appendCode() << m_utils.writeToStackFunction(_lvalue.type) <<
 							"(" <<
 							_memory.address <<
 							", " <<
 							prepared.commaSeparatedList() <<
 							")\n";
+					}
+					else
+					{
+						if (_memory.byteArrayElement)
+						{
+							solAssert(_lvalue.type == *TypeProvider::byte());
+							appendCode() << "mstore8(" + _memory.address + ", byte(0, " + prepared.commaSeparatedList() + "))\n";
+						}
+						else
+							appendCode() << m_utils.writeToMemoryFunction(_lvalue.type) <<
+								"(" <<
+								_memory.address <<
+								", " <<
+								prepared.commaSeparatedList() <<
+								")\n";
+					}
 				}
 				else if (auto const* literalType = dynamic_cast<StringLiteralType const*>(&_value.type()))
 				{
@@ -3086,7 +3114,8 @@ IRVariable IRGeneratorForStatements::readFromLValue(IRLValue const& _lvalue)
 		[&](IRLValue::Memory const& _memory) {
 			if (_lvalue.type.isValueType())
 				define(result) <<
-					m_utils.readFromMemory(_lvalue.type) <<
+					(_memory.inStack ? m_utils.readFromStack(_lvalue.type)
+						: m_utils.readFromMemory(_lvalue.type)) <<
 					"(" <<
 					_memory.address <<
 					")\n";

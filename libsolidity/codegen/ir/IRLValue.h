@@ -59,6 +59,7 @@ struct IRLValue
 	{
 		std::string const address;
 		bool byteArrayElement = false;
+		bool inStack = false;
 	};
 	struct Tuple
 	{

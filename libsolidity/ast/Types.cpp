@@ -1498,6 +1498,7 @@ TypeResult ReferenceType::unaryOperatorResult(Token _operator) const
 	case DataLocation::CallData:
 		return nullptr;
 	case DataLocation::Memory:
+	case DataLocation::Stack:
 		return TypeProvider::emptyTuple();
 	case DataLocation::Storage:
 		return isPointer() ? nullptr : TypeProvider::emptyTuple();
@@ -1528,6 +1529,8 @@ string ReferenceType::stringForReferencePart() const
 		return "calldata";
 	case DataLocation::Memory:
 		return "memory";
+	case DataLocation::Stack:
+		return "stack";
 	}
 	solAssert(false, "");
 	return "";
@@ -1546,6 +1549,9 @@ string ReferenceType::identifierLocationSuffix() const
 		break;
 	case DataLocation::CallData:
 		id += "_calldata";
+		break;
+	case DataLocation::Stack:
+		id += "_stack";
 		break;
 	}
 	if (isPointer())
@@ -1705,6 +1711,10 @@ BoolResult ArrayType::validForLocation(DataLocation _loc) const
 			if (storageSizeUpperBound() >= bigint(1) << 256)
 				return BoolResult::err("Type too large for storage.");
 			break;
+		case DataLocation::Stack:
+			if (m_baseType->isDynamicallySized())
+				return BoolResult::err("Dynamically sized stack data location is not implemented.");
+			break;
 	}
 	return true;
 }
@@ -1781,6 +1791,7 @@ vector<tuple<string, Type const*>> ArrayType::makeStackItems() const
 			else
 				return {std::make_tuple("offset", TypeProvider::uint256())};
 		case DataLocation::Memory:
+		case DataLocation::Stack:
 			return {std::make_tuple("mpos", TypeProvider::uint256())};
 		case DataLocation::Storage:
 			// byte offset inside storage value is omitted
@@ -2522,6 +2533,7 @@ vector<tuple<string, Type const*>> StructType::makeStackItems() const
 		case DataLocation::CallData:
 			return {std::make_tuple("offset", TypeProvider::uint256())};
 		case DataLocation::Memory:
+		case DataLocation::Stack:
 			return {std::make_tuple("mpos", TypeProvider::uint256())};
 		case DataLocation::Storage:
 			return {std::make_tuple("slot", TypeProvider::uint256())};

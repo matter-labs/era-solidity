@@ -126,6 +126,9 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 		if (!baseFeeException(instr.second))
 			reserved.emplace(name);
 	}
+	reserved.emplace("allocstk");
+	reserved.emplace("stkload");
+	reserved.emplace("stkstore");
 	reserved += vector<YulString>{
 		"linkersymbol"_yulstring,
 		"datasize"_yulstring,
@@ -135,6 +138,33 @@ set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 		"loadimmutable"_yulstring,
 	};
 	return reserved;
+}
+
+pair<YulString, BuiltinFunctionForEVM>
+createVerbatimWrapper(const std::string& _name, size_t _params, size_t _returns, bool _sideEffects)
+{
+	SideEffects sideEffects{};
+	if (_sideEffects)
+	{
+		sideEffects
+			= {/*movable=*/false,
+			   /*movableApartFromEffects=*/false,
+			   /*canBeRemoved=*/false,
+			   /*canBeRemovedIfNoMSize=*/false,
+			   /*cannotLoop=*/true,
+			   /*otherState=*/SideEffects::Effect::Write,
+			   /*storage=*/SideEffects::Effect::Write,
+			   /*memory=*/SideEffects::Effect::Write};
+	}
+
+	return createFunction(
+		_name,
+		_params,
+		_returns,
+		sideEffects,
+		{},
+		[=](FunctionCall const&, AbstractAssembly& _assembly, BuiltinContext&)
+		{ _assembly.appendVerbatim(asBytes(_name), _params, _returns); });
 }
 
 map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVersion, bool _objectAccess)
@@ -156,6 +186,10 @@ map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVe
 		)
 			builtins.emplace(createEVMFunction(name, opcode));
 	}
+
+	builtins.emplace(createVerbatimWrapper("allocstk", 1, 1, true));
+	builtins.emplace(createVerbatimWrapper("stkload", 1, 1, false));
+	builtins.emplace(createVerbatimWrapper("stkstore", 2, 0, true));
 
 	if (_objectAccess)
 	{

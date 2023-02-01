@@ -1211,7 +1211,9 @@ string YulUtilFunctions::arrayLengthFunction(ArrayType const& _type)
 						</byteArray>
 					</storage>
 					<?calldata>
+					<?stack>
 						length := len
+					</stack>
 					</calldata>
 				<!dynamic>
 					length := <length>
@@ -1225,6 +1227,7 @@ string YulUtilFunctions::arrayLengthFunction(ArrayType const& _type)
 		w("memory", _type.location() == DataLocation::Memory);
 		w("storage", _type.location() == DataLocation::Storage);
 		w("calldata", _type.location() == DataLocation::CallData);
+		w("stack", _type.location() == DataLocation::Stack);
 		if (_type.location() == DataLocation::Storage)
 		{
 			w("byteArray", _type.isByteArrayOrString());
@@ -2228,8 +2231,10 @@ string YulUtilFunctions::arrayConvertLengthToSize(ArrayType const& _type)
 
 string YulUtilFunctions::arrayAllocationSizeFunction(ArrayType const& _type)
 {
-	solAssert(_type.dataStoredIn(DataLocation::Memory), "");
+	solAssert(_type.dataStoredIn(DataLocation::Memory) || _type.dataStoredIn(DataLocation::Stack), "");
 	string functionName = "array_allocation_size_" + _type.identifier();
+
+	// FIXME: Does this calculation work for stack allocations?
 	return m_functionCollector.createFunction(functionName, [&]() {
 		Whiskers w(R"(
 			function <functionName>(length) -> size {
@@ -2450,6 +2455,8 @@ string YulUtilFunctions::nextArrayElementFunction(ArrayType const& _type)
 		templ("functionName", functionName);
 		switch (_type.location())
 		{
+		// FIXME: Not sure if the <advance> is correct in stack:
+		case DataLocation::Stack:
 		case DataLocation::Memory:
 			templ("advance", "0x20");
 			break;
@@ -2887,6 +2894,32 @@ string YulUtilFunctions::updateStorageValueFunction(
 	});
 }
 
+string YulUtilFunctions::writeToStackFunction(Type const& _type)
+{
+	string const functionName = "write_to_stack_" + _type.identifier();
+
+	return m_functionCollector.createFunction(functionName, [&] {
+		if (_type.isValueType())
+		{
+			return Whiskers(R"(
+				function <functionName>(memPtr, value) {
+					stkstore(memPtr, <cleanup>(value))
+				}
+			)")
+			("functionName", functionName)
+			("cleanup", cleanupFunction(_type))
+			.render();
+		}
+		else
+		{
+			solAssert(
+				false,
+				"Stack store of type " + _type.toString(true) + " not allowed."
+			);
+		}
+	});
+}
+
 string YulUtilFunctions::writeToMemoryFunction(Type const& _type)
 {
 	string const functionName = "write_to_memory_" + _type.identifier();
@@ -3048,6 +3081,20 @@ string YulUtilFunctions::prepareStoreFunction(Type const& _type)
 	});
 }
 
+string YulUtilFunctions::stackAllocationFunction()
+{
+	string functionName = "allocate_stack";
+	return m_functionCollector.createFunction(functionName, [&]() {
+		return Whiskers(R"(
+			function <functionName>(size) -> memPtr {
+				memPtr := allocstk(size)
+			}
+		)")
+		("functionName", functionName)
+		.render();
+	});
+}
+
 string YulUtilFunctions::allocationFunction()
 {
 	string functionName = "allocate_memory";
@@ -3158,7 +3205,7 @@ string YulUtilFunctions::allocateMemoryArrayFunction(ArrayType const& _type)
 				}
 			)")
 			("functionName", functionName)
-			("alloc", allocationFunction())
+			("alloc", _type.location() == DataLocation::Stack ? stackAllocationFunction() : allocationFunction())
 			("allocSize", arrayAllocationSizeFunction(_type))
 			("dynamic", _type.isDynamicallySized())
 			.render();
@@ -4175,7 +4222,7 @@ string YulUtilFunctions::zeroValueFunction(Type const& _type, bool _splitFunctio
 		}
 		else
 		{
-			solAssert(_type.dataStoredIn(DataLocation::Memory), "");
+			solAssert(_type.dataStoredIn(DataLocation::Memory) || _type.dataStoredIn(DataLocation::Stack), "");
 			if (auto const* arrayType = dynamic_cast<ArrayType const*>(&_type))
 			{
 				if (_type.isDynamicallySized())
@@ -4323,6 +4370,24 @@ string YulUtilFunctions::conversionFunctionSpecial(Type const& _from, Type const
 				false,
 				"Invalid conversion from string literal to " + _to.toString() + " requested."
 			);
+	});
+}
+
+string YulUtilFunctions::readFromStack(Type const& _type)
+{
+	string functionName = "read_from_stack_" + _type.identifier();
+	return m_functionCollector.createFunction(functionName, [&] {
+		solUnimplementedAssert(_type.isValueType() && _type.category() != Type::Category::Function,
+				"Reading non-value types and functions from stack is not supported");
+		Whiskers templ(R"(
+			function <functionName>(ptr) -> ret {
+				let value := <cleanup>(stkload(ptr))
+				ret := value
+			}
+		)");
+		templ("functionName", functionName);
+		templ("cleanup", cleanupFunction(_type));
+		return templ.render();
 	});
 }
 

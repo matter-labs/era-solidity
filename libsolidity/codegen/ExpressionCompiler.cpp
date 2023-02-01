@@ -1978,6 +1978,8 @@ bool ExpressionCompiler::visit(MemberAccess const& _memberAccess)
 				case DataLocation::Memory:
 					m_context << Instruction::MLOAD;
 					break;
+				case DataLocation::Stack:
+					solUnimplemented("Stack data location is not supported in the legacy pipeline");
 				}
 		}
 		else if (member == "push" || member == "pop")
@@ -2124,6 +2126,8 @@ bool ExpressionCompiler::visit(IndexAccess const& _indexAccess)
 				case DataLocation::CallData:
 					ArrayUtils(m_context).accessCallDataArrayElement(arrayType);
 					break;
+				case DataLocation::Stack:
+					solUnimplemented("Stack data location is not supported in the legacy pipeline");
 			}
 			break;
 		}

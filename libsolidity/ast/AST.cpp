@@ -813,7 +813,7 @@ set<VariableDeclaration::Location> VariableDeclaration::allowedDataLocations() c
 	}
 	else if (isLocalVariable())
 		// Further restrictions will be imposed later on.
-		return set<Location>{ Location::Memory, Location::Storage, Location::CallData };
+		return set<Location>{ Location::Memory, Location::Storage, Location::CallData, Location::Stack };
 	else
 		// Struct members etc.
 		return set<Location>{ Location::Unspecified };

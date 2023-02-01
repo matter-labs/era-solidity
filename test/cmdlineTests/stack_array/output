@@ -1,0 +1,70 @@
+Optimized IR:
+/// @use-src 0:"stack_array/input.sol"
+object "C_45" {
+    code {
+        {
+            /// @src 0:60:273  "contract C {..."
+            let _1 := memoryguard(0x80)
+            mstore(64, _1)
+            if callvalue() { revert(0, 0) }
+            let _2 := datasize("C_45_deployed")
+            codecopy(_1, dataoffset("C_45_deployed"), _2)
+            return(_1, _2)
+        }
+    }
+    /// @use-src 0:"stack_array/input.sol"
+    object "C_45_deployed" {
+        code {
+            {
+                /// @src 0:60:273  "contract C {..."
+                mstore(64, memoryguard(0x80))
+                if iszero(lt(calldatasize(), 4))
+                {
+                    let _1 := 0
+                    switch shr(224, calldataload(_1))
+                    case 0x26121ff0 {
+                        if callvalue() { revert(_1, _1) }
+                        if slt(add(calldatasize(), not(3)), _1) { revert(_1, _1) }
+                        let _2 := 320
+                        let memPtr := allocstk(_2)
+                        calldatacopy(memPtr, calldatasize(), _2)
+                        stkstore(add(memPtr, 32), /** @src 0:223:228  "0xabc" */ 0x0abc)
+                        /// @src 0:60:273  "contract C {..."
+                        let addr := add(memPtr, 64)
+                        stkstore(addr, /** @src 0:241:246  "0xdef" */ 0x0def)
+                        /// @src 0:252:266  "return g(a[2])"
+                        let var := /** @src 0:259:266  "g(a[2])" */ fun_g(/** @src 0:60:273  "contract C {..." */ stkload(addr))
+                        let memPos := mload(64)
+                        mstore(memPos, var)
+                        return(memPos, 32)
+                    }
+                    case 0xe420264a {
+                        if callvalue() { revert(_1, _1) }
+                        if slt(add(calldatasize(), not(3)), 32) { revert(_1, _1) }
+                        let ret := fun_g(calldataload(4))
+                        let memPos_1 := mload(64)
+                        mstore(memPos_1, ret)
+                        return(memPos_1, 32)
+                    }
+                }
+                revert(0, 0)
+            }
+            /// @ast-id 13 @src 0:75:144  "function g(uint i) public pure returns (uint) {..."
+            function fun_g(var_i) -> var
+            {
+                /// @src 0:60:273  "contract C {..."
+                let sum := add(var_i, /** @src 0:138:139  "1" */ 0x01)
+                /// @src 0:60:273  "contract C {..."
+                if gt(var_i, sum)
+                {
+                    mstore(/** @src -1:-1:-1 */ 0, /** @src 0:60:273  "contract C {..." */ shl(224, 0x4e487b71))
+                    mstore(4, 0x11)
+                    revert(/** @src -1:-1:-1 */ 0, /** @src 0:60:273  "contract C {..." */ 0x24)
+                }
+                /// @src 0:127:139  "return i + 1"
+                var := sum
+            }
+        }
+        data ".metadata" hex"<BYTECODE REMOVED>"
+    }
+}
