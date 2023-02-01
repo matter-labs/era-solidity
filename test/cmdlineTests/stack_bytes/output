@@ -1,0 +1,142 @@
+Optimized IR:
+/// @use-src 0:"stack_bytes/input.sol"
+object "C_95" {
+    code {
+        {
+            /// @src 0:60:441  "contract C {..."
+            let _1 := memoryguard(0x80)
+            mstore(64, _1)
+            if callvalue() { revert(0, 0) }
+            let _2 := datasize("C_95_deployed")
+            codecopy(_1, dataoffset("C_95_deployed"), _2)
+            return(_1, _2)
+        }
+    }
+    /// @use-src 0:"stack_bytes/input.sol"
+    object "C_95_deployed" {
+        code {
+            {
+                /// @src 0:60:441  "contract C {..."
+                mstore(64, memoryguard(0x80))
+                let _1 := 4
+                if iszero(lt(calldatasize(), _1))
+                {
+                    let _2 := 0
+                    switch shr(224, calldataload(_2))
+                    case 0x9f07e34a {
+                        if callvalue() { revert(_2, _2) }
+                        if slt(add(calldatasize(), not(3)), 384) { revert(_2, _2) }
+                        if iszero(slt(35, calldatasize())) { revert(_2, _2) }
+                        let dst := $zk_stack_alloc(320)
+                        let dst_1 := dst
+                        let _3 := 324
+                        if gt(_3, calldatasize()) { revert(_2, _2) }
+                        let src := _1
+                        for { } lt(src, _3) { src := add(src, 0x20) }
+                        {
+                            let value := calldataload(src)
+                            if iszero(eq(value, and(value, shl(248, 255)))) { revert(_2, _2) }
+                            $zk_stack_store(dst, value)
+                            dst := add(dst, 0x20)
+                        }
+                        let value_1 := calldataload(356)
+                        let _4 := shl(248, 255)
+                        let _5 := and(value_1, _4)
+                        if iszero(eq(value_1, _5)) { revert(_2, _2) }
+                        /// @src 0:219:229  "uint i = b"
+                        let var_i := /** @src 0:60:441  "contract C {..." */ calldataload(_3)
+                        /// @src 0:214:283  "for (uint i = b; i < 10; ++i) {..."
+                        for { }
+                        /** @src 0:231:237  "i < 10" */ lt(var_i, /** @src 0:235:237  "10" */ 0x0a)
+                        /// @src 0:219:229  "uint i = b"
+                        {
+                            /// @src 0:60:441  "contract C {..."
+                            if eq(var_i, not(0))
+                            {
+                                mstore(_2, shl(224, 0x4e487b71))
+                                mstore(_1, 0x11)
+                                revert(_2, 0x24)
+                            }
+                            /// @src 0:239:242  "++i"
+                            var_i := /** @src 0:60:441  "contract C {..." */ add(var_i, 1)
+                        }
+                        /// @src 0:239:242  "++i"
+                        {
+                            /// @src 0:249:278  "if (a[i] == '0')..."
+                            if /** @src 0:253:264  "a[i] == '0'" */ eq(/** @src 0:60:441  "contract C {..." */ and($zk_stack_load(/** @src 0:253:257  "a[i]" */ memory_array_index_access_bytes1_stack_ptr(dst_1, var_i)), /** @src 0:60:441  "contract C {..." */ _4), shl(252, 3))
+                            /// @src 0:249:278  "if (a[i] == '0')..."
+                            {
+                                /// @src 0:60:441  "contract C {..."
+                                $zk_stack_store(/** @src 0:270:278  "a[i] = c" */ memory_array_index_access_bytes1_stack_ptr(dst_1, var_i), /** @src 0:60:441  "contract C {..." */ _5)
+                            }
+                        }
+                        return(_2, _2)
+                    }
+                    case 0xb3de648b {
+                        if callvalue() { revert(_2, _2) }
+                        if slt(add(calldatasize(), not(3)), 32) { revert(_2, _2) }
+                        let _6 := 320
+                        let memPtr := $zk_stack_alloc(_6)
+                        $zk_copy_calldata_to_stack(memPtr, calldatasize(), _6)
+                        $zk_stack_store(memPtr, shl(248, 97))
+                        $zk_stack_store(add(memPtr, 32), shl(249, 49))
+                        let addr := add(memPtr, 64)
+                        let _7 := shl(252, 3)
+                        $zk_stack_store(addr, _7)
+                        /// @src 0:219:229  "uint i = b"
+                        let var_i_1 := /** @src 0:60:441  "contract C {..." */ calldataload(_1)
+                        /// @src 0:214:283  "for (uint i = b; i < 10; ++i) {..."
+                        for { }
+                        /** @src 0:231:237  "i < 10" */ lt(var_i_1, /** @src 0:235:237  "10" */ 0x0a)
+                        /// @src 0:219:229  "uint i = b"
+                        {
+                            /// @src 0:60:441  "contract C {..."
+                            if eq(var_i_1, not(0))
+                            {
+                                mstore(_2, shl(224, 0x4e487b71))
+                                mstore(_1, 0x11)
+                                revert(_2, 0x24)
+                            }
+                            /// @src 0:239:242  "++i"
+                            var_i_1 := /** @src 0:60:441  "contract C {..." */ add(var_i_1, 1)
+                        }
+                        /// @src 0:239:242  "++i"
+                        {
+                            /// @src 0:249:278  "if (a[i] == '0')..."
+                            if /** @src 0:253:264  "a[i] == '0'" */ eq(/** @src 0:60:441  "contract C {..." */ and($zk_stack_load(/** @src 0:253:257  "a[i]" */ memory_array_index_access_bytes1_stack_ptr(memPtr, var_i_1)), /** @src 0:60:441  "contract C {..." */ shl(248, 255)), _7)
+                            /// @src 0:249:278  "if (a[i] == '0')..."
+                            {
+                                /// @src 0:60:441  "contract C {..."
+                                $zk_stack_store(/** @src 0:270:278  "a[i] = c" */ memory_array_index_access_bytes1_stack_ptr(memPtr, var_i_1), /** @src 0:60:441  "contract C {..." */ shl(248, 99))
+                            }
+                        }
+                        let memPos := mload(64)
+                        mstore(memPos, /** @src 0:135:142  "i & '0'" */ and(/** @src 0:60:441  "contract C {..." */ $zk_stack_load(addr), _7))
+                        return(memPos, 32)
+                    }
+                    case 0xcd86dc6b {
+                        if callvalue() { revert(_2, _2) }
+                        if slt(add(calldatasize(), not(3)), 32) { revert(_2, _2) }
+                        let value_2 := calldataload(_1)
+                        if iszero(eq(value_2, and(value_2, shl(248, 255)))) { revert(_2, _2) }
+                        let memPos_1 := mload(64)
+                        mstore(memPos_1, /** @src 0:135:142  "i & '0'" */ and(/** @src 0:60:441  "contract C {..." */ value_2, shl(252, 3)))
+                        return(memPos_1, 32)
+                    }
+                }
+                revert(0, 0)
+            }
+            function memory_array_index_access_bytes1_stack_ptr(baseRef, index) -> addr
+            {
+                if iszero(lt(index, 0x0a))
+                {
+                    mstore(0, shl(224, 0x4e487b71))
+                    mstore(4, 0x32)
+                    revert(0, 0x24)
+                }
+                addr := add(baseRef, shl(5, index))
+            }
+        }
+        data ".metadata" hex"<BYTECODE REMOVED>"
+    }
+}

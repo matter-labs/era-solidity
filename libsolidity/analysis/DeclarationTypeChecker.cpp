@@ -364,6 +364,7 @@ void DeclarationTypeChecker::endVisit(VariableDeclaration const& _variable)
 				case Location::Memory: return "\"memory\"";
 				case Location::Storage: return "\"storage\"";
 				case Location::CallData: return "\"calldata\"";
+				case Location::Stack: return "\"stack\"";
 				case Location::Unspecified: return "none";
 			}
 			return {};
@@ -433,11 +434,18 @@ void DeclarationTypeChecker::endVisit(VariableDeclaration const& _variable)
 			case Location::CallData:
 				typeLoc = DataLocation::CallData;
 				break;
+			case Location::Stack:
+				typeLoc = DataLocation::Stack;
+				break;
 			case Location::Unspecified:
 				solAssert(!_variable.hasReferenceOrMappingType(), "Data location not properly set.");
 		}
 
 	Type const* type = _variable.typeName().annotation().type;
+
+	if (typeLoc == DataLocation::Stack && type->isDynamicallySized())
+		m_errorReporter.fatalTypeError(7362_error, _variable.location(), "Dynamically sized stack data location is not implemented.");
+
 	if (auto ref = dynamic_cast<ReferenceType const*>(type))
 	{
 		bool isPointer = !_variable.isStateVariable();

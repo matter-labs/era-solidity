@@ -2238,6 +2238,7 @@ void IRGeneratorForStatements::endVisit(IndexAccess const& _indexAccess)
 				break;
 			}
 			case DataLocation::Memory:
+			case DataLocation::Stack:
 			{
 				string const memAddress =
 					m_utils.memoryArrayIndexAccessFunction(arrayType) +
@@ -2249,7 +2250,7 @@ void IRGeneratorForStatements::endVisit(IndexAccess const& _indexAccess)
 
 				setLValue(_indexAccess, IRLValue{
 					*arrayType.baseType(),
-					IRLValue::Memory{memAddress, arrayType.isByteArrayOrString()}
+					IRLValue::Memory{memAddress, arrayType.isByteArrayOrString(), /*inStack=*/arrayType.location() == DataLocation::Stack}
 				});
 				break;
 			}
@@ -2997,18 +2998,30 @@ void IRGeneratorForStatements::writeToLValue(IRLValue const& _lvalue, IRVariable
 					IRVariable prepared(m_context.newYulVariable(), _lvalue.type);
 					define(prepared, _value);
 
-					if (_memory.byteArrayElement)
+					if (_memory.inStack)
 					{
-						solAssert(_lvalue.type == *TypeProvider::byte());
-						appendCode() << "mstore8(" + _memory.address + ", byte(0, " + prepared.commaSeparatedList() + "))\n";
-					}
-					else
-						appendCode() << m_utils.writeToMemoryFunction(_lvalue.type) <<
+						appendCode() << m_utils.writeToStackFunction(_lvalue.type) <<
 							"(" <<
 							_memory.address <<
 							", " <<
 							prepared.commaSeparatedList() <<
 							")\n";
+					}
+					else
+					{
+						if (_memory.byteArrayElement)
+						{
+							solAssert(_lvalue.type == *TypeProvider::byte());
+							appendCode() << "mstore8(" + _memory.address + ", byte(0, " + prepared.commaSeparatedList() + "))\n";
+						}
+						else
+							appendCode() << m_utils.writeToMemoryFunction(_lvalue.type) <<
+								"(" <<
+								_memory.address <<
+								", " <<
+								prepared.commaSeparatedList() <<
+								")\n";
+					}
 				}
 				else if (auto const* literalType = dynamic_cast<StringLiteralType const*>(&_value.type()))
 				{
@@ -3028,6 +3041,8 @@ void IRGeneratorForStatements::writeToLValue(IRLValue const& _lvalue, IRVariable
 					solAssert(valueReferenceType);
 					if (valueReferenceType->dataStoredIn(DataLocation::Memory))
 						appendCode() << "mstore(" + _memory.address + ", " + _value.part("mpos").name() + ")\n";
+					else if (valueReferenceType->dataStoredIn(DataLocation::Stack))
+						appendCode() << "$zk_stack_store(" + _memory.address + ", " + _value.part("mpos").name() + ")\n";
 					else
 						appendCode() << "mstore(" + _memory.address + ", " + m_utils.conversionFunction(_value.type(), _lvalue.type) + "(" + _value.commaSeparatedList() + "))\n";
 				}
@@ -3084,12 +3099,13 @@ IRVariable IRGeneratorForStatements::readFromLValue(IRLValue const& _lvalue)
 		[&](IRLValue::Memory const& _memory) {
 			if (_lvalue.type.isValueType())
 				define(result) <<
-					m_utils.readFromMemory(_lvalue.type) <<
+					(_memory.inStack ? m_utils.readFromStack(_lvalue.type)
+						: m_utils.readFromMemory(_lvalue.type)) <<
 					"(" <<
 					_memory.address <<
 					")\n";
 			else
-				define(result) << "mload(" << _memory.address << ")\n";
+				define(result) << (_memory.inStack ? "$zk_stack_load(" : "mload(") << _memory.address << ")\n";
 		},
 		[&](IRLValue::Stack const& _stack) {
 			define(result, _stack.variable);

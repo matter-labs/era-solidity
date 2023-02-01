@@ -1111,6 +1111,8 @@ void CompilerUtils::convertType(
 				"Invalid conversion to calldata type."
 			);
 			break;
+		case DataLocation::Stack:
+			solUnimplemented("Stack data location is not supported in the legacy pipeline");
 		}
 		break;
 	}
@@ -1231,12 +1233,16 @@ void CompilerUtils::convertType(
 			case DataLocation::Memory:
 				// nothing to do
 				break;
+			case DataLocation::Stack:
+				solUnimplemented("Stack data location is not supported in the legacy pipeline");
 			}
 			break;
 		case DataLocation::CallData:
 			solAssert(_typeOnStack == _targetType);
 			// nothing to do
 			break;
+		case DataLocation::Stack:
+			solUnimplemented("Stack data location is not supported in the legacy pipeline");
 		}
 		break;
 	}

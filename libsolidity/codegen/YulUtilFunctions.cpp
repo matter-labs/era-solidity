@@ -1196,6 +1196,10 @@ string YulUtilFunctions::wrappingIntExpFunction(
 
 string YulUtilFunctions::arrayLengthFunction(ArrayType const& _type)
 {
+	if (_type.dataStoredIn(DataLocation::Stack)) {
+		solAssert(!_type.isDynamicallySized(), "");
+	}
+
 	string functionName = "array_length_" + _type.identifier();
 	return m_functionCollector.createFunction(functionName, [&]() {
 		Whiskers w(R"(
@@ -2228,15 +2232,26 @@ string YulUtilFunctions::arrayConvertLengthToSize(ArrayType const& _type)
 
 string YulUtilFunctions::arrayAllocationSizeFunction(ArrayType const& _type)
 {
-	solAssert(_type.dataStoredIn(DataLocation::Memory), "");
+	solAssert(_type.dataStoredIn(DataLocation::Memory) || _type.dataStoredIn(DataLocation::Stack), "");
+	if (_type.dataStoredIn(DataLocation::Stack))
+		solAssert(!_type.isDynamicallySized(), "");
 	string functionName = "array_allocation_size_" + _type.identifier();
+
+	// FIXME: If the generated function is used for copying from a non stack
+	// data location to a stack data location, the calculated size becomes
+	// incompatible. For the sake of simplicity, can we allow unaligned stack
+	// access for byte arrays everywhere in the yul generator?
 	return m_functionCollector.createFunction(functionName, [&]() {
 		Whiskers w(R"(
 			function <functionName>(length) -> size {
 				// Make sure we can allocate memory without overflow
 				if gt(length, 0xffffffffffffffff) { <panic>() }
 				<?byteArray>
-					size := <roundUp>(length)
+					<?inStack>
+						size := mul(length, 0x20)
+					<!inStack>
+						size := <roundUp>(length)
+					</inStack>
 				<!byteArray>
 					size := mul(length, 0x20)
 				</byteArray>
@@ -2251,6 +2266,7 @@ string YulUtilFunctions::arrayAllocationSizeFunction(ArrayType const& _type)
 		w("byteArray", _type.isByteArrayOrString());
 		w("roundUp", roundUpFunction());
 		w("dynamic", _type.isDynamicallySized());
+		w("inStack", _type.dataStoredIn(DataLocation::Stack));
 		return w.render();
 	});
 }
@@ -2333,6 +2349,10 @@ string YulUtilFunctions::storageArrayIndexAccessFunction(ArrayType const& _type)
 
 string YulUtilFunctions::memoryArrayIndexAccessFunction(ArrayType const& _type)
 {
+	bool inStack = _type.dataStoredIn(DataLocation::Stack);
+	if (inStack)
+		solAssert(!_type.isDynamicallySized(), "");
+
 	string functionName = "memory_array_index_access_" + _type.identifier();
 	return m_functionCollector.createFunction(functionName, [&]() {
 		return Whiskers(R"(
@@ -2341,10 +2361,14 @@ string YulUtilFunctions::memoryArrayIndexAccessFunction(ArrayType const& _type)
 					<panic>()
 				}
 
-				let offset := mul(index, <stride>)
-				<?dynamicallySized>
-					offset := add(offset, 32)
-				</dynamicallySized>
+				<?stack>
+					let offset := mul(index, 32)
+				<!stack>
+					let offset := mul(index, <stride>)
+					<?dynamicallySized>
+						offset := add(offset, 32)
+					</dynamicallySized>
+				</stack>
 				addr := add(baseRef, offset)
 			}
 		)")
@@ -2353,6 +2377,7 @@ string YulUtilFunctions::memoryArrayIndexAccessFunction(ArrayType const& _type)
 		("arrayLen", arrayLengthFunction(_type))
 		("stride", to_string(_type.memoryStride()))
 		("dynamicallySized", _type.isDynamicallySized())
+		("stack", inStack)
 		.render();
 	});
 }
@@ -2450,6 +2475,7 @@ string YulUtilFunctions::nextArrayElementFunction(ArrayType const& _type)
 		templ("functionName", functionName);
 		switch (_type.location())
 		{
+		case DataLocation::Stack:
 		case DataLocation::Memory:
 			templ("advance", "0x20");
 			break;
@@ -2887,6 +2913,32 @@ string YulUtilFunctions::updateStorageValueFunction(
 	});
 }
 
+string YulUtilFunctions::writeToStackFunction(Type const& _type)
+{
+	string const functionName = "write_to_stack_" + _type.identifier();
+
+	return m_functionCollector.createFunction(functionName, [&] {
+		if (_type.isValueType())
+		{
+			return Whiskers(R"(
+				function <functionName>(memPtr, value) {
+					$zk_stack_store(memPtr, <cleanup>(value))
+				}
+			)")
+			("functionName", functionName)
+			("cleanup", cleanupFunction(_type))
+			.render();
+		}
+		else
+		{
+			solAssert(
+				false,
+				"Stack store of type " + _type.toString(true) + " not allowed."
+			);
+		}
+	});
+}
+
 string YulUtilFunctions::writeToMemoryFunction(Type const& _type)
 {
 	string const functionName = "write_to_memory_" + _type.identifier();
@@ -3048,6 +3100,20 @@ string YulUtilFunctions::prepareStoreFunction(Type const& _type)
 	});
 }
 
+string YulUtilFunctions::stackAllocationFunction()
+{
+	string functionName = "allocate_stack";
+	return m_functionCollector.createFunction(functionName, [&]() {
+		return Whiskers(R"(
+			function <functionName>(size) -> memPtr {
+				memPtr := $zk_stack_alloc(size)
+			}
+		)")
+		("functionName", functionName)
+		.render();
+	});
+}
+
 string YulUtilFunctions::allocationFunction()
 {
 	string functionName = "allocate_memory";
@@ -3103,11 +3169,11 @@ string YulUtilFunctions::finalizeAllocationFunction()
 string YulUtilFunctions::zeroMemoryArrayFunction(ArrayType const& _type)
 {
 	if (_type.baseType()->hasSimpleZeroValueInMemory())
-		return zeroMemoryFunction(*_type.baseType());
+		return zeroMemoryFunction(*_type.baseType(), _type.dataStoredIn(DataLocation::Stack));
 	return zeroComplexMemoryArrayFunction(_type);
 }
 
-string YulUtilFunctions::zeroMemoryFunction(Type const& _type)
+string YulUtilFunctions::zeroMemoryFunction(Type const& _type, bool _inStack)
 {
 	solAssert(_type.hasSimpleZeroValueInMemory(), "");
 
@@ -3115,10 +3181,11 @@ string YulUtilFunctions::zeroMemoryFunction(Type const& _type)
 	return m_functionCollector.createFunction(functionName, [&]() {
 		return Whiskers(R"(
 			function <functionName>(dataStart, dataSizeInBytes) {
-				calldatacopy(dataStart, calldatasize(), dataSizeInBytes)
+				<calldatacopy>(dataStart, calldatasize(), dataSizeInBytes)
 			}
 		)")
 		("functionName", functionName)
+		("calldatacopy", _inStack ? "$zk_copy_calldata_to_stack" : "calldatacopy")
 		.render();
 	});
 }
@@ -3133,19 +3200,23 @@ string YulUtilFunctions::zeroComplexMemoryArrayFunction(ArrayType const& _type)
 		return Whiskers(R"(
 			function <functionName>(dataStart, dataSizeInBytes) {
 				for {let i := 0} lt(i, dataSizeInBytes) { i := add(i, <stride>) } {
-					mstore(add(dataStart, i), <zeroValue>())
+					<store>(add(dataStart, i), <zeroValue>())
 				}
 			}
 		)")
 		("functionName", functionName)
 		("stride", to_string(_type.memoryStride()))
 		("zeroValue", zeroValueFunction(*_type.baseType(), false))
+		("store", _type.dataStoredIn(DataLocation::Stack) ? "$zk_stack_store" : "mstore")
 		.render();
 	});
 }
 
 string YulUtilFunctions::allocateMemoryArrayFunction(ArrayType const& _type)
 {
+	if (_type.dataStoredIn(DataLocation::Stack))
+		solAssert(!_type.isDynamicallySized(), "");
+
 	string functionName = "allocate_memory_array_" + _type.identifier();
 	return m_functionCollector.createFunction(functionName, [&]() {
 		return Whiskers(R"(
@@ -3158,7 +3229,7 @@ string YulUtilFunctions::allocateMemoryArrayFunction(ArrayType const& _type)
 				}
 			)")
 			("functionName", functionName)
-			("alloc", allocationFunction())
+			("alloc", _type.location() == DataLocation::Stack ? stackAllocationFunction() : allocationFunction())
 			("allocSize", arrayAllocationSizeFunction(_type))
 			("dynamic", _type.isDynamicallySized())
 			.render();
@@ -3167,6 +3238,9 @@ string YulUtilFunctions::allocateMemoryArrayFunction(ArrayType const& _type)
 
 string YulUtilFunctions::allocateAndInitializeMemoryArrayFunction(ArrayType const& _type)
 {
+	if (_type.dataStoredIn(DataLocation::Stack))
+		solAssert(!_type.isDynamicallySized(), "");
+
 	string functionName = "allocate_and_zero_memory_array_" + _type.identifier();
 	return m_functionCollector.createFunction(functionName, [&]() {
 		return Whiskers(R"(
@@ -4175,7 +4249,7 @@ string YulUtilFunctions::zeroValueFunction(Type const& _type, bool _splitFunctio
 		}
 		else
 		{
-			solAssert(_type.dataStoredIn(DataLocation::Memory), "");
+			solAssert(_type.dataStoredIn(DataLocation::Memory) || _type.dataStoredIn(DataLocation::Stack), "");
 			if (auto const* arrayType = dynamic_cast<ArrayType const*>(&_type))
 			{
 				if (_type.isDynamicallySized())
@@ -4323,6 +4397,24 @@ string YulUtilFunctions::conversionFunctionSpecial(Type const& _from, Type const
 				false,
 				"Invalid conversion from string literal to " + _to.toString() + " requested."
 			);
+	});
+}
+
+string YulUtilFunctions::readFromStack(Type const& _type)
+{
+	string functionName = "read_from_stack_" + _type.identifier();
+	return m_functionCollector.createFunction(functionName, [&] {
+		solUnimplementedAssert(_type.isValueType() && _type.category() != Type::Category::Function,
+				"Reading non-value types and functions from stack is not supported");
+		Whiskers templ(R"(
+			function <functionName>(ptr) -> ret {
+				let value := <cleanup>($zk_stack_load(ptr))
+				ret := value
+			}
+		)");
+		templ("functionName", functionName);
+		templ("cleanup", cleanupFunction(_type));
+		return templ.render();
 	});
 }
 

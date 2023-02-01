@@ -250,6 +250,7 @@ object "C_15" {
                     let elementPos := src
 
                     mstore(dst, abi_decode_t_uint256(elementPos, end))
+
                     dst := add(dst, 0x20)
                 }
             }
@@ -281,6 +282,7 @@ object "C_15" {
                     let elementPos := add(offset, innerOffset)
 
                     mstore(dst, abi_decode_t_array$_t_uint256_$dyn_memory_ptr(elementPos, end))
+
                     dst := add(dst, 0x20)
                 }
             }

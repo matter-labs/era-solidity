@@ -21,7 +21,7 @@
 using namespace solidity::zkevm;
 
 // clang-format off
-const std::array<IntrInfo, 34> solidity::zkevm::intrInfos{{
+const std::array<IntrInfo, 38> solidity::zkevm::intrInfos{{
 //	 Name											Args	Rets	SideEffect	Literals
 	{"$zk_to_l1",									3,		0,		true},
 	{"$zk_code_source",								0,		1,		false},
@@ -56,6 +56,10 @@ const std::array<IntrInfo, 34> solidity::zkevm::intrInfos{{
 	{"$zk_multiplication_high",						2,		1,		false},
 	{"$zk_global_load",								1,		1,		false,		{yul::LiteralKind::String}},
 	{"$zk_global_store",							2,		0,		true,		{yul::LiteralKind::String, std::nullopt}},
-	{"$zk_global_extra_abi_data",					1,		1,		false}
+	{"$zk_global_extra_abi_data",					1,		1,		false},
+	{"$zk_stack_alloc",								1,		1,		true},
+	{"$zk_stack_load",								1,		1,		false},
+	{"$zk_stack_store",								2,		0,		true},
+	{"$zk_copy_calldata_to_stack",					3,		0,		true},
 }};
 // clang-format on

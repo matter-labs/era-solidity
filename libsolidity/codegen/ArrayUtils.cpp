@@ -1022,6 +1022,8 @@ void ArrayUtils::retrieveLength(ArrayType const& _arrayType, unsigned _stackDept
 			if (_arrayType.isByteArrayOrString())
 				m_context.callYulFunction(m_context.utilFunctions().extractByteArrayLengthFunction(), 1, 1);
 			break;
+		case DataLocation::Stack:
+			solUnimplemented("Stack data location is not supported in the legacy pipeline");
 		}
 	}
 }
@@ -1119,6 +1121,8 @@ void ArrayUtils::accessIndex(ArrayType const& _arrayType, bool _doBoundsCheck, b
 		m_context << endTag;
 		break;
 	}
+	case DataLocation::Stack:
+		solUnimplemented("Stack data location is not supported in the legacy pipeline");
 	}
 }
 

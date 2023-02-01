@@ -14,7 +14,7 @@ library L {
 // TypeError 6651: (129-135): Data location must be "storage", "memory" or "calldata" for return parameter in function, but none was given.
 // TypeError 6651: (180-181): Data location must be "storage", "memory" or "calldata" for return parameter in function, but none was given.
 // TypeError 6651: (226-247): Data location must be "storage", "memory" or "calldata" for return parameter in function, but none was given.
-// TypeError 6651: (268-275): Data location must be "storage", "memory" or "calldata" for parameter in function, but none was given.
-// TypeError 6651: (310-316): Data location must be "storage", "memory" or "calldata" for parameter in function, but none was given.
-// TypeError 6651: (351-352): Data location must be "storage", "memory" or "calldata" for parameter in function, but none was given.
-// TypeError 6651: (387-408): Data location must be "storage", "memory" or "calldata" for parameter in function, but none was given.
+// TypeError 6651: (268-275): Data location must be "storage", "memory", "calldata" or "stack" for parameter in function, but none was given.
+// TypeError 6651: (310-316): Data location must be "storage", "memory", "calldata" or "stack" for parameter in function, but none was given.
+// TypeError 6651: (351-352): Data location must be "storage", "memory", "calldata" or "stack" for parameter in function, but none was given.
+// TypeError 6651: (387-408): Data location must be "storage", "memory", "calldata" or "stack" for parameter in function, but none was given.

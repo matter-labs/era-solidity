@@ -284,7 +284,7 @@ public:
 	/// signature: (array, index) -> slot, offset
 	std::string storageArrayIndexAccessFunction(ArrayType const& _type);
 
-	/// @returns the name of a function that returns the memory address for the
+	/// @returns the name of a function that returns the memory (or stack) address for the
 	/// given array base ref and index.
 	/// Causes invalid opcode on out of range access.
 	/// signature: (baseRef, index) -> address
@@ -339,6 +339,11 @@ public:
 	/// Reverts on invalid input.
 	/// signature: (addr) -> value
 	std::string readFromCalldata(Type const& _type);
+	/// @returns a function that reads a value type from stack address. Performs
+	/// cleanup.
+	/// signature: (addr) -> value
+	std::string readFromStack(Type const& _type);
+
 
 	/// @returns a function that extracts a value type from storage slot that has been
 	/// retrieved already.
@@ -360,6 +365,12 @@ public:
 	);
 
 	/// Returns the name of a function that will write the given value to
+	/// the specified address in stack.
+	/// Performs a cleanup before writing for value types.
+	/// signature: (memPtr, value) ->
+	std::string writeToStackFunction(Type const& _type);
+
+	/// Returns the name of a function that will write the given value to
 	/// the specified address.
 	/// Performs a cleanup before writing for value types.
 	/// signature: (memPtr, value) ->
@@ -378,6 +389,10 @@ public:
 	/// to fit the number of bytes in storage.
 	/// The resulting value might still have dirty higher order bits.
 	std::string prepareStoreFunction(Type const& _type);
+
+	/// @returns the name of a function that allocates stack.
+	/// signature: (size) -> memPtr
+	std::string stackAllocationFunction();
 
 	/// @returns the name of a function that allocates memory.
 	/// Modifies the "free memory pointer"
@@ -400,9 +415,10 @@ public:
 	/// signature: (dataStart, dataSizeInBytes) ->
 	std::string zeroMemoryArrayFunction(ArrayType const& _type);
 
-	/// @returns the name of a function that zeroes a chunk of memory.
+	/// @returns the name of a function that zeroes a chunk of memory (or stack
+	/// if `_inStack` is set).
 	/// signature: (dataStart, dataSizeInBytes) ->
-	std::string zeroMemoryFunction(Type const& _type);
+	std::string zeroMemoryFunction(Type const& _type, bool _inStack = false);
 
 	/// @returns the name of a function that zeroes an array
 	/// where the base does not have simple zero value in memory.

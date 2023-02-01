@@ -625,7 +625,8 @@ bool TypeChecker::visit(VariableDeclaration const& _variable)
 	{
 		if (
 			_variable.referenceLocation() == VariableDeclaration::Location::CallData ||
-			_variable.referenceLocation() == VariableDeclaration::Location::Memory
+			_variable.referenceLocation() == VariableDeclaration::Location::Memory ||
+			_variable.referenceLocation() == VariableDeclaration::Location::Stack
 		)
 			if (varType->containsNestedMapping())
 				m_errorReporter.fatalTypeError(

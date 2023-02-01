@@ -1006,6 +1006,8 @@ string ASTJsonExporter::location(VariableDeclaration::Location _location)
 		return "memory";
 	case VariableDeclaration::Location::CallData:
 		return "calldata";
+	case VariableDeclaration::Location::Stack:
+		return "stack";
 	}
 	// To make the compiler happy
 	return {};

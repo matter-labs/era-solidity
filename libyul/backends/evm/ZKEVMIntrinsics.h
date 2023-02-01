@@ -33,5 +33,5 @@ struct IntrInfo
 	LiteralKinds literalKinds = {};
 };
 
-extern const std::array<IntrInfo, 34> intrInfos;
+extern const std::array<IntrInfo, 38> intrInfos;
 }

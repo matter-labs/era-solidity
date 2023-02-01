@@ -807,13 +807,17 @@ set<VariableDeclaration::Location> VariableDeclaration::allowedDataLocations() c
 		)
 			locations.insert(Location::Storage);
 		if (!isTryCatchParameter() && !isConstructorParameter())
+		{
 			locations.insert(Location::CallData);
+			if (!isReturnParameter())
+				locations.insert(Location::Stack);
+		}
 
 		return locations;
 	}
 	else if (isLocalVariable())
 		// Further restrictions will be imposed later on.
-		return set<Location>{ Location::Memory, Location::Storage, Location::CallData };
+		return set<Location>{ Location::Memory, Location::Storage, Location::CallData, Location::Stack };
 	else
 		// Struct members etc.
 		return set<Location>{ Location::Unspecified };

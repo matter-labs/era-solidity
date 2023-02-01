@@ -1136,7 +1136,7 @@ string ABIFunctions::abiDecodingFunctionValueType(Type const& _type, bool _fromM
 
 string ABIFunctions::abiDecodingFunctionArray(ArrayType const& _type, bool _fromMemory)
 {
-	solAssert(_type.dataStoredIn(DataLocation::Memory), "");
+	solAssert(_type.dataStoredIn(DataLocation::Memory) || _type.dataStoredIn(DataLocation::Stack), "");
 
 	string functionName =
 		"abi_decode_" +
@@ -1168,7 +1168,9 @@ string ABIFunctions::abiDecodingFunctionArray(ArrayType const& _type, bool _from
 
 string ABIFunctions::abiDecodingFunctionArrayAvailableLength(ArrayType const& _type, bool _fromMemory)
 {
-	solAssert(_type.dataStoredIn(DataLocation::Memory), "");
+	solAssert(_type.dataStoredIn(DataLocation::Memory) || _type.dataStoredIn(DataLocation::Stack), "");
+	if (_type.dataStoredIn(DataLocation::Stack))
+		solAssert(!_type.isDynamicallySized(), "");
 	if (_type.isByteArrayOrString())
 		return abiDecodingFunctionByteArrayAvailableLength(_type, _fromMemory);
 	solAssert(_type.calldataStride() > 0, "");
@@ -1201,14 +1203,18 @@ string ABIFunctions::abiDecodingFunctionArrayAvailableLength(ArrayType const& _t
 					<!dynamicBase>
 						let elementPos := src
 					</dynamicBase>
-					mstore(dst, <decodingFun>(elementPos, end))
+					<?stack>
+						$zk_stack_store(dst, <decodingFun>(elementPos, end))
+					<!stack>
+						mstore(dst, <decodingFun>(elementPos, end))
+					</stack>
 					dst := add(dst, 0x20)
 				}
 			}
 		)");
 		templ("functionName", functionName);
 		templ("readableTypeName", _type.toString(true));
-		templ("allocate", m_utils.allocationFunction());
+		templ("allocate", _type.dataStoredIn(DataLocation::Stack) ? m_utils.stackAllocationFunction() : m_utils.allocationFunction());
 		templ("allocationSize", m_utils.arrayAllocationSizeFunction(_type));
 		templ("stride", toCompactHexWithPrefix(_type.calldataStride()));
 		templ("dynamic", _type.isDynamicallySized());
@@ -1220,6 +1226,7 @@ string ABIFunctions::abiDecodingFunctionArrayAvailableLength(ArrayType const& _t
 		);
 		templ("revertStringOffset", revertReasonIfDebugFunction("ABI decoding: invalid calldata array offset"));
 		templ("decodingFun", abiDecodingFunction(*_type.baseType(), _fromMemory, false));
+		templ("stack", _type.dataStoredIn(DataLocation::Stack));
 		return templ.render();
 	});
 }
