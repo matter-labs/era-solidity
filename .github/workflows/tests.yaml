@@ -1,0 +1,72 @@
+name: Integration testing
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testing:
+    runs-on: [self-hosted, ci-runner-compiler]
+    container:
+      image: matterlabs/llvm_runner:latest
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Setting the compiler-tester mode
+        shell: bash
+        run: echo "COMPILER_TESTER_MODE='0.8.17'" >> $GITHUB_ENV
+
+      - name: Checking out the Solidity repository
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
+        with:
+          submodules: recursive
+          path: solidity
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Checking out the compiler-tester repository
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
+        with:
+          repository: matter-labs/compiler-tester
+          path: compiler-tester
+          submodules: recursive
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Preparing workspace
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
+
+      - name: Building the Solidity compiler
+        working-directory: solidity
+        run: |
+          mkdir -p ./build
+          cd ./build
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DUSE_Z3=OFF
+          make -j$(nproc)
+
+      - name: Building and running the compiler tester
+        id: compiler_tester_run
+        working-directory: compiler-tester
+        run: |
+          mkdir -p solc-bin
+          cp ../solidity/build/solc/solc ./solc-bin/solc-0.8.17
+          chmod +x ./solc-bin/solc-0.8.17
+          ldd ./solc-bin/solc-0.8.17
+          export RUST_BACKTRACE=full
+          cargo install compiler-llvm-builder
+          /usr/local/cargo/bin/zkevm-llvm clone && /usr/local/cargo/bin/zkevm-llvm build
+          cargo run --verbose --release --bin compiler-tester -- --mode=${{ env.COMPILER_TESTER_MODE }} \
+            --solc-bin-config-path='configs/solc-bin-zkevm-candidate.json'
+
+      - uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,commit,author,action,eventName,ref,workflow,job,took,pullRequest # selectable (default: repo,message)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.COMPILER_CI_MATTERMOST_WEBHOOK }} # required
+        if: ${{ failure() || success() }} # Skip canceled jobs
