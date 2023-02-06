@@ -1529,15 +1529,13 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 		string address{IRVariable(_functionCall.expression()).part("address").name()};
 		string value{expressionAsType(*arguments[0], *(parameterTypes[0]))};
 		Whiskers templ(R"(
-			let <gas> := 0
-			if iszero(<value>) { <gas> := <callStipend> }
+			let <gas> := gas()
 			let <success> := call(<gas>, <address>, <value>, 0, 0, 0, 0)
 			<?isTransfer>
 				if iszero(<success>) { <forwardingRevert>() }
 			</isTransfer>
 		)");
 		templ("gas", m_context.newYulVariable());
-		templ("callStipend", toString(evmasm::GasCosts::callStipend));
 		templ("address", address);
 		templ("value", value);
 		if (functionType->kind() == FunctionType::Kind::Transfer)
