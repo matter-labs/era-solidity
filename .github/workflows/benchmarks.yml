@@ -1,0 +1,212 @@
+name: Benchmarking
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmarks_candidate:
+    runs-on: [self-hosted, ci-runner-compiler]
+    container:
+      image: matterlabs/llvm_runner:latest
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: AutoModality/action-clean@492b2d2e2e77247bfd0b17eaa89a371b2f3430ee # v1
+      - name: Preparing workspace. Setting environment.
+        run: |
+          echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^I+B3 0.8.17' }}" >> $GITHUB_ENV
+          echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || '' }}" >> $GITHUB_ENV
+          echo "CANDIDATE_BRANCH_NAME=${{ github.event.inputs.compiler_tester_candidate_branch }}" >> $GITHUB_ENV
+
+      - name: Getting the branch name (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
+
+      - name: Checking out the Solidity repository
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
+        with:
+          submodules: recursive
+          path: solidity
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Checking out the compiler-tester candidate
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
+        with:
+          repository: matter-labs/compiler-tester
+          submodules: recursive
+          path: compiler-tester
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Preparing workspace
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
+
+      - name: Building the Solidity compiler
+        working-directory: solidity
+        run: |
+          mkdir -p ./build
+          cd ./build
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DUSE_Z3=OFF
+          make -j$(nproc)
+
+      - name: Benchmarking the Solidity compiler candidate
+        id: compiler_tester_run
+        working-directory: compiler-tester
+        run: |
+          mkdir -p solc-bin
+          cp ../solidity/build/solc/solc ./solc-bin/solc-0.8.17
+          chmod +x ./solc-bin/solc-0.8.17
+          export RUST_BACKTRACE=full
+          cargo install compiler-llvm-builder
+          /usr/local/cargo/bin/zkevm-llvm clone && /usr/local/cargo/bin/zkevm-llvm build
+          cargo run --release --bin compiler-tester -- \
+            --path="${{ env.BENCHMARK_PATH || '' }}" \
+            --mode="${{ env.BENCHMARK_MODE || '' }}" \
+            --benchmark='candidate.json' \
+            --solc-bin-config-path='configs/solc-bin-zkevm-candidate.json'
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: candidate-benchmark
+          path: compiler-tester/candidate.json
+
+  benchmarks_reference:
+    runs-on: [self-hosted, ci-runner-compiler]
+    container:
+      image: matterlabs/llvm_runner:latest
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: AutoModality/action-clean@492b2d2e2e77247bfd0b17eaa89a371b2f3430ee # v1
+      - name: Preparing workspace. Setting environment.
+        run: |
+          echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^I+B3 0.8.17' }}" >> $GITHUB_ENV
+          echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || '' }}" >> $GITHUB_ENV
+          echo "REFERENCE_BRANCH_NAME=${{ github.event.inputs.compiler_tester_reference_branch }}" >> $GITHUB_ENV
+
+      - name: Getting the branch name (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
+
+      - name: Checking out the Solidity repository
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
+        with:
+          submodules: recursive
+          path: solidity
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Checking out the compiler-tester candidate
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
+        with:
+          repository: matter-labs/compiler-tester
+          submodules: recursive
+          path: compiler-tester
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Preparing workspace
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
+
+      - name: Benchmarking the Solidity compiler reference
+        working-directory: compiler-tester
+        id: compiler_tester_run
+        run: |
+          export RUST_BACKTRACE=full
+          cargo install compiler-llvm-builder
+          /usr/local/cargo/bin/zkevm-llvm clone && /usr/local/cargo/bin/zkevm-llvm build
+          cargo run --release --bin compiler-tester -- \
+            --path="${{ env.BENCHMARK_PATH || '' }}" \
+            --mode="${{ env.BENCHMARK_MODE || '' }}" \
+            --benchmark='reference.json' \
+            --solc-bin-config-path='configs/solc-bin-zkevm-reference.json'
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: reference-benchmark
+          path: compiler-tester/reference.json
+
+  benchmarks_analysis:
+    runs-on: [self-hosted, ci-runner]
+    needs: [benchmarks_candidate, benchmarks_reference]
+    container:
+      image: matterlabs/llvm_runner:latest
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: AutoModality/action-clean@492b2d2e2e77247bfd0b17eaa89a371b2f3430ee # v1
+      - name: Getting the branch name (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
+
+      - name: Checking out the compiler-tester repository
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
+        with:
+          repository: matter-labs/compiler-tester
+          submodules: recursive
+          path: compiler-tester
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Preparing workspace
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
+
+      - uses: actions/download-artifact@master
+        with:
+          name: candidate-benchmark
+          path: compiler-tester
+
+      - uses: actions/download-artifact@master
+        with:
+          name: reference-benchmark
+          path: compiler-tester
+
+      - name: Comparing the benchmark results
+        id: compiler_tester_run
+        run: |
+          cd compiler-tester && \
+          export RUST_BACKTRACE=full && \
+          cargo run --release --bin benchmark-analyzer -- \
+            --reference 'reference.json' \
+            --candidate 'candidate.json' \
+            --output-file 'result.txt' && \
+          chown 1000:1000 result.txt
+
+      - name: Posting the benchmark results to the step summary
+        run: |
+          printf "Benchmark results:\n" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat ./compiler-tester/result.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat $GITHUB_STEP_SUMMARY > ./compiler-tester/result.txt
+
+      - name: Posting the benchmark results to a PR comment
+        if: github.event_name == 'pull_request'
+        uses: machine-learning-apps/pr-comment@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+        with:
+          path: ./compiler-tester/result.txt
+
+      - uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,commit,author,action,eventName,ref,workflow,job,took,pullRequest # selectable (default: repo,message)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.COMPILER_CI_MATTERMOST_WEBHOOK }} # required
+        if: ${{ failure() || success() }} # Skip canceled jobs
