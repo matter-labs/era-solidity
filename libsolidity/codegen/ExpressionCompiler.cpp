@@ -753,7 +753,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			ContractDefinition const* contract =
 				&dynamic_cast<ContractType const&>(*function.returnParameterTypes().front()).contractDefinition();
 			utils().fetchFreeMemoryPointer();
-			utils().copyContractCodeToMemory(*contract, true);
+			utils().copyContractCodeToMemory(*contract, true, /*zkevm=*/true);
 			utils().abiEncode(argumentTypes, function.parameterTypes());
 			// now on stack: [salt], [value], memory_end_ptr
 			// need: [salt], size, offset, value
@@ -775,9 +775,9 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 
 			// now: [salt], [value], [salt], size, offset, value
 			if (function.saltSet())
-				m_context << Instruction::CREATE2;
+				m_context << Instruction::ZK_CREATE2;
 			else
-				m_context << Instruction::CREATE;
+				m_context << Instruction::ZK_CREATE;
 
 			// now: [salt], [value], address
 

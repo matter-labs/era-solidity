@@ -141,6 +141,18 @@ void EthAssemblyAdapter::appendDataOffset(vector<AbstractAssembly::SubID> const&
 	m_assembly.pushSubroutineOffset(m_assembly.encodeSubPath(_subPath));
 }
 
+void EthAssemblyAdapter::appendZKEVMDataOffset(vector<AbstractAssembly::SubID> const& _subPath)
+{
+	if (auto it = m_dataHashBySubId.find(_subPath[0]); it != m_dataHashBySubId.end())
+	{
+		yulAssert(_subPath.size() == 1, "");
+		m_assembly << evmasm::AssemblyItem(evmasm::PushData, it->second);
+		return;
+	}
+
+	m_assembly.append(evmasm::AssemblyItem(evmasm::ZKEVMPushSub, m_assembly.encodeSubPath(_subPath)));
+}
+
 void EthAssemblyAdapter::appendDataSize(vector<AbstractAssembly::SubID> const& _subPath)
 {
 	if (auto it = m_dataHashBySubId.find(_subPath[0]); it != m_dataHashBySubId.end())
@@ -151,6 +163,18 @@ void EthAssemblyAdapter::appendDataSize(vector<AbstractAssembly::SubID> const& _
 	}
 
 	m_assembly.pushSubroutineSize(m_assembly.encodeSubPath(_subPath));
+}
+
+void EthAssemblyAdapter::appendZKEVMDataSize(vector<AbstractAssembly::SubID> const& _subPath)
+{
+	if (auto it = m_dataHashBySubId.find(_subPath[0]); it != m_dataHashBySubId.end())
+	{
+		yulAssert(_subPath.size() == 1, "");
+		m_assembly << u256(m_assembly.data(h256(it->second)).size());
+		return;
+	}
+
+	m_assembly.append(evmasm::AssemblyItem(evmasm::ZKEVMPushSubSize, m_assembly.encodeSubPath(_subPath)));
 }
 
 AbstractAssembly::SubID EthAssemblyAdapter::appendData(bytes const& _data)

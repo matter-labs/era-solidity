@@ -1507,14 +1507,14 @@ void CompilerUtils::computeHashStatic()
 	m_context << u256(32) << u256(0) << Instruction::KECCAK256;
 }
 
-void CompilerUtils::copyContractCodeToMemory(ContractDefinition const& contract, bool _creation)
+void CompilerUtils::copyContractCodeToMemory(ContractDefinition const& contract, bool _creation, bool _zkevm)
 {
 	string which = _creation ? "Creation" : "Runtime";
 	m_context.callLowLevelFunction(
 		"$copyContract" + which + "CodeToMemory_" + contract.type()->identifier(),
 		1,
 		1,
-		[&contract, _creation](CompilerContext& _context)
+		[&contract, _creation, _zkevm](CompilerContext& _context)
 		{
 			// copy the contract's code into memory
 			shared_ptr<evmasm::Assembly> assembly =
@@ -1522,9 +1522,11 @@ void CompilerUtils::copyContractCodeToMemory(ContractDefinition const& contract,
 				_context.compiledContract(contract) :
 				_context.compiledContractRuntime(contract);
 			// pushes size
-			auto subroutine = _context.addSubroutine(assembly);
-			_context << Instruction::DUP1 << subroutine;
-			_context << Instruction::DUP4 << Instruction::CODECOPY;
+			if (_zkevm)
+				_context << Instruction::DUP1 << _context.zkevmAddSubroutine(assembly);
+			else
+				_context << Instruction::DUP1 << _context.addSubroutine(assembly);
+			_context << Instruction::DUP4 << (_zkevm ? Instruction::ZK_DATACOPY : Instruction::CODECOPY);
 			_context << Instruction::ADD;
 		}
 	);

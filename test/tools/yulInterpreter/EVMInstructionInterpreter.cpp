@@ -32,6 +32,8 @@
 #include <libsolutil/Keccak256.h>
 #include <libsolutil/Numeric.h>
 
+#include "liblangutil/Exceptions.h"
+
 #include <limits>
 
 using namespace std;
@@ -316,6 +318,10 @@ u256 EVMInstructionInterpreter::eval(
 		logTrace(_instruction, arg);
 		return 0;
 	// --------------- calls ---------------
+	case Instruction::ZK_CREATE:
+	case Instruction::ZK_CREATE2:
+	case Instruction::ZK_DATACOPY:
+		solUnimplemented("ZKEVM instructions are not supported in the yul interpreter");
 	case Instruction::CREATE:
 		accessMemory(arg[1], arg[2]);
 		logTrace(_instruction, arg);
