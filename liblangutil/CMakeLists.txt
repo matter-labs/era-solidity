@@ -32,3 +32,7 @@ set(sources
 
 add_library(langutil ${sources})
 target_link_libraries(langutil PUBLIC solutil fmt::fmt-header-only)
+
+if(NOT ZKEVM_MODE_BY_DEFAULT)
+	target_compile_definitions(langutil PRIVATE DISABLE_ZKEVM_MODE_BY_DEFAULT)
+endif()

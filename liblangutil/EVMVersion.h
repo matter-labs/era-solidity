@@ -105,4 +105,6 @@ private:
 	Version m_version = Version::London;
 };
 
+extern bool g_zkEVM;
+
 }

@@ -48,6 +48,8 @@ static string const g_strEVM = "evm";
 static string const g_strEVMVersion = "evm-version";
 static string const g_strEwasm = "ewasm";
 static string const g_strViaIR = "via-ir";
+static string const g_strEnableZKEVMMode = "zkevm-mode";
+static string const g_strDisableZKEVMMode = "no-zkevm-mode";
 static string const g_strExperimentalViaIR = "experimental-via-ir";
 static string const g_strGas = "gas";
 static string const g_strHelp = "help";
@@ -584,6 +586,14 @@ General Information)").c_str(),
 		(
 			g_strViaIR.c_str(),
 			"Turn on compilation mode via the IR."
+		)
+		(
+			g_strEnableZKEVMMode.c_str(),
+			"Enable ZKEVM mode"
+		)
+		(
+			g_strDisableZKEVMMode.c_str(),
+			"Disable ZKEVM mode"
 		)
 		(
 			g_strRevertStrings.c_str(),
@@ -1277,6 +1287,14 @@ void CommandLineParser::processArgs()
 		m_args.count(g_strModelCheckerTargets) ||
 		m_args.count(g_strModelCheckerTimeout);
 	m_options.output.viaIR = (m_args.count(g_strExperimentalViaIR) > 0 || m_args.count(g_strViaIR) > 0);
+
+	if (m_args.count(g_strEnableZKEVMMode) > 0 && m_args.count(g_strDisableZKEVMMode) > 0)
+		solThrow(CommandLineValidationError, "zkevm mode cannot be both enabled and disabled");
+	if (m_args.count(g_strEnableZKEVMMode) > 0)
+		langutil::g_zkEVM = true;
+	else if (m_args.count(g_strDisableZKEVMMode) > 0)
+		langutil::g_zkEVM = false;
+
 	if (m_options.input.mode == InputMode::Compiler)
 		m_options.input.errorRecovery = (m_args.count(g_strErrorRecovery) > 0);
 

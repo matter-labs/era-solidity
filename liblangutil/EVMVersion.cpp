@@ -25,6 +25,12 @@ using namespace solidity;
 using namespace solidity::evmasm;
 using namespace solidity::langutil;
 
+#ifdef DISABLE_ZKEVM_MODE_BY_DEFAULT
+bool solidity::langutil::g_zkEVM = false;
+#else
+bool solidity::langutil::g_zkEVM = true;
+#endif
+
 bool EVMVersion::hasOpcode(Instruction _opcode) const
 {
 	switch (_opcode)
