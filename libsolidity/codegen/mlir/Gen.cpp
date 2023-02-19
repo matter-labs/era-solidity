@@ -257,7 +257,9 @@ void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 		gen.run(*contract);
 	}
 
-	gen.mod.print(llvm::errs(), mlir::OpPrintingFlags().enableDebugInfo());
+	gen.mod.print(llvm::outs(), mlir::OpPrintingFlags().enableDebugInfo());
+	llvm::outs() << "\n";
+	llvm::outs().flush();
 
 	if (failed(mlir::verify(gen.mod)))
 	{

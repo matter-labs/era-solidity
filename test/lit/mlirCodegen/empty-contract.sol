@@ -1,4 +1,4 @@
-// RUN: solc --mlir %s |& FileCheck %s
+// RUN: solc --mlir %s | FileCheck %s
 // CHECK: module {
 // CHECK-NEXT: solidity.contract @C {
 contract C {
