@@ -31,5 +31,5 @@ class CharStream;
 namespace solidity::frontend
 {
 class ContractDefinition;
-extern void runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, langutil::CharStream const& _stream);
+extern bool runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, langutil::CharStream const& _stream);
 }

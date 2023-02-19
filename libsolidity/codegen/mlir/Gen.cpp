@@ -244,7 +244,7 @@ void MLIRGen::run(ContractDefinition const& _cont)
 	m_b.setInsertionPointAfter(op);
 }
 
-void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, CharStream const& _stream)
+bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, CharStream const& _stream)
 {
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
@@ -257,12 +257,14 @@ void solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 		gen.run(*contract);
 	}
 
-	gen.mod.print(llvm::outs(), mlir::OpPrintingFlags().enableDebugInfo());
-	llvm::outs() << "\n";
-	llvm::outs().flush();
-
 	if (failed(mlir::verify(gen.mod)))
 	{
 		gen.mod.emitError("Module verification error");
+		return false;
 	}
+
+	gen.mod.print(llvm::outs(), mlir::OpPrintingFlags().enableDebugInfo());
+	llvm::outs() << "\n";
+	llvm::outs().flush();
+	return true;
 }
