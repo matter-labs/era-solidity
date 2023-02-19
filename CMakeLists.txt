@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.13.0)
 
+# Used in test/lit/lit.site.cfg.py.in
+set(SOLIDITY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 set(ETH_CMAKE_DIR   "${CMAKE_CURRENT_LIST_DIR}/cmake"   CACHE PATH "The the path to the cmake directory")
 list(APPEND CMAKE_MODULE_PATH ${ETH_CMAKE_DIR})
 
@@ -141,6 +144,9 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
 set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
+
+# Used in test/lit/lit.site.cfg.py.in
+set(SOLIDITY_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")

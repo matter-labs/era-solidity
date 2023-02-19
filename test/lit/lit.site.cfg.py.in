@@ -1,0 +1,11 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.solidity_obj_root = "@SOLIDITY_BINARY_DIR@";
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@SOLIDITY_SOURCE_DIR@/test/lit/lit.cfg.py")

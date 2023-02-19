@@ -215,5 +215,26 @@ if (NOT Boost_USE_STATIC_LIBS)
     target_compile_definitions(soltest PUBLIC -DBOOST_TEST_DYN_LINK)
 endif()
 
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit/lit.cfg.py
+  )
+
+set(SOLIDITY_TEST_DEPENDS
+  FileCheck
+  )
+
+add_lit_testsuite(check-solidity-mlir "Running solidity's MLIR regression tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/lit
+  DEPENDS ${SOLIDITY_TEST_DEPENDS}
+  )
+set_target_properties(check-solidity-mlir PROPERTIES FOLDER "Tests")
+
+add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}/lit/mlirCodegen
+  DEPENDS ${SOLIDITY_TEST_DEPENDS}
+)
+
 add_subdirectory(tools)
 add_subdirectory(evmc)
