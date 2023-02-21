@@ -783,13 +783,10 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 		case FunctionType::Kind::Transfer:
 		{
 			_functionCall.expression().accept(*this);
-			// Provide the gas stipend manually at first because we may send zero ether.
-			// Will be zeroed if we send more than zero ether.
-			m_context << u256(evmasm::GasCosts::callStipend);
+			// Unlike evm, 0 or GasCosts::callStipend constants doesn't make
+			// sense for zkevm
+			m_context << Instruction::GAS;
 			acceptAndConvert(*arguments.front(), *function.parameterTypes().front(), true);
-			// gas <- gas * !value
-			m_context << Instruction::SWAP1 << Instruction::DUP2;
-			m_context << Instruction::ISZERO << Instruction::MUL << Instruction::SWAP1;
 			FunctionType::Options callOptions;
 			callOptions.valueSet = true;
 			callOptions.gasSet = true;
