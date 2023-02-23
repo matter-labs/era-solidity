@@ -16,9 +16,10 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USER }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
-      - name: Setting the compiler-tester mode
+      - name: Getting the branch name (pull request)
+        if: github.event_name == 'pull_request'
         shell: bash
-        run: echo "COMPILER_TESTER_MODE='0.8.17'" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
 
       - name: Checking out the Solidity repository
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
@@ -54,14 +55,14 @@ jobs:
         working-directory: compiler-tester
         run: |
           mkdir -p solc-bin
-          cp ../solidity/build/solc/solc ./solc-bin/solc-0.8.17
-          chmod +x ./solc-bin/solc-0.8.17
-          ldd ./solc-bin/solc-0.8.17
+          cp ../solidity/build/solc/solc ./solc-bin/solc-${BRANCH_NAME}
+          chmod +x ./solc-bin/solc-${BRANCH_NAME}
+          ldd ./solc-bin/solc-${BRANCH_NAME}
           export RUST_BACKTRACE=full
           cargo install compiler-llvm-builder
           /usr/local/cargo/bin/zkevm-llvm clone && /usr/local/cargo/bin/zkevm-llvm build
-          cargo run --verbose --release --bin compiler-tester -- --mode=${{ env.COMPILER_TESTER_MODE }} \
-            --solc-bin-config-path='configs/solc-bin-zkevm-candidate.json'
+          cargo run --verbose --release --bin compiler-tester -- \
+            --solc-bin-config-path="configs/solc-bin-zkevm-candidate-${BRANCH_NAME}.json"
 
       - uses: 8398a7/action-slack@v3
         with:
