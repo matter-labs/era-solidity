@@ -265,7 +265,7 @@ bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 		return false;
 	}
 
-	gen.mod.print(llvm::outs(), mlir::OpPrintingFlags().enableDebugInfo());
+	gen.mod.print(llvm::outs());
 	llvm::outs() << "\n";
 	llvm::outs().flush();
 	return true;
