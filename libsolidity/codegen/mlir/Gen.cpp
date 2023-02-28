@@ -60,7 +60,7 @@ private:
 	mlir::OpBuilder m_b;
 	CharStream const& m_stream;
 
-	// Returns the mlir location for the solidity source location `_loc`
+	/// Returns the mlir location for the solidity source location `_loc`
 	mlir::Location loc(SourceLocation _loc)
 	{
 		// FIXME: Track _loc.end as well
@@ -68,16 +68,16 @@ private:
 		return mlir::FileLineColLoc::get(m_b.getStringAttr(m_stream.name()), lineCol.line, lineCol.column);
 	}
 
-	// Returns the corresponding mlir type for the solidity type `_ty`
+	/// Returns the corresponding mlir type for the solidity type `_ty`
 	mlir::Type type(Type const* _ty);
 
-	// Returns the cast from `_val` to a value having type `_dstTy`
+	/// Returns the cast from `_val` to a value having type `_dstTy`
 	mlir::Value genCast(mlir::Value _val, mlir::Type _dstTy);
 
-	// Returns the mlir expression for the literal `_lit`
+	/// Returns the mlir expression for the literal `_lit`
 	mlir::Value genExpr(Literal const* _lit);
 
-	// Returns the mlir expression from `_expr` and optionally casts it to `_resTy`
+	/// Returns the mlir expression from `_expr` and optionally casts it to `_resTy`
 	mlir::Value genExpr(Expression const* _expr, std::optional<mlir::Type const> _resTy = std::nullopt);
 
 	bool visit(Return const&) override;
