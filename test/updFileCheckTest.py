@@ -60,6 +60,7 @@ def main():
         run_lines[i].cmd = val.cmd.replace('%s', args.input)
 
     # Write assertions with the corresponding prefix to the input file
+    loc_re = re.compile(r'^#loc[0-9]+? = loc\((?P<file>".*?"):')
     with open(args.input, 'r+', encoding='utf-8') as handle:
         handle.seek(insert_pt)
         handle.writelines([HEADER])
@@ -71,6 +72,8 @@ def main():
                 if line != '':
                     assertion = COMMENT_PREFIX + ' ' + run_line.check_prefix
                     assertion += '-NEXT: ' if wrote_first_line else ': '
+                    if (mat_loc := loc_re.search(line)):
+                        line = line.replace(mat_loc.group('file'), '{{.*}}')
                     assertion += line
                     handle.writelines([assertion + '\n'])
                     wrote_first_line |= True
