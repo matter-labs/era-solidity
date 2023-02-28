@@ -26,6 +26,7 @@
 #include "Solidity/SolidityOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -33,6 +34,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace solidity::langutil;
@@ -267,4 +269,18 @@ bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 	llvm::outs() << "\n";
 	llvm::outs().flush();
 	return true;
+}
+
+void solidity::frontend::registerMLIRCLOpts() { mlir::registerAsmPrinterCLOptions(); }
+
+bool solidity::frontend::parseMLIROpts(std::vector<const char*>& _argv)
+{
+	// ParseCommandLineOptions() expects argv[0] to be the name of a program
+	std::vector<const char*> argv{"foo"};
+	for (const char* arg: _argv)
+	{
+		argv.push_back(arg);
+	}
+
+	return llvm::cl::ParseCommandLineOptions(argv.size(), argv.data(), "Generic MLIR flags\n");
 }

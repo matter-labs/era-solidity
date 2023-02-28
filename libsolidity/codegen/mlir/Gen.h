@@ -31,5 +31,12 @@ class CharStream;
 namespace solidity::frontend
 {
 class ContractDefinition;
+
+/// Registers required command line options in the MLIR framework
+extern void registerMLIRCLOpts();
+
+/// Parses command line options in `argv` for the MLIR framework
+extern bool parseMLIROpts(std::vector<const char*>& _argv);
+
 extern bool runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, langutil::CharStream const& _stream);
 }

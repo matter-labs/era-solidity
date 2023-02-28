@@ -24,6 +24,8 @@
 
 #include <liblangutil/EVMVersion.h>
 
+#include <libsolidity/codegen/mlir/Gen.h>
+
 #include <boost/algorithm/string.hpp>
 
 #include <range/v3/view/transform.hpp>
@@ -41,6 +43,7 @@ namespace solidity::frontend
 static string const g_strAllowPaths = "allow-paths";
 static string const g_strBasePath = "base-path";
 static string const g_strIncludePath = "include-path";
+static string const g_strMMLIR = "mmlir";
 static string const g_strAssemble = "assemble";
 static string const g_strCombinedJson = "combined-json";
 static string const g_strErrorRecovery = "error-recovery";
@@ -630,6 +633,11 @@ General Information)").c_str(),
 			po::value<string>()->value_name("stage"),
 			"Stop execution after the given compiler stage. Valid options: \"parsing\"."
 		)
+		(
+			g_strMMLIR.c_str(),
+			po::value<vector<string>>()->value_name("option"),
+			"Forwards the option to the MLIR framework"
+		)
 	;
 	desc.add(outputOptions);
 
@@ -1150,6 +1158,19 @@ void CommandLineParser::processArgs()
 	m_options.optimizer.noOptimizeYul = (m_args.count(g_strNoOptimizeYul) > 0);
 	if (!m_args[g_strOptimizeRuns].defaulted())
 		m_options.optimizer.expectedExecutionsPerDeployment = m_args.at(g_strOptimizeRuns).as<unsigned>();
+
+	if (m_args.count(g_strMMLIR))
+	{
+		vector<const char*> argv;
+		for (string const& flag: m_args[g_strMMLIR].as<vector<string>>())
+		{
+			if (flag.empty())
+				solThrow(CommandLineValidationError, "Empty values are not allowed in --" + g_strMMLIR + ".");
+			argv.push_back(flag.c_str());
+		}
+		if (!parseMLIROpts(argv))
+			solThrow(CommandLineValidationError, "Invalid option for --" + g_strMMLIR + ".");
+	}
 
 	if (m_args.count(g_strYulOptimizations))
 	{
