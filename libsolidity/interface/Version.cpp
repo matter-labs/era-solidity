@@ -32,6 +32,7 @@
 using namespace std;
 
 char const* solidity::frontend::VersionNumber = ETH_PROJECT_VERSION;
+char const* solidity::frontend::ZKEVMVersionString = SOL_VERSION_ZKEVM;
 
 string const solidity::frontend::VersionString =
 	string(solidity::frontend::VersionNumber) +
