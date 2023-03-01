@@ -38,6 +38,7 @@ extern std::string const VersionStringStrict;
 /// the first byte is zero, the following three bytes encode A B and C (interpreted as decimals)
 /// and HASH is interpreted as 8 hex digits and encoded into the last four bytes.
 bytes binaryVersion();
+extern char const* ZKEVMVersionString;
 
 }
 }
