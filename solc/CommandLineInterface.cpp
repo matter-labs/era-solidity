@@ -157,11 +157,12 @@ static set<string> const g_combinedJsonArgs{
 static void version()
 {
 	cout <<
-		"solc, the solidity compiler commandline interface" <<
+		"solc, the zkEVM Solidity compiler commandline interface" <<
 		endl <<
 		"Version: " <<
 		dev::solidity::VersionString <<
-		endl;
+		endl <<
+		"zkEVM: " << dev::solidity::ZKEVMVersionString << endl;
 	exit(0);
 }
 
