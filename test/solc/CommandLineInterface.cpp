@@ -138,7 +138,8 @@ BOOST_AUTO_TEST_CASE(version)
 	OptionsReaderAndMessages result = runCLI({"solc", "--version"}, "");
 
 	BOOST_TEST(result.success);
-	BOOST_TEST(boost::ends_with(result.stdoutContent, "Version: " + solidity::frontend::VersionString + "\n"));
+	BOOST_TEST(boost::ends_with(result.stdoutContent, "Version: " + solidity::frontend::VersionString + "\n"
+				+ "zkEVM: " + solidity::frontend::ZKEVMVersionString + "\n"));
 	BOOST_TEST(result.stderrContent == "");
 	BOOST_TEST(result.options.input.mode == InputMode::Version);
 }
