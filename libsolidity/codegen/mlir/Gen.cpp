@@ -83,6 +83,9 @@ private:
 	/// Returns the mlir expression for the literal `_lit`
 	mlir::Value genExpr(Literal const* _lit);
 
+	/// Returns the mlir expression for the binary operation `_binOp`
+	mlir::Value genExpr(BinaryOperation const* _binOp);
+
 	/// Returns the mlir expression from `_expr` and optionally casts it to the
 	/// corresponding mlir type of `_resTy`
 	mlir::Value genExpr(Expression const* _expr, std::optional<Type const*> _resTy = std::nullopt);
@@ -163,6 +166,24 @@ mlir::Value MLIRGen::genCast(mlir::Value _val, Type const* _srcTy, Type const* _
 	solUnimplemented("Unhandled cast\n");
 }
 
+mlir::Value MLIRGen::genExpr(BinaryOperation const* _binOp)
+{
+	auto lhs = genExpr(&_binOp->leftExpression());
+	auto rhs = genExpr(&_binOp->rightExpression());
+	auto lc = loc(_binOp->location());
+
+	switch (_binOp->getOperator())
+	{
+	case Token::Add:
+		return m_b.create<mlir::arith::AddIOp>(lc, lhs, rhs)->getResult(0);
+	case Token::Mul:
+		return m_b.create<mlir::arith::MulIOp>(lc, lhs, rhs)->getResult(0);
+	default:
+		break;
+	}
+	solUnimplemented("Unhandled binary operation");
+}
+
 mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<Type const*> _resTy)
 {
 	mlir::Value val;
@@ -171,6 +192,10 @@ mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<Type const*>
 	if (auto* lit = dynamic_cast<Literal const*>(_expr))
 	{
 		val = genExpr(lit);
+	}
+	else if (auto* binOp = dynamic_cast<BinaryOperation const*>(_expr))
+	{
+		val = genExpr(binOp);
 	}
 
 	// Generate cast (Optional)
