@@ -40,7 +40,7 @@ contract C {
 // DBG-NEXT:       %0 = arith.extsi %c300_i16 : i16 to i256 loc(#loc6)
 // DBG-NEXT:       return %0 : i256 loc(#loc7)
 // DBG-NEXT:     } loc(#loc5)
-// DBG-NEXT:     func.func @f2(%arg0: i256 loc("test/lit/mlirCodegen/return-const.sol":6:14)) -> i256 {
+// DBG-NEXT:     func.func @f2(%arg0: i256 loc({{.*}}:6:14)) -> i256 {
 // DBG-NEXT:       %c7_i8 = arith.constant 7 : i8 loc(#loc10)
 // DBG-NEXT:       %0 = arith.extui %c7_i8 : i8 to i256 loc(#loc10)
 // DBG-NEXT:       return %0 : i256 loc(#loc11)

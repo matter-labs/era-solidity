@@ -60,7 +60,7 @@ def main():
         run_lines[i].cmd = val.cmd.replace('%s', args.input)
 
     # Write assertions with the corresponding prefix to the input file
-    loc_re = re.compile(r'^#loc[0-9]+? = loc\((?P<file>".*?"):')
+    loc_re = re.compile(r' loc\((?P<file>".*?"):\d+:\d+\)')
     with open(args.input, 'r+', encoding='utf-8') as handle:
         handle.seek(insert_pt)
         handle.writelines([HEADER])
