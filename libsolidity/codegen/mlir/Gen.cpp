@@ -22,6 +22,7 @@
 #include <liblangutil/SourceLocation.h>
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTVisitor.h>
+#include <range/v3/view/zip.hpp>
 
 #include "Solidity/SolidityOps.h"
 #include "liblangutil/Exceptions.h"
@@ -227,10 +228,12 @@ void MLIRGen::run(FunctionDefinition const& _func)
 {
 	currFunc = &_func;
 	std::vector<mlir::Type> inpTys, outTys;
+	std::vector<mlir::Location> inpLocs;
 
 	for (auto const& param: _func.parameters())
 	{
 		inpTys.push_back(type(param->annotation().type));
+		inpLocs.push_back(loc(param->location()));
 	}
 
 	for (auto const& param: _func.returnParameters())
@@ -244,8 +247,10 @@ void MLIRGen::run(FunctionDefinition const& _func)
 	auto funcType = m_b.getFunctionType(inpTys, outTys);
 	auto op = m_b.create<mlir::func::FuncOp>(loc(_func.location()), _func.name(), funcType);
 
-	solUnimplementedAssert(inpTys.empty(), "TODO: Add inp args to entry block");
 	mlir::Block* entryBlk = m_b.createBlock(&op.getRegion());
+	for (auto&& [inpTy, inpLoc]: ranges::views::zip(inpTys, inpLocs))
+		entryBlk->addArgument(inpTy, inpLoc);
+
 	m_b.setInsertionPointToStart(entryBlk);
 
 	_func.accept(*this);
