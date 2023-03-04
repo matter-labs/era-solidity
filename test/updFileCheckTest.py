@@ -77,6 +77,7 @@ def main():
                     assertion += line
                     handle.writelines([assertion + '\n'])
                     wrote_first_line |= True
+        handle.truncate()
 
 if __name__ == '__main__':
     main()
