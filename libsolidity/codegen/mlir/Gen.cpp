@@ -24,6 +24,7 @@
 #include <libsolidity/ast/ASTVisitor.h>
 
 #include "Solidity/SolidityOps.h"
+#include "liblangutil/Exceptions.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/AsmState.h"
@@ -60,6 +61,9 @@ private:
 	mlir::OpBuilder m_b;
 	CharStream const& m_stream;
 
+	/// The function being lowered
+	FunctionDefinition const* currFunc;
+
 	/// Returns the mlir location for the solidity source location `_loc`
 	mlir::Location loc(SourceLocation _loc)
 	{
@@ -71,14 +75,16 @@ private:
 	/// Returns the corresponding mlir type for the solidity type `_ty`
 	mlir::Type type(Type const* _ty);
 
-	/// Returns the cast from `_val` to a value having type `_dstTy`
-	mlir::Value genCast(mlir::Value _val, mlir::Type _dstTy);
+	/// Returns the cast from `_val` having the corresponding mlir type of
+	/// `_srcTy` to a value having the corresponding mlir type of `_dstTy`
+	mlir::Value genCast(mlir::Value _val, Type const* _srcTy, Type const* _dstTy);
 
 	/// Returns the mlir expression for the literal `_lit`
 	mlir::Value genExpr(Literal const* _lit);
 
-	/// Returns the mlir expression from `_expr` and optionally casts it to `_resTy`
-	mlir::Value genExpr(Expression const* _expr, std::optional<mlir::Type const> _resTy = std::nullopt);
+	/// Returns the mlir expression from `_expr` and optionally casts it to the
+	/// corresponding mlir type of `_resTy`
+	mlir::Value genExpr(Expression const* _expr, std::optional<Type const*> _resTy = std::nullopt);
 
 	bool visit(Return const&) override;
 	void run(FunctionDefinition const&);
@@ -108,24 +114,42 @@ mlir::Type MLIRGen::type(Type const* _ty)
 	solUnimplemented("Unhandled type\n");
 }
 
-mlir::Value MLIRGen::genCast(mlir::Value _val, mlir::Type _dstTy)
+mlir::Value MLIRGen::genCast(mlir::Value _val, Type const* _srcTy, Type const* _dstTy)
 {
-	mlir::Type srcTy = _val.getType();
-
 	// Don't cast if we're casting to the same type
-	if (srcTy == _dstTy)
+	if (_srcTy == _dstTy)
 		return _val;
 
+	auto getAsIntTy = [](Type const* _ty) -> IntegerType const*
+	{
+		auto intTy = dynamic_cast<IntegerType const*>(_ty);
+		if (!intTy)
+		{
+			if (auto* ratTy = dynamic_cast<RationalNumberType const*>(_ty))
+			{
+				if (auto* intRatTy = ratTy->integerType())
+					return intRatTy;
+			}
+			return nullptr;
+		}
+		return intTy;
+	};
+
+	// We generate signless integral mlir::Types, so we must track the solidity
+	// type to perform "sign aware lowering".
+	//
 	// Casting between integers
-	auto srcIntTy = srcTy.dyn_cast<mlir::IntegerType>();
-	auto dstIntTy = _dstTy.dyn_cast<mlir::IntegerType>();
+	auto srcIntTy = getAsIntTy(_srcTy);
+	auto dstIntTy = getAsIntTy(_dstTy);
+
 	if (srcIntTy && dstIntTy)
 	{
 		// Generate extends
-		if (dstIntTy.getWidth() > srcIntTy.getWidth())
+		if (dstIntTy->numBits() > srcIntTy->numBits())
 		{
-			return dstIntTy.isSigned() ? m_b.create<mlir::arith::ExtSIOp>(_val.getLoc(), dstIntTy, _val)->getResult(0)
-									   : m_b.create<mlir::arith::ExtUIOp>(_val.getLoc(), dstIntTy, _val)->getResult(0);
+			return dstIntTy->isSigned()
+					   ? m_b.create<mlir::arith::ExtSIOp>(_val.getLoc(), type(dstIntTy), _val)->getResult(0)
+					   : m_b.create<mlir::arith::ExtUIOp>(_val.getLoc(), type(dstIntTy), _val)->getResult(0);
 		}
 		else
 		{
@@ -138,7 +162,7 @@ mlir::Value MLIRGen::genCast(mlir::Value _val, mlir::Type _dstTy)
 	solUnimplemented("Unhandled cast\n");
 }
 
-mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<mlir::Type const> _resTy)
+mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<Type const*> _resTy)
 {
 	mlir::Value val;
 
@@ -151,7 +175,7 @@ mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<mlir::Type c
 	// Generate cast (Optional)
 	if (_resTy)
 	{
-		return genCast(val, *_resTy);
+		return genCast(val, _expr->annotation().type, *_resTy);
 	}
 
 	return val;
@@ -185,17 +209,15 @@ mlir::Value MLIRGen::genExpr(Literal const* _lit)
 
 bool MLIRGen::visit(Return const& _ret)
 {
-	auto currFunc = m_b.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
+	auto currFuncResTys = currFunc->functionType(/*FIXME*/ true)->returnParameterTypes();
 
 	// The function generator emits `ReturnOp` for empty result
-	if (currFunc.getNumResults() == 0)
+	if (currFuncResTys.size() == 0)
 		return true;
 
-	// Get the return type of the current function so that we can apply any
-	// necessary cast operations
-	mlir::Type currFuncResTy = currFunc.getFunctionType().getResult(0);
-	mlir::Value expr = genExpr(_ret.expression(), currFuncResTy);
+	solUnimplementedAssert(currFuncResTys.size() == 1, "TODO: Impl multivalued return");
 
+	mlir::Value expr = genExpr(_ret.expression(), currFuncResTys[0]);
 	m_b.create<mlir::func::ReturnOp>(loc(_ret.location()), expr);
 
 	return true;
@@ -203,6 +225,7 @@ bool MLIRGen::visit(Return const& _ret)
 
 void MLIRGen::run(FunctionDefinition const& _func)
 {
+	currFunc = &_func;
 	std::vector<mlir::Type> inpTys, outTys;
 
 	for (auto const& param: _func.parameters())
