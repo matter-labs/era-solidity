@@ -28,10 +28,12 @@
 #include "liblangutil/Exceptions.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
@@ -65,6 +67,10 @@ private:
 	/// The function being lowered
 	FunctionDefinition const* currFunc;
 
+	// TODO: Use VariableDeclaration instead?
+	/// Maps variables to its MemRef
+	std::map<Declaration const*, mlir::Value> m_varMemRef;
+
 	/// Returns the mlir location for the solidity source location `_loc`
 	mlir::Location loc(SourceLocation _loc)
 	{
@@ -75,6 +81,13 @@ private:
 
 	/// Returns the corresponding mlir type for the solidity type `_ty`
 	mlir::Type type(Type const* _ty);
+
+	/// Returns the MemRef of the variable
+	mlir::Value getMemRef(Declaration const* _decl);
+	mlir::Value getMemRef(Identifier const* _ident);
+
+	/// Sets the MemRef of the variable
+	void setMemRef(Declaration const* _decl, mlir::Value _addr);
 
 	/// Returns the cast from `_val` having the corresponding mlir type of
 	/// `_srcTy` to a value having the corresponding mlir type of `_dstTy`
@@ -116,6 +129,15 @@ mlir::Type MLIRGen::type(Type const* _ty)
 	}
 	// TODO:
 	solUnimplemented("Unhandled type\n");
+}
+
+mlir::Value MLIRGen::getMemRef(Declaration const* _decl) { return m_varMemRef[_decl]; }
+
+void MLIRGen::setMemRef(Declaration const* _decl, mlir::Value _addr) { m_varMemRef[_decl] = _addr; }
+
+mlir::Value MLIRGen::getMemRef(Identifier const* _ident)
+{
+	return getMemRef(_ident->annotation().referencedDeclaration);
 }
 
 mlir::Value MLIRGen::genCast(mlir::Value _val, Type const* _srcTy, Type const* _dstTy)
@@ -168,9 +190,11 @@ mlir::Value MLIRGen::genCast(mlir::Value _val, Type const* _srcTy, Type const* _
 
 mlir::Value MLIRGen::genExpr(BinaryOperation const* _binOp)
 {
-	auto lhs = genExpr(&_binOp->leftExpression());
-	auto rhs = genExpr(&_binOp->rightExpression());
+	auto resTy = _binOp->annotation().type;
 	auto lc = loc(_binOp->location());
+
+	mlir::Value lhs = genExpr(&_binOp->leftExpression(), resTy);
+	mlir::Value rhs = genExpr(&_binOp->rightExpression(), resTy);
 
 	switch (_binOp->getOperator())
 	{
@@ -193,6 +217,12 @@ mlir::Value MLIRGen::genExpr(Expression const* _expr, std::optional<Type const*>
 	{
 		val = genExpr(lit);
 	}
+	// Generate variable access
+	else if (auto* ident = dynamic_cast<Identifier const*>(_expr))
+	{
+		return m_b.create<mlir::memref::LoadOp>(loc(_expr->location()), getMemRef(ident));
+	}
+	// Generate binary operation
 	else if (auto* binOp = dynamic_cast<BinaryOperation const*>(_expr))
 	{
 		val = genExpr(binOp);
@@ -273,10 +303,17 @@ void MLIRGen::run(FunctionDefinition const& _func)
 	auto op = m_b.create<mlir::func::FuncOp>(loc(_func.location()), _func.name(), funcType);
 
 	mlir::Block* entryBlk = m_b.createBlock(&op.getRegion());
-	for (auto&& [inpTy, inpLoc]: ranges::views::zip(inpTys, inpLocs))
-		entryBlk->addArgument(inpTy, inpLoc);
-
 	m_b.setInsertionPointToStart(entryBlk);
+
+	for (auto&& [inpTy, inpLoc, param]: ranges::views::zip(inpTys, inpLocs, _func.parameters()))
+	{
+		mlir::Value arg = entryBlk->addArgument(inpTy, inpLoc);
+		// TODO: Support non-scalars
+		mlir::MemRefType memRefTy = mlir::MemRefType::get({}, inpTy);
+		mlir::Value addr = m_b.create<mlir::memref::AllocaOp>(inpLoc, memRefTy).getResult();
+		setMemRef(param.get(), addr);
+		m_b.create<mlir::memref::StoreOp>(inpLoc, arg, addr);
+	}
 
 	_func.accept(*this);
 
@@ -305,6 +342,7 @@ bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
 	ctx.getOrLoadDialect<mlir::func::FuncDialect>();
 	ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+	ctx.getOrLoadDialect<mlir::memref::MemRefDialect>();
 
 	MLIRGen gen(ctx, _stream);
 	for (auto* contract: _contracts)

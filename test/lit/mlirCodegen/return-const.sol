@@ -21,9 +21,11 @@ contract C {
 // CHECK-NEXT:       return %0 : i256
 // CHECK-NEXT:     }
 // CHECK-NEXT:     func.func @f2(%arg0: i256) -> i256 {
+// CHECK-NEXT:       %0 = memref.alloca() : memref<i256>
+// CHECK-NEXT:       memref.store %arg0, %0[] : memref<i256>
 // CHECK-NEXT:       %c7_i8 = arith.constant 7 : i8
-// CHECK-NEXT:       %0 = arith.extui %c7_i8 : i8 to i256
-// CHECK-NEXT:       return %0 : i256
+// CHECK-NEXT:       %1 = arith.extui %c7_i8 : i8 to i256
+// CHECK-NEXT:       return %1 : i256
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
@@ -41,9 +43,11 @@ contract C {
 // DBG-NEXT:       return %0 : i256 loc(#loc7)
 // DBG-NEXT:     } loc(#loc5)
 // DBG-NEXT:     func.func @f2(%arg0: i256 loc({{.*}}:6:14)) -> i256 {
+// DBG-NEXT:       %0 = memref.alloca() : memref<i256> loc(#loc9)
+// DBG-NEXT:       memref.store %arg0, %0[] : memref<i256> loc(#loc9)
 // DBG-NEXT:       %c7_i8 = arith.constant 7 : i8 loc(#loc10)
-// DBG-NEXT:       %0 = arith.extui %c7_i8 : i8 to i256 loc(#loc10)
-// DBG-NEXT:       return %0 : i256 loc(#loc11)
+// DBG-NEXT:       %1 = arith.extui %c7_i8 : i8 to i256 loc(#loc10)
+// DBG-NEXT:       return %1 : i256 loc(#loc11)
 // DBG-NEXT:     } loc(#loc8)
 // DBG-NEXT:   } loc(#loc1)
 // DBG-NEXT: } loc(#loc0)
