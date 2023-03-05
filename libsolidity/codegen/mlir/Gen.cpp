@@ -65,7 +65,7 @@ private:
 	CharStream const& m_stream;
 
 	/// The function being lowered
-	FunctionDefinition const* currFunc;
+	FunctionDefinition const* m_currFunc;
 
 	// TODO: Use VariableDeclaration instead?
 	/// Maps variables to its MemRef
@@ -265,7 +265,7 @@ mlir::Value MLIRGen::genExpr(Literal const* _lit)
 
 bool MLIRGen::visit(Return const& _ret)
 {
-	auto currFuncResTys = currFunc->functionType(/*FIXME*/ true)->returnParameterTypes();
+	auto currFuncResTys = m_currFunc->functionType(/*FIXME*/ true)->returnParameterTypes();
 
 	// The function generator emits `ReturnOp` for empty result
 	if (currFuncResTys.size() == 0)
@@ -281,7 +281,7 @@ bool MLIRGen::visit(Return const& _ret)
 
 void MLIRGen::run(FunctionDefinition const& _func)
 {
-	currFunc = &_func;
+	m_currFunc = &_func;
 	std::vector<mlir::Type> inpTys, outTys;
 	std::vector<mlir::Location> inpLocs;
 
