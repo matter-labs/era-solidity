@@ -216,6 +216,9 @@ set(LIBS
 	${dialect_libs}
 	${conversion_libs}
 	MLIRSolidity
+	MLIRFuncDialect
+	MLIRArithmeticDialect
+	MLIRMemRefDialect
 )
 
 add_library(solidity ${sources} ${mlir_sources})
