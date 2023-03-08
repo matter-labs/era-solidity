@@ -120,24 +120,6 @@ void LoadResolver::tryEvaluateKeccak(
 		m_expectedExecutionsPerDeployment ? *m_expectedExecutionsPerDeployment : 1
 	};
 
-	bigint costOfKeccak = gasMeter.costs(_e);
-	bigint costOfLiteral = gasMeter.costs(
-		Literal{
-			{},
-			LiteralKind::Number,
-			// a dummy 256-bit number to represent the Keccak256 hash.
-			YulString{numeric_limits<u256>::max().str()},
-			{}
-		}
-	);
-
-	// We skip if there are no net gas savings.
-	// Note that for default `m_runs = 200`, the values are
-	// `costOfLiteral = 7200` and `costOfKeccak = 9000` for runtime context.
-	// For creation context: `costOfLiteral = 531` and `costOfKeccak = 90`.
-	if (costOfLiteral > costOfKeccak)
-		return;
-
 	optional<YulString> value = memoryValue(memoryKey->name);
 	if (value && inScope(*value))
 	{
