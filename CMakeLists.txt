@@ -136,6 +136,10 @@ if (NOT (${Z3_FOUND} OR ${CVC4_FOUND}))
   \nPlease install Z3 or CVC4 or remove the option disabling them (USE_Z3, USE_CVC4).")
 endif()
 
+# The specified llvm-project build with mlir is expected to be configured with
+# -frtti (i.e. with -DLLVM_ENABLE_RTTI=ON) to avoid build issues when mixing
+# solidity source using rtti and llvm-project source (like, for instance, the
+# "undefined reference to 'typeinfo ...'" link-time error).
 find_package(MLIR REQUIRED CONFIG)
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
