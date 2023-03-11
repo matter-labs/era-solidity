@@ -187,6 +187,8 @@ set(sources
 set(mlir_sources
 	codegen/mlir/Gen.cpp
 	codegen/mlir/Gen.h
+	codegen/mlir/Passes.h
+	codegen/mlir/LowerToLLVM.cpp
 )
 
 set(mlir_solidity_dialect_sources
@@ -215,6 +217,7 @@ get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set(LIBS
 	${dialect_libs}
 	${conversion_libs}
+	MLIRPass
 	MLIRSolidity
 	MLIRFuncDialect
 	MLIRArithmeticDialect

@@ -17,6 +17,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/Passes.h>
 
 #include <liblangutil/CharStream.h>
 #include <liblangutil/SourceLocation.h>
@@ -38,6 +39,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Pass/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -359,6 +361,9 @@ bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 	gen.mod.print(llvm::outs());
 	llvm::outs() << "\n";
 	llvm::outs().flush();
+
+	mlir::PassManager passMgr(&ctx);
+	passMgr.addPass(mlir::solidity::createLowerToLLVMPass());
 	return true;
 }
 
