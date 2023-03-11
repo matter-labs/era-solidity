@@ -21,7 +21,22 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/DialectRegistry.h"
+
+#include "mlir/Support/LogicalResult.h"
+
+#include "mlir/Transforms/DialectConversion.h"
+
+#include <algorithm>
 
 using namespace mlir;
 
@@ -31,7 +46,25 @@ struct LowerToLLVMPass: public PassWrapper<LowerToLLVMPass, OperationPass<Module
 {
 	MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LowerToLLVMPass)
 
-	void runOnOperation() override {}
+	void getDependentDialects(DialectRegistry& reg) const override { reg.insert<LLVM::LLVMDialect>(); }
+
+	void runOnOperation() override
+	{
+		// We only lower till the llvm dialect
+		LLVMConversionTarget llConv(getContext());
+		llConv.addLegalOp<ModuleOp>();
+		LLVMTypeConverter llTyConv(&getContext());
+
+		// Lower arith, memref and func dialects to the llvm dialect
+		RewritePatternSet pats(&getContext());
+		arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
+		populateMemRefToLLVMConversionPatterns(llTyConv, pats);
+		populateFuncToLLVMConversionPatterns(llTyConv, pats);
+
+		ModuleOp mod = getOperation();
+		if (failed(applyFullConversion(mod, llConv, std::move(pats))))
+			signalPassFailure();
+	}
 };
 }
 

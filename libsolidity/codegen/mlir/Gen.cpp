@@ -363,7 +363,11 @@ bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 	llvm::outs().flush();
 
 	mlir::PassManager passMgr(&ctx);
-	passMgr.addPass(mlir::solidity::createLowerToLLVMPass());
+	if (false)
+		passMgr.addPass(mlir::solidity::createLowerToLLVMPass());
+	if (mlir::failed(passMgr.run(gen.mod)))
+		return false;
+
 	return true;
 }
 
