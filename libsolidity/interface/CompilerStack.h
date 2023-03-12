@@ -205,8 +205,10 @@ public:
 	/// Enable generation of Yul IR code.
 	void enableIRGeneration(bool _enable = true) { m_generateIR = _enable; }
 
+	/// Enable generation of MLIR
 	void enableMLIRGeneration(bool _enable = true) { m_generateMLIR = _enable; }
 
+	/// Set the stage of MLIR generation
 	void setMLIRGenStage(MLIRGenStage _stage) { m_MLIRGenStage = _stage; }
 
 	/// Enable experimental generation of Ewasm code. If enabled, IR is also generated.
