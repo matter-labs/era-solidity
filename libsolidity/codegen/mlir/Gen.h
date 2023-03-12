@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <liblangutil/Exceptions.h>
+#include <string>
 #include <vector>
 
 namespace solidity::langutil
@@ -38,5 +40,15 @@ extern void registerMLIRCLOpts();
 /// Parses command line options in `argv` for the MLIR framework
 extern bool parseMLIROpts(std::vector<const char*>& _argv);
 
-extern bool runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, langutil::CharStream const& _stream);
+/// MLIRGen stages
+enum class MLIRGenStage
+{
+	Init,
+	LLVMIR
+};
+
+extern bool runMLIRGen(
+	std::vector<ContractDefinition const*> const& _contracts,
+	langutil::CharStream const& _stream,
+	MLIRGenStage stage = MLIRGenStage::Init);
 }

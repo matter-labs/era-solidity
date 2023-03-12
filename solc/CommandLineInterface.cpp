@@ -715,6 +715,7 @@ void CommandLineInterface::compile()
 
 		m_compiler->enableIRGeneration(m_options.compiler.outputs.ir || m_options.compiler.outputs.irOptimized);
 		m_compiler->enableMLIRGeneration(m_options.compiler.outputs.mlir);
+		m_compiler->setMLIRGenStage(m_options.output.mlirGenStage);
 		m_compiler->enableEwasmGeneration(m_options.compiler.outputs.ewasm);
 		m_compiler->enableEvmBytecodeGeneration(
 			m_options.compiler.estimateGas ||

@@ -25,6 +25,8 @@
 #include <libsolidity/interface/FileReader.h>
 #include <libsolidity/interface/ImportRemapper.h>
 
+#include <libsolidity/codegen/mlir/Gen.h>
+
 #include <libyul/YulStack.h>
 
 #include <liblangutil/DebugInfoSelection.h>
@@ -189,6 +191,7 @@ struct CommandLineOptions
 		std::optional<langutil::DebugInfoSelection> debugInfoSelection;
 		CompilerStack::State stopAfter = CompilerStack::State::CompilationSuccessful;
 		std::optional<uint8_t> eofVersion;
+		MLIRGenStage mlirGenStage = MLIRGenStage::Init;
 	} output;
 
 	struct

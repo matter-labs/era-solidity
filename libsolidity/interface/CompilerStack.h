@@ -31,6 +31,8 @@
 #include <libsolidity/interface/Version.h>
 #include <libsolidity/interface/DebugSettings.h>
 
+#include <libsolidity/codegen/mlir/Gen.h>
+
 #include <libsolidity/formal/ModelCheckerSettings.h>
 
 #include <libsmtutil/SolverInterface.h>
@@ -204,6 +206,8 @@ public:
 	void enableIRGeneration(bool _enable = true) { m_generateIR = _enable; }
 
 	void enableMLIRGeneration(bool _enable = true) { m_generateMLIR = _enable; }
+
+	void setMLIRGenStage(MLIRGenStage _stage) { m_MLIRGenStage = _stage; }
 
 	/// Enable experimental generation of Ewasm code. If enabled, IR is also generated.
 	void enableEwasmGeneration(bool _enable = true) { m_generateEwasm = _enable; }
@@ -510,6 +514,7 @@ private:
 	bool m_generateEvmBytecode = true;
 	bool m_generateIR = false;
 	bool m_generateMLIR = false;
+	MLIRGenStage m_MLIRGenStage = MLIRGenStage::Init;
 	bool m_generateEwasm = false;
 	std::map<std::string, util::h160> m_libraries;
 	ImportRemapper m_importRemapper;

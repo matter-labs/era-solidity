@@ -338,7 +338,8 @@ void MLIRGen::run(ContractDefinition const& _cont)
 	m_b.setInsertionPointAfter(op);
 }
 
-bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const& _contracts, CharStream const& _stream)
+bool solidity::frontend::runMLIRGen(
+	std::vector<ContractDefinition const*> const& _contracts, CharStream const& _stream, MLIRGenStage stage)
 {
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
@@ -363,7 +364,7 @@ bool solidity::frontend::runMLIRGen(std::vector<ContractDefinition const*> const
 	llvm::outs().flush();
 
 	mlir::PassManager passMgr(&ctx);
-	if (false)
+	if (stage >= MLIRGenStage::LLVMIR)
 		passMgr.addPass(mlir::solidity::createLowerToLLVMPass());
 	if (mlir::failed(passMgr.run(gen.mod)))
 		return false;

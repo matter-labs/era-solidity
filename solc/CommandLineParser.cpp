@@ -40,6 +40,16 @@ namespace po = boost::program_options;
 namespace solidity::frontend
 {
 
+static MLIRGenStage strToMLIRGenStage(std::string const& _str)
+{
+	if (_str == "init")
+		return MLIRGenStage::Init;
+	else if (_str == "llvm-ir")
+		return MLIRGenStage::LLVMIR;
+
+	solAssert(false, "Invalid MLIRGenStage");
+}
+
 static string const g_strAllowPaths = "allow-paths";
 static string const g_strBasePath = "base-path";
 static string const g_strIncludePath = "include-path";
@@ -60,6 +70,7 @@ static string const g_strInputFile = "input-file";
 static string const g_strYul = "yul";
 static string const g_strYulDialect = "yul-dialect";
 static string const g_strDebugInfo = "debug-info";
+static string const g_strMLIRGenStage = "mlir-stg";
 static string const g_strIPFS = "ipfs";
 static string const g_strLicense = "license";
 static string const g_strLibraries = "libraries";
@@ -629,6 +640,11 @@ General Information)").c_str(),
 			"following components: " + util::joinHumanReadable(DebugInfoSelection::componentMap() | ranges::views::keys) + ".").c_str()
 		)
 		(
+			g_strMLIRGenStage.c_str(),
+			po::value<string>()->default_value("init"),
+			"Stop MLIR generator at the specified stage"
+		)
+		(
 			g_strStopAfter.c_str(),
 			po::value<string>()->value_name("stage"),
 			"Stop execution after the given compiler stage. Valid options: \"parsing\"."
@@ -1068,6 +1084,12 @@ void CommandLineParser::processArgs()
 
 		if (m_options.output.debugInfoSelection->snippet && !m_options.output.debugInfoSelection->location)
 			solThrow(CommandLineValidationError, "To use 'snippet' with --" + g_strDebugInfo + " you must select also 'location'.");
+	}
+
+	if (!m_args[g_strMLIRGenStage].defaulted())
+	{
+		string val = m_args[g_strMLIRGenStage].as<string>();
+		m_options.output.mlirGenStage = strToMLIRGenStage(val);
 	}
 
 	parseCombinedJsonOption();
