@@ -19,7 +19,7 @@ jobs:
       - uses: AutoModality/action-clean@492b2d2e2e77247bfd0b17eaa89a371b2f3430ee # v1
       - name: Preparing workspace. Setting environment.
         run: |
-          echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^I+B3' }}" >> $GITHUB_ENV
+          echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^B3' }}" >> $GITHUB_ENV
           echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || '' }}" >> $GITHUB_ENV
           echo "CANDIDATE_BRANCH_NAME=${{ github.event.inputs.compiler_tester_candidate_branch }}" >> $GITHUB_ENV
 
@@ -89,7 +89,7 @@ jobs:
       - uses: AutoModality/action-clean@492b2d2e2e77247bfd0b17eaa89a371b2f3430ee # v1
       - name: Preparing workspace. Setting environment.
         run: |
-          echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^I+B3' }}" >> $GITHUB_ENV
+          echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^B3' }}" >> $GITHUB_ENV
           echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || '' }}" >> $GITHUB_ENV
           echo "REFERENCE_BRANCH_NAME=${{ github.event.inputs.compiler_tester_reference_branch }}" >> $GITHUB_ENV
 
