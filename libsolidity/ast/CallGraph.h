@@ -70,6 +70,9 @@ struct CallGraph
 
 	/// Errors that are used by functions present in the graph.
 	std::set<ErrorDefinition const*, ASTNode::CompareByID> usedErrors;
+
+	/// Returns true if @a _callable belongs to a cycle
+	bool inCycle(CallableDeclaration const* _callable) const;
 };
 
 }
