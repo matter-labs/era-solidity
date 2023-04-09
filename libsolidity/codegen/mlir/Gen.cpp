@@ -301,6 +301,7 @@ void MLIRGen::run(FunctionDefinition const& _func)
 	// TODO:
 	solUnimplementedAssert(outTys.size() <= 1, "TODO: Impl multivalued return");
 
+	// TODO: Specify visibility
 	auto funcType = m_b.getFunctionType(inpTys, outTys);
 	auto op = m_b.create<mlir::func::FuncOp>(loc(_func.location()), _func.name(), funcType);
 
