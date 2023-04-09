@@ -20,6 +20,7 @@
  */
 
 #include "libsolidity/codegen/mlir/Passes.h"
+#include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -27,13 +28,13 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
 
 #include "mlir/Support/LogicalResult.h"
-
 #include "mlir/Transforms/DialectConversion.h"
 
 #include <algorithm>
@@ -42,6 +43,40 @@ using namespace mlir;
 
 namespace
 {
+
+class ContractOpLowering: public ConversionPattern
+{
+public:
+	explicit ContractOpLowering(MLIRContext* ctx)
+		: ConversionPattern(solidity::ContractOp::getOperationName(), /*benefit=*/1, ctx)
+	{
+	}
+
+	LogicalResult
+	matchAndRewrite(Operation* op, ArrayRef<Value> operands, ConversionPatternRewriter& rewriter) const override
+	{
+		auto contOp = cast<solidity::ContractOp>(op);
+		assert(isa<ModuleOp>(contOp->getParentOp()));
+		auto modOp = cast<ModuleOp>(contOp->getParentOp());
+		Block* modBody = modOp.getBody();
+
+		// Move functions to the parent ModuleOp
+		std::vector<Operation*> funcs;
+		for (Operation& func: contOp.getBody()->getOperations())
+		{
+			assert(isa<func::FuncOp>(&func));
+			funcs.push_back(&func);
+		}
+		for (Operation* func: funcs)
+		{
+			func->moveAfter(modBody, modBody->begin());
+		}
+
+		rewriter.eraseOp(op);
+		return success();
+	}
+};
+
 struct LowerToLLVMPass: public PassWrapper<LowerToLLVMPass, OperationPass<ModuleOp>>
 {
 	MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LowerToLLVMPass)
@@ -60,6 +95,7 @@ struct LowerToLLVMPass: public PassWrapper<LowerToLLVMPass, OperationPass<Module
 		arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
 		populateMemRefToLLVMConversionPatterns(llTyConv, pats);
 		populateFuncToLLVMConversionPatterns(llTyConv, pats);
+		pats.add<ContractOpLowering>(&getContext());
 
 		ModuleOp mod = getOperation();
 		if (failed(applyFullConversion(mod, llConv, std::move(pats))))

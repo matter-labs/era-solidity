@@ -359,15 +359,15 @@ bool solidity::frontend::runMLIRGen(
 		return false;
 	}
 
-	gen.mod.print(llvm::outs());
-	llvm::outs() << "\n";
-	llvm::outs().flush();
-
 	mlir::PassManager passMgr(&ctx);
 	if (stage >= MLIRGenStage::LLVMIR)
 		passMgr.addPass(mlir::solidity::createLowerToLLVMPass());
 	if (mlir::failed(passMgr.run(gen.mod)))
 		return false;
+
+	gen.mod.print(llvm::outs());
+	llvm::outs() << "\n";
+	llvm::outs().flush();
 
 	return true;
 }

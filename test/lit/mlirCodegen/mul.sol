@@ -1,4 +1,5 @@
 // RUN: solc --mlir %s | FileCheck %s
+// RUN: solc --mlir --mlir-stg=llvm-ir %s | FileCheck --check-prefix=LLVM %s
 // RUN: solc --mlir --mmlir --mlir-print-debuginfo %s | FileCheck --check-prefix=DBG %s
 
 contract C {
@@ -19,10 +20,32 @@ contract C {
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
-// DBG: #loc3 = loc({{.*}}:4:12)
+// LLVM: module {
+// LLVM-NEXT:   llvm.func @f(%arg0: i256) -> i256 {
+// LLVM-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
+// LLVM-NEXT:     %1 = llvm.mlir.null : !llvm.ptr<i256>
+// LLVM-NEXT:     %2 = llvm.getelementptr %1[%0] : (!llvm.ptr<i256>, i64) -> !llvm.ptr<i256>
+// LLVM-NEXT:     %3 = llvm.ptrtoint %2 : !llvm.ptr<i256> to i64
+// LLVM-NEXT:     %4 = llvm.alloca %3 x i256 : (i64) -> !llvm.ptr<i256>
+// LLVM-NEXT:     %5 = llvm.mlir.undef : !llvm.struct<(ptr<i256>, ptr<i256>, i64)>
+// LLVM-NEXT:     %6 = llvm.insertvalue %4, %5[0] : !llvm.struct<(ptr<i256>, ptr<i256>, i64)>
+// LLVM-NEXT:     %7 = llvm.insertvalue %4, %6[1] : !llvm.struct<(ptr<i256>, ptr<i256>, i64)>
+// LLVM-NEXT:     %8 = llvm.mlir.constant(0 : index) : i64
+// LLVM-NEXT:     %9 = llvm.insertvalue %8, %7[2] : !llvm.struct<(ptr<i256>, ptr<i256>, i64)>
+// LLVM-NEXT:     %10 = llvm.extractvalue %9[1] : !llvm.struct<(ptr<i256>, ptr<i256>, i64)>
+// LLVM-NEXT:     llvm.store %arg0, %10 : !llvm.ptr<i256>
+// LLVM-NEXT:     %11 = llvm.extractvalue %9[1] : !llvm.struct<(ptr<i256>, ptr<i256>, i64)>
+// LLVM-NEXT:     %12 = llvm.load %11 : !llvm.ptr<i256>
+// LLVM-NEXT:     %13 = llvm.mlir.constant(7 : i8) : i8
+// LLVM-NEXT:     %14 = llvm.mlir.constant(7 : i256) : i256
+// LLVM-NEXT:     %15 = llvm.mul %12, %14  : i256
+// LLVM-NEXT:     llvm.return %15 : i256
+// LLVM-NEXT:   }
+// LLVM-NEXT: }
+// DBG: #loc3 = loc({{.*}}:5:12)
 // DBG-NEXT: module {
 // DBG-NEXT:   solidity.contract @C {
-// DBG-NEXT:     func.func @f(%arg0: i256 loc({{.*}}:4:12)) -> i256 {
+// DBG-NEXT:     func.func @f(%arg0: i256 loc({{.*}}:5:12)) -> i256 {
 // DBG-NEXT:       %0 = memref.alloca() : memref<i256> loc(#loc3)
 // DBG-NEXT:       memref.store %arg0, %0[] : memref<i256> loc(#loc3)
 // DBG-NEXT:       %1 = memref.load %0[] : memref<i256> loc(#loc4)
@@ -34,8 +57,8 @@ contract C {
 // DBG-NEXT:   } loc(#loc1)
 // DBG-NEXT: } loc(#loc0)
 // DBG-NEXT: #loc0 = loc(unknown)
-// DBG-NEXT: #loc1 = loc({{.*}}:3:0)
-// DBG-NEXT: #loc2 = loc({{.*}}:4:1)
-// DBG-NEXT: #loc4 = loc({{.*}}:4:53)
-// DBG-NEXT: #loc5 = loc({{.*}}:4:57)
-// DBG-NEXT: #loc6 = loc({{.*}}:4:46)
+// DBG-NEXT: #loc1 = loc({{.*}}:4:0)
+// DBG-NEXT: #loc2 = loc({{.*}}:5:1)
+// DBG-NEXT: #loc4 = loc({{.*}}:5:53)
+// DBG-NEXT: #loc5 = loc({{.*}}:5:57)
+// DBG-NEXT: #loc6 = loc({{.*}}:5:46)
