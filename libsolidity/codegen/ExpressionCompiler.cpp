@@ -30,7 +30,6 @@
 
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTUtils.h>
-#include <libsolidity/ast/CallGraph.h>
 #include <libsolidity/ast/TypeProvider.h>
 
 #include <libevmasm/GasMeter.h>
@@ -623,29 +622,6 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	auto functionCallKind = *_functionCall.annotation().kind;
-
-	auto& currContr = m_context.mostDerivedContract();
-	auto& callGraphSetOnce = currContr.annotation().deployedCallGraph;
-	if (callGraphSetOnce.set())
-	{
-		auto& callGraph = *callGraphSetOnce;
-		auto const* id = dynamic_cast<Identifier const*>(&_functionCall.expression());
-		if (id)
-		{
-			if (auto const* callable = dynamic_cast<CallableDeclaration const*>(id->annotation().referencedDeclaration))
-			{
-				// TODO: Ideally we should get all the cycles in advance and do a
-				// lookup here.
-				if (callGraph->inCycle(callable))
-				{
-					// cout << "Cycle from " << id->name() << "\n";
-					//
-					// FIXME: What should we emit here?
-					// m_context << ???;
-				}
-			}
-		}
-	}
 
 	CompilerContext::LocationSetter locationSetter(m_context, _functionCall);
 	if (functionCallKind == FunctionCallKind::TypeConversion)

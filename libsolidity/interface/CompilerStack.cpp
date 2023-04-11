@@ -1087,6 +1087,17 @@ string const& CompilerStack::metadata(Contract const& _contract) const
 	return _contract.metadata.init([&]{ return createMetadata(_contract, m_viaIR); });
 }
 
+Json::Value const& CompilerStack::extraMetadata(string const& _contractName) const
+{
+	Contract const& contr = contract(_contractName);
+	if (m_stackState < AnalysisPerformed)
+		solThrow(CompilerError, "Analysis was not successful.");
+
+	solAssert(contr.contract, "");
+
+	return contr.extraMetadata;
+}
+
 CharStream const& CompilerStack::charStream(string const& _sourceName) const
 {
 	if (m_stackState < SourcesSet)
@@ -1349,6 +1360,7 @@ void CompilerStack::compileContract(
 		solAssert(false, "Optimizer exception during compilation");
 	}
 
+	compiledContract.extraMetadata = compiler->metadata();
 	_otherCompilers[compiledContract.contract] = compiler;
 
 	assemble(_contract, compiler->assemblyPtr(), compiler->runtimeAssemblyPtr());

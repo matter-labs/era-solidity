@@ -59,7 +59,6 @@ bool CallGraph::inCycle(CallableDeclaration const* _callable) const
 			return;
 		for (auto const& calleeVariant: callees->second)
 		{
-			// FIXME: Signal failure here and in other such instances
 			if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
 				return;
 			_cycleDetector.run(*get<CallableDeclaration const*>(calleeVariant));

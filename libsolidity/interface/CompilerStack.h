@@ -344,6 +344,9 @@ public:
 	/// @returns the Contract Metadata matching the pipeline selected using the viaIR setting.
 	std::string const& metadata(std::string const& _contractName) const { return metadata(contract(_contractName)); }
 
+	/// @returns the contract metadata containing miscellaneous information
+	Json::Value const& extraMetadata(std::string const& _contractName) const;
+
 	/// @returns the CBOR-encoded metadata matching the pipeline selected using the viaIR setting.
 	bytes cborMetadata(std::string const& _contractName) const { return cborMetadata(_contractName, m_viaIR); }
 
@@ -391,6 +394,7 @@ private:
 		std::string yulIROptimized; ///< Optimized Yul IR code.
 		std::string ewasm; ///< Experimental Ewasm text representation
 		evmasm::LinkerObject ewasmObject; ///< Experimental Ewasm code
+		Json::Value extraMetadata; ///< Misc metadata
 		util::LazyInit<std::string const> metadata; ///< The metadata json that will be hashed into the chain.
 		util::LazyInit<Json::Value const> abi;
 		util::LazyInit<Json::Value const> storageLayout;

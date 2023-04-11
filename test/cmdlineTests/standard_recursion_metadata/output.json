@@ -1,0 +1,105 @@
+{
+    "contracts":
+    {
+        "A":
+        {
+            "C":
+            {
+                "evm":
+                {
+                    "bytecode":
+                    {
+                        "generatedSources": [],
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "deployedBytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "extraMetadata":
+                    {
+                        "recursiveFunctions":
+                        [
+                            {
+                                "name": "f2",
+                                "paramTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "retParamTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "tag": "19"
+                            },
+                            {
+                                "name": "f1",
+                                "paramTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "retParamTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "tag": "15"
+                            }
+                        ]
+                    }
+                }
+            },
+            "D":
+            {
+                "evm":
+                {
+                    "bytecode":
+                    {
+                        "generatedSources": [],
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "deployedBytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "extraMetadata":
+                    {
+                        "recursiveFunctions":
+                        [
+                            {
+                                "name": "f1",
+                                "paramTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "retParamTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "tag": "14"
+                            },
+                            {
+                                "name": "f0",
+                                "paramTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "retParamTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "tag": "9"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "sources":
+    {
+        "A":
+        {
+            "id": 0
+        }
+    }
+}
