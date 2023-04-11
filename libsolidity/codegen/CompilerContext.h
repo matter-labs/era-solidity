@@ -296,6 +296,12 @@ public:
 	/// Should be avoided except when adding sub-assemblies.
 	std::shared_ptr<evmasm::Assembly> assemblyPtr() const { return m_asm; }
 
+	/// Per contract metadata map
+	/// Current mappings:
+	/// - "recursiveFunctions": array of functions (name, parameters etc.)
+	///   involved in recursion
+	Json::Value metadata;
+
 	/**
 	 * Helper class to pop the visited nodes stack when a scope closes
 	 */

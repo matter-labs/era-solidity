@@ -24,11 +24,56 @@
 #include <libsolidity/codegen/Compiler.h>
 
 #include <libsolidity/codegen/ContractCompiler.h>
+#include <libsolidity/ast/CallGraph.h>
 #include <libevmasm/Assembly.h>
 
 using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
+
+void Compiler::addExtraMetadata(ContractDefinition const& _contract)
+{
+	// Set "recursiveFunctions"
+	Json::Value recFuncs(Json::arrayValue);
+	auto& callGraphSetOnce = _contract.annotation().deployedCallGraph;
+	if (callGraphSetOnce.set())
+	{
+		auto& callGraph = *callGraphSetOnce;
+		for (FunctionDefinition const* fn: _contract.definedFunctions())
+		{
+			evmasm::AssemblyItem const& tag = m_runtimeContext.functionEntryLabelIfExists(*fn);
+			if (tag == evmasm::AssemblyItem(evmasm::UndefinedItem))
+				continue;
+
+			// TODO: Ideally we should get all the cycles in advance and do a
+			// lookup here.
+			if (callGraph->inCycle(fn))
+			{
+				Json::Value func(Json::objectValue);
+				func["name"] = fn->name();
+				func["tag"] = tag.data().str();
+
+				Json::Value paramTypes(Json::arrayValue), retParamTypes(Json::arrayValue);
+				for (auto& param: fn->parameters())
+				{
+					paramTypes.append(param->type()->toString());
+				}
+				func["paramTypes"] = paramTypes;
+
+				for (auto& param: fn->returnParameters())
+				{
+					retParamTypes.append(param->type()->toString());
+				}
+				func["retParamTypes"] = retParamTypes;
+
+				recFuncs.append(func);
+			}
+		}
+	}
+
+	if (!recFuncs.empty())
+		m_runtimeContext.metadata["recursiveFunctions"] = recFuncs;
+}
 
 void Compiler::compileContract(
 	ContractDefinition const& _contract,
@@ -50,6 +95,8 @@ void Compiler::compileContract(
 	m_runtimeSub = creationCompiler.compileConstructor(_contract, _otherCompilers);
 
 	m_context.optimise(m_optimiserSettings);
+
+	addExtraMetadata(_contract);
 
 	solAssert(m_context.appendYulUtilityFunctionsRan(), "appendYulUtilityFunctions() was not called.");
 	solAssert(m_runtimeContext.appendYulUtilityFunctionsRan(), "appendYulUtilityFunctions() was not called.");
