@@ -619,6 +619,25 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	return false;
 }
 
+// Populates @a _intFuncs with internal functions in @a _contr and its ancestor
+// contracts.
+static void populateInternalFuncs(ContractDefinition const& _contr, vector<FunctionDefinition const*>& _intFuncs)
+{
+	for (FunctionDefinition const* intFunc: _contr.definedFunctions())
+	{
+		_intFuncs.push_back(intFunc);
+	}
+
+	for (auto& baseSpec: _contr.baseContracts())
+	{
+		ContractDefinition const* baseContr
+			= dynamic_cast<ContractDefinition const*>(baseSpec->name().annotation().referencedDeclaration);
+		// TODO: Will this fail?
+		solAssert(baseContr, "");
+		populateInternalFuncs(*baseContr, _intFuncs);
+	}
+}
+
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	auto functionCallKind = *_functionCall.annotation().kind;
@@ -717,7 +736,67 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Extract the runtime part.
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
-			m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+			ContractDefinition const& contract = m_context.mostDerivedContract();
+
+			struct TagInfo
+			{
+				evmasm::AssemblyItem const tag;
+				FunctionDefinition const* func;
+			};
+			vector<TagInfo> tagInfos;
+
+			vector<FunctionDefinition const*> intFuncs;
+			populateInternalFuncs(contract, intFuncs);
+			for (auto* intFunc: intFuncs)
+			{
+				// clang-format off
+				if (intFunc->noVisibilitySpecified()
+						|| intFunc->visibility() != Visibility::Internal
+						|| *intFunc->functionType(true) != *functionType
+
+						// FIXME: Generating entry tags for functions
+						// automatically adds it to the queue of functions
+						// to be compiled. If we generate tags for
+						// unimplemented function, we'll hit assertion
+						// failures in codegen.
+						|| !intFunc->isImplemented())
+					continue;
+				// clang-format on
+
+				m_context << Instruction::DUP1;
+				m_context << m_context.functionEntryLabel(*intFunc).data();
+				m_context << Instruction::EQ;
+
+				AssemblyItem newTag = m_context.newTag();
+				m_context.appendConditionalJumpTo(newTag);
+				tagInfos.push_back({newTag, intFunc});
+			}
+
+			// If we can't match the entry tag of any of the internal
+			// function
+			if (tagInfos.size())
+				m_context.appendRevert("Invalid function pointer");
+			else
+				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+
+			unsigned int stkOffsetAfterJumpI = m_context.stackHeight();
+			for (TagInfo& tagInfo: tagInfos)
+			{
+				// The PC is set to this tag from the jumpi, so we need to
+				// set the stack offset correctly
+				m_context.setStackOffset((int) stkOffsetAfterJumpI);
+
+				m_context << tagInfo.tag;
+
+				// Pop the original function pointer
+				m_context << Instruction::POP;
+
+				m_context << m_context.functionEntryLabel(*tagInfo.func).pushTag();
+				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+				// After the call, the vm's pc should be set to
+				// `returnLabel` since it is pushed to the stack.
+			}
+
 			m_context << returnLabel;
 
 			unsigned returnParametersSize = CompilerUtils::sizeOnStack(function.returnParameterTypes());

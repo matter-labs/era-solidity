@@ -1,0 +1,675 @@
+
+======= internal_function_pointer/input.sol:C =======
+EVM assembly:
+    /* "internal_function_pointer/input.sol":138:591  contract C is D {... */
+  mstore(0x40, 0x80)
+    /* "internal_function_pointer/input.sol":399:523  constructor(int i) {... */
+  callvalue
+  dup1
+  iszero
+  tag_1
+  jumpi
+  0x00
+  dup1
+  revert
+tag_1:
+  pop
+  mload(0x40)
+  sub(codesize, bytecodeSize)
+  dup1
+  bytecodeSize
+  dup4
+  codecopy
+  dup2
+  dup2
+  add
+  0x40
+  mstore
+  dup2
+  add
+  swap1
+  tag_2
+  swap2
+  swap1
+  tag_3
+  jump	// in
+tag_2:
+    /* "internal_function_pointer/input.sol":433:434  0 */
+  0x00
+    /* "internal_function_pointer/input.sol":428:429  i */
+  dup2
+    /* "internal_function_pointer/input.sol":428:434  i == 0 */
+  sub
+    /* "internal_function_pointer/input.sol":424:448  if (i == 0) { fp = f0; } */
+  tag_6
+  jumpi
+    /* "internal_function_pointer/input.sol":443:445  f0 */
+  or(tag_0_8, shl(0x20, tag_7))
+    /* "internal_function_pointer/input.sol":438:440  fp */
+  0x01
+  0x00
+    /* "internal_function_pointer/input.sol":438:445  fp = f0 */
+  0x0100
+  exp
+  dup2
+  sload
+  dup2
+  0xffffffffffffffff
+  mul
+  not
+  and
+  swap1
+  dup4
+  0xffffffffffffffff
+  and
+  mul
+  or
+  swap1
+  sstore
+  pop
+    /* "internal_function_pointer/input.sol":424:448  if (i == 0) { fp = f0; } */
+tag_6:
+    /* "internal_function_pointer/input.sol":462:463  1 */
+  0x01
+    /* "internal_function_pointer/input.sol":457:458  i */
+  dup2
+    /* "internal_function_pointer/input.sol":457:463  i == 1 */
+  sub
+    /* "internal_function_pointer/input.sol":453:477  if (i == 1) { fp = f1; } */
+  tag_8
+  jumpi
+    /* "internal_function_pointer/input.sol":472:474  f1 */
+  or(tag_0_9, shl(0x20, tag_9))
+    /* "internal_function_pointer/input.sol":467:469  fp */
+  0x01
+  0x00
+    /* "internal_function_pointer/input.sol":467:474  fp = f1 */
+  0x0100
+  exp
+  dup2
+  sload
+  dup2
+  0xffffffffffffffff
+  mul
+  not
+  and
+  swap1
+  dup4
+  0xffffffffffffffff
+  and
+  mul
+  or
+  swap1
+  sstore
+  pop
+    /* "internal_function_pointer/input.sol":453:477  if (i == 1) { fp = f1; } */
+tag_8:
+    /* "internal_function_pointer/input.sol":491:492  3 */
+  0x03
+    /* "internal_function_pointer/input.sol":486:487  i */
+  dup2
+    /* "internal_function_pointer/input.sol":486:492  i == 3 */
+  sub
+    /* "internal_function_pointer/input.sol":482:506  if (i == 3) { fp = f3; } */
+  tag_10
+  jumpi
+    /* "internal_function_pointer/input.sol":501:503  f3 */
+  or(tag_0_10, shl(0x20, tag_11))
+    /* "internal_function_pointer/input.sol":496:498  fp */
+  0x01
+  0x00
+    /* "internal_function_pointer/input.sol":496:503  fp = f3 */
+  0x0100
+  exp
+  dup2
+  sload
+  dup2
+  0xffffffffffffffff
+  mul
+  not
+  and
+  swap1
+  dup4
+  0xffffffffffffffff
+  and
+  mul
+  or
+  swap1
+  sstore
+  pop
+    /* "internal_function_pointer/input.sol":482:506  if (i == 3) { fp = f3; } */
+tag_10:
+    /* "internal_function_pointer/input.sol":515:519  fp() */
+  tag_12
+    /* "internal_function_pointer/input.sol":515:517  fp */
+  0x01
+  0x00
+  swap1
+  sload
+  swap1
+  0x0100
+  exp
+  swap1
+  div
+  dup1
+  iszero
+  or(tag_0_11, shl(0x20, tag_13))
+  mul
+  or
+  0xffffffffffffffff
+  and
+    /* "internal_function_pointer/input.sol":515:519  fp() */
+  0x20
+  shr
+  dup1
+  0x07
+  eq
+  tag_14
+  jumpi
+  dup1
+  0x09
+  eq
+  tag_15
+  jumpi
+  dup1
+  0x0b
+  eq
+  tag_16
+  jumpi
+  0x00
+  dup1
+  revert
+tag_14:
+  pop
+  tag_7
+  jump	// in
+tag_15:
+  pop
+  tag_9
+  jump	// in
+tag_16:
+  pop
+  tag_11
+  jump	// in
+tag_12:
+    /* "internal_function_pointer/input.sol":511:512  x */
+  0x00
+    /* "internal_function_pointer/input.sol":511:519  x = fp() */
+  dup2
+  swap1
+  sstore
+  pop
+    /* "internal_function_pointer/input.sol":399:523  constructor(int i) {... */
+  pop
+    /* "internal_function_pointer/input.sol":138:591  contract C is D {... */
+  jump(tag_17)
+    /* "internal_function_pointer/input.sol":214:273  function f0() internal pure returns (uint) { return 0xa0; } */
+tag_7:
+    /* "internal_function_pointer/input.sol":251:255  uint */
+  0x00
+    /* "internal_function_pointer/input.sol":266:270  0xa0 */
+  0xa0
+    /* "internal_function_pointer/input.sol":259:270  return 0xa0 */
+  swap1
+  pop
+    /* "internal_function_pointer/input.sol":214:273  function f0() internal pure returns (uint) { return 0xa0; } */
+  swap1
+  jump	// out
+    /* "internal_function_pointer/input.sol":276:335  function f1() internal pure returns (uint) { return 0xa1; } */
+tag_9:
+    /* "internal_function_pointer/input.sol":313:317  uint */
+  0x00
+    /* "internal_function_pointer/input.sol":328:332  0xa1 */
+  0xa1
+    /* "internal_function_pointer/input.sol":321:332  return 0xa1 */
+  swap1
+  pop
+    /* "internal_function_pointer/input.sol":276:335  function f1() internal pure returns (uint) { return 0xa1; } */
+  swap1
+  jump	// out
+    /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+tag_11:
+    /* "internal_function_pointer/input.sol":112:116  uint */
+  0x00
+    /* "internal_function_pointer/input.sol":127:131  0xa3 */
+  0xa3
+    /* "internal_function_pointer/input.sol":120:131  return 0xa3 */
+  swap1
+  pop
+    /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+  swap1
+  jump	// out
+    /* "internal_function_pointer/input.sol":138:591  contract C is D {... */
+tag_13:
+  tag_21
+  tag_22
+  jump	// in
+tag_21:
+  jump	// out
+    /* "#utility.yul":88:205   */
+tag_24:
+    /* "#utility.yul":197:198   */
+  0x00
+    /* "#utility.yul":194:195   */
+  dup1
+    /* "#utility.yul":187:199   */
+  revert
+    /* "#utility.yul":334:410   */
+tag_26:
+    /* "#utility.yul":370:377   */
+  0x00
+    /* "#utility.yul":399:404   */
+  dup2
+    /* "#utility.yul":388:404   */
+  swap1
+  pop
+    /* "#utility.yul":334:410   */
+  swap2
+  swap1
+  pop
+  jump	// out
+    /* "#utility.yul":416:536   */
+tag_27:
+    /* "#utility.yul":488:511   */
+  tag_35
+    /* "#utility.yul":505:510   */
+  dup2
+    /* "#utility.yul":488:511   */
+  tag_26
+  jump	// in
+tag_35:
+    /* "#utility.yul":481:486   */
+  dup2
+    /* "#utility.yul":478:512   */
+  eq
+    /* "#utility.yul":468:530   */
+  tag_36
+  jumpi
+    /* "#utility.yul":526:527   */
+  0x00
+    /* "#utility.yul":523:524   */
+  dup1
+    /* "#utility.yul":516:528   */
+  revert
+    /* "#utility.yul":468:530   */
+tag_36:
+    /* "#utility.yul":416:536   */
+  pop
+  jump	// out
+    /* "#utility.yul":542:683   */
+tag_28:
+    /* "#utility.yul":598:603   */
+  0x00
+    /* "#utility.yul":629:635   */
+  dup2
+    /* "#utility.yul":623:636   */
+  mload
+    /* "#utility.yul":614:636   */
+  swap1
+  pop
+    /* "#utility.yul":645:677   */
+  tag_38
+    /* "#utility.yul":671:676   */
+  dup2
+    /* "#utility.yul":645:677   */
+  tag_27
+  jump	// in
+tag_38:
+    /* "#utility.yul":542:683   */
+  swap3
+  swap2
+  pop
+  pop
+  jump	// out
+    /* "#utility.yul":689:1038   */
+tag_3:
+    /* "#utility.yul":758:764   */
+  0x00
+    /* "#utility.yul":807:809   */
+  0x20
+    /* "#utility.yul":795:804   */
+  dup3
+    /* "#utility.yul":786:793   */
+  dup5
+    /* "#utility.yul":782:805   */
+  sub
+    /* "#utility.yul":778:810   */
+  slt
+    /* "#utility.yul":775:894   */
+  iszero
+  tag_40
+  jumpi
+    /* "#utility.yul":813:892   */
+  tag_41
+  tag_24
+  jump	// in
+tag_41:
+    /* "#utility.yul":775:894   */
+tag_40:
+    /* "#utility.yul":933:934   */
+  0x00
+    /* "#utility.yul":958:1021   */
+  tag_42
+    /* "#utility.yul":1013:1020   */
+  dup5
+    /* "#utility.yul":1004:1010   */
+  dup3
+    /* "#utility.yul":993:1002   */
+  dup6
+    /* "#utility.yul":989:1011   */
+  add
+    /* "#utility.yul":958:1021   */
+  tag_28
+  jump	// in
+tag_42:
+    /* "#utility.yul":948:1021   */
+  swap2
+  pop
+    /* "#utility.yul":904:1031   */
+  pop
+    /* "#utility.yul":689:1038   */
+  swap3
+  swap2
+  pop
+  pop
+  jump	// out
+    /* "#utility.yul":1044:1224   */
+tag_22:
+    /* "#utility.yul":1092:1169   */
+  0x4e487b7100000000000000000000000000000000000000000000000000000000
+    /* "#utility.yul":1089:1090   */
+  0x00
+    /* "#utility.yul":1082:1170   */
+  mstore
+    /* "#utility.yul":1189:1193   */
+  0x51
+    /* "#utility.yul":1186:1187   */
+  0x04
+    /* "#utility.yul":1179:1194   */
+  mstore
+    /* "#utility.yul":1213:1217   */
+  0x24
+    /* "#utility.yul":1210:1211   */
+  0x00
+    /* "#utility.yul":1203:1218   */
+  revert
+    /* "internal_function_pointer/input.sol":138:591  contract C is D {... */
+tag_17:
+  dataSize(sub_0)
+  dup1
+  dataOffset(sub_0)
+  0x00
+  codecopy
+  0x00
+  return
+stop
+
+sub_0: assembly {
+        /* "internal_function_pointer/input.sol":138:591  contract C is D {... */
+      mstore(0x40, 0x80)
+      callvalue
+      dup1
+      iszero
+      tag_1
+      jumpi
+      0x00
+      dup1
+      revert
+    tag_1:
+      pop
+      jumpi(tag_2, lt(calldatasize, 0x04))
+      shr(0xe0, calldataload(0x00))
+      dup1
+      0xe2179b8e
+      eq
+      tag_3
+      jumpi
+    tag_2:
+      0x00
+      dup1
+      revert
+        /* "internal_function_pointer/input.sol":527:589  function g() public view returns (uint) {... */
+    tag_3:
+      tag_4
+      tag_5
+      jump	// in
+    tag_4:
+      mload(0x40)
+      tag_6
+      swap2
+      swap1
+      tag_7
+      jump	// in
+    tag_6:
+      mload(0x40)
+      dup1
+      swap2
+      sub
+      swap1
+      return
+    tag_5:
+        /* "internal_function_pointer/input.sol":561:565  uint */
+      0x00
+        /* "internal_function_pointer/input.sol":580:584  fp() */
+      tag_13
+        /* "internal_function_pointer/input.sol":580:582  fp */
+      0x01
+      0x00
+      swap1
+      sload
+      swap1
+      0x0100
+      exp
+      swap1
+      div
+      dup1
+      iszero
+      tag_11
+      mul
+      or
+      0xffffffffffffffff
+      and
+        /* "internal_function_pointer/input.sol":580:584  fp() */
+      0xffffffff
+      and
+      dup1
+      0x08
+      eq
+      tag_14
+      jumpi
+      dup1
+      0x09
+      eq
+      tag_15
+      jumpi
+      dup1
+      0x0a
+      eq
+      tag_16
+      jumpi
+      0x00
+      dup1
+      revert
+    tag_14:
+      pop
+      tag_8
+      jump	// in
+    tag_15:
+      pop
+      tag_9
+      jump	// in
+    tag_16:
+      pop
+      tag_10
+      jump	// in
+    tag_13:
+        /* "internal_function_pointer/input.sol":573:584  return fp() */
+      swap1
+      pop
+        /* "internal_function_pointer/input.sol":527:589  function g() public view returns (uint) {... */
+      swap1
+      jump	// out
+        /* "internal_function_pointer/input.sol":214:273  function f0() internal pure returns (uint) { return 0xa0; } */
+    tag_8:
+        /* "internal_function_pointer/input.sol":251:255  uint */
+      0x00
+        /* "internal_function_pointer/input.sol":266:270  0xa0 */
+      0xa0
+        /* "internal_function_pointer/input.sol":259:270  return 0xa0 */
+      swap1
+      pop
+        /* "internal_function_pointer/input.sol":214:273  function f0() internal pure returns (uint) { return 0xa0; } */
+      swap1
+      jump	// out
+        /* "internal_function_pointer/input.sol":276:335  function f1() internal pure returns (uint) { return 0xa1; } */
+    tag_9:
+        /* "internal_function_pointer/input.sol":313:317  uint */
+      0x00
+        /* "internal_function_pointer/input.sol":328:332  0xa1 */
+      0xa1
+        /* "internal_function_pointer/input.sol":321:332  return 0xa1 */
+      swap1
+      pop
+        /* "internal_function_pointer/input.sol":276:335  function f1() internal pure returns (uint) { return 0xa1; } */
+      swap1
+      jump	// out
+        /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+    tag_10:
+        /* "internal_function_pointer/input.sol":112:116  uint */
+      0x00
+        /* "internal_function_pointer/input.sol":127:131  0xa3 */
+      0xa3
+        /* "internal_function_pointer/input.sol":120:131  return 0xa3 */
+      swap1
+      pop
+        /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+      swap1
+      jump	// out
+    tag_11:
+      tag_20
+      tag_21
+      jump	// in
+    tag_20:
+      jump	// out
+        /* "#utility.yul":7:84   */
+    tag_22:
+        /* "#utility.yul":44:51   */
+      0x00
+        /* "#utility.yul":73:78   */
+      dup2
+        /* "#utility.yul":62:78   */
+      swap1
+      pop
+        /* "#utility.yul":7:84   */
+      swap2
+      swap1
+      pop
+      jump	// out
+        /* "#utility.yul":90:208   */
+    tag_23:
+        /* "#utility.yul":177:201   */
+      tag_27
+        /* "#utility.yul":195:200   */
+      dup2
+        /* "#utility.yul":177:201   */
+      tag_22
+      jump	// in
+    tag_27:
+        /* "#utility.yul":172:175   */
+      dup3
+        /* "#utility.yul":165:202   */
+      mstore
+        /* "#utility.yul":90:208   */
+      pop
+      pop
+      jump	// out
+        /* "#utility.yul":214:436   */
+    tag_7:
+        /* "#utility.yul":307:311   */
+      0x00
+        /* "#utility.yul":345:347   */
+      0x20
+        /* "#utility.yul":334:343   */
+      dup3
+        /* "#utility.yul":330:348   */
+      add
+        /* "#utility.yul":322:348   */
+      swap1
+      pop
+        /* "#utility.yul":358:429   */
+      tag_29
+        /* "#utility.yul":426:427   */
+      0x00
+        /* "#utility.yul":415:424   */
+      dup4
+        /* "#utility.yul":411:428   */
+      add
+        /* "#utility.yul":402:408   */
+      dup5
+        /* "#utility.yul":358:429   */
+      tag_23
+      jump	// in
+    tag_29:
+        /* "#utility.yul":214:436   */
+      swap3
+      swap2
+      pop
+      pop
+      jump	// out
+        /* "#utility.yul":442:622   */
+    tag_21:
+        /* "#utility.yul":490:567   */
+      0x4e487b7100000000000000000000000000000000000000000000000000000000
+        /* "#utility.yul":487:488   */
+      0x00
+        /* "#utility.yul":480:568   */
+      mstore
+        /* "#utility.yul":587:591   */
+      0x51
+        /* "#utility.yul":584:585   */
+      0x04
+        /* "#utility.yul":577:592   */
+      mstore
+        /* "#utility.yul":611:615   */
+      0x24
+        /* "#utility.yul":608:609   */
+      0x00
+        /* "#utility.yul":601:616   */
+      revert
+
+    auxdata: <AUXDATA REMOVED>
+}
+
+
+======= internal_function_pointer/input.sol:D =======
+EVM assembly:
+    /* "internal_function_pointer/input.sol":60:136  contract D {... */
+  mstore(0x40, 0x80)
+  callvalue
+  dup1
+  iszero
+  tag_1
+  jumpi
+  0x00
+  dup1
+  revert
+tag_1:
+  pop
+  dataSize(sub_0)
+  dup1
+  dataOffset(sub_0)
+  0x00
+  codecopy
+  0x00
+  return
+stop
+
+sub_0: assembly {
+        /* "internal_function_pointer/input.sol":60:136  contract D {... */
+      mstore(0x40, 0x80)
+      0x00
+      dup1
+      revert
+
+    auxdata: <AUXDATA REMOVED>
+}
