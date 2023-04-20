@@ -162,17 +162,17 @@ tag_10:
   0x20
   shr
   dup1
-  0x07
+  tag_7
   eq
   tag_14
   jumpi
   dup1
-  0x09
+  tag_9
   eq
   tag_15
   jumpi
   dup1
-  0x0b
+  tag_11
   eq
   tag_16
   jumpi
@@ -473,17 +473,17 @@ sub_0: assembly {
       0xffffffff
       and
       dup1
-      0x08
+      tag_8
       eq
       tag_14
       jumpi
       dup1
-      0x09
+      tag_9
       eq
       tag_15
       jumpi
       dup1
-      0x0a
+      tag_10
       eq
       tag_16
       jumpi

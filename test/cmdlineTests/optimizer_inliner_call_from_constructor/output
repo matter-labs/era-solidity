@@ -17,49 +17,57 @@ tag_1:
     /* "optimizer_inliner_call_from_constructor/input.sol":109:112  a() */
   tag_4
     /* "optimizer_inliner_call_from_constructor/input.sol":109:110  a */
-  tag_5
+  shl(0x20, tag_5)
     /* "optimizer_inliner_call_from_constructor/input.sol":109:112  a() */
-  0x06
-  dup2
+  0x20
+  shr
+  dup1
+  tag_5
   eq
-  tag_7
+  tag_6
   jumpi
   0x00
   dup1
   revert
-tag_7:
+tag_6:
   pop
-    /* "optimizer_inliner_call_from_constructor/input.sol":257:258  6 */
-  0x06
-  swap1
-    /* "optimizer_inliner_call_from_constructor/input.sol":206:261  function f() internal pure returns (uint) { return 6; } */
-  jump
-    /* "optimizer_inliner_call_from_constructor/input.sol":109:112  a() */
+  tag_5
+  jump	// in
 tag_4:
     /* "optimizer_inliner_call_from_constructor/input.sol":105:106  x */
   0x00
     /* "optimizer_inliner_call_from_constructor/input.sol":105:112  x = a() */
   sstore
     /* "optimizer_inliner_call_from_constructor/input.sol":60:263  contract C {... */
-  jump(tag_8)
+  jump(tag_7)
     /* "optimizer_inliner_call_from_constructor/input.sol":120:175  function a() public pure returns (uint) { return f(); } */
 tag_5:
     /* "optimizer_inliner_call_from_constructor/input.sol":154:158  uint */
   0x00
     /* "optimizer_inliner_call_from_constructor/input.sol":169:172  f() */
-  tag_10
+  tag_9
     /* "optimizer_inliner_call_from_constructor/input.sol":169:170  f */
-  tag_6
+  shl(0x20, tag_10)
     /* "optimizer_inliner_call_from_constructor/input.sol":169:172  f() */
-  0x06
-  dup2
+  0x20
+  shr
+  dup1
+  tag_10
   eq
-  tag_7
+  tag_11
   jumpi
   0x00
   dup1
   revert
-tag_10:
+tag_11:
+  pop
+    /* "optimizer_inliner_call_from_constructor/input.sol":257:258  6 */
+  0x06
+  swap1
+    /* "optimizer_inliner_call_from_constructor/input.sol":206:261  function f() internal pure returns (uint) { return 6; } */
+  jump
+    /* "optimizer_inliner_call_from_constructor/input.sol":169:172  f() */
+tag_9:
     /* "optimizer_inliner_call_from_constructor/input.sol":162:172  return f() */
   swap1
   pop
@@ -67,14 +75,14 @@ tag_10:
   swap1
   jump	// out
     /* "optimizer_inliner_call_from_constructor/input.sol":206:261  function f() internal pure returns (uint) { return 6; } */
-tag_6:
+tag_10:
     /* "optimizer_inliner_call_from_constructor/input.sol":257:258  6 */
   0x06
   swap1
     /* "optimizer_inliner_call_from_constructor/input.sol":206:261  function f() internal pure returns (uint) { return 6; } */
   jump	// out
     /* "optimizer_inliner_call_from_constructor/input.sol":60:263  contract C {... */
-tag_8:
+tag_7:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -110,10 +118,9 @@ sub_0: assembly {
       revert
         /* "optimizer_inliner_call_from_constructor/input.sol":120:175  function a() public pure returns (uint) { return f(); } */
     tag_3:
-      tag_4
-      tag_5
-      jump	// in
-    tag_4:
+        /* "optimizer_inliner_call_from_constructor/input.sol":257:258  6 */
+      0x06
+        /* "optimizer_inliner_call_from_constructor/input.sol":120:175  function a() public pure returns (uint) { return f(); } */
       mload(0x40)
         /* "#utility.yul":160:185   */
       swap1
@@ -130,44 +137,6 @@ sub_0: assembly {
       sub
       swap1
       return
-    tag_5:
-        /* "optimizer_inliner_call_from_constructor/input.sol":154:158  uint */
-      0x00
-        /* "optimizer_inliner_call_from_constructor/input.sol":169:172  f() */
-      tag_9
-        /* "optimizer_inliner_call_from_constructor/input.sol":169:170  f */
-      tag_10
-        /* "optimizer_inliner_call_from_constructor/input.sol":169:172  f() */
-      dup1
-      0x0a
-      eq
-      tag_11
-      jumpi
-      0x00
-      dup1
-      revert
-    tag_11:
-      pop
-        /* "optimizer_inliner_call_from_constructor/input.sol":257:258  6 */
-      0x06
-      swap1
-        /* "optimizer_inliner_call_from_constructor/input.sol":206:261  function f() internal pure returns (uint) { return 6; } */
-      jump
-        /* "optimizer_inliner_call_from_constructor/input.sol":169:172  f() */
-    tag_9:
-        /* "optimizer_inliner_call_from_constructor/input.sol":162:172  return f() */
-      swap1
-      pop
-        /* "optimizer_inliner_call_from_constructor/input.sol":120:175  function a() public pure returns (uint) { return f(); } */
-      swap1
-      jump	// out
-        /* "optimizer_inliner_call_from_constructor/input.sol":206:261  function f() internal pure returns (uint) { return 6; } */
-    tag_10:
-        /* "optimizer_inliner_call_from_constructor/input.sol":257:258  6 */
-      0x06
-      swap1
-        /* "optimizer_inliner_call_from_constructor/input.sol":206:261  function f() internal pure returns (uint) { return 6; } */
-      jump	// out
 
     auxdata: <AUXDATA REMOVED>
 }
