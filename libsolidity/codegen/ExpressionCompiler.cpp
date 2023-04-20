@@ -619,13 +619,12 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	return false;
 }
 
-// Populates @a _intFuncs with internal functions in @a _contr and its ancestor
-// contracts.
-static void populateInternalFuncs(ContractDefinition const& _contr, vector<FunctionDefinition const*>& _intFuncs)
+// Populates @a _funcs with functions in @a _contr and its ancestor contracts.
+static void populateFuncs(ContractDefinition const& _contr, vector<FunctionDefinition const*>& _funcs)
 {
 	for (FunctionDefinition const* intFunc: _contr.definedFunctions())
 	{
-		_intFuncs.push_back(intFunc);
+		_funcs.push_back(intFunc);
 	}
 
 	for (auto& baseSpec: _contr.baseContracts())
@@ -634,7 +633,7 @@ static void populateInternalFuncs(ContractDefinition const& _contr, vector<Funct
 			= dynamic_cast<ContractDefinition const*>(baseSpec->name().annotation().referencedDeclaration);
 		// TODO: Will this fail?
 		solAssert(baseContr, "");
-		populateInternalFuncs(*baseContr, _intFuncs);
+		populateFuncs(*baseContr, _funcs);
 	}
 }
 
@@ -736,6 +735,26 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Extract the runtime part.
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
+			auto const* functionDecl = ASTNode::referencedDeclaration(_functionCall.expression());
+			if (!functionDecl)
+			{
+				// This can happen with syntaxTests/parsing/calling_function.sol:
+				// ```
+				// function() returns(function() returns(function() returns(function() returns(uint)))) x;
+				// uint y;
+				// y = x()()()();
+				// ```
+
+				// FIXME: Will this always work?
+				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+				m_context << returnLabel;
+
+				unsigned returnParametersSize = CompilerUtils::sizeOnStack(function.returnParameterTypes());
+				// callee adds return parameters, but removes arguments and return label
+				m_context.adjustStackOffset(static_cast<int>(returnParametersSize - parameterSize) - 1);
+				break;
+			}
+
 			ContractDefinition const& contract = m_context.mostDerivedContract();
 
 			struct TagInfo
@@ -745,31 +764,40 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			};
 			vector<TagInfo> tagInfos;
 
-			vector<FunctionDefinition const*> intFuncs;
-			populateInternalFuncs(contract, intFuncs);
-			for (auto* intFunc: intFuncs)
+			vector<FunctionDefinition const*> funcs;
+			populateFuncs(contract, funcs);
+			for (auto* otherFunc: funcs)
 			{
+				if (otherFunc->noVisibilitySpecified())
+					continue;
+				FunctionType const* otherFuncType = otherFunc->functionType(true);
+				if (!otherFuncType)
+					continue;
 				// clang-format off
-				if (intFunc->noVisibilitySpecified()
-						|| intFunc->visibility() != Visibility::Internal
-						|| *intFunc->functionType(true) != *functionType
+				if (*otherFuncType != *functionType
+						// FIXME: Can a function pointer point to a function
+						// with a different visibility?
+						|| otherFunc->visibility() != functionDecl->visibility()
 
 						// FIXME: Generating entry tags for functions
 						// automatically adds it to the queue of functions
 						// to be compiled. If we generate tags for
 						// unimplemented function, we'll hit assertion
 						// failures in codegen.
-						|| !intFunc->isImplemented())
+						|| !otherFunc->isImplemented())
 					continue;
 				// clang-format on
 
 				m_context << Instruction::DUP1;
-				m_context << m_context.functionEntryLabel(*intFunc).data();
+				// FIXME: CompilerUtils::pushCombinedFunctionEntryLabel() adds
+				// sub-assembly tags to the low bits for function pointers. Do
+				// we need to worry about this here?
+				m_context << m_context.functionEntryLabel(*otherFunc).pushTag();
 				m_context << Instruction::EQ;
 
 				AssemblyItem newTag = m_context.newTag();
 				m_context.appendConditionalJumpTo(newTag);
-				tagInfos.push_back({newTag, intFunc});
+				tagInfos.push_back({newTag, otherFunc});
 			}
 
 			// If we can't match the entry tag of any of the internal
