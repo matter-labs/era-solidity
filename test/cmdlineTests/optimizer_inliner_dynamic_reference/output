@@ -116,26 +116,26 @@ sub_0: assembly {
       dup1
       sload
         /* "optimizer_inliner_dynamic_reference/input.sol":295:298  x() */
-      tag_20
+      tag_19
       swap1
         /* "optimizer_inliner_dynamic_reference/input.sol":295:296  x */
       dup1
       iszero
-      tag_21
+      tag_20
       mul
       or
         /* "optimizer_inliner_dynamic_reference/input.sol":295:298  x() */
       0xffffffff
       and
       jump	// in
-    tag_20:
+    tag_19:
         /* "optimizer_inliner_dynamic_reference/input.sol":295:302  x() + 1 */
       tag_16
       swap1
         /* "optimizer_inliner_dynamic_reference/input.sol":301:302  1 */
       0x01
         /* "optimizer_inliner_dynamic_reference/input.sol":295:302  x() + 1 */
-      tag_23
+      tag_22
       jump	// in
         /* "optimizer_inliner_dynamic_reference/input.sol":310:365  function f() internal pure returns (uint) { return 6; } */
     tag_17:
@@ -144,14 +144,14 @@ sub_0: assembly {
       swap1
         /* "optimizer_inliner_dynamic_reference/input.sol":310:365  function f() internal pure returns (uint) { return 6; } */
       jump	// out
-    tag_21:
+    tag_20:
+      tag_25
       tag_26
-      tag_27
       jump	// in
-    tag_26:
+    tag_25:
       jump	// out
         /* "#utility.yul":196:418   */
-    tag_23:
+    tag_22:
         /* "#utility.yul":261:270   */
       dup1
       dup3
@@ -162,7 +162,7 @@ sub_0: assembly {
       gt
         /* "#utility.yul":279:412   */
       iszero
-      tag_31
+      tag_30
       jumpi
         /* "#utility.yul":334:344   */
       0x4e487b71
@@ -187,7 +187,7 @@ sub_0: assembly {
         /* "#utility.yul":387:402   */
       revert
         /* "#utility.yul":279:412   */
-    tag_31:
+    tag_30:
         /* "#utility.yul":196:418   */
       swap3
       swap2
@@ -195,7 +195,7 @@ sub_0: assembly {
       pop
       jump	// out
         /* "#utility.yul":423:550   */
-    tag_27:
+    tag_26:
         /* "#utility.yul":484:494   */
       0x4e487b71
         /* "#utility.yul":479:482   */
