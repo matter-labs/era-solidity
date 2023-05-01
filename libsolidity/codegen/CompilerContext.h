@@ -47,6 +47,7 @@
 #include <queue>
 #include <utility>
 #include <limits>
+#include <set>
 
 namespace solidity::frontend
 {
@@ -310,6 +311,16 @@ public:
 
 	RevertStrings revertStrings() const { return m_revertStrings; }
 
+	/// @returns true if the function pointer @_func is referenced at least once
+	bool referencedFuncPtr(FunctionDefinition const* _func) { return funcPtrRefs.count(_func) == 1; }
+	/// Adds the function pointer @_func to the list of referenced function
+	/// pointers
+	void addReferencedFuncPtr(FunctionDefinition const* _func) { funcPtrRefs.insert(_func); }
+
+	/// Setter and getter of the function pointer reference set
+	std::set<FunctionDefinition const*>& getFuncPtrReferenceSet() { return funcPtrRefs; }
+	void setFuncPtrReferenceSet(std::set<FunctionDefinition const*>& _funcPtrRefs) { funcPtrRefs = _funcPtrRefs; }
+
 private:
 	/// Updates source location set in the assembly.
 	void updateSourceLocation();
@@ -393,6 +404,8 @@ private:
 	std::queue<std::tuple<std::string, unsigned, unsigned, std::function<void(CompilerContext&)>>> m_lowLevelFunctionGenerationQueue;
 	/// Flag to check that appendYulUtilityFunctions() was called exactly once
 	bool m_appendYulUtilityFunctionsRan = false;
+	/// Set of function pointers that are referenced
+	std::set<FunctionDefinition const*> funcPtrRefs;
 };
 
 }

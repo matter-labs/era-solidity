@@ -736,16 +736,17 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
 			auto const* functionDecl = ASTNode::referencedDeclaration(_functionCall.expression());
-			if (!functionDecl)
+			if (!functionDecl || _functionCall.expression().annotation().calledDirectly)
 			{
-				// This can happen with syntaxTests/parsing/calling_function.sol:
+				// `functionDecl` can be nullptr with cases like
+				// syntaxTests/parsing/calling_function.sol:
 				// ```
 				// function() returns(function() returns(function() returns(function() returns(uint)))) x;
 				// uint y;
 				// y = x()()()();
 				// ```
 
-				// FIXME: Will this always work?
+				// In this case, we don't generate the selector
 				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
 				m_context << returnLabel;
 
@@ -784,7 +785,9 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 						// to be compiled. If we generate tags for
 						// unimplemented function, we'll hit assertion
 						// failures in codegen.
-						|| !otherFunc->isImplemented())
+						|| !otherFunc->isImplemented()
+						|| m_context.referencedFuncPtr(otherFunc) == 0
+						)
 					continue;
 				// clang-format on
 
@@ -792,6 +795,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// FIXME: CompilerUtils::pushCombinedFunctionEntryLabel() adds
 				// sub-assembly tags to the low bits for function pointers. Do
 				// we need to worry about this here?
+				// FIXME: Do we need to use FunctionDefinition::resolveVirtual()
+				// here?
 				m_context << m_context.functionEntryLabel(*otherFunc).pushTag();
 				m_context << Instruction::EQ;
 

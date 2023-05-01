@@ -22,6 +22,7 @@
  */
 
 #include <libsolidity/codegen/Compiler.h>
+#include <libsolidity/codegen/FuncPtrTracker.h>
 
 #include <libsolidity/codegen/ContractCompiler.h>
 #include <libevmasm/Assembly.h>
@@ -36,6 +37,10 @@ void Compiler::compileContract(
 	bytes const& _metadata
 )
 {
+	FuncPtrTracker fpt{_contract, m_runtimeContext};
+	fpt.run();
+	m_context.setFuncPtrReferenceSet(m_runtimeContext.getFuncPtrReferenceSet());
+
 	ContractCompiler runtimeCompiler(nullptr, m_runtimeContext, m_optimiserSettings);
 	runtimeCompiler.compileContract(_contract, _otherCompilers);
 	m_runtimeContext.appendToAuxiliaryData(_metadata);

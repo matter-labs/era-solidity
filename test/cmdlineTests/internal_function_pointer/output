@@ -1,9 +1,9 @@
 
 ======= internal_function_pointer/input.sol:C =======
 EVM assembly:
-    /* "internal_function_pointer/input.sol":138:594  contract C is D {... */
+    /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
   mstore(0x40, 0x80)
-    /* "internal_function_pointer/input.sol":401:526  constructor(int i) {... */
+    /* "internal_function_pointer/input.sol":630:789  constructor(int i) {... */
   callvalue
   dup1
   iszero
@@ -34,21 +34,21 @@ tag_1:
   tag_3
   jump	// in
 tag_2:
-    /* "internal_function_pointer/input.sol":435:436  0 */
+    /* "internal_function_pointer/input.sol":664:665  0 */
   0x00
-    /* "internal_function_pointer/input.sol":430:431  i */
+    /* "internal_function_pointer/input.sol":659:660  i */
   dup2
-    /* "internal_function_pointer/input.sol":430:436  i == 0 */
+    /* "internal_function_pointer/input.sol":659:665  i == 0 */
   sub
-    /* "internal_function_pointer/input.sol":426:450  if (i == 0) { fp = f0; } */
+    /* "internal_function_pointer/input.sol":655:679  if (i == 0) { fp = c0; } */
   tag_6
   jumpi
-    /* "internal_function_pointer/input.sol":445:447  f0 */
+    /* "internal_function_pointer/input.sol":674:676  c0 */
   or(tag_0_8, shl(0x20, tag_7))
-    /* "internal_function_pointer/input.sol":440:442  fp */
+    /* "internal_function_pointer/input.sol":669:671  fp */
   0x01
   0x00
-    /* "internal_function_pointer/input.sol":440:447  fp = f0 */
+    /* "internal_function_pointer/input.sol":669:676  fp = c0 */
   0x0100
   exp
   dup2
@@ -67,23 +67,23 @@ tag_2:
   swap1
   sstore
   pop
-    /* "internal_function_pointer/input.sol":426:450  if (i == 0) { fp = f0; } */
+    /* "internal_function_pointer/input.sol":655:679  if (i == 0) { fp = c0; } */
 tag_6:
-    /* "internal_function_pointer/input.sol":464:465  1 */
+    /* "internal_function_pointer/input.sol":693:694  1 */
   0x01
-    /* "internal_function_pointer/input.sol":459:460  i */
+    /* "internal_function_pointer/input.sol":688:689  i */
   dup2
-    /* "internal_function_pointer/input.sol":459:465  i == 1 */
+    /* "internal_function_pointer/input.sol":688:694  i == 1 */
   sub
-    /* "internal_function_pointer/input.sol":455:479  if (i == 1) { fp = f1; } */
+    /* "internal_function_pointer/input.sol":684:708  if (i == 1) { fp = c1; } */
   tag_8
   jumpi
-    /* "internal_function_pointer/input.sol":474:476  f1 */
+    /* "internal_function_pointer/input.sol":703:705  c1 */
   or(tag_0_9, shl(0x20, tag_9))
-    /* "internal_function_pointer/input.sol":469:471  fp */
+    /* "internal_function_pointer/input.sol":698:700  fp */
   0x01
   0x00
-    /* "internal_function_pointer/input.sol":469:476  fp = f1 */
+    /* "internal_function_pointer/input.sol":698:705  fp = c1 */
   0x0100
   exp
   dup2
@@ -102,23 +102,23 @@ tag_6:
   swap1
   sstore
   pop
-    /* "internal_function_pointer/input.sol":455:479  if (i == 1) { fp = f1; } */
+    /* "internal_function_pointer/input.sol":684:708  if (i == 1) { fp = c1; } */
 tag_8:
-    /* "internal_function_pointer/input.sol":493:494  3 */
-  0x03
-    /* "internal_function_pointer/input.sol":488:489  i */
+    /* "internal_function_pointer/input.sol":722:723  2 */
+  0x02
+    /* "internal_function_pointer/input.sol":717:718  i */
   dup2
-    /* "internal_function_pointer/input.sol":488:494  i == 3 */
+    /* "internal_function_pointer/input.sol":717:723  i == 2 */
   sub
-    /* "internal_function_pointer/input.sol":484:508  if (i == 3) { fp = f3; } */
+    /* "internal_function_pointer/input.sol":713:737  if (i == 2) { fp = d0; } */
   tag_10
   jumpi
-    /* "internal_function_pointer/input.sol":503:505  f3 */
+    /* "internal_function_pointer/input.sol":732:734  d0 */
   or(tag_0_10, shl(0x20, tag_11))
-    /* "internal_function_pointer/input.sol":498:500  fp */
+    /* "internal_function_pointer/input.sol":727:729  fp */
   0x01
   0x00
-    /* "internal_function_pointer/input.sol":498:505  fp = f3 */
+    /* "internal_function_pointer/input.sol":727:734  fp = d0 */
   0x0100
   exp
   dup2
@@ -137,11 +137,53 @@ tag_8:
   swap1
   sstore
   pop
-    /* "internal_function_pointer/input.sol":484:508  if (i == 3) { fp = f3; } */
+    /* "internal_function_pointer/input.sol":713:737  if (i == 2) { fp = d0; } */
 tag_10:
-    /* "internal_function_pointer/input.sol":517:521  fp() */
+    /* "internal_function_pointer/input.sol":751:752  3 */
+  0x03
+    /* "internal_function_pointer/input.sol":746:747  i */
+  dup2
+    /* "internal_function_pointer/input.sol":746:752  i == 3 */
+  sub
+    /* "internal_function_pointer/input.sol":742:771  if (i == 3) { fp = getD1(); } */
   tag_12
-    /* "internal_function_pointer/input.sol":517:519  fp */
+  jumpi
+    /* "internal_function_pointer/input.sol":761:768  getD1() */
+  tag_13
+    /* "internal_function_pointer/input.sol":761:766  getD1 */
+  shl(0x20, tag_14)
+    /* "internal_function_pointer/input.sol":761:768  getD1() */
+  0x20
+  shr
+  jump	// in
+tag_13:
+    /* "internal_function_pointer/input.sol":756:758  fp */
+  0x01
+  0x00
+    /* "internal_function_pointer/input.sol":756:768  fp = getD1() */
+  0x0100
+  exp
+  dup2
+  sload
+  dup2
+  0xffffffffffffffff
+  mul
+  not
+  and
+  swap1
+  dup4
+  0xffffffffffffffff
+  and
+  mul
+  or
+  swap1
+  sstore
+  pop
+    /* "internal_function_pointer/input.sol":742:771  if (i == 3) { fp = getD1(); } */
+tag_12:
+    /* "internal_function_pointer/input.sol":780:784  fp() */
+  tag_15
+    /* "internal_function_pointer/input.sol":780:782  fp */
   0x01
   0x00
   swap1
@@ -153,101 +195,134 @@ tag_10:
   div
   dup1
   iszero
-  or(tag_0_11, shl(0x20, tag_13))
+  or(tag_0_11, shl(0x20, tag_16))
   mul
   or
   0xffffffffffffffff
   and
-    /* "internal_function_pointer/input.sol":517:521  fp() */
+    /* "internal_function_pointer/input.sol":780:784  fp() */
   0x20
   shr
   dup1
   tag_7
   eq
-  tag_14
+  tag_17
   jumpi
   dup1
   tag_9
   eq
-  tag_15
+  tag_18
   jumpi
   dup1
   tag_11
   eq
-  tag_16
+  tag_19
+  jumpi
+  dup1
+  tag_20
+  eq
+  tag_21
   jumpi
   0x00
   dup1
   revert
-tag_14:
+tag_17:
   pop
   tag_7
   jump	// in
-tag_15:
+tag_18:
   pop
   tag_9
   jump	// in
-tag_16:
+tag_19:
   pop
   tag_11
   jump	// in
-tag_12:
-    /* "internal_function_pointer/input.sol":513:514  x */
+tag_21:
+  pop
+  tag_20
+  jump	// in
+tag_15:
+    /* "internal_function_pointer/input.sol":776:777  x */
   0x00
-    /* "internal_function_pointer/input.sol":513:521  x = fp() */
+    /* "internal_function_pointer/input.sol":776:784  x = fp() */
   dup2
   swap1
   sstore
   pop
-    /* "internal_function_pointer/input.sol":401:526  constructor(int i) {... */
+    /* "internal_function_pointer/input.sol":630:789  constructor(int i) {... */
   pop
-    /* "internal_function_pointer/input.sol":138:594  contract C is D {... */
-  jump(tag_17)
-    /* "internal_function_pointer/input.sol":215:274  function f0() internal pure returns (uint) { return 0xa0; } */
+    /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
+  jump(tag_22)
+    /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
 tag_7:
-    /* "internal_function_pointer/input.sol":252:256  uint */
+    /* "internal_function_pointer/input.sol":481:485  uint */
   0x00
-    /* "internal_function_pointer/input.sol":267:271  0xa0 */
-  0xa0
-    /* "internal_function_pointer/input.sol":260:271  return 0xa0 */
+    /* "internal_function_pointer/input.sol":496:500  0xc0 */
+  0xc0
+    /* "internal_function_pointer/input.sol":489:500  return 0xc0 */
   swap1
   pop
-    /* "internal_function_pointer/input.sol":215:274  function f0() internal pure returns (uint) { return 0xa0; } */
+    /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
   swap1
   jump	// out
-    /* "internal_function_pointer/input.sol":277:336  function f1() internal pure returns (uint) { return 0xa1; } */
+    /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
 tag_9:
-    /* "internal_function_pointer/input.sol":314:318  uint */
+    /* "internal_function_pointer/input.sol":543:547  uint */
   0x00
-    /* "internal_function_pointer/input.sol":329:333  0xa1 */
-  0xa1
-    /* "internal_function_pointer/input.sol":322:333  return 0xa1 */
+    /* "internal_function_pointer/input.sol":558:562  0xc1 */
+  0xc1
+    /* "internal_function_pointer/input.sol":551:562  return 0xc1 */
   swap1
   pop
-    /* "internal_function_pointer/input.sol":277:336  function f1() internal pure returns (uint) { return 0xa1; } */
+    /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
   swap1
   jump	// out
-    /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+    /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
 tag_11:
     /* "internal_function_pointer/input.sol":112:116  uint */
   0x00
-    /* "internal_function_pointer/input.sol":127:131  0xa3 */
-  0xa3
-    /* "internal_function_pointer/input.sol":120:131  return 0xa3 */
+    /* "internal_function_pointer/input.sol":127:131  0xd0 */
+  0xd0
+    /* "internal_function_pointer/input.sol":120:131  return 0xd0 */
   swap1
   pop
-    /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+    /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
   swap1
   jump	// out
-    /* "internal_function_pointer/input.sol":138:594  contract C is D {... */
-tag_13:
-  tag_21
-  tag_22
+    /* "internal_function_pointer/input.sol":200:301  function getD1() internal pure returns (function() internal pure returns (uint)) {... */
+tag_14:
+    /* "internal_function_pointer/input.sol":240:280  function() internal pure returns (uint)) */
+  or(tag_0_11, shl(0x20, tag_16))
+    /* "internal_function_pointer/input.sol":294:296  d1 */
+  or(tag_0_12, shl(0x20, tag_20))
+    /* "internal_function_pointer/input.sol":287:296  return d1 */
+  swap1
+  pop
+    /* "internal_function_pointer/input.sol":200:301  function getD1() internal pure returns (function() internal pure returns (uint)) {... */
+  swap1
+  jump	// out
+    /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
+tag_20:
+    /* "internal_function_pointer/input.sol":175:179  uint */
+  0x00
+    /* "internal_function_pointer/input.sol":190:194  0xd1 */
+  0xd1
+    /* "internal_function_pointer/input.sol":183:194  return 0xd1 */
+  swap1
+  pop
+    /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
+  swap1
+  jump	// out
+    /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
+tag_16:
+  tag_28
+  tag_29
   jump	// in
-tag_21:
+tag_28:
   jump	// out
     /* "#utility.yul":88:205   */
-tag_24:
+tag_31:
     /* "#utility.yul":197:198   */
   0x00
     /* "#utility.yul":194:195   */
@@ -255,7 +330,7 @@ tag_24:
     /* "#utility.yul":187:199   */
   revert
     /* "#utility.yul":334:410   */
-tag_26:
+tag_33:
     /* "#utility.yul":370:377   */
   0x00
     /* "#utility.yul":399:404   */
@@ -269,21 +344,21 @@ tag_26:
   pop
   jump	// out
     /* "#utility.yul":416:536   */
-tag_27:
+tag_34:
     /* "#utility.yul":488:511   */
-  tag_35
+  tag_42
     /* "#utility.yul":505:510   */
   dup2
     /* "#utility.yul":488:511   */
-  tag_26
+  tag_33
   jump	// in
-tag_35:
+tag_42:
     /* "#utility.yul":481:486   */
   dup2
     /* "#utility.yul":478:512   */
   eq
     /* "#utility.yul":468:530   */
-  tag_36
+  tag_43
   jumpi
     /* "#utility.yul":526:527   */
   0x00
@@ -292,12 +367,12 @@ tag_35:
     /* "#utility.yul":516:528   */
   revert
     /* "#utility.yul":468:530   */
-tag_36:
+tag_43:
     /* "#utility.yul":416:536   */
   pop
   jump	// out
     /* "#utility.yul":542:683   */
-tag_28:
+tag_35:
     /* "#utility.yul":598:603   */
   0x00
     /* "#utility.yul":629:635   */
@@ -308,13 +383,13 @@ tag_28:
   swap1
   pop
     /* "#utility.yul":645:677   */
-  tag_38
+  tag_45
     /* "#utility.yul":671:676   */
   dup2
     /* "#utility.yul":645:677   */
-  tag_27
+  tag_34
   jump	// in
-tag_38:
+tag_45:
     /* "#utility.yul":542:683   */
   swap3
   swap2
@@ -337,19 +412,19 @@ tag_3:
   slt
     /* "#utility.yul":775:894   */
   iszero
-  tag_40
+  tag_47
   jumpi
     /* "#utility.yul":813:892   */
-  tag_41
-  tag_24
+  tag_48
+  tag_31
   jump	// in
-tag_41:
+tag_48:
     /* "#utility.yul":775:894   */
-tag_40:
+tag_47:
     /* "#utility.yul":933:934   */
   0x00
     /* "#utility.yul":958:1021   */
-  tag_42
+  tag_49
     /* "#utility.yul":1013:1020   */
   dup5
     /* "#utility.yul":1004:1010   */
@@ -359,9 +434,9 @@ tag_40:
     /* "#utility.yul":989:1011   */
   add
     /* "#utility.yul":958:1021   */
-  tag_28
+  tag_35
   jump	// in
-tag_42:
+tag_49:
     /* "#utility.yul":948:1021   */
   swap2
   pop
@@ -374,7 +449,7 @@ tag_42:
   pop
   jump	// out
     /* "#utility.yul":1044:1224   */
-tag_22:
+tag_29:
     /* "#utility.yul":1092:1169   */
   0x4e487b7100000000000000000000000000000000000000000000000000000000
     /* "#utility.yul":1089:1090   */
@@ -393,8 +468,8 @@ tag_22:
   0x00
     /* "#utility.yul":1203:1218   */
   revert
-    /* "internal_function_pointer/input.sol":138:594  contract C is D {... */
-tag_17:
+    /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
+tag_22:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -405,7 +480,7 @@ tag_17:
 stop
 
 sub_0: assembly {
-        /* "internal_function_pointer/input.sol":138:594  contract C is D {... */
+        /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
       mstore(0x40, 0x80)
       callvalue
       dup1
@@ -428,7 +503,7 @@ sub_0: assembly {
       0x00
       dup1
       revert
-        /* "internal_function_pointer/input.sol":530:592  function g() public view returns (uint) {... */
+        /* "internal_function_pointer/input.sol":793:855  function g() public view returns (uint) {... */
     tag_3:
       tag_4
       tag_5
@@ -448,11 +523,11 @@ sub_0: assembly {
       swap1
       return
     tag_5:
-        /* "internal_function_pointer/input.sol":564:568  uint */
+        /* "internal_function_pointer/input.sol":827:831  uint */
       0x00
-        /* "internal_function_pointer/input.sol":583:587  fp() */
-      tag_13
-        /* "internal_function_pointer/input.sol":583:585  fp */
+        /* "internal_function_pointer/input.sol":846:850  fp() */
+      tag_14
+        /* "internal_function_pointer/input.sol":846:848  fp */
       0x01
       0x00
       swap1
@@ -469,90 +544,111 @@ sub_0: assembly {
       or
       0xffffffffffffffff
       and
-        /* "internal_function_pointer/input.sol":583:587  fp() */
+        /* "internal_function_pointer/input.sol":846:850  fp() */
       0xffffffff
       and
       dup1
       tag_8
       eq
-      tag_14
+      tag_15
       jumpi
       dup1
       tag_9
       eq
-      tag_15
+      tag_16
       jumpi
       dup1
       tag_10
       eq
-      tag_16
+      tag_17
+      jumpi
+      dup1
+      tag_12
+      eq
+      tag_18
       jumpi
       0x00
       dup1
       revert
-    tag_14:
+    tag_15:
       pop
       tag_8
       jump	// in
-    tag_15:
+    tag_16:
       pop
       tag_9
       jump	// in
-    tag_16:
+    tag_17:
       pop
       tag_10
       jump	// in
-    tag_13:
-        /* "internal_function_pointer/input.sol":576:587  return fp() */
+    tag_18:
+      pop
+      tag_12
+      jump	// in
+    tag_14:
+        /* "internal_function_pointer/input.sol":839:850  return fp() */
       swap1
       pop
-        /* "internal_function_pointer/input.sol":530:592  function g() public view returns (uint) {... */
+        /* "internal_function_pointer/input.sol":793:855  function g() public view returns (uint) {... */
       swap1
       jump	// out
-        /* "internal_function_pointer/input.sol":215:274  function f0() internal pure returns (uint) { return 0xa0; } */
+        /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
     tag_8:
-        /* "internal_function_pointer/input.sol":252:256  uint */
+        /* "internal_function_pointer/input.sol":481:485  uint */
       0x00
-        /* "internal_function_pointer/input.sol":267:271  0xa0 */
-      0xa0
-        /* "internal_function_pointer/input.sol":260:271  return 0xa0 */
+        /* "internal_function_pointer/input.sol":496:500  0xc0 */
+      0xc0
+        /* "internal_function_pointer/input.sol":489:500  return 0xc0 */
       swap1
       pop
-        /* "internal_function_pointer/input.sol":215:274  function f0() internal pure returns (uint) { return 0xa0; } */
+        /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
       swap1
       jump	// out
-        /* "internal_function_pointer/input.sol":277:336  function f1() internal pure returns (uint) { return 0xa1; } */
+        /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
     tag_9:
-        /* "internal_function_pointer/input.sol":314:318  uint */
+        /* "internal_function_pointer/input.sol":543:547  uint */
       0x00
-        /* "internal_function_pointer/input.sol":329:333  0xa1 */
-      0xa1
-        /* "internal_function_pointer/input.sol":322:333  return 0xa1 */
+        /* "internal_function_pointer/input.sol":558:562  0xc1 */
+      0xc1
+        /* "internal_function_pointer/input.sol":551:562  return 0xc1 */
       swap1
       pop
-        /* "internal_function_pointer/input.sol":277:336  function f1() internal pure returns (uint) { return 0xa1; } */
+        /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
       swap1
       jump	// out
-        /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+        /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
     tag_10:
         /* "internal_function_pointer/input.sol":112:116  uint */
       0x00
-        /* "internal_function_pointer/input.sol":127:131  0xa3 */
-      0xa3
-        /* "internal_function_pointer/input.sol":120:131  return 0xa3 */
+        /* "internal_function_pointer/input.sol":127:131  0xd0 */
+      0xd0
+        /* "internal_function_pointer/input.sol":120:131  return 0xd0 */
       swap1
       pop
-        /* "internal_function_pointer/input.sol":75:134  function f3() internal pure returns (uint) { return 0xa3; } */
+        /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
+      swap1
+      jump	// out
+        /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
+    tag_12:
+        /* "internal_function_pointer/input.sol":175:179  uint */
+      0x00
+        /* "internal_function_pointer/input.sol":190:194  0xd1 */
+      0xd1
+        /* "internal_function_pointer/input.sol":183:194  return 0xd1 */
+      swap1
+      pop
+        /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
       swap1
       jump	// out
     tag_11:
-      tag_20
-      tag_21
+      tag_23
+      tag_24
       jump	// in
-    tag_20:
+    tag_23:
       jump	// out
         /* "#utility.yul":7:84   */
-    tag_22:
+    tag_25:
         /* "#utility.yul":44:51   */
       0x00
         /* "#utility.yul":73:78   */
@@ -566,15 +662,15 @@ sub_0: assembly {
       pop
       jump	// out
         /* "#utility.yul":90:208   */
-    tag_23:
+    tag_26:
         /* "#utility.yul":177:201   */
-      tag_27
+      tag_30
         /* "#utility.yul":195:200   */
       dup2
         /* "#utility.yul":177:201   */
-      tag_22
+      tag_25
       jump	// in
-    tag_27:
+    tag_30:
         /* "#utility.yul":172:175   */
       dup3
         /* "#utility.yul":165:202   */
@@ -597,7 +693,7 @@ sub_0: assembly {
       swap1
       pop
         /* "#utility.yul":358:429   */
-      tag_29
+      tag_32
         /* "#utility.yul":426:427   */
       0x00
         /* "#utility.yul":415:424   */
@@ -607,9 +703,9 @@ sub_0: assembly {
         /* "#utility.yul":402:408   */
       dup5
         /* "#utility.yul":358:429   */
-      tag_23
+      tag_26
       jump	// in
-    tag_29:
+    tag_32:
         /* "#utility.yul":214:436   */
       swap3
       swap2
@@ -617,7 +713,7 @@ sub_0: assembly {
       pop
       jump	// out
         /* "#utility.yul":442:622   */
-    tag_21:
+    tag_24:
         /* "#utility.yul":490:567   */
       0x4e487b7100000000000000000000000000000000000000000000000000000000
         /* "#utility.yul":487:488   */
@@ -643,7 +739,7 @@ sub_0: assembly {
 
 ======= internal_function_pointer/input.sol:D =======
 EVM assembly:
-    /* "internal_function_pointer/input.sol":60:136  contract D {... */
+    /* "internal_function_pointer/input.sol":60:365  contract D {... */
   mstore(0x40, 0x80)
   callvalue
   dup1
@@ -665,7 +761,7 @@ tag_1:
 stop
 
 sub_0: assembly {
-        /* "internal_function_pointer/input.sol":60:136  contract D {... */
+        /* "internal_function_pointer/input.sol":60:365  contract D {... */
       mstore(0x40, 0x80)
       0x00
       dup1
