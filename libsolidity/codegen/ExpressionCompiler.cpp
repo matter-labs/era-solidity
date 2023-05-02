@@ -808,7 +808,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			// If we can't match the entry tag of any of the internal
 			// function
 			if (tagInfos.size())
-				m_context.appendRevert("Invalid function pointer");
+				m_context.appendPanic(PanicCode::InvalidInternalFunction);
 			else
 				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
 

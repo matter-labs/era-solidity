@@ -223,9 +223,10 @@ tag_12:
   eq
   tag_21
   jumpi
-  0x00
-  dup1
-  revert
+  tag_22
+  tag_23
+  jump	// in
+tag_22:
 tag_17:
   pop
   tag_7
@@ -253,7 +254,7 @@ tag_15:
     /* "internal_function_pointer/input.sol":630:789  constructor(int i) {... */
   pop
     /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
-  jump(tag_22)
+  jump(tag_24)
     /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
 tag_7:
     /* "internal_function_pointer/input.sol":481:485  uint */
@@ -316,13 +317,13 @@ tag_20:
   jump	// out
     /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
 tag_16:
-  tag_28
-  tag_29
+  tag_30
+  tag_23
   jump	// in
-tag_28:
+tag_30:
   jump	// out
     /* "#utility.yul":88:205   */
-tag_31:
+tag_32:
     /* "#utility.yul":197:198   */
   0x00
     /* "#utility.yul":194:195   */
@@ -330,7 +331,7 @@ tag_31:
     /* "#utility.yul":187:199   */
   revert
     /* "#utility.yul":334:410   */
-tag_33:
+tag_34:
     /* "#utility.yul":370:377   */
   0x00
     /* "#utility.yul":399:404   */
@@ -344,21 +345,21 @@ tag_33:
   pop
   jump	// out
     /* "#utility.yul":416:536   */
-tag_34:
+tag_35:
     /* "#utility.yul":488:511   */
-  tag_42
+  tag_43
     /* "#utility.yul":505:510   */
   dup2
     /* "#utility.yul":488:511   */
-  tag_33
+  tag_34
   jump	// in
-tag_42:
+tag_43:
     /* "#utility.yul":481:486   */
   dup2
     /* "#utility.yul":478:512   */
   eq
     /* "#utility.yul":468:530   */
-  tag_43
+  tag_44
   jumpi
     /* "#utility.yul":526:527   */
   0x00
@@ -367,12 +368,12 @@ tag_42:
     /* "#utility.yul":516:528   */
   revert
     /* "#utility.yul":468:530   */
-tag_43:
+tag_44:
     /* "#utility.yul":416:536   */
   pop
   jump	// out
     /* "#utility.yul":542:683   */
-tag_35:
+tag_36:
     /* "#utility.yul":598:603   */
   0x00
     /* "#utility.yul":629:635   */
@@ -383,13 +384,13 @@ tag_35:
   swap1
   pop
     /* "#utility.yul":645:677   */
-  tag_45
+  tag_46
     /* "#utility.yul":671:676   */
   dup2
     /* "#utility.yul":645:677   */
-  tag_34
+  tag_35
   jump	// in
-tag_45:
+tag_46:
     /* "#utility.yul":542:683   */
   swap3
   swap2
@@ -412,19 +413,19 @@ tag_3:
   slt
     /* "#utility.yul":775:894   */
   iszero
-  tag_47
+  tag_48
   jumpi
     /* "#utility.yul":813:892   */
-  tag_48
-  tag_31
+  tag_49
+  tag_32
   jump	// in
-tag_48:
+tag_49:
     /* "#utility.yul":775:894   */
-tag_47:
+tag_48:
     /* "#utility.yul":933:934   */
   0x00
     /* "#utility.yul":958:1021   */
-  tag_49
+  tag_50
     /* "#utility.yul":1013:1020   */
   dup5
     /* "#utility.yul":1004:1010   */
@@ -434,9 +435,9 @@ tag_47:
     /* "#utility.yul":989:1011   */
   add
     /* "#utility.yul":958:1021   */
-  tag_35
+  tag_36
   jump	// in
-tag_49:
+tag_50:
     /* "#utility.yul":948:1021   */
   swap2
   pop
@@ -449,7 +450,7 @@ tag_49:
   pop
   jump	// out
     /* "#utility.yul":1044:1224   */
-tag_29:
+tag_23:
     /* "#utility.yul":1092:1169   */
   0x4e487b7100000000000000000000000000000000000000000000000000000000
     /* "#utility.yul":1089:1090   */
@@ -469,7 +470,7 @@ tag_29:
     /* "#utility.yul":1203:1218   */
   revert
     /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
-tag_22:
+tag_24:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -567,9 +568,10 @@ sub_0: assembly {
       eq
       tag_18
       jumpi
-      0x00
-      dup1
-      revert
+      tag_19
+      tag_20
+      jump	// in
+    tag_19:
     tag_15:
       pop
       tag_8
@@ -642,13 +644,13 @@ sub_0: assembly {
       swap1
       jump	// out
     tag_11:
-      tag_23
-      tag_24
+      tag_25
+      tag_20
       jump	// in
-    tag_23:
+    tag_25:
       jump	// out
         /* "#utility.yul":7:84   */
-    tag_25:
+    tag_26:
         /* "#utility.yul":44:51   */
       0x00
         /* "#utility.yul":73:78   */
@@ -662,15 +664,15 @@ sub_0: assembly {
       pop
       jump	// out
         /* "#utility.yul":90:208   */
-    tag_26:
+    tag_27:
         /* "#utility.yul":177:201   */
-      tag_30
+      tag_31
         /* "#utility.yul":195:200   */
       dup2
         /* "#utility.yul":177:201   */
-      tag_25
+      tag_26
       jump	// in
-    tag_30:
+    tag_31:
         /* "#utility.yul":172:175   */
       dup3
         /* "#utility.yul":165:202   */
@@ -693,7 +695,7 @@ sub_0: assembly {
       swap1
       pop
         /* "#utility.yul":358:429   */
-      tag_32
+      tag_33
         /* "#utility.yul":426:427   */
       0x00
         /* "#utility.yul":415:424   */
@@ -703,9 +705,9 @@ sub_0: assembly {
         /* "#utility.yul":402:408   */
       dup5
         /* "#utility.yul":358:429   */
-      tag_26
+      tag_27
       jump	// in
-    tag_32:
+    tag_33:
         /* "#utility.yul":214:436   */
       swap3
       swap2
@@ -713,7 +715,7 @@ sub_0: assembly {
       pop
       jump	// out
         /* "#utility.yul":442:622   */
-    tag_24:
+    tag_20:
         /* "#utility.yul":490:567   */
       0x4e487b7100000000000000000000000000000000000000000000000000000000
         /* "#utility.yul":487:488   */
