@@ -132,7 +132,22 @@ sub_0: assembly {
         /* "optimizer_inliner_dynamic_reference_constructor/input.sol":289:292  x() */
       0xffffffff
       and
+      tag_12
+      dup2
+      eq
+      tag_19
+      jumpi
+      tag_19
+      tag_20
       jump	// in
+    tag_19:
+      pop
+        /* "optimizer_inliner_dynamic_reference_constructor/input.sol":355:356  6 */
+      0x06
+      swap1
+        /* "optimizer_inliner_dynamic_reference_constructor/input.sol":304:359  function f() internal pure returns (uint) { return 6; } */
+      jump
+        /* "optimizer_inliner_dynamic_reference_constructor/input.sol":289:292  x() */
     tag_16:
         /* "optimizer_inliner_dynamic_reference_constructor/input.sol":289:296  x() + 1 */
       tag_14
@@ -140,7 +155,7 @@ sub_0: assembly {
         /* "optimizer_inliner_dynamic_reference_constructor/input.sol":295:296  1 */
       0x01
         /* "optimizer_inliner_dynamic_reference_constructor/input.sol":289:296  x() + 1 */
-      tag_19
+      tag_22
       jump	// in
         /* "optimizer_inliner_dynamic_reference_constructor/input.sol":304:359  function f() internal pure returns (uint) { return 6; } */
     tag_12:
@@ -150,79 +165,79 @@ sub_0: assembly {
         /* "optimizer_inliner_dynamic_reference_constructor/input.sol":304:359  function f() internal pure returns (uint) { return 6; } */
       jump	// out
     tag_17:
-      tag_21
-      tag_22
+      tag_24
+      tag_20
       jump	// in
-    tag_21:
+    tag_24:
       jump	// out
-        /* "#utility.yul":196:418   */
-    tag_19:
-        /* "#utility.yul":261:270   */
+        /* "#utility.yul":196:323   */
+    tag_20:
+        /* "#utility.yul":257:267   */
+      0x4e487b71
+        /* "#utility.yul":252:255   */
+      0xe0
+        /* "#utility.yul":248:268   */
+      shl
+        /* "#utility.yul":245:246   */
+      0x00
+        /* "#utility.yul":238:269   */
+      mstore
+        /* "#utility.yul":288:292   */
+      0x51
+        /* "#utility.yul":285:286   */
+      0x04
+        /* "#utility.yul":278:293   */
+      mstore
+        /* "#utility.yul":312:316   */
+      0x24
+        /* "#utility.yul":309:310   */
+      0x00
+        /* "#utility.yul":302:317   */
+      revert
+        /* "#utility.yul":328:550   */
+    tag_22:
+        /* "#utility.yul":393:402   */
       dup1
       dup3
       add
-        /* "#utility.yul":282:292   */
+        /* "#utility.yul":414:424   */
       dup1
       dup3
       gt
-        /* "#utility.yul":279:412   */
+        /* "#utility.yul":411:544   */
       iszero
-      tag_26
+      tag_29
       jumpi
-        /* "#utility.yul":334:344   */
+        /* "#utility.yul":466:476   */
       0x4e487b71
-        /* "#utility.yul":329:332   */
+        /* "#utility.yul":461:464   */
       0xe0
-        /* "#utility.yul":325:345   */
+        /* "#utility.yul":457:477   */
       shl
-        /* "#utility.yul":322:323   */
+        /* "#utility.yul":454:455   */
       0x00
-        /* "#utility.yul":315:346   */
+        /* "#utility.yul":447:478   */
       mstore
-        /* "#utility.yul":369:373   */
+        /* "#utility.yul":501:505   */
       0x11
-        /* "#utility.yul":366:367   */
+        /* "#utility.yul":498:499   */
       0x04
-        /* "#utility.yul":359:374   */
+        /* "#utility.yul":491:506   */
       mstore
-        /* "#utility.yul":397:401   */
+        /* "#utility.yul":529:533   */
       0x24
-        /* "#utility.yul":394:395   */
+        /* "#utility.yul":526:527   */
       0x00
-        /* "#utility.yul":387:402   */
+        /* "#utility.yul":519:534   */
       revert
-        /* "#utility.yul":279:412   */
-    tag_26:
-        /* "#utility.yul":196:418   */
+        /* "#utility.yul":411:544   */
+    tag_29:
+        /* "#utility.yul":328:550   */
       swap3
       swap2
       pop
       pop
       jump	// out
-        /* "#utility.yul":423:550   */
-    tag_22:
-        /* "#utility.yul":484:494   */
-      0x4e487b71
-        /* "#utility.yul":479:482   */
-      0xe0
-        /* "#utility.yul":475:495   */
-      shl
-        /* "#utility.yul":472:473   */
-      0x00
-        /* "#utility.yul":465:496   */
-      mstore
-        /* "#utility.yul":515:519   */
-      0x51
-        /* "#utility.yul":512:513   */
-      0x04
-        /* "#utility.yul":505:520   */
-      mstore
-        /* "#utility.yul":539:543   */
-      0x24
-        /* "#utility.yul":536:537   */
-      0x00
-        /* "#utility.yul":529:544   */
-      revert
 
     auxdata: <AUXDATA REMOVED>
 }
