@@ -735,18 +735,9 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Extract the runtime part.
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
-			auto const* functionDecl = ASTNode::referencedDeclaration(_functionCall.expression());
-			if (!functionDecl || _functionCall.expression().annotation().calledDirectly)
+			if (_functionCall.expression().annotation().calledDirectly)
 			{
-				// `functionDecl` can be nullptr with cases like
-				// syntaxTests/parsing/calling_function.sol:
-				// ```
-				// function() returns(function() returns(function() returns(function() returns(uint)))) x;
-				// uint y;
-				// y = x()()()();
-				// ```
-
-				// In this case, we don't generate the selector
+				// Then don't generate the selector
 				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
 				m_context << returnLabel;
 
@@ -776,10 +767,6 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 					continue;
 				// clang-format off
 				if (*otherFuncType != *functionType
-						// FIXME: Can a function pointer point to a function
-						// with a different visibility?
-						|| otherFunc->visibility() != functionDecl->visibility()
-
 						// FIXME: Generating entry tags for functions
 						// automatically adds it to the queue of functions
 						// to be compiled. If we generate tags for
