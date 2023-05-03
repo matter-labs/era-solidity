@@ -766,14 +766,15 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				if (!otherFuncType)
 					continue;
 				// clang-format off
-				if (*otherFuncType != *functionType
+				if (!otherFuncType->hasEqualParameterTypes(function)
+						|| !otherFuncType->hasEqualReturnTypes(function)
 						// FIXME: Generating entry tags for functions
 						// automatically adds it to the queue of functions
 						// to be compiled. If we generate tags for
 						// unimplemented function, we'll hit assertion
 						// failures in codegen.
 						|| !otherFunc->isImplemented()
-						|| m_context.referencedFuncPtr(otherFunc) == 0
+						|| !m_context.referencedFuncPtr(otherFunc)
 						)
 					continue;
 				// clang-format on
@@ -792,12 +793,13 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				tagInfos.push_back({newTag, otherFunc});
 			}
 
-			// If we can't match the entry tag of any of the internal
-			// function
-			if (tagInfos.size())
-				m_context.appendPanic(PanicCode::InvalidInternalFunction);
-			else
-				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+			if (tagInfos.empty())
+			{
+				// Pop the original function pointer
+				m_context << Instruction::POP;
+			}
+			// If we can't match the entry tag of any of the internal function
+			m_context.appendPanic(PanicCode::InvalidInternalFunction);
 
 			unsigned int stkOffsetAfterJumpI = m_context.stackHeight();
 			for (TagInfo& tagInfo: tagInfos)
