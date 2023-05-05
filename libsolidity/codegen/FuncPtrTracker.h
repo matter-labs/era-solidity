@@ -43,6 +43,8 @@ public:
 
 	void run(ContractDefinition const& _contract)
 	{
+		// TODO: Replace this recursion with ContractDefinitionAnnotation::linearizedBaseContracts?
+
 		for (auto& baseSpec: _contract.baseContracts())
 		{
 			ContractDefinition const* baseContr
