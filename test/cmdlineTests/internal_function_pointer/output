@@ -155,6 +155,8 @@ tag_10:
     /* "internal_function_pointer/input.sol":761:768  getD1() */
   0x20
   shr
+  0xffffffff
+  and
   jump	// in
 tag_13:
     /* "internal_function_pointer/input.sol":756:758  fp */
@@ -203,6 +205,8 @@ tag_12:
     /* "internal_function_pointer/input.sol":780:784  fp() */
   0x20
   shr
+  0xffffffff
+  and
   dup1
   tag_7
   eq
