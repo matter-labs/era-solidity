@@ -37,7 +37,7 @@ class FuncPtrTracker: private ASTConstVisitor
 {
 public:
 	FuncPtrTracker(ContractDefinition const& _contract, CompilerContext& _context)
-		: m_contract(_contract), m_currContract(&_contract), m_context(_context)
+		: m_contract(_contract), m_context(_context)
 	{
 	}
 
@@ -54,7 +54,6 @@ public:
 			run(*baseContr);
 		}
 
-		m_currContract = &_contract;
 		_contract.accept(*this);
 	}
 
@@ -62,7 +61,6 @@ public:
 
 private:
 	ContractDefinition const& m_contract;
-	ContractDefinition const* m_currContract;
 	CompilerContext& m_context;
 
 	void endVisit(Identifier const& _identifier);
