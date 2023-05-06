@@ -30,7 +30,7 @@ void FuncPtrTracker::endVisit(Identifier const& _identifier)
 		return;
 
 	solAssert(*_identifier.annotation().requiredLookup == VirtualLookup::Virtual);
-	FunctionDefinition const& resolvedFunctionDef = functionDef->resolveVirtual(*m_currContract);
+	FunctionDefinition const& resolvedFunctionDef = functionDef->resolveVirtual(m_contract);
 
 	solAssert(resolvedFunctionDef.functionType(true));
 	solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);
@@ -64,11 +64,11 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 			if (contractType.isSuper())
 			{
 				solAssert(!!_memberAccess.annotation().referencedDeclaration, "Referenced declaration not resolved.");
-				ContractDefinition const* super = contractType.contractDefinition().superContract(*m_currContract);
+				ContractDefinition const* super = contractType.contractDefinition().superContract(m_contract);
 				solAssert(super, "Super contract not available.");
 				FunctionDefinition const& resolvedFunctionDef
 					= dynamic_cast<FunctionDefinition const&>(*_memberAccess.annotation().referencedDeclaration)
-						  .resolveVirtual(*m_currContract, super);
+						  .resolveVirtual(m_contract, super);
 
 				solAssert(resolvedFunctionDef.functionType(true));
 				solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);

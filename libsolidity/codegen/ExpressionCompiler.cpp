@@ -786,8 +786,9 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// FIXME: CompilerUtils::pushCombinedFunctionEntryLabel() adds
 				// sub-assembly tags to the low bits for function pointers. Do
 				// we need to worry about this here?
-				// FIXME: Do we need to use FunctionDefinition::resolveVirtual()
-				// here?
+				//
+				// We don't need to resolve the function here since
+				// FuncPtrTracker already did that.
 				m_context << m_context.functionEntryLabel(*otherFunc).pushTag();
 				m_context << Instruction::EQ;
 
@@ -816,6 +817,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Pop the original function pointer
 				m_context << Instruction::POP;
 
+				// We don't need to resolve the function here since
+				// FuncPtrTracker already did that.
 				m_context << m_context.functionEntryLabel(*tagInfo.func).pushTag();
 				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
 				// After the call, the vm's pc should be set to
