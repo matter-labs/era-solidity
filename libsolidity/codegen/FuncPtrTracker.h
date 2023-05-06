@@ -41,23 +41,13 @@ public:
 	{
 	}
 
-	void run(ContractDefinition const& _contract)
+	void run()
 	{
-		// TODO: Replace this recursion with ContractDefinitionAnnotation::linearizedBaseContracts?
-
-		for (auto& baseSpec: _contract.baseContracts())
+		for (ContractDefinition const* base: m_contract.annotation().linearizedBaseContracts)
 		{
-			ContractDefinition const* baseContr
-				= dynamic_cast<ContractDefinition const*>(baseSpec->name().annotation().referencedDeclaration);
-			// TODO: Will this fail?
-			solAssert(baseContr, "");
-			run(*baseContr);
+			base->accept(*this);
 		}
-
-		_contract.accept(*this);
 	}
-
-	void run() { run(m_contract); }
 
 private:
 	ContractDefinition const& m_contract;
