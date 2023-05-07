@@ -619,24 +619,6 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	return false;
 }
 
-// Populates @a _funcs with functions in @a _contr and its ancestor contracts.
-static void populateFuncs(ContractDefinition const& _contr, vector<FunctionDefinition const*>& _funcs)
-{
-	for (FunctionDefinition const* intFunc: _contr.definedFunctions())
-	{
-		_funcs.push_back(intFunc);
-	}
-
-	for (auto& baseSpec: _contr.baseContracts())
-	{
-		ContractDefinition const* baseContr
-			= dynamic_cast<ContractDefinition const*>(baseSpec->name().annotation().referencedDeclaration);
-		// TODO: Will this fail?
-		solAssert(baseContr, "");
-		populateFuncs(*baseContr, _funcs);
-	}
-}
-
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	auto functionCallKind = *_functionCall.annotation().kind;
@@ -759,8 +741,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			};
 			vector<TagInfo> tagInfos;
 
-			vector<FunctionDefinition const*> funcs;
-			populateFuncs(contract, funcs);
+			set<FunctionDefinition const*>& funcs = m_context.getFuncPtrReferenceSet();
 			for (auto* otherFunc: funcs)
 			{
 				if (otherFunc->noVisibilitySpecified())
