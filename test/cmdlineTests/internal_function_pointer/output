@@ -208,7 +208,7 @@ tag_12:
   0xffffffff
   and
   dup1
-  tag_7
+  tag_11
   eq
   tag_17
   jumpi
@@ -218,12 +218,12 @@ tag_12:
   tag_18
   jumpi
   dup1
-  tag_11
-  eq
   tag_19
+  eq
+  tag_20
   jumpi
   dup1
-  tag_20
+  tag_7
   eq
   tag_21
   jumpi
@@ -233,19 +233,19 @@ tag_12:
 tag_22:
 tag_17:
   pop
-  tag_7
+  tag_11
   jump	// in
 tag_18:
   pop
   tag_9
   jump	// in
-tag_19:
+tag_20:
   pop
-  tag_11
+  tag_19
   jump	// in
 tag_21:
   pop
-  tag_20
+  tag_7
   jump	// in
 tag_15:
     /* "internal_function_pointer/input.sol":776:777  x */
@@ -300,7 +300,7 @@ tag_14:
     /* "internal_function_pointer/input.sol":240:280  function() internal pure returns (uint)) */
   or(tag_0_11, shl(0x20, tag_16))
     /* "internal_function_pointer/input.sol":294:296  d1 */
-  or(tag_0_12, shl(0x20, tag_20))
+  or(tag_0_12, shl(0x20, tag_19))
     /* "internal_function_pointer/input.sol":287:296  return d1 */
   swap1
   pop
@@ -308,7 +308,7 @@ tag_14:
   swap1
   jump	// out
     /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
-tag_20:
+tag_19:
     /* "internal_function_pointer/input.sol":175:179  uint */
   0x00
     /* "internal_function_pointer/input.sol":190:194  0xd1 */
@@ -553,7 +553,7 @@ sub_0: assembly {
       0xffffffff
       and
       dup1
-      tag_8
+      tag_10
       eq
       tag_15
       jumpi
@@ -563,12 +563,12 @@ sub_0: assembly {
       tag_16
       jumpi
       dup1
-      tag_10
+      tag_12
       eq
       tag_17
       jumpi
       dup1
-      tag_12
+      tag_8
       eq
       tag_18
       jumpi
@@ -578,7 +578,7 @@ sub_0: assembly {
     tag_19:
     tag_15:
       pop
-      tag_8
+      tag_10
       jump	// in
     tag_16:
       pop
@@ -586,11 +586,11 @@ sub_0: assembly {
       jump	// in
     tag_17:
       pop
-      tag_10
+      tag_12
       jump	// in
     tag_18:
       pop
-      tag_12
+      tag_8
       jump	// in
     tag_14:
         /* "internal_function_pointer/input.sol":839:850  return fp() */
