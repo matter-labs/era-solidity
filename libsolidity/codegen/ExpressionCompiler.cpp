@@ -761,7 +761,6 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 						// unimplemented function, we'll hit assertion
 						// failures in codegen.
 						|| !otherFunc->isImplemented()
-						|| !m_context.referencedFuncPtr(otherFunc)
 						)
 					continue;
 				// clang-format on
