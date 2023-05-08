@@ -735,8 +735,6 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				m_context << u256(0xffffffff) << Instruction::AND;
 			}
 
-			ContractDefinition const& contract = m_context.mostDerivedContract();
-
 			struct TagInfo
 			{
 				evmasm::AssemblyItem const tag;
