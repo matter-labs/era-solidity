@@ -710,6 +710,13 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				parameterSize += function.selfType()->sizeOnStack();
 			}
 
+			// There can be cases when ExpressionAnnotation::calledDirectly is
+			// false but we can infer that it is a direct call if the target PC
+			// is a literal tag
+			bool directCallInferred = false;
+			if (m_context.assembly().items().back().type() == AssemblyItemType::PushTag)
+				directCallInferred = true;
+
 			if (m_context.runtimeContext())
 				// We have a runtime context, so we need the creation part.
 				utils().rightShiftNumberOnStack(32);
@@ -717,7 +724,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Extract the runtime part.
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
-			if (_functionCall.expression().annotation().calledDirectly)
+			if (_functionCall.expression().annotation().calledDirectly || directCallInferred)
 			{
 				// Then don't generate the selector
 				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
