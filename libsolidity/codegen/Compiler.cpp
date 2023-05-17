@@ -59,17 +59,30 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 					func["runtimeTag"] = runtimeTag.data().str();
 
 				Json::Value paramTypes(Json::arrayValue), retParamTypes(Json::arrayValue);
+				unsigned totalParamSize = 0, totalRetParamSize = 0;
 				for (auto& param: fn->parameters())
 				{
-					paramTypes.append(param->type()->toString());
+					auto* type = param->type();
+					paramTypes.append(type->toString());
+					if (type->isDynamicallySized())
+						totalParamSize += 32; // FIXME
+					else
+						totalParamSize += type->calldataEncodedSize();
 				}
 				func["paramTypes"] = paramTypes;
+				func["totalParamSize"] = totalParamSize;
 
 				for (auto& param: fn->returnParameters())
 				{
-					retParamTypes.append(param->type()->toString());
+					auto* type = param->type();
+					retParamTypes.append(type->toString());
+					if (type->isDynamicallySized())
+						totalRetParamSize += 32;
+					else
+						totalRetParamSize += type->calldataEncodedSize();
 				}
 				func["retParamTypes"] = retParamTypes;
+				func["totalRetParamSize"] = totalRetParamSize;
 
 				recFuncs.append(func);
 			}
