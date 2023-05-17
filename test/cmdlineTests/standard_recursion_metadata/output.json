@@ -9,7 +9,6 @@
                 {
                     "bytecode":
                     {
-                        "generatedSources": [],
                         "object": "<BYTECODE REMOVED>"
                     },
                     "deployedBytecode":
@@ -30,7 +29,7 @@
                                 [
                                     "uint256"
                                 ],
-                                "tag": "19"
+                                "runtimeTag": "23"
                             },
                             {
                                 "name": "f1",
@@ -42,7 +41,7 @@
                                 [
                                     "uint256"
                                 ],
-                                "tag": "15"
+                                "runtimeTag": "15"
                             }
                         ]
                     }
@@ -54,7 +53,6 @@
                 {
                     "bytecode":
                     {
-                        "generatedSources": [],
                         "object": "<BYTECODE REMOVED>"
                     },
                     "deployedBytecode":
@@ -66,6 +64,7 @@
                         "recursiveFunctions":
                         [
                             {
+                                "creationTag": "11",
                                 "name": "f1",
                                 "paramTypes":
                                 [
@@ -75,9 +74,10 @@
                                 [
                                     "uint256"
                                 ],
-                                "tag": "14"
+                                "runtimeTag": "15"
                             },
                             {
+                                "creationTag": "7",
                                 "name": "f0",
                                 "paramTypes":
                                 [
@@ -87,7 +87,7 @@
                                 [
                                     "uint256"
                                 ],
-                                "tag": "9"
+                                "runtimeTag": "10"
                             }
                         ]
                     }
