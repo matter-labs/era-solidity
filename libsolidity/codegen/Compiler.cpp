@@ -41,8 +41,10 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 		auto& callGraph = *callGraphSetOnce;
 		for (FunctionDefinition const* fn: _contract.definedFunctions())
 		{
-			evmasm::AssemblyItem const& tag = m_runtimeContext.functionEntryLabelIfExists(*fn);
-			if (tag == evmasm::AssemblyItem(evmasm::UndefinedItem))
+			evmasm::AssemblyItem const& creationTag = m_context.functionEntryLabelIfExists(*fn);
+			evmasm::AssemblyItem const& runtimeTag = m_runtimeContext.functionEntryLabelIfExists(*fn);
+			if (creationTag == evmasm::AssemblyItem(evmasm::UndefinedItem)
+				&& runtimeTag == evmasm::AssemblyItem(evmasm::UndefinedItem))
 				continue;
 
 			// TODO: Ideally we should get all the cycles in advance and do a
@@ -51,7 +53,10 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 			{
 				Json::Value func(Json::objectValue);
 				func["name"] = fn->name();
-				func["tag"] = tag.data().str();
+				if (creationTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
+					func["creationTag"] = creationTag.data().str();
+				if (runtimeTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
+					func["runtimeTag"] = runtimeTag.data().str();
 
 				Json::Value paramTypes(Json::arrayValue), retParamTypes(Json::arrayValue);
 				for (auto& param: fn->parameters())

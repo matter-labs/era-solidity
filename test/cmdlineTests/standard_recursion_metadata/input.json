@@ -1,10 +1,10 @@
 {
-	"language": "Solidity",
-	"sources":
-	{
-		"A":
-		{
-			"content": "
+  "language": "Solidity",
+  "sources":
+  {
+    "A":
+    {
+      "content": "
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.0;
 contract C {
@@ -12,7 +12,7 @@ contract C {
   function f1(uint a) public pure returns (uint r) { r = f2(a); }
   function f0(uint a) public pure returns (uint r) { r = f1(a); }
 
-  function g(uint a) public pure returns (uint) {
+  function g0(uint a) public pure returns (uint) {
       return f0(a);
   }
 }
@@ -21,18 +21,24 @@ contract D {
   function f1(uint a) public pure returns (uint r) { r = f0(a); }
   function f0(uint a) public pure returns (uint r) { r = f1(a); }
 
-  function g(uint a) public pure returns (uint) {
+  function g0(uint a) public pure returns (uint) {
       return f0(a);
   }
+
+  uint public g;
+  constructor(uint a) {
+    g = f0(a);
+  }
+
 }
       "
-		}
-	},
-	"settings":
-	{
-		"outputSelection":
-		{
-			"*": { "*": ["evm.bytecode.object", "evm.bytecode.generatedSources", "evm.deployedBytecode.object"] }
-		}
-	}
+    }
+  },
+  "settings":
+  {
+    "outputSelection":
+    {
+      "*": { "*": ["evm.bytecode.object", "evm.deployedBytecode.object"] }
+    }
+  }
 }
