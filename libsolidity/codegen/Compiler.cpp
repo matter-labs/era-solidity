@@ -69,10 +69,7 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 				{
 					auto* type = param->type();
 					paramTypes.append(type->toString());
-					if (type->isDynamicallySized())
-						totalParamSize += 32; // FIXME
-					else
-						totalParamSize += type->calldataEncodedSize();
+					totalParamSize += type->sizeOnStack();
 				}
 				func["paramTypes"] = paramTypes;
 				func["totalParamSize"] = totalParamSize;
@@ -81,10 +78,7 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 				{
 					auto* type = param->type();
 					retParamTypes.append(type->toString());
-					if (type->isDynamicallySized())
-						totalRetParamSize += 32;
-					else
-						totalRetParamSize += type->calldataEncodedSize();
+					totalRetParamSize += type->sizeOnStack();
 				}
 				func["retParamTypes"] = retParamTypes;
 				func["totalRetParamSize"] = totalRetParamSize;
