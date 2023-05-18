@@ -36,6 +36,10 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 {
 	// Set "recursiveFunctions"
 	Json::Value recFuncs(Json::arrayValue);
+
+	// FIXME: Can we have cases where where a cycle in creationCallGraph is
+	// absent in deployedCallGraph?
+
 	auto& callGraphSetOnce = _contract.annotation().deployedCallGraph;
 	if (callGraphSetOnce.set())
 	{
