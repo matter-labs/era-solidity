@@ -13,6 +13,7 @@ EVM assembly:
   revert
 tag_1:
   pop
+tag_2:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -68,18 +69,49 @@ sub_0: assembly {
       iszero
       tag_8
       jumpi
-        /* "optimizer_inliner_add/input.sol":149:154  x + y */
-      dup1
-      add
+    tag_9:
+        /* "optimizer_inliner_add/input.sol":245:276  unsafe_add(x, unsafe_add(x, 1)) */
+      tag_10
+        /* "optimizer_inliner_add/input.sol":256:257  x */
+      dup2
+        /* "optimizer_inliner_add/input.sol":259:275  unsafe_add(x, 1) */
+      tag_11
+        /* "optimizer_inliner_add/input.sol":270:271  x */
+      dup4
         /* "optimizer_inliner_add/input.sol":273:274  1 */
       0x01
-        /* "optimizer_inliner_add/input.sol":149:154  x + y */
-      add
+        /* "optimizer_inliner_add/input.sol":259:269  unsafe_add */
+      tag_12
+        /* "optimizer_inliner_add/input.sol":259:275  unsafe_add(x, 1) */
+      jump	// in
+    tag_11:
+        /* "optimizer_inliner_add/input.sol":245:255  unsafe_add */
+      tag_12
+        /* "optimizer_inliner_add/input.sol":245:276  unsafe_add(x, unsafe_add(x, 1)) */
+      jump	// in
+    tag_10:
+        /* "optimizer_inliner_add/input.sol":241:276  x = unsafe_add(x, unsafe_add(x, 1)) */
+      swap1
+      pop
         /* "optimizer_inliner_add/input.sol":217:297  for(uint x = 0; x < 10; x = unsafe_add(x, unsafe_add(x, 1)))... */
       jump(tag_7)
     tag_8:
       pop
         /* "optimizer_inliner_add/input.sol":182:303  function f() public pure {... */
+    tag_6:
+      jump	// out
+        /* "optimizer_inliner_add/input.sol":60:163  function unsafe_add(uint x, uint y) pure returns (uint)... */
+    tag_12:
+        /* "optimizer_inliner_add/input.sol":149:154  x + y */
+      dup2
+      dup2
+      add
+        /* "optimizer_inliner_add/input.sol":60:163  function unsafe_add(uint x, uint y) pure returns (uint)... */
+    tag_13:
+      swap3
+      swap2
+      pop
+      pop
       jump	// out
 
     auxdata: <AUXDATA REMOVED>

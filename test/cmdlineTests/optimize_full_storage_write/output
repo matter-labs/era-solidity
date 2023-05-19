@@ -13,6 +13,7 @@ EVM assembly:
   revert
 tag_1:
   pop
+tag_2:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -49,16 +50,226 @@ sub_0: assembly {
         /* "optimize_full_storage_write/input.sol":111:211  function f() public {... */
     tag_3:
       tag_4
-        /* "optimize_full_storage_write/input.sol":192:207  nums[3] = 44444 */
-      0xad9c000000000000823500000000000056ce0000000000002b67
-        /* "optimize_full_storage_write/input.sol":135:139  nums */
-      0x00
-        /* "optimize_full_storage_write/input.sol":192:207  nums[3] = 44444 */
-      sstore
-        /* "optimize_full_storage_write/input.sol":111:211  function f() public {... */
-      jump
+      tag_5
+      jump	// in
     tag_4:
       stop
+    tag_5:
+        /* "optimize_full_storage_write/input.sol":145:150  11111 */
+      0x2b67
+        /* "optimize_full_storage_write/input.sol":135:139  nums */
+      0x00
+      dup1
+        /* "optimize_full_storage_write/input.sol":135:142  nums[0] */
+      jump(tag_7)
+    tag_8:
+    tag_7:
+      0x04
+      swap2
+      dup3
+      dup3
+      div
+      add
+      swap2
+      swap1
+      mod
+      0x08
+      mul
+    tag_10:
+        /* "optimize_full_storage_write/input.sol":135:150  nums[0] = 11111 */
+      0x0100
+      exp
+      dup2
+      sload
+      dup2
+      0xffffffffffffffff
+      mul
+      not
+      and
+      swap1
+      dup4
+      0xffffffffffffffff
+      and
+      mul
+      or
+      swap1
+      sstore
+      pop
+        /* "optimize_full_storage_write/input.sol":164:169  22222 */
+      0x56ce
+        /* "optimize_full_storage_write/input.sol":154:158  nums */
+      0x00
+        /* "optimize_full_storage_write/input.sol":159:160  1 */
+      0x01
+        /* "optimize_full_storage_write/input.sol":154:161  nums[1] */
+      0x04
+      dup2
+      lt
+      tag_11
+      jumpi
+      tag_12
+      tag_9
+      jump	// in
+    tag_12:
+    tag_11:
+      0x04
+      swap2
+      dup3
+      dup3
+      div
+      add
+      swap2
+      swap1
+      mod
+      0x08
+      mul
+    tag_13:
+        /* "optimize_full_storage_write/input.sol":154:169  nums[1] = 22222 */
+      0x0100
+      exp
+      dup2
+      sload
+      dup2
+      0xffffffffffffffff
+      mul
+      not
+      and
+      swap1
+      dup4
+      0xffffffffffffffff
+      and
+      mul
+      or
+      swap1
+      sstore
+      pop
+        /* "optimize_full_storage_write/input.sol":183:188  33333 */
+      0x8235
+        /* "optimize_full_storage_write/input.sol":173:177  nums */
+      0x00
+        /* "optimize_full_storage_write/input.sol":178:179  2 */
+      0x02
+        /* "optimize_full_storage_write/input.sol":173:180  nums[2] */
+      0x04
+      dup2
+      lt
+      tag_14
+      jumpi
+      tag_15
+      tag_9
+      jump	// in
+    tag_15:
+    tag_14:
+      0x04
+      swap2
+      dup3
+      dup3
+      div
+      add
+      swap2
+      swap1
+      mod
+      0x08
+      mul
+    tag_16:
+        /* "optimize_full_storage_write/input.sol":173:188  nums[2] = 33333 */
+      0x0100
+      exp
+      dup2
+      sload
+      dup2
+      0xffffffffffffffff
+      mul
+      not
+      and
+      swap1
+      dup4
+      0xffffffffffffffff
+      and
+      mul
+      or
+      swap1
+      sstore
+      pop
+        /* "optimize_full_storage_write/input.sol":202:207  44444 */
+      0xad9c
+        /* "optimize_full_storage_write/input.sol":192:196  nums */
+      0x00
+        /* "optimize_full_storage_write/input.sol":197:198  3 */
+      0x03
+        /* "optimize_full_storage_write/input.sol":192:199  nums[3] */
+      0x04
+      dup2
+      lt
+      tag_17
+      jumpi
+      tag_18
+      tag_9
+      jump	// in
+    tag_18:
+    tag_17:
+      0x04
+      swap2
+      dup3
+      dup3
+      div
+      add
+      swap2
+      swap1
+      mod
+      0x08
+      mul
+    tag_19:
+        /* "optimize_full_storage_write/input.sol":192:207  nums[3] = 44444 */
+      0x0100
+      exp
+      dup2
+      sload
+      dup2
+      0xffffffffffffffff
+      mul
+      not
+      and
+      swap1
+      dup4
+      0xffffffffffffffff
+      and
+      mul
+      or
+      swap1
+      sstore
+      pop
+        /* "optimize_full_storage_write/input.sol":111:211  function f() public {... */
+    tag_6:
+      jump	// out
+        /* "#utility.yul":14:141   */
+    tag_9:
+        /* "#utility.yul":75:85   */
+      0x4e487b71
+        /* "#utility.yul":70:73   */
+      0xe0
+        /* "#utility.yul":66:86   */
+      shl
+        /* "#utility.yul":63:64   */
+      0x00
+        /* "#utility.yul":56:87   */
+      mstore
+        /* "#utility.yul":106:110   */
+      0x32
+        /* "#utility.yul":103:104   */
+      0x04
+        /* "#utility.yul":96:111   */
+      mstore
+        /* "#utility.yul":130:134   */
+      0x24
+        /* "#utility.yul":127:128   */
+      0x00
+        /* "#utility.yul":120:135   */
+      revert
+        /* "#utility.yul":14:141   */
+    tag_21:
+      jump	// out
+    tag_20:
 
     auxdata: <AUXDATA REMOVED>
 }

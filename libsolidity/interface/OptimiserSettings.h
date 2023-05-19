@@ -79,10 +79,7 @@ struct OptimiserSettings
 	{
 		OptimiserSettings s;
 		s.runOrderLiterals = true;
-		s.runInliner = true;
-		s.runJumpdestRemover = true;
 		s.runPeephole = true;
-		s.runDeduplicate = true;
 		s.runCSE = true;
 		s.runConstantOptimiser = true;
 		s.runYulOptimiser = true;

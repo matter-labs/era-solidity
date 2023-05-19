@@ -12,6 +12,7 @@ EVM assembly:
   revert
 tag_1:
   pop
+tag_2:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -45,7 +46,14 @@ sub_0: assembly {
       dup1
       revert
     tag_3:
+      tag_4
+      tag_5
+      jump	// in
+    tag_4:
       stop
+    tag_5:
+    tag_6:
+      jump	// out
 
     auxdata: <AUXDATA REMOVED>
 }
