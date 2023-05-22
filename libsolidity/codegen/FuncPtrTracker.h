@@ -29,17 +29,14 @@ namespace solidity::frontend
 
 /**
  * This class is used to add all the function pointer references in the contract
- * and its ancestor contracts to the CompilerContext. The visitor is copied from
- * the yul codegen pipeline's usage of
+ * and its ancestor contracts to the ContractDefinitionAnnotation::funcPtrRefs.
+ * The visitor is copied from the yul codegen pipeline's usage of
  * IRGeneratorForStatements::assignInternalFunctionIDIfNotCalledDirectly()
  */
 class FuncPtrTracker: private ASTConstVisitor
 {
 public:
-	FuncPtrTracker(ContractDefinition const& _contract, CompilerContext& _context)
-		: m_contract(_contract), m_context(_context)
-	{
-	}
+	FuncPtrTracker(ContractDefinition const& _contract): m_contract(_contract) {}
 
 	void run()
 	{
@@ -51,7 +48,6 @@ public:
 
 private:
 	ContractDefinition const& m_contract;
-	CompilerContext& m_context;
 
 	void endVisit(Identifier const& _identifier);
 	void endVisit(MemberAccess const& _memberAccess);

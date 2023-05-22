@@ -36,7 +36,7 @@ void FuncPtrTracker::endVisit(Identifier const& _identifier)
 	solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);
 	if (_identifier.annotation().calledDirectly)
 		return;
-	m_context.addReferencedFuncPtr(&resolvedFunctionDef);
+	m_contract.annotation().funcPtrRefs.insert(&resolvedFunctionDef);
 }
 
 void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
@@ -47,7 +47,8 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 	{
 		solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static);
 		if (memberFunctionType->kind() == FunctionType::Kind::Internal)
-			m_context.addReferencedFuncPtr(&dynamic_cast<FunctionDefinition const&>(memberFunctionType->declaration()));
+			m_contract.annotation().funcPtrRefs.insert(
+				&dynamic_cast<FunctionDefinition const&>(memberFunctionType->declaration()));
 	}
 
 	Type::Category objectCategory = _memberAccess.expression().annotation().type->category();
@@ -72,13 +73,13 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 
 				solAssert(resolvedFunctionDef.functionType(true));
 				solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);
-				m_context.addReferencedFuncPtr(&resolvedFunctionDef);
+				m_contract.annotation().funcPtrRefs.insert(&resolvedFunctionDef);
 			}
 			else if (memberFunctionType && memberFunctionType->kind() == FunctionType::Kind::Internal)
 			{
 				if (auto const* function
 					= dynamic_cast<FunctionDefinition const*>(_memberAccess.annotation().referencedDeclaration))
-					m_context.addReferencedFuncPtr(function);
+					m_contract.annotation().funcPtrRefs.insert(function);
 			}
 		}
 		break;
@@ -95,7 +96,7 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 			solAssert(funType->kind() == FunctionType::Kind::Internal);
 			solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static);
 
-			m_context.addReferencedFuncPtr(function);
+			m_contract.annotation().funcPtrRefs.insert(function);
 		}
 		break;
 	}

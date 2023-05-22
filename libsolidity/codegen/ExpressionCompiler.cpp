@@ -749,7 +749,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			};
 			vector<TagInfo> tagInfos;
 
-			set<FunctionDefinition const*>& funcs = m_context.getFuncPtrReferenceSet();
+			set<FunctionDefinition const*>& funcs = m_context.mostDerivedContract().annotation().funcPtrRefs;
 			for (auto* otherFunc: funcs)
 			{
 				if (otherFunc->noVisibilitySpecified())

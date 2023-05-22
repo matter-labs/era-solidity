@@ -48,6 +48,7 @@
 #include <libsolidity/ast/TypeProvider.h>
 #include <libsolidity/ast/ASTJsonImporter.h>
 #include <libsolidity/codegen/Compiler.h>
+#include <libsolidity/codegen/FuncPtrTracker.h>
 #include <libsolidity/formal/ModelChecker.h>
 #include <libsolidity/interface/ABI.h>
 #include <libsolidity/interface/Natspec.h>
@@ -112,6 +113,21 @@ CompilerStack::~CompilerStack()
 {
 	--g_compilerStackCounts;
 	TypeProvider::reset();
+}
+
+void CompilerStack::populateFuncPtrRefs()
+{
+	for (Source const* source: m_sourceOrder)
+	{
+		if (!source->ast)
+			continue;
+
+		for (ContractDefinition const* contract: ASTNode::filteredNodes<ContractDefinition>(source->ast->nodes()))
+		{
+			FuncPtrTracker tracker{*contract};
+			tracker.run();
+		}
+	}
 }
 
 void CompilerStack::createAndAssignCallGraphs()
@@ -525,6 +541,7 @@ bool CompilerStack::analyze()
 		// Create & assign callgraphs and check for contract dependency cycles
 		if (noErrors)
 		{
+			populateFuncPtrRefs();
 			createAndAssignCallGraphs();
 			findAndReportCyclicContractDependencies();
 		}
