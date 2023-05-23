@@ -46,7 +46,7 @@ bool CallGraph::CompareByID::operator()(int64_t _lhs, Node const& _rhs) const
 	return _lhs < get<CallableDeclaration const*>(_rhs)->id();
 }
 
-bool CallGraph::inCycle(CallableDeclaration const* _callable) const
+bool CallGraph::hasReachableCycle(CallableDeclaration const* _callable) const
 {
 	auto callees = edges.find(_callable);
 	if (callees == edges.end())
@@ -65,22 +65,5 @@ bool CallGraph::inCycle(CallableDeclaration const* _callable) const
 		}
 	};
 
-	auto* start = util::CycleDetector<CallableDeclaration>(visitor).run(*_callable);
-
-	if (!start)
-		return false;
-	else if (start == _callable)
-		return true;
-	else if (start)
-	{
-		auto callees = edges.find(start);
-		for (auto const& callee: callees->second)
-		{
-			if (!holds_alternative<CallableDeclaration const*>(callee))
-				continue;
-			if (get<CallableDeclaration const*>(callee) == _callable)
-				return true;
-		}
-	}
-	return false;
+	return util::CycleDetector<CallableDeclaration>(visitor).run(*_callable);
 }

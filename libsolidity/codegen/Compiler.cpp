@@ -54,7 +54,7 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 
 			// TODO: Ideally we should get all the cycles in advance and do a
 			// lookup here.
-			if (callGraph->inCycle(fn))
+			if (callGraph->hasReachableCycle(fn))
 			{
 				Json::Value func(Json::objectValue);
 				func["name"] = fn->name();
