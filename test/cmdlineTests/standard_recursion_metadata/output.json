@@ -20,20 +20,6 @@
                         "recursiveFunctions":
                         [
                             {
-                                "name": "f2",
-                                "paramTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "retParamTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "runtimeTag": "23",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
-                            },
-                            {
                                 "name": "f1",
                                 "paramTypes":
                                 [
@@ -58,6 +44,20 @@
                                     "uint256"
                                 ],
                                 "runtimeTag": "10",
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
+                            },
+                            {
+                                "name": "f2",
+                                "paramTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "retParamTypes":
+                                [
+                                    "uint256"
+                                ],
+                                "runtimeTag": "23",
                                 "totalParamSize": 1,
                                 "totalRetParamSize": 1
                             },
