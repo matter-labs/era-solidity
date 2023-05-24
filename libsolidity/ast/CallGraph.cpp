@@ -46,6 +46,62 @@ bool CallGraph::CompareByID::operator()(int64_t _lhs, Node const& _rhs) const
 	return _lhs < get<CallableDeclaration const*>(_rhs)->id();
 }
 
+struct CycleFinder
+{
+	CallGraph const& callGraph;
+	CallableDeclaration const* m_src;
+	vector<CallGraph::Path>& m_paths;
+	set<CallableDeclaration const*> m_visited;
+
+	void find(CallableDeclaration const* _callable, CallGraph::Path& _path)
+	{
+		m_visited.insert(_callable);
+		_path.push_back(_callable);
+
+		auto callees = callGraph.edges.find(_callable);
+		if (callees == callGraph.edges.end())
+			return;
+		for (auto const& calleeVariant: callees->second)
+		{
+			if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
+				continue;
+			auto* callee = get<CallableDeclaration const*>(calleeVariant);
+
+			if (callee == m_src)
+			{
+				m_paths.push_back(_path);
+				continue;
+			}
+
+			if (m_visited.count(callee))
+				continue;
+
+			find(callee, _path);
+		}
+		_path.pop_back();
+	}
+
+	void run()
+	{
+		CallGraph::Path p;
+		find(m_src, p);
+		for (auto i: m_paths)
+		{
+			for (auto j: i)
+			{
+				cerr << j->name() << " -> ";
+			}
+			cerr << "\n";
+		}
+	}
+};
+
+void CallGraph::getCycles(CallableDeclaration const* _callable, vector<Path>& _paths) const
+{
+	CycleFinder cf{*this, _callable, _paths, {}};
+	cf.run();
+}
+
 bool CallGraph::hasReachableCycle(CallableDeclaration const* _callable) const
 {
 	auto callees = edges.find(_callable);

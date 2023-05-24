@@ -47,6 +47,7 @@ struct CallGraph
 	};
 
 	using Node = std::variant<CallableDeclaration const*, SpecialNode>;
+	using Path = std::vector<CallableDeclaration const*>;
 
 	struct CompareByID
 	{
@@ -70,6 +71,8 @@ struct CallGraph
 
 	/// Errors that are used by functions present in the graph.
 	std::set<ErrorDefinition const*, ASTNode::CompareByID> usedErrors;
+
+	void getCycles(CallableDeclaration const* _callable, std::vector<Path>& _paths) const;
 
 	/// Returns true if a cycle can be reached from @a _callable
 	bool hasReachableCycle(CallableDeclaration const* _callable) const;
