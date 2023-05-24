@@ -41,52 +41,52 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 	// absent in deployedCallGraph?
 
 	auto& callGraphSetOnce = _contract.annotation().deployedCallGraph;
-	if (callGraphSetOnce.set())
+	if (!callGraphSetOnce.set())
+		return;
+
+	auto& callGraph = *callGraphSetOnce;
+	set<CallableDeclaration const*> reachableCycleFuncs;
+	for (FunctionDefinition const* fn: _contract.definedFunctions())
 	{
-		auto& callGraph = *callGraphSetOnce;
-		set<CallableDeclaration const*> reachableCycleFuncs;
-		for (FunctionDefinition const* fn: _contract.definedFunctions())
+		callGraph->getReachableCycleFuncs(fn, reachableCycleFuncs);
+	}
+
+	for (auto* fn: reachableCycleFuncs)
+	{
+		evmasm::AssemblyItem const& creationTag = m_context.functionEntryLabelIfExists(*fn);
+		evmasm::AssemblyItem const& runtimeTag = m_runtimeContext.functionEntryLabelIfExists(*fn);
+		if (creationTag == evmasm::AssemblyItem(evmasm::UndefinedItem)
+			&& runtimeTag == evmasm::AssemblyItem(evmasm::UndefinedItem))
+			continue;
+
+		Json::Value func(Json::objectValue);
+		func["name"] = fn->name();
+		if (creationTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
+			func["creationTag"] = creationTag.data().str();
+		if (runtimeTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
+			func["runtimeTag"] = runtimeTag.data().str();
+
+		Json::Value paramTypes(Json::arrayValue), retParamTypes(Json::arrayValue);
+		unsigned totalParamSize = 0, totalRetParamSize = 0;
+		for (auto& param: fn->parameters())
 		{
-			callGraph->getReachableCycleFuncs(fn, reachableCycleFuncs);
+			auto* type = param->type();
+			paramTypes.append(type->toString());
+			totalParamSize += type->sizeOnStack();
 		}
+		func["paramTypes"] = paramTypes;
+		func["totalParamSize"] = totalParamSize;
 
-		for (auto* fn: reachableCycleFuncs)
+		for (auto& param: fn->returnParameters())
 		{
-			evmasm::AssemblyItem const& creationTag = m_context.functionEntryLabelIfExists(*fn);
-			evmasm::AssemblyItem const& runtimeTag = m_runtimeContext.functionEntryLabelIfExists(*fn);
-			if (creationTag == evmasm::AssemblyItem(evmasm::UndefinedItem)
-				&& runtimeTag == evmasm::AssemblyItem(evmasm::UndefinedItem))
-				continue;
-
-			Json::Value func(Json::objectValue);
-			func["name"] = fn->name();
-			if (creationTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
-				func["creationTag"] = creationTag.data().str();
-			if (runtimeTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
-				func["runtimeTag"] = runtimeTag.data().str();
-
-			Json::Value paramTypes(Json::arrayValue), retParamTypes(Json::arrayValue);
-			unsigned totalParamSize = 0, totalRetParamSize = 0;
-			for (auto& param: fn->parameters())
-			{
-				auto* type = param->type();
-				paramTypes.append(type->toString());
-				totalParamSize += type->sizeOnStack();
-			}
-			func["paramTypes"] = paramTypes;
-			func["totalParamSize"] = totalParamSize;
-
-			for (auto& param: fn->returnParameters())
-			{
-				auto* type = param->type();
-				retParamTypes.append(type->toString());
-				totalRetParamSize += type->sizeOnStack();
-			}
-			func["retParamTypes"] = retParamTypes;
-			func["totalRetParamSize"] = totalRetParamSize;
-
-			recFuncs.append(func);
+			auto* type = param->type();
+			retParamTypes.append(type->toString());
+			totalRetParamSize += type->sizeOnStack();
 		}
+		func["retParamTypes"] = retParamTypes;
+		func["totalRetParamSize"] = totalRetParamSize;
+
+		recFuncs.append(func);
 	}
 
 	if (!recFuncs.empty())
