@@ -46,38 +46,54 @@ bool CallGraph::CompareByID::operator()(int64_t _lhs, Node const& _rhs) const
 	return _lhs < get<CallableDeclaration const*>(_rhs)->id();
 }
 
-struct CycleFinder
+// TODO? Merge this with CycleDetector?
+/// Populates reachable cycles from m_src into paths;
+class CycleFinder
 {
-	CallGraph const& callGraph;
+	CallGraph const& m_callGraph;
 	CallableDeclaration const* m_src;
-	vector<CallGraph::Path>& m_paths;
-	set<CallableDeclaration const*> m_visited;
+	set<CallableDeclaration const*> m_processing;
+	set<CallableDeclaration const*> m_processed;
+
+public:
+	CycleFinder(CallGraph const& _callGraph, CallableDeclaration const* _src, vector<CallGraph::Path>& _paths)
+		: m_callGraph(_callGraph), m_src(_src), paths(_paths)
+	{
+	}
+	vector<CallGraph::Path>& paths;
 
 	void find(CallableDeclaration const* _callable, CallGraph::Path& _path)
 	{
-		m_visited.insert(_callable);
-		_path.push_back(_callable);
-
-		auto callees = callGraph.edges.find(_callable);
-		if (callees == callGraph.edges.end())
+		if (m_processed.count(_callable))
 			return;
+
+		auto callees = m_callGraph.edges.find(_callable);
+		if (callees == m_callGraph.edges.end())
+		{
+			solAssert(m_processing.count(_callable) == 0, "");
+			m_processed.insert(_callable);
+			return;
+		}
+
+		m_processing.insert(_callable);
+		_path.push_back(_callable);
 		for (auto const& calleeVariant: callees->second)
 		{
 			if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
 				continue;
 			auto* callee = get<CallableDeclaration const*>(calleeVariant);
 
-			if (callee == m_src)
+			if (m_processing.count(callee))
 			{
-				m_paths.push_back(_path);
+				paths.push_back(_path);
 				continue;
 			}
 
-			if (m_visited.count(callee))
-				continue;
-
 			find(callee, _path);
 		}
+
+		m_processing.erase(_callable);
+		m_processed.insert(_callable);
 		_path.pop_back();
 	}
 
@@ -85,21 +101,26 @@ struct CycleFinder
 	{
 		CallGraph::Path p;
 		find(m_src, p);
-		for (auto i: m_paths)
+	}
+
+	void dump(ostream& _out)
+	{
+		for (CallGraph::Path const& path: paths)
 		{
-			for (auto j: i)
+			for (CallableDeclaration const* func: path)
 			{
-				cerr << j->name() << " -> ";
+				_out << func->name() << " -> ";
 			}
-			cerr << "\n";
+			_out << "\n";
 		}
 	}
 };
 
 void CallGraph::getCycles(CallableDeclaration const* _callable, vector<Path>& _paths) const
 {
-	CycleFinder cf{*this, _callable, _paths, {}};
+	CycleFinder cf{*this, _callable, _paths};
 	cf.run();
+	cf.dump(cerr);
 }
 
 bool CallGraph::hasReachableCycle(CallableDeclaration const* _callable) const
