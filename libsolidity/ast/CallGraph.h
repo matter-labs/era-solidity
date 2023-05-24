@@ -72,7 +72,8 @@ struct CallGraph
 	/// Errors that are used by functions present in the graph.
 	std::set<ErrorDefinition const*, ASTNode::CompareByID> usedErrors;
 
-	void getCycles(CallableDeclaration const* _callable, std::vector<Path>& _paths) const;
+	void getCycles(CallableDeclaration const* _src, std::vector<Path>& _paths) const;
+	void getReachableCycleFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
 
 	/// Returns true if a cycle can be reached from @a _callable
 	bool hasReachableCycle(CallableDeclaration const* _callable) const;

@@ -116,11 +116,25 @@ public:
 	}
 };
 
-void CallGraph::getCycles(CallableDeclaration const* _callable, vector<Path>& _paths) const
+void CallGraph::getCycles(CallableDeclaration const* _src, vector<Path>& _paths) const
 {
-	CycleFinder cf{*this, _callable, _paths};
+	CycleFinder cf{*this, _src, _paths};
 	cf.run();
-	cf.dump(cerr);
+}
+
+void CallGraph::getReachableCycleFuncs(
+	CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
+{
+	vector<CallGraph::Path> paths;
+	getCycles(_src, paths);
+
+	for (CallGraph::Path const& path: paths)
+	{
+		for (CallableDeclaration const* func: path)
+		{
+			_funcs.insert(func);
+		}
+	}
 }
 
 bool CallGraph::hasReachableCycle(CallableDeclaration const* _callable) const
