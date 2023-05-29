@@ -21,6 +21,7 @@
  * Utilities for the solidity compiler.
  */
 
+#include "libyul/backends/evm/EVMCodeTransform.h"
 #include <libsolidity/codegen/CompilerContext.h>
 
 #include <libsolidity/ast/AST.h>
@@ -518,15 +519,16 @@ void CompilerContext::appendInlineAssembly(
 		reportError("Failed to analyze inline assembly block.");
 
 	solAssert(errorReporter.errors().empty(), "Failed to analyze inline assembly block.");
+	shared_ptr<yul::CodeTransformContext> yulContext;
 	yul::CodeGenerator::assemble(
 		*parserResult,
 		analysisInfo,
 		*m_asm,
 		m_evmVersion,
+		yulContext,
 		identifierAccess.generateCode,
 		_system,
-		_optimiserSettings.optimizeStackAllocation
-	);
+		_optimiserSettings.optimizeStackAllocation);
 
 	// Reset the source location to the one of the node (instead of the CODEGEN source location)
 	updateSourceLocation();

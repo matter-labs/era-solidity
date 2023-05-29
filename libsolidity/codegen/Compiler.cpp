@@ -28,9 +28,67 @@
 #include <libsolidity/ast/CallGraph.h>
 #include <libevmasm/Assembly.h>
 
+#include "libyul/optimiser/CallGraphGenerator.h"
+
 using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
+
+class InlineAsmRecursiveFuncTracker: public ASTConstVisitor
+{
+public:
+	void run() { m_contr.accept(*this); }
+
+	// FIXME: Add const to CompilerContext&
+	InlineAsmRecursiveFuncTracker(
+		ContractDefinition const& _contr,
+		CompilerContext& _context,
+		CompilerContext& _runtimeContext,
+		Json::Value& _recFuncs)
+		: m_contr(_contr), m_context(_context), m_runtimeContext(_runtimeContext), m_recFuncs(_recFuncs)
+	{
+	}
+
+private:
+	ContractDefinition const& m_contr;
+	CompilerContext& m_context;
+	CompilerContext& m_runtimeContext;
+	Json::Value& m_recFuncs;
+	void endVisit(InlineAssembly const& _asm)
+	{
+		yul::Block const& code = _asm.operations();
+		set<yul::YulString> recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
+		shared_ptr<yul::CodeTransformContext> yulContext = m_context.inlineAsmContextMap[&_asm];
+		shared_ptr<yul::CodeTransformContext> yulRuntimeContext = m_runtimeContext.inlineAsmContextMap[&_asm];
+		for (auto recFunc: recFuncs)
+		{
+			if (yulContext)
+			{
+				// FIXME: How does the call-graph of strings represent yul's
+				// scopes?
+				for (auto tag: yulContext->functionEntryIDsWithoutScope[recFunc])
+				{
+					Json::Value func(Json::objectValue);
+					func["name"] = recFunc.str();
+					func["creationTag"] = tag;
+					// FIXME: How do we get the parameters?
+					m_recFuncs.append(func);
+				}
+			}
+
+			if (yulRuntimeContext)
+			{
+				for (auto tag: yulRuntimeContext->functionEntryIDsWithoutScope[recFunc])
+				{
+					Json::Value func(Json::objectValue);
+					func["name"] = recFunc.str();
+					func["runtimeTag"] = tag;
+					m_recFuncs.append(func);
+				}
+			}
+		}
+	}
+};
 
 void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 {
@@ -89,6 +147,10 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 		recFuncs.append(func);
 	}
 
+	InlineAsmRecursiveFuncTracker inAsmTracker{_contract, m_context, m_runtimeContext, recFuncs};
+	inAsmTracker.run();
+
+	// cerr << recFuncs;
 	if (!recFuncs.empty())
 		m_runtimeContext.metadata["recursiveFunctions"] = recFuncs;
 }

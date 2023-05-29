@@ -22,6 +22,7 @@
  */
 
 
+#include "libyul/backends/evm/EVMCodeTransform.h"
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTUtils.h>
 #include <libsolidity/ast/TypeProvider.h>
@@ -950,15 +951,17 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		analysisInfo = object.analysisInfo.get();
 	}
 
+	shared_ptr<yul::CodeTransformContext> yulContext;
 	yul::CodeGenerator::assemble(
 		*code,
 		*analysisInfo,
 		*m_context.assemblyPtr(),
 		m_context.evmVersion(),
+		yulContext,
 		identifierAccessCodeGen,
 		false,
-		m_optimiserSettings.optimizeStackAllocation
-	);
+		m_optimiserSettings.optimizeStackAllocation);
+	m_context.inlineAsmContextMap[&_inlineAssembly] = yulContext;
 	m_context.setStackOffset(static_cast<int>(startStackHeight));
 	return false;
 }

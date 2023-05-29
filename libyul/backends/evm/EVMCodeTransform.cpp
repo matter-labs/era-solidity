@@ -609,6 +609,8 @@ void CodeTransform::createFunctionEntryID(FunctionDefinition const& _function)
 			astID
 		) :
 		m_assembly.newLabelId();
+
+	m_context->functionEntryIDsWithoutScope[_function.name].insert(m_context->functionEntryIDs[&scopeFunction]);
 }
 
 AbstractAssembly::LabelID CodeTransform::functionEntryID(Scope::Function const& _scopeFunction) const

@@ -40,6 +40,7 @@
 
 #include <libyul/AsmAnalysisInfo.h>
 #include <libyul/backends/evm/EVMDialect.h>
+#include "libyul/backends/evm/EVMCodeTransform.h"
 
 #include <functional>
 #include <ostream>
@@ -301,6 +302,8 @@ public:
 	/// - "recursiveFunctions": array of functions (name, parameters etc.)
 	///   involved in recursion
 	Json::Value metadata;
+
+	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> inlineAsmContextMap;
 
 	/**
 	 * Helper class to pop the visited nodes stack when a scope closes
