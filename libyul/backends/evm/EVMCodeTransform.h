@@ -22,6 +22,7 @@
 #pragma once
 
 #include "libyul/YulString.h"
+#include "libyul/backends/evm/AbstractAssembly.h"
 #include <libyul/backends/evm/EVMDialect.h>
 #include <libyul/backends/evm/VariableReferenceCounter.h>
 #include <libyul/optimiser/ASTWalker.h>
@@ -43,8 +44,14 @@ struct AsmAnalysisInfo;
 
 struct CodeTransformContext
 {
+	struct FunctionInfo
+	{
+		FunctionDefinition const* ast;
+		AbstractAssembly::LabelID label;
+	};
+
 	std::map<Scope::Function const*, AbstractAssembly::LabelID> functionEntryIDs;
-	std::map<YulString, std::set<AbstractAssembly::LabelID>> functionEntryIDsWithoutScope;
+	std::map<YulString, std::set<FunctionInfo>> functionInfoMap;
 	std::map<Scope::Variable const*, size_t> variableStackHeights;
 	std::map<Scope::Variable const*, unsigned> variableReferences;
 
@@ -62,6 +69,8 @@ struct CodeTransformContext
 
 	std::stack<ForLoopLabels> forLoopStack;
 };
+
+bool operator<(CodeTransformContext::FunctionInfo const& a, CodeTransformContext::FunctionInfo const& b);
 
 class CodeTransform
 {

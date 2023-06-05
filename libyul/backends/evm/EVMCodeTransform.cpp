@@ -610,7 +610,8 @@ void CodeTransform::createFunctionEntryID(FunctionDefinition const& _function)
 		) :
 		m_assembly.newLabelId();
 
-	m_context->functionEntryIDsWithoutScope[_function.name].insert(m_context->functionEntryIDs[&scopeFunction]);
+	m_context->functionInfoMap[_function.name].emplace(
+		CodeTransformContext::FunctionInfo{&_function, m_context->functionEntryIDs[&scopeFunction]});
 }
 
 AbstractAssembly::LabelID CodeTransform::functionEntryID(Scope::Function const& _scopeFunction) const
@@ -808,4 +809,9 @@ int CodeTransform::variableStackHeight(YulString _name) const
 void CodeTransform::expectDeposit(int _deposit, int _oldHeight) const
 {
 	yulAssert(m_assembly.stackHeight() == _oldHeight + _deposit, "Invalid stack deposit.");
+}
+
+bool solidity::yul::operator<(CodeTransformContext::FunctionInfo const& a, CodeTransformContext::FunctionInfo const& b)
+{
+	return a.ast < b.ast;
 }

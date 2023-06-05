@@ -66,24 +66,30 @@ private:
 			{
 				// FIXME: How does the call-graph of strings represent yul's
 				// scopes?
-				for (auto tag: yulContext->functionEntryIDsWithoutScope[recFunc])
+				for (auto func: yulContext->functionInfoMap[recFunc])
 				{
-					Json::Value func(Json::objectValue);
-					func["name"] = recFunc.str();
-					func["creationTag"] = tag;
-					// FIXME: How do we get the parameters?
-					m_recFuncs.append(func);
+					Json::Value record(Json::objectValue);
+					record["name"] = recFunc.str();
+					record["creationTag"] = func.label;
+					// FIXME: Will this work for custom yul types?
+					record["totalParamSize"] = func.ast->parameters.size();
+					record["totalRetParamSize"] = func.ast->returnVariables.size();
+					m_recFuncs.append(record);
+					cerr << record;
 				}
 			}
 
 			if (yulRuntimeContext)
 			{
-				for (auto tag: yulRuntimeContext->functionEntryIDsWithoutScope[recFunc])
+				for (auto func: yulRuntimeContext->functionInfoMap[recFunc])
 				{
-					Json::Value func(Json::objectValue);
-					func["name"] = recFunc.str();
-					func["runtimeTag"] = tag;
-					m_recFuncs.append(func);
+					Json::Value record(Json::objectValue);
+					record["name"] = recFunc.str();
+					record["runtimeTag"] = func.label;
+					record["totalParamSize"] = func.ast->parameters.size();
+					record["totalRetParamSize"] = func.ast->returnVariables.size();
+					m_recFuncs.append(record);
+					cerr << record;
 				}
 			}
 		}
