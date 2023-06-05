@@ -37,20 +37,20 @@ using namespace solidity::frontend;
 class InlineAsmRecursiveFuncTracker: public ASTConstVisitor
 {
 public:
-	void run() { m_contr.accept(*this); }
+	void run() { m_func.accept(*this); }
 
 	// FIXME: Add const to CompilerContext&
 	InlineAsmRecursiveFuncTracker(
-		ContractDefinition const& _contr,
+		CallableDeclaration const& _func,
 		CompilerContext& _context,
 		CompilerContext& _runtimeContext,
 		Json::Value& _recFuncs)
-		: m_contr(_contr), m_context(_context), m_runtimeContext(_runtimeContext), m_recFuncs(_recFuncs)
+		: m_func(_func), m_context(_context), m_runtimeContext(_runtimeContext), m_recFuncs(_recFuncs)
 	{
 	}
 
 private:
-	ContractDefinition const& m_contr;
+	CallableDeclaration const& m_func;
 	CompilerContext& m_context;
 	CompilerContext& m_runtimeContext;
 	Json::Value& m_recFuncs;
@@ -104,9 +104,17 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 
 	auto& callGraph = *callGraphSetOnce;
 	set<CallableDeclaration const*> reachableCycleFuncs;
+	set<CallableDeclaration const*> reachableFuncs;
 	for (FunctionDefinition const* fn: _contract.definedFunctions())
 	{
 		callGraph->getReachableCycleFuncs(fn, reachableCycleFuncs);
+		callGraph->getReachableFuncs(fn, reachableFuncs);
+	}
+
+	for (auto* fn: reachableFuncs)
+	{
+		InlineAsmRecursiveFuncTracker inAsmTracker{*fn, m_context, m_runtimeContext, recFuncs};
+		inAsmTracker.run();
 	}
 
 	for (auto* fn: reachableCycleFuncs)
@@ -147,8 +155,6 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 		recFuncs.append(func);
 	}
 
-	InlineAsmRecursiveFuncTracker inAsmTracker{_contract, m_context, m_runtimeContext, recFuncs};
-	inAsmTracker.run();
 
 	// cerr << recFuncs;
 	if (!recFuncs.empty())

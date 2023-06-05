@@ -122,6 +122,25 @@ void CallGraph::getCycles(CallableDeclaration const* _src, vector<Path>& _paths)
 	cf.run();
 }
 
+void CallGraph::getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
+{
+	if (_funcs.count(_src))
+		return;
+	_funcs.insert(_src);
+
+	auto callees = edges.find(_src);
+	if (callees == edges.end())
+		return;
+
+	for (auto const& calleeVariant: callees->second)
+	{
+		if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
+			continue;
+		auto* callee = get<CallableDeclaration const*>(calleeVariant);
+		getReachableFuncs(callee, _funcs);
+	}
+}
+
 void CallGraph::getReachableCycleFuncs(
 	CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
 {

@@ -74,6 +74,7 @@ struct CallGraph
 
 	void getCycles(CallableDeclaration const* _src, std::vector<Path>& _paths) const;
 	void getReachableCycleFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
+	void getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
 
 	/// Returns true if a cycle can be reached from @a _callable
 	bool hasReachableCycle(CallableDeclaration const* _callable) const;
