@@ -85,7 +85,10 @@ public:
 
 			if (m_processing.count(callee))
 			{
-				paths.push_back(_path);
+				// Extract the cycle
+				auto cycleStart = std::find(_path.begin(), _path.end(), callee);
+				solAssert(cycleStart != _path.end(), "");
+				paths.emplace_back(cycleStart, _path.end());
 				continue;
 			}
 

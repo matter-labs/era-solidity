@@ -34,20 +34,6 @@
                                 "totalRetParamSize": 1
                             },
                             {
-                                "name": "f0",
-                                "paramTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "retParamTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "runtimeTag": "10",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
-                            },
-                            {
                                 "name": "f2",
                                 "paramTypes":
                                 [
@@ -58,20 +44,6 @@
                                     "uint256"
                                 ],
                                 "runtimeTag": "23",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
-                            },
-                            {
-                                "name": "g0",
-                                "paramTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "retParamTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "runtimeTag": "19",
                                 "totalParamSize": 1,
                                 "totalRetParamSize": 1
                             }
@@ -122,20 +94,6 @@
                                     "uint256"
                                 ],
                                 "runtimeTag": "10",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
-                            },
-                            {
-                                "name": "g0",
-                                "paramTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "retParamTypes":
-                                [
-                                    "uint256"
-                                ],
-                                "runtimeTag": "19",
                                 "totalParamSize": 1,
                                 "totalRetParamSize": 1
                             }
