@@ -1,0 +1,47 @@
+{
+    "contracts":
+    {
+        "A":
+        {
+            "C":
+            {
+                "evm":
+                {
+                    "bytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "deployedBytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "extraMetadata":
+                    {
+                        "recursiveFunctions":
+                        [
+                            {
+                                "name": "_out",
+                                "runtimeTag": 21,
+                                "totalParamSize": 2,
+                                "totalRetParamSize": 1
+                            },
+                            {
+                                "name": "_in",
+                                "runtimeTag": 11,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "sources":
+    {
+        "A":
+        {
+            "id": 0
+        }
+    }
+}
