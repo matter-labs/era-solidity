@@ -67,8 +67,10 @@ public:
 		if (m_processed.count(_callable))
 			return;
 
-		auto callees = m_callGraph.edges.find(_callable);
-		if (callees == m_callGraph.edges.end())
+		auto directCallees = m_callGraph.edges.find(_callable);
+		auto indirectCallees = m_callGraph.indirectEdges.find(_callable);
+		// Is _callable a leaf node?
+		if (directCallees == m_callGraph.edges.end() && indirectCallees == m_callGraph.indirectEdges.end())
 		{
 			solAssert(m_processing.count(_callable) == 0, "");
 			m_processed.insert(_callable);
@@ -77,7 +79,14 @@ public:
 
 		m_processing.insert(_callable);
 		_path.push_back(_callable);
-		for (auto const& calleeVariant: callees->second)
+
+		// Traverse all the direct and indirect callees
+		set<CallGraph::Node, CallGraph::CompareByID> callees;
+		if (directCallees != m_callGraph.edges.end())
+			callees.insert(directCallees->second.begin(), directCallees->second.end());
+		if (indirectCallees != m_callGraph.indirectEdges.end())
+			callees.insert(indirectCallees->second.begin(), indirectCallees->second.end());
+		for (auto const& calleeVariant: callees)
 		{
 			if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
 				continue;
