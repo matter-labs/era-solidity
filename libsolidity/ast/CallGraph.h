@@ -62,6 +62,9 @@ struct CallGraph
 	/// any calls.
 	std::map<Node, std::set<Node, CompareByID>, CompareByID> edges;
 
+	/// Graph edges for indirect calls
+	std::map<Node, std::set<Node, CompareByID>, CompareByID> indirectEdges;
+
 	/// Contracts that need to be compiled before this one can be compiled.
 	/// The value is the ast node that created the dependency.
 	std::map<ContractDefinition const*, ASTNode const*, ASTCompareByID<ContractDefinition>> bytecodeDependency;

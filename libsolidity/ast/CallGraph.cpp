@@ -173,7 +173,7 @@ bool CallGraph::hasReachableCycle(CallableDeclaration const* _callable) const
 		for (auto const& calleeVariant: callees->second)
 		{
 			if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
-				return;
+				continue;
 			_cycleDetector.run(*get<CallableDeclaration const*>(calleeVariant));
 		}
 	};
