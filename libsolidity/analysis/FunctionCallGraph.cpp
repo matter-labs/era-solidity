@@ -122,7 +122,7 @@ bool FunctionCallGraphBuilder::visit(FunctionCall const& _functionCall)
 
 	if (functionType->kind() == FunctionType::Kind::Internal && !_functionCall.expression().annotation().calledDirectly)
 	{
-		for (FunctionDefinition const* funcPtrRef: m_contract.annotation().funcPtrRefs)
+		for (FunctionDefinition const* funcPtrRef: m_contract.annotation().intFuncPtrRefs)
 		{
 			FunctionType const* funcPtrRefType = funcPtrRef->functionType(true);
 			solAssert(funcPtrRefType, "");

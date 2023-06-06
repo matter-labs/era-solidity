@@ -36,7 +36,7 @@ void FuncPtrTracker::endVisit(Identifier const& _identifier)
 	solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);
 	if (_identifier.annotation().calledDirectly)
 		return;
-	m_contract.annotation().funcPtrRefs.insert(&resolvedFunctionDef);
+	m_contract.annotation().intFuncPtrRefs.insert(&resolvedFunctionDef);
 }
 
 void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
@@ -47,7 +47,7 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 	{
 		solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static);
 		if (memberFunctionType->kind() == FunctionType::Kind::Internal)
-			m_contract.annotation().funcPtrRefs.insert(
+			m_contract.annotation().intFuncPtrRefs.insert(
 				&dynamic_cast<FunctionDefinition const&>(memberFunctionType->declaration()));
 	}
 
@@ -73,13 +73,13 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 
 				solAssert(resolvedFunctionDef.functionType(true));
 				solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);
-				m_contract.annotation().funcPtrRefs.insert(&resolvedFunctionDef);
+				m_contract.annotation().intFuncPtrRefs.insert(&resolvedFunctionDef);
 			}
 			else if (memberFunctionType && memberFunctionType->kind() == FunctionType::Kind::Internal)
 			{
 				if (auto const* function
 					= dynamic_cast<FunctionDefinition const*>(_memberAccess.annotation().referencedDeclaration))
-					m_contract.annotation().funcPtrRefs.insert(function);
+					m_contract.annotation().intFuncPtrRefs.insert(function);
 			}
 		}
 		break;
@@ -96,7 +96,7 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 			solAssert(funType->kind() == FunctionType::Kind::Internal);
 			solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static);
 
-			m_contract.annotation().funcPtrRefs.insert(function);
+			m_contract.annotation().intFuncPtrRefs.insert(function);
 		}
 		break;
 	}

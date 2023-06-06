@@ -164,8 +164,8 @@ struct ContractDefinitionAnnotation: TypeDeclarationAnnotation, StructurallyDocu
 	util::SetOnce<std::shared_ptr<CallGraph const>> creationCallGraph;
 	/// A graph with edges representing calls between functions that may happen in a deployed contract.
 	util::SetOnce<std::shared_ptr<CallGraph const>> deployedCallGraph;
-	/// Set of functions referenced as function pointers
-	std::set<FunctionDefinition const*> funcPtrRefs;
+	/// Set of internal functions referenced as function pointers
+	std::set<FunctionDefinition const*> intFuncPtrRefs;
 
 	/// List of contracts whose bytecode is referenced by this contract, e.g. through "new".
 	/// The Value represents the ast node that referenced the contract.
