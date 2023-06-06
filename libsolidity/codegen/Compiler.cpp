@@ -75,7 +75,6 @@ private:
 					record["totalParamSize"] = func.ast->parameters.size();
 					record["totalRetParamSize"] = func.ast->returnVariables.size();
 					m_recFuncs.append(record);
-					cerr << record;
 				}
 			}
 
@@ -89,7 +88,6 @@ private:
 					record["totalParamSize"] = func.ast->parameters.size();
 					record["totalRetParamSize"] = func.ast->returnVariables.size();
 					m_recFuncs.append(record);
-					cerr << record;
 				}
 			}
 		}
@@ -161,8 +159,6 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 		recFuncs.append(func);
 	}
 
-
-	// cerr << recFuncs;
 	if (!recFuncs.empty())
 		m_runtimeContext.metadata["recursiveFunctions"] = recFuncs;
 }
