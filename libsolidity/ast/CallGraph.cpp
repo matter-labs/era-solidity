@@ -126,12 +126,6 @@ public:
 	}
 };
 
-void CallGraph::getCycles(CallableDeclaration const* _src, vector<Path>& _paths) const
-{
-	CycleFinder cf{*this, _src, _paths};
-	cf.run();
-}
-
 void CallGraph::getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
 {
 	if (_funcs.count(_src))
@@ -155,7 +149,8 @@ void CallGraph::getReachableCycleFuncs(
 	CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
 {
 	vector<CallGraph::Path> paths;
-	getCycles(_src, paths);
+	CycleFinder cf{*this, _src, paths};
+	cf.run();
 
 	for (CallGraph::Path const& path: paths)
 	{
