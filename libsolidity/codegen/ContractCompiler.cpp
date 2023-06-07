@@ -959,7 +959,8 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		yulContext,
 		identifierAccessCodeGen,
 		false,
-		m_optimiserSettings.optimizeStackAllocation);
+		m_optimiserSettings.optimizeStackAllocation
+	);
 	m_context.inlineAsmContextMap[&_inlineAssembly] = yulContext;
 	m_context.setStackOffset(static_cast<int>(startStackHeight));
 	return false;

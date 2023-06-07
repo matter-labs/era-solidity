@@ -48,6 +48,7 @@ public:
 		std::shared_ptr<CodeTransformContext>& _context, // out
 		ExternalIdentifierAccess::CodeGenerator _identifierAccess = {},
 		bool _useNamedLabelsForFunctions = false,
-		bool _optimizeStackAllocation = false);
+		bool _optimizeStackAllocation = false
+	);
 };
 }

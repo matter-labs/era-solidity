@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "libyul/YulString.h"
-#include "libyul/backends/evm/AbstractAssembly.h"
 #include <libyul/backends/evm/EVMDialect.h>
 #include <libyul/backends/evm/VariableReferenceCounter.h>
 #include <libyul/optimiser/ASTWalker.h>

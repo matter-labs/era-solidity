@@ -27,7 +27,6 @@
 #include <libyul/AsmAnalysisInfo.h>
 
 #include <libsolutil/StackTooDeepString.h>
-#include <memory>
 
 using namespace std;
 using namespace solidity;
@@ -43,7 +42,8 @@ void CodeGenerator::assemble(
 	shared_ptr<CodeTransformContext>& _context, // out
 	ExternalIdentifierAccess::CodeGenerator _identifierAccessCodeGen,
 	bool _useNamedLabelsForFunctions,
-	bool _optimizeStackAllocation)
+	bool _optimizeStackAllocation
+)
 {
 	EthAssemblyAdapter assemblyAdapter(_assembly);
 	BuiltinContext builtinContext;

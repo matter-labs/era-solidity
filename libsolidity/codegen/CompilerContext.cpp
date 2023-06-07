@@ -527,7 +527,8 @@ void CompilerContext::appendInlineAssembly(
 		yulContext,
 		identifierAccess.generateCode,
 		_system,
-		_optimiserSettings.optimizeStackAllocation);
+		_optimiserSettings.optimizeStackAllocation
+	);
 
 	// Reset the source location to the one of the node (instead of the CODEGEN source location)
 	updateSourceLocation();
