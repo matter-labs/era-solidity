@@ -120,9 +120,7 @@ public:
 		for (CallGraph::Path const& path: paths)
 		{
 			for (CallableDeclaration const* func: path)
-			{
 				_out << func->name() << " -> ";
-			}
 			_out << "\n";
 		}
 	}
