@@ -132,11 +132,20 @@ void CallGraph::getReachableFuncs(CallableDeclaration const* _src, std::set<Call
 		return;
 	_funcs.insert(_src);
 
-	auto callees = edges.find(_src);
-	if (callees == edges.end())
+	auto directCallees = edges.find(_src);
+	auto indirectCallees = indirectEdges.find(_src);
+	// Is _src a leaf node?
+	if (directCallees == edges.end() && indirectCallees == indirectEdges.end())
 		return;
 
-	for (auto const& calleeVariant: callees->second)
+	// Traverse all the direct and indirect callees
+	set<CallGraph::Node, CallGraph::CompareByID> callees;
+	if (directCallees != edges.end())
+		callees.insert(directCallees->second.begin(), directCallees->second.end());
+	if (indirectCallees != indirectEdges.end())
+		callees.insert(indirectCallees->second.begin(), indirectCallees->second.end());
+
+	for (auto const& calleeVariant: callees)
 	{
 		if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
 			continue;

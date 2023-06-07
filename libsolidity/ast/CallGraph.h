@@ -79,8 +79,8 @@ struct CallGraph
 	/// belong to a cycle. Note that the cycle can be due to indirect calls.
 	void getReachableCycleFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
 
-	/// Populates @a _funcs with the functions reachable from @a _src.
-	/// FIXME? Indirect calls?
+	/// Populates @a _funcs with the functions reachable (including the ones
+	/// from indirect calls) from @a _src.
 	void getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
 
 	/// Returns true if a cycle can be reached from @a _callable
