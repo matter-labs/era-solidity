@@ -169,25 +169,3 @@ void CallGraph::getReachableCycleFuncs(
 		}
 	}
 }
-
-bool CallGraph::hasReachableCycle(CallableDeclaration const* _callable) const
-{
-	auto callees = edges.find(_callable);
-	if (callees == edges.end())
-		return false;
-	auto visitor
-		= [&](CallableDeclaration const& _node, util::CycleDetector<CallableDeclaration>& _cycleDetector, size_t)
-	{
-		auto callees = edges.find(&_node);
-		if (callees == edges.end())
-			return;
-		for (auto const& calleeVariant: callees->second)
-		{
-			if (!holds_alternative<CallableDeclaration const*>(calleeVariant))
-				continue;
-			_cycleDetector.run(*get<CallableDeclaration const*>(calleeVariant));
-		}
-	};
-
-	return util::CycleDetector<CallableDeclaration>(visitor).run(*_callable);
-}
