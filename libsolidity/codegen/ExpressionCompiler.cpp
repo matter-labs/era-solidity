@@ -757,24 +757,11 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// ContractDefinitionAnnotation::intFuncPtrRefs should only
 				// contain refs to internal functions
 				solAssert(intFuncPtrRefType, "");
-				// clang-format off
 				if (!intFuncPtrRefType->hasEqualParameterTypes(function)
-						|| !intFuncPtrRefType->hasEqualReturnTypes(function)
-						// FIXME: Generating entry tags for functions
-						// automatically adds it to the queue of functions
-						// to be compiled. If we generate tags for
-						// unimplemented function, we'll hit assertion
-						// failures in codegen.
-						|| !intFuncPtrRef->isImplemented()
-						)
+					|| !intFuncPtrRefType->hasEqualReturnTypes(function) || !intFuncPtrRef->isImplemented())
 					continue;
-				// clang-format on
 
-				m_context << Instruction::DUP1;
-				// FIXME: CompilerUtils::pushCombinedFunctionEntryLabel() adds
-				// sub-assembly tags to the low bits for function pointers. Do
-				// we need to worry about this here?
-				//
+				m_context << Instruction::DUP1; // The loaded function pointer
 				// We don't need to resolve the function here since
 				// FuncPtrTracker already did that.
 				m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
