@@ -731,7 +731,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				m_context << returnLabel;
 
 				unsigned returnParametersSize = CompilerUtils::sizeOnStack(function.returnParameterTypes());
-				// callee adds return parameters, but removes arguments and return label
+				// Callee adds return parameters, but removes arguments and return label
 				m_context.adjustStackOffset(static_cast<int>(returnParametersSize - parameterSize) - 1);
 				break;
 			}
@@ -761,7 +761,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 					|| !intFuncPtrRefType->hasEqualReturnTypes(function) || !intFuncPtrRef->isImplemented())
 					continue;
 
-				m_context << Instruction::DUP1; // The loaded function pointer
+				// The loaded function pointer
+				m_context << Instruction::DUP1;
 				// We don't need to resolve the function here since
 				// FuncPtrTracker already did that.
 				m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
