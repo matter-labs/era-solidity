@@ -749,24 +749,23 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			};
 			vector<TagInfo> tagInfos;
 
-			set<FunctionDefinition const*>& funcs = m_context.mostDerivedContract().annotation().intFuncPtrRefs;
-			for (auto* otherFunc: funcs)
+			for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
 			{
-				if (otherFunc->noVisibilitySpecified())
+				if (intFuncPtrRef->noVisibilitySpecified())
 					continue;
-				FunctionType const* otherFuncType = otherFunc->functionType(true);
+				FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
 				// ContractDefinitionAnnotation::intFuncPtrRefs should only
 				// contain refs to internal functions
-				solAssert(otherFuncType, "");
+				solAssert(intFuncPtrRefType, "");
 				// clang-format off
-				if (!otherFuncType->hasEqualParameterTypes(function)
-						|| !otherFuncType->hasEqualReturnTypes(function)
+				if (!intFuncPtrRefType->hasEqualParameterTypes(function)
+						|| !intFuncPtrRefType->hasEqualReturnTypes(function)
 						// FIXME: Generating entry tags for functions
 						// automatically adds it to the queue of functions
 						// to be compiled. If we generate tags for
 						// unimplemented function, we'll hit assertion
 						// failures in codegen.
-						|| !otherFunc->isImplemented()
+						|| !intFuncPtrRef->isImplemented()
 						)
 					continue;
 				// clang-format on
@@ -778,12 +777,12 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				//
 				// We don't need to resolve the function here since
 				// FuncPtrTracker already did that.
-				m_context << m_context.functionEntryLabel(*otherFunc).pushTag();
+				m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
 				m_context << Instruction::EQ;
 
 				AssemblyItem newTag = m_context.newTag();
 				m_context.appendConditionalJumpTo(newTag);
-				tagInfos.push_back({newTag, otherFunc});
+				tagInfos.push_back({newTag, intFuncPtrRef});
 			}
 
 			if (tagInfos.empty())
