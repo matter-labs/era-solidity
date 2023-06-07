@@ -21,7 +21,6 @@
  * Utilities for the solidity compiler.
  */
 
-#include "libyul/backends/evm/EVMCodeTransform.h"
 #include <libsolidity/codegen/CompilerContext.h>
 
 #include <libsolidity/ast/AST.h>

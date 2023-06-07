@@ -22,7 +22,6 @@
  */
 
 
-#include "libyul/backends/evm/EVMCodeTransform.h"
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTUtils.h>
 #include <libsolidity/ast/TypeProvider.h>
