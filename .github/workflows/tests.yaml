@@ -54,14 +54,22 @@ jobs:
         id: compiler_tester_run
         working-directory: compiler-tester
         run: |
-          mkdir -p solc-bin
-          cp ../solidity/build/solc/solc ./solc-bin/solc-${BRANCH_NAME}
-          chmod +x ./solc-bin/solc-${BRANCH_NAME}
-          ldd ./solc-bin/solc-${BRANCH_NAME}
-          export RUST_BACKTRACE=full
+          mkdir -p './solc-bin/'
+          cp '../solidity/build/solc/solc' "./solc-bin/solc-${BRANCH_NAME}"
+          chmod +x "./solc-bin/solc-${BRANCH_NAME}"
+
           cargo install compiler-llvm-builder
           /usr/local/cargo/bin/zkevm-llvm clone && /usr/local/cargo/bin/zkevm-llvm build
-          cargo run --verbose --release --bin compiler-tester -- \
+
+          export RUST_BACKTRACE='full'
+          export LLVM_SYS_150_PREFIX="$(pwd)/target-llvm/target-final/"
+          cargo build --verbose --release --bin 'compiler-tester'
+          cargo build --verbose --release --manifest-path /usr/local/cargo/git/checkouts/compiler-solidity-*/*/Cargo.toml --target-dir './target-zksolc/'
+          cargo build --verbose --release --manifest-path /usr/local/cargo/git/checkouts/compiler-vyper-*/*/Cargo.toml --target-dir './target-zkvyper/'
+
+          ./target/release/compiler-tester \
+            --zksolc './target-zksolc/release/zksolc' \
+            --zkvyper './target-zkvyper/release/zkvyper' \
             --solc-bin-config-path="configs/solc-bin-zkevm-candidate-${BRANCH_NAME}.json"
 
       - uses: 8398a7/action-slack@v3
