@@ -70,10 +70,10 @@ private:
 				{
 					Json::Value record(Json::objectValue);
 					record["name"] = recFunc.str();
-					record["creationTag"] = func.label;
+					record["creationTag"] = to_string(func.label);
 					// FIXME: Will this work for custom yul types?
-					record["totalParamSize"] = func.ast->parameters.size();
-					record["totalRetParamSize"] = func.ast->returnVariables.size();
+					record["totalParamSize"] = to_string(func.ast->parameters.size());
+					record["totalRetParamSize"] = to_string(func.ast->returnVariables.size());
 					m_recFuncs.append(record);
 				}
 			}
@@ -84,9 +84,9 @@ private:
 				{
 					Json::Value record(Json::objectValue);
 					record["name"] = recFunc.str();
-					record["runtimeTag"] = func.label;
-					record["totalParamSize"] = func.ast->parameters.size();
-					record["totalRetParamSize"] = func.ast->returnVariables.size();
+					record["runtimeTag"] = to_string(func.label);
+					record["totalParamSize"] = to_string(func.ast->parameters.size());
+					record["totalRetParamSize"] = to_string(func.ast->returnVariables.size());
 					m_recFuncs.append(record);
 				}
 			}
@@ -145,7 +145,7 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 			totalParamSize += type->sizeOnStack();
 		}
 		func["paramTypes"] = paramTypes;
-		func["totalParamSize"] = totalParamSize;
+		func["totalParamSize"] = to_string(totalParamSize);
 
 		for (auto& param: fn->returnParameters())
 		{
@@ -154,7 +154,7 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 			totalRetParamSize += type->sizeOnStack();
 		}
 		func["retParamTypes"] = retParamTypes;
-		func["totalRetParamSize"] = totalRetParamSize;
+		func["totalRetParamSize"] = to_string(totalRetParamSize);
 
 		recFuncs.append(func);
 	}

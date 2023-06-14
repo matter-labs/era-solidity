@@ -30,8 +30,8 @@
                                     "uint256"
                                 ],
                                 "runtimeTag": "15",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
+                                "totalParamSize": "1",
+                                "totalRetParamSize": "1"
                             },
                             {
                                 "name": "f2",
@@ -44,8 +44,8 @@
                                     "uint256"
                                 ],
                                 "runtimeTag": "23",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
+                                "totalParamSize": "1",
+                                "totalRetParamSize": "1"
                             }
                         ]
                     }
@@ -79,8 +79,8 @@
                                     "uint256"
                                 ],
                                 "runtimeTag": "15",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
+                                "totalParamSize": "1",
+                                "totalRetParamSize": "1"
                             },
                             {
                                 "creationTag": "7",
@@ -94,8 +94,8 @@
                                     "uint256"
                                 ],
                                 "runtimeTag": "10",
-                                "totalParamSize": 1,
-                                "totalRetParamSize": 1
+                                "totalParamSize": "1",
+                                "totalRetParamSize": "1"
                             }
                         ]
                     }
