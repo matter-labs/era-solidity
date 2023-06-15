@@ -751,8 +751,6 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 
 			for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
 			{
-				if (intFuncPtrRef->noVisibilitySpecified())
-					continue;
 				FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
 				// ContractDefinitionAnnotation::intFuncPtrRefs should only
 				// contain refs to internal functions
