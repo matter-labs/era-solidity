@@ -99,20 +99,23 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 	// Set "recursiveFunctions"
 	Json::Value recFuncs(Json::arrayValue);
 
-	// FIXME: Can we have cases where where a cycle in creationCallGraph is
-	// absent in deployedCallGraph?
+	auto& creationCallGraph = _contract.annotation().creationCallGraph;
+	auto& runtimeCallGraph = _contract.annotation().deployedCallGraph;
 
-	auto& callGraphSetOnce = _contract.annotation().deployedCallGraph;
-	if (!callGraphSetOnce.set())
-		return;
+	set<CallableDeclaration const*> reachableCycleFuncs, reachableFuncs;
 
-	auto& callGraph = *callGraphSetOnce;
-	set<CallableDeclaration const*> reachableCycleFuncs;
-	set<CallableDeclaration const*> reachableFuncs;
 	for (FunctionDefinition const* fn: _contract.definedFunctions())
 	{
-		callGraph->getReachableCycleFuncs(fn, reachableCycleFuncs);
-		callGraph->getReachableFuncs(fn, reachableFuncs);
+		if (fn->isConstructor() && creationCallGraph.set())
+		{
+			(*creationCallGraph)->getReachableCycleFuncs(fn, reachableCycleFuncs);
+			(*creationCallGraph)->getReachableFuncs(fn, reachableFuncs);
+		}
+		else if (runtimeCallGraph.set())
+		{
+			(*runtimeCallGraph)->getReachableCycleFuncs(fn, reachableCycleFuncs);
+			(*runtimeCallGraph)->getReachableFuncs(fn, reachableFuncs);
+		}
 	}
 
 	for (auto* fn: reachableFuncs)
