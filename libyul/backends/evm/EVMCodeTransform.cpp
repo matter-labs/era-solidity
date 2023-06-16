@@ -813,5 +813,5 @@ void CodeTransform::expectDeposit(int _deposit, int _oldHeight) const
 
 bool solidity::yul::operator<(CodeTransformContext::FunctionInfo const& a, CodeTransformContext::FunctionInfo const& b)
 {
-	return a.ast < b.ast;
+	return less<FunctionDefinition const*>{}(a.ast, b.ast);
 }
