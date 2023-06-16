@@ -136,24 +136,12 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 		if (runtimeTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
 			func["runtimeTag"] = runtimeTag.data().str();
 
-		Json::Value paramTypes(Json::arrayValue), retParamTypes(Json::arrayValue);
 		unsigned totalParamSize = 0, totalRetParamSize = 0;
 		for (auto& param: fn->parameters())
-		{
-			auto* type = param->type();
-			paramTypes.append(type->toString());
-			totalParamSize += type->sizeOnStack();
-		}
-		func["paramTypes"] = paramTypes;
+			totalParamSize += param->type()->sizeOnStack();
 		func["totalParamSize"] = to_string(totalParamSize);
-
 		for (auto& param: fn->returnParameters())
-		{
-			auto* type = param->type();
-			retParamTypes.append(type->toString());
-			totalRetParamSize += type->sizeOnStack();
-		}
-		func["retParamTypes"] = retParamTypes;
+			totalRetParamSize += param->type()->sizeOnStack();
 		func["totalRetParamSize"] = to_string(totalRetParamSize);
 
 		recFuncs.append(func);
