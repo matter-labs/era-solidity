@@ -66,7 +66,7 @@ private:
 			{
 				// FIXME: How does the call-graph of strings represent yul's
 				// scopes?
-				for (auto func: yulContext->functionInfoMap[recFunc])
+				for (auto& func: yulContext->functionInfoMap[recFunc])
 				{
 					Json::Value record(Json::objectValue);
 					record["name"] = recFunc.str();
@@ -80,7 +80,7 @@ private:
 
 			if (yulRuntimeContext)
 			{
-				for (auto func: yulRuntimeContext->functionInfoMap[recFunc])
+				for (auto& func: yulRuntimeContext->functionInfoMap[recFunc])
 				{
 					Json::Value record(Json::objectValue);
 					record["name"] = recFunc.str();
