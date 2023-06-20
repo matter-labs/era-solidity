@@ -20,11 +20,11 @@
                         "recursiveFunctions":
                         [
                             {
-                                "creationTag": "7",
+                                "creationTag": 7,
                                 "name": "f0",
-                                "runtimeTag": "10",
-                                "totalParamSize": "1",
-                                "totalRetParamSize": "1"
+                                "runtimeTag": 10,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
                             }
                         ]
                     }

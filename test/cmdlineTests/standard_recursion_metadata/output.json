@@ -21,15 +21,15 @@
                         [
                             {
                                 "name": "f1",
-                                "runtimeTag": "15",
-                                "totalParamSize": "1",
-                                "totalRetParamSize": "1"
+                                "runtimeTag": 15,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
                             },
                             {
                                 "name": "f2",
-                                "runtimeTag": "23",
-                                "totalParamSize": "1",
-                                "totalRetParamSize": "1"
+                                "runtimeTag": 23,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
                             }
                         ]
                     }
@@ -52,18 +52,18 @@
                         "recursiveFunctions":
                         [
                             {
-                                "creationTag": "11",
+                                "creationTag": 11,
                                 "name": "f1",
-                                "runtimeTag": "15",
-                                "totalParamSize": "1",
-                                "totalRetParamSize": "1"
+                                "runtimeTag": 15,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
                             },
                             {
-                                "creationTag": "7",
+                                "creationTag": 7,
                                 "name": "f0",
-                                "runtimeTag": "10",
-                                "totalParamSize": "1",
-                                "totalRetParamSize": "1"
+                                "runtimeTag": 10,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
                             }
                         ]
                     }

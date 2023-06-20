@@ -70,10 +70,10 @@ private:
 				{
 					Json::Value record(Json::objectValue);
 					record["name"] = recFunc.str();
-					record["creationTag"] = to_string(func.label);
+					record["creationTag"] = func.label;
 					// FIXME: Will this work for custom yul types?
-					record["totalParamSize"] = to_string(func.ast->parameters.size());
-					record["totalRetParamSize"] = to_string(func.ast->returnVariables.size());
+					record["totalParamSize"] = func.ast->parameters.size();
+					record["totalRetParamSize"] = func.ast->returnVariables.size();
 					m_recFuncs.append(record);
 				}
 			}
@@ -84,9 +84,9 @@ private:
 				{
 					Json::Value record(Json::objectValue);
 					record["name"] = recFunc.str();
-					record["runtimeTag"] = to_string(func.label);
-					record["totalParamSize"] = to_string(func.ast->parameters.size());
-					record["totalRetParamSize"] = to_string(func.ast->returnVariables.size());
+					record["runtimeTag"] = func.label;
+					record["totalParamSize"] = func.ast->parameters.size();
+					record["totalRetParamSize"] = func.ast->returnVariables.size();
 					m_recFuncs.append(record);
 				}
 			}
@@ -134,18 +134,21 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 
 		Json::Value func(Json::objectValue);
 		func["name"] = fn->name();
+
+
 		if (creationTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
-			func["creationTag"] = creationTag.data().str();
+			// Assembly::new[Push]Tag() asserts that the tag is 32 bits
+			func["creationTag"] = creationTag.data().convert_to<uint32_t>();
 		if (runtimeTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
-			func["runtimeTag"] = runtimeTag.data().str();
+			func["runtimeTag"] = runtimeTag.data().convert_to<uint32_t>();
 
 		unsigned totalParamSize = 0, totalRetParamSize = 0;
 		for (auto& param: fn->parameters())
 			totalParamSize += param->type()->sizeOnStack();
-		func["totalParamSize"] = to_string(totalParamSize);
+		func["totalParamSize"] = totalParamSize;
 		for (auto& param: fn->returnParameters())
 			totalRetParamSize += param->type()->sizeOnStack();
-		func["totalRetParamSize"] = to_string(totalRetParamSize);
+		func["totalRetParamSize"] = totalRetParamSize;
 
 		recFuncs.append(func);
 	}
