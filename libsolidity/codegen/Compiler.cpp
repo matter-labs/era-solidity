@@ -155,6 +155,30 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 
 	if (!recFuncs.empty())
 		m_runtimeContext.metadata["recursiveFunctions"] = recFuncs;
+
+	// Set "indirectCallees"
+	Json::Value indirectCallees(Json::arrayValue);
+	for (FunctionDefinition const* fn: _contract.annotation().intFuncPtrRefs)
+	{
+		evmasm::AssemblyItem const& creationTag = m_context.functionEntryLabelIfExists(*fn);
+		evmasm::AssemblyItem const& runtimeTag = m_runtimeContext.functionEntryLabelIfExists(*fn);
+		if (creationTag == evmasm::AssemblyItem(evmasm::UndefinedItem)
+			&& runtimeTag == evmasm::AssemblyItem(evmasm::UndefinedItem))
+			continue;
+
+		Json::Value func(Json::objectValue);
+		func["name"] = fn->name();
+		if (creationTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
+			// Assembly::new[Push]Tag() asserts that the tag is 32 bits
+			func["creationTag"] = creationTag.data().convert_to<uint32_t>();
+		if (runtimeTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
+			func["runtimeTag"] = runtimeTag.data().convert_to<uint32_t>();
+
+		indirectCallees.append(func);
+	}
+
+	if (!indirectCallees.empty())
+		m_runtimeContext.metadata["indirectCallees"] = indirectCallees;
 }
 
 void Compiler::compileContract(
