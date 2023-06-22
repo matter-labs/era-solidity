@@ -70,7 +70,6 @@ struct OptimiserSettings
 	static OptimiserSettings minimal()
 	{
 		OptimiserSettings s = none();
-		s.runJumpdestRemover = true;
 		s.runPeephole = true;
 		return s;
 	}

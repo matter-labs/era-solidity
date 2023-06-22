@@ -22,7 +22,7 @@ object "object" {
 
 
 Binary representation:
-600080600f565b60008035905090565b60156006565b91506026565b600081359050919050565b602e6070601b565b90508082555050
+6000806010565b6000803590505b90565b60166006565b91506028565b6000813590505b919050565b60306070601c565b90508082555050
 
 Text representation:
     /* "yul_function_name_clashes_different_params/input.yul":37:42   */
@@ -42,6 +42,7 @@ tag_1:
   swap1
   pop
     /* "yul_function_name_clashes_different_params/input.yul":79:133   */
+tag_3:
   swap1
   jump	// out
 tag_2:
@@ -66,6 +67,7 @@ tag_5:
   swap1
   pop
     /* "yul_function_name_clashes_different_params/input.yul":187:242   */
+tag_7:
   swap2
   swap1
   pop

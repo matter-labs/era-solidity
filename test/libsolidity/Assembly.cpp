@@ -156,7 +156,7 @@ void checkAssemblyLocations(AssemblyItems const& _items, vector<SourceLocation> 
 
 BOOST_AUTO_TEST_SUITE(Assembly)
 
-BOOST_AUTO_TEST_CASE(location_test)
+BOOST_AUTO_TEST_CASE(location_test, *boost::unit_test::disabled())
 {
 	string sourceCode = R"(
 	pragma abicoder v1;

@@ -34,6 +34,7 @@ tag_1:
   tag_3
   jump	// in
 tag_2:
+tag_4:
     /* "internal_function_pointer/input.sol":664:665  0 */
   0x00
     /* "internal_function_pointer/input.sol":659:660  i */
@@ -254,6 +255,7 @@ tag_15:
   sstore
   pop
     /* "internal_function_pointer/input.sol":630:789  constructor(int i) {... */
+tag_5:
   pop
     /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
   jump(tag_24)
@@ -267,6 +269,7 @@ tag_7:
   swap1
   pop
     /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
+tag_25:
   swap1
   jump	// out
     /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
@@ -279,6 +282,7 @@ tag_9:
   swap1
   pop
     /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
+tag_26:
   swap1
   jump	// out
     /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
@@ -291,6 +295,7 @@ tag_11:
   swap1
   pop
     /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
+tag_27:
   swap1
   jump	// out
     /* "internal_function_pointer/input.sol":200:301  function getD1() internal pure returns (function() internal pure returns (uint)) {... */
@@ -303,6 +308,7 @@ tag_14:
   swap1
   pop
     /* "internal_function_pointer/input.sol":200:301  function getD1() internal pure returns (function() internal pure returns (uint)) {... */
+tag_28:
   swap1
   jump	// out
     /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
@@ -315,6 +321,7 @@ tag_20:
   swap1
   pop
     /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
+tag_29:
   swap1
   jump	// out
     /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
@@ -324,6 +331,21 @@ tag_16:
   jump	// in
 tag_30:
   jump	// out
+    /* "#utility.yul":7:82   */
+tag_31:
+    /* "#utility.yul":40:46   */
+  0x00
+    /* "#utility.yul":73:75   */
+  0x40
+    /* "#utility.yul":67:76   */
+  mload
+    /* "#utility.yul":57:76   */
+  swap1
+  pop
+    /* "#utility.yul":7:82   */
+tag_38:
+  swap1
+  jump	// out
     /* "#utility.yul":88:205   */
 tag_32:
     /* "#utility.yul":197:198   */
@@ -332,6 +354,20 @@ tag_32:
   dup1
     /* "#utility.yul":187:199   */
   revert
+    /* "#utility.yul":88:205   */
+tag_39:
+  jump	// out
+    /* "#utility.yul":211:328   */
+tag_33:
+    /* "#utility.yul":320:321   */
+  0x00
+    /* "#utility.yul":317:318   */
+  dup1
+    /* "#utility.yul":310:322   */
+  revert
+    /* "#utility.yul":211:328   */
+tag_40:
+  jump	// out
     /* "#utility.yul":334:410   */
 tag_34:
     /* "#utility.yul":370:377   */
@@ -342,6 +378,7 @@ tag_34:
   swap1
   pop
     /* "#utility.yul":334:410   */
+tag_41:
   swap2
   swap1
   pop
@@ -373,6 +410,7 @@ tag_43:
 tag_44:
     /* "#utility.yul":416:536   */
   pop
+tag_42:
   jump	// out
     /* "#utility.yul":542:683   */
 tag_36:
@@ -394,6 +432,7 @@ tag_36:
   jump	// in
 tag_46:
     /* "#utility.yul":542:683   */
+tag_45:
   swap3
   swap2
   pop
@@ -446,6 +485,7 @@ tag_50:
     /* "#utility.yul":904:1031   */
   pop
     /* "#utility.yul":689:1038   */
+tag_47:
   swap3
   swap2
   pop
@@ -471,6 +511,10 @@ tag_23:
   0x00
     /* "#utility.yul":1203:1218   */
   revert
+    /* "#utility.yul":1044:1224   */
+tag_51:
+  jump	// out
+tag_37:
     /* "internal_function_pointer/input.sol":367:857  contract C is D {... */
 tag_24:
   dataSize(sub_0)
@@ -595,6 +639,7 @@ sub_0: assembly {
       swap1
       pop
         /* "internal_function_pointer/input.sol":793:855  function g() public view returns (uint) {... */
+    tag_13:
       swap1
       jump	// out
         /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
@@ -607,6 +652,7 @@ sub_0: assembly {
       swap1
       pop
         /* "internal_function_pointer/input.sol":444:503  function c0() internal pure returns (uint) { return 0xc0; } */
+    tag_21:
       swap1
       jump	// out
         /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
@@ -619,6 +665,7 @@ sub_0: assembly {
       swap1
       pop
         /* "internal_function_pointer/input.sol":506:565  function c1() internal pure returns (uint) { return 0xc1; } */
+    tag_22:
       swap1
       jump	// out
         /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
@@ -631,6 +678,7 @@ sub_0: assembly {
       swap1
       pop
         /* "internal_function_pointer/input.sol":75:134  function d0() internal pure returns (uint) { return 0xd0; } */
+    tag_23:
       swap1
       jump	// out
         /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
@@ -643,6 +691,7 @@ sub_0: assembly {
       swap1
       pop
         /* "internal_function_pointer/input.sol":138:197  function d1() internal pure returns (uint) { return 0xd1; } */
+    tag_24:
       swap1
       jump	// out
     tag_11:
@@ -661,6 +710,7 @@ sub_0: assembly {
       swap1
       pop
         /* "#utility.yul":7:84   */
+    tag_29:
       swap2
       swap1
       pop
@@ -682,6 +732,7 @@ sub_0: assembly {
         /* "#utility.yul":90:208   */
       pop
       pop
+    tag_30:
       jump	// out
         /* "#utility.yul":214:436   */
     tag_7:
@@ -711,6 +762,7 @@ sub_0: assembly {
       jump	// in
     tag_33:
         /* "#utility.yul":214:436   */
+    tag_32:
       swap3
       swap2
       pop
@@ -736,6 +788,10 @@ sub_0: assembly {
       0x00
         /* "#utility.yul":601:616   */
       revert
+        /* "#utility.yul":442:622   */
+    tag_34:
+      jump	// out
+    tag_28:
 
     auxdata: <AUXDATA REMOVED>
 }
@@ -755,6 +811,7 @@ EVM assembly:
   revert
 tag_1:
   pop
+tag_2:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -767,6 +824,7 @@ stop
 sub_0: assembly {
         /* "internal_function_pointer/input.sol":60:365  contract D {... */
       mstore(0x40, 0x80)
+    tag_1:
       0x00
       dup1
       revert

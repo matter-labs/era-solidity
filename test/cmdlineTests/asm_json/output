@@ -96,6 +96,19 @@ EVM assembly:
     {
       "begin": 60,
       "end": 160,
+      "name": "tag",
+      "source": 0,
+      "value": "2"
+    },
+    {
+      "begin": 60,
+      "end": 160,
+      "name": "JUMPDEST",
+      "source": 0
+    },
+    {
+      "begin": 60,
+      "end": 160,
       "name": "PUSH #[$]",
       "source": 0,
       "value": "0000000000000000000000000000000000000000000000000000000000000000"
@@ -651,6 +664,19 @@ EVM assembly:
         {
           "begin": 77,
           "end": 158,
+          "name": "tag",
+          "source": 0,
+          "value": "8"
+        },
+        {
+          "begin": 77,
+          "end": 158,
+          "name": "JUMPDEST",
+          "source": 0
+        },
+        {
+          "begin": 77,
+          "end": 158,
           "name": "POP",
           "source": 0
         },
@@ -660,6 +686,77 @@ EVM assembly:
           "jumpType": "[out]",
           "name": "JUMP",
           "source": 0
+        },
+        {
+          "begin": 7,
+          "end": 82,
+          "name": "tag",
+          "source": 1,
+          "value": "12"
+        },
+        {
+          "begin": 7,
+          "end": 82,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 40,
+          "end": 46,
+          "name": "PUSH",
+          "source": 1,
+          "value": "0"
+        },
+        {
+          "begin": 73,
+          "end": 75,
+          "name": "PUSH",
+          "source": 1,
+          "value": "40"
+        },
+        {
+          "begin": 67,
+          "end": 76,
+          "name": "MLOAD",
+          "source": 1
+        },
+        {
+          "begin": 57,
+          "end": 76,
+          "name": "SWAP1",
+          "source": 1
+        },
+        {
+          "begin": 57,
+          "end": 76,
+          "name": "POP",
+          "source": 1
+        },
+        {
+          "begin": 7,
+          "end": 82,
+          "name": "tag",
+          "source": 1,
+          "value": "20"
+        },
+        {
+          "begin": 7,
+          "end": 82,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 7,
+          "end": 82,
+          "name": "SWAP1",
+          "source": 1
+        },
+        {
+          "begin": 7,
+          "end": 82,
+          "jumpType": "[out]",
+          "name": "JUMP",
+          "source": 1
         },
         {
           "begin": 88,
@@ -691,6 +788,78 @@ EVM assembly:
           "begin": 187,
           "end": 199,
           "name": "REVERT",
+          "source": 1
+        },
+        {
+          "begin": 88,
+          "end": 205,
+          "name": "tag",
+          "source": 1,
+          "value": "21"
+        },
+        {
+          "begin": 88,
+          "end": 205,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 88,
+          "end": 205,
+          "jumpType": "[out]",
+          "name": "JUMP",
+          "source": 1
+        },
+        {
+          "begin": 211,
+          "end": 328,
+          "name": "tag",
+          "source": 1,
+          "value": "14"
+        },
+        {
+          "begin": 211,
+          "end": 328,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 320,
+          "end": 321,
+          "name": "PUSH",
+          "source": 1,
+          "value": "0"
+        },
+        {
+          "begin": 317,
+          "end": 318,
+          "name": "DUP1",
+          "source": 1
+        },
+        {
+          "begin": 310,
+          "end": 322,
+          "name": "REVERT",
+          "source": 1
+        },
+        {
+          "begin": 211,
+          "end": 328,
+          "name": "tag",
+          "source": 1,
+          "value": "22"
+        },
+        {
+          "begin": 211,
+          "end": 328,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 211,
+          "end": 328,
+          "jumpType": "[out]",
+          "name": "JUMP",
           "source": 1
         },
         {
@@ -729,6 +898,19 @@ EVM assembly:
           "begin": 389,
           "end": 405,
           "name": "POP",
+          "source": 1
+        },
+        {
+          "begin": 334,
+          "end": 411,
+          "name": "tag",
+          "source": 1,
+          "value": "23"
+        },
+        {
+          "begin": 334,
+          "end": 411,
+          "name": "JUMPDEST",
           "source": 1
         },
         {
@@ -875,6 +1057,19 @@ EVM assembly:
         {
           "begin": 417,
           "end": 539,
+          "name": "tag",
+          "source": 1,
+          "value": "24"
+        },
+        {
+          "begin": 417,
+          "end": 539,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 417,
+          "end": 539,
           "jumpType": "[out]",
           "name": "JUMP",
           "source": 1
@@ -960,6 +1155,19 @@ EVM assembly:
         {
           "begin": 645,
           "end": 678,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 545,
+          "end": 684,
+          "name": "tag",
+          "source": 1,
+          "value": "27"
+        },
+        {
+          "begin": 545,
+          "end": 684,
           "name": "JUMPDEST",
           "source": 1
         },
@@ -1197,6 +1405,19 @@ EVM assembly:
         {
           "begin": 690,
           "end": 1019,
+          "name": "tag",
+          "source": 1,
+          "value": "29"
+        },
+        {
+          "begin": 690,
+          "end": 1019,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 690,
+          "end": 1019,
           "name": "SWAP3",
           "source": 1
         },
@@ -1296,6 +1517,26 @@ EVM assembly:
           "begin": 1184,
           "end": 1199,
           "name": "REVERT",
+          "source": 1
+        },
+        {
+          "begin": 1025,
+          "end": 1205,
+          "name": "tag",
+          "source": 1,
+          "value": "33"
+        },
+        {
+          "begin": 1025,
+          "end": 1205,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 1025,
+          "end": 1205,
+          "jumpType": "[out]",
+          "name": "JUMP",
           "source": 1
         },
         {
@@ -1539,6 +1780,19 @@ EVM assembly:
         {
           "begin": 1211,
           "end": 1402,
+          "name": "tag",
+          "source": 1,
+          "value": "34"
+        },
+        {
+          "begin": 1211,
+          "end": 1402,
+          "name": "JUMPDEST",
+          "source": 1
+        },
+        {
+          "begin": 1211,
+          "end": 1402,
           "name": "SWAP3",
           "source": 1
         },
@@ -1565,6 +1819,19 @@ EVM assembly:
           "end": 1402,
           "jumpType": "[out]",
           "name": "JUMP",
+          "source": 1
+        },
+        {
+          "begin": 1211,
+          "end": 1402,
+          "name": "tag",
+          "source": 1,
+          "value": "19"
+        },
+        {
+          "begin": 1211,
+          "end": 1402,
+          "name": "JUMPDEST",
           "source": 1
         }
       ]

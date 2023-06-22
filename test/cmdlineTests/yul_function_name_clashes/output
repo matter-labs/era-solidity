@@ -22,7 +22,7 @@ object "object" {
 
 
 Binary representation:
-600080600f565b60008035905090565b60156006565b91506025565b6000602035905090565b602b601b565b90508082555050
+6000806010565b6000803590505b90565b60166006565b91506027565b600060203590505b90565b602d601c565b90508082555050
 
 Text representation:
   0x00
@@ -34,6 +34,7 @@ tag_1:
   calldataload
   swap1
   pop
+tag_3:
   swap1
   jump	// out
 tag_2:
@@ -50,6 +51,7 @@ tag_5:
   calldataload
   swap1
   pop
+tag_7:
   swap1
   jump	// out
 tag_6:

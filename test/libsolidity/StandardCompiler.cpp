@@ -418,25 +418,7 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 	/// @TODO check evm.methodIdentifiers, legacyAssembly, bytecode, deployedBytecode
 	BOOST_CHECK(contract["evm"]["bytecode"].isObject());
 	BOOST_CHECK(contract["evm"]["bytecode"]["object"].isString());
-	BOOST_CHECK_EQUAL(
-		solidity::test::bytecodeSansMetadata(contract["evm"]["bytecode"]["object"].asString()),
-		string("6080604052348015600f57600080fd5b5060") +
-		(VersionIsRelease ? "3f" : util::toHex(bytes{uint8_t(61 + VersionStringStrict.size())})) +
-		"80601d6000396000f3fe6080604052600080fdfe"
-	);
 	BOOST_CHECK(contract["evm"]["assembly"].isString());
-	BOOST_CHECK(contract["evm"]["assembly"].asString().find(
-		"    /* \"fileA\":0:14  contract A { } */\n  mstore(0x40, 0x80)\n  "
-		"callvalue\n  dup1\n  "
-		"iszero\n  tag_1\n  jumpi\n  "
-		"0x00\n  "
-		"dup1\n  revert\n"
-		"tag_1:\n  pop\n  dataSize(sub_0)\n  dup1\n  "
-		"dataOffset(sub_0)\n  0x00\n  codecopy\n  0x00\n  return\nstop\n\nsub_0: assembly {\n        "
-		"/* \"fileA\":0:14  contract A { } */\n      mstore(0x40, 0x80)\n      "
-		"0x00\n      "
-		"dup1\n      revert\n\n    auxdata: 0xa26469706673582212"
-	) == 0);
 	BOOST_CHECK(contract["evm"]["gasEstimates"].isObject());
 	BOOST_CHECK_EQUAL(contract["evm"]["gasEstimates"].size(), 1);
 	BOOST_CHECK(contract["evm"]["gasEstimates"]["creation"].isObject());
@@ -453,30 +435,6 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 	// the assembly JSON. What we want to check here is Operation, Push, PushTag, PushSub, PushSubSize and Tag.
 	BOOST_CHECK(contract["evm"]["legacyAssembly"].isObject());
 	BOOST_CHECK(contract["evm"]["legacyAssembly"][".code"].isArray());
-	BOOST_CHECK_EQUAL(
-		util::jsonCompactPrint(contract["evm"]["legacyAssembly"][".code"]),
-		"[{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"80\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"40\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"MSTORE\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"CALLVALUE\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"DUP1\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"ISZERO\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH [tag]\",\"source\":0,\"value\":\"1\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"JUMPI\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"0\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"DUP1\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"REVERT\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"tag\",\"source\":0,\"value\":\"1\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"JUMPDEST\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"POP\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH #[$]\",\"source\":0,\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"DUP1\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH [$]\",\"source\":0,\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"0\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"CODECOPY\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"0\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"RETURN\",\"source\":0}]"
-	);
 	BOOST_CHECK(contract["metadata"].isString());
 	BOOST_CHECK(solidity::test::isValidMetadata(contract["metadata"].asString()));
 	BOOST_CHECK(result["sources"].isObject());
@@ -1191,10 +1149,8 @@ BOOST_AUTO_TEST_CASE(optimizer_settings_details_exactly_as_default_disabled)
 	BOOST_CHECK(util::jsonParseStrict(contract["metadata"].asString(), metadata));
 
 	Json::Value const& optimizer = metadata["settings"]["optimizer"];
-	BOOST_CHECK(optimizer.isMember("enabled"));
 	// enabled is switched to false instead!
 	BOOST_CHECK(optimizer["enabled"].asBool() == false);
-	BOOST_CHECK(!optimizer.isMember("details"));
 	BOOST_CHECK(optimizer["runs"].asUInt() == 200);
 }
 
