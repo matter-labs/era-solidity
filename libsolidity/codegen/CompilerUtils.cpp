@@ -1198,12 +1198,19 @@ void CompilerUtils::convertType(
 					_context << Instruction::POP << Instruction::POP;
 				};
 				if (typeOnStack.recursive())
+				{
 					m_context.callLowLevelFunction(
 						"$convertRecursiveArrayStorageToMemory_" + typeOnStack.identifier() + "_to_" + targetType.identifier(),
 						1,
 						1,
 						conversionImpl
 					);
+					string name{
+						"$convertRecursiveArrayStorageToMemory_" + typeOnStack.identifier() + "_to_"
+						+ targetType.identifier()};
+					auto tag = m_context.lowLevelFunctionTag(name, 1, 1, conversionImpl);
+					m_context.recursiveLowLevelFuncs.insert({name, tag.data().convert_to<uint32_t>(), 1, 1});
+				}
 				else
 					conversionImpl(m_context);
 				break;

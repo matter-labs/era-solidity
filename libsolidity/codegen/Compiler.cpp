@@ -118,6 +118,26 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 		}
 	}
 
+	// Report recursive low level calls
+	for (auto fn: m_context.recursiveLowLevelFuncs)
+	{
+		Json::Value func(Json::objectValue);
+		func["name"] = get<0>(fn);
+		func["creationTag"] = get<1>(fn);
+		func["totalParamSize"] = get<2>(fn);
+		func["totalRetParamSize"] = get<3>(fn);
+		recFuncs.append(func);
+	}
+	for (auto fn: m_runtimeContext.recursiveLowLevelFuncs)
+	{
+		Json::Value func(Json::objectValue);
+		func["name"] = get<0>(fn);
+		func["runtimeTag"] = get<1>(fn);
+		func["totalParamSize"] = get<2>(fn);
+		func["totalRetParamSize"] = get<3>(fn);
+		recFuncs.append(func);
+	}
+
 	for (auto* fn: reachableFuncs)
 	{
 		InlineAsmRecursiveFuncTracker inAsmTracker{*fn, m_context, m_runtimeContext, recFuncs};

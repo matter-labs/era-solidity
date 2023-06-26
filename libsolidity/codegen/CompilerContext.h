@@ -306,6 +306,10 @@ public:
 
 	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> inlineAsmContextMap;
 
+	/// Set of low level utility functions generated in this context that are recursive
+	std::set<std::tuple<std::string const /*name*/, unsigned /*tag*/, unsigned /*ins*/, unsigned /*outs*/>>
+		recursiveLowLevelFuncs;
+
 	/**
 	 * Helper class to pop the visited nodes stack when a scope closes
 	 */

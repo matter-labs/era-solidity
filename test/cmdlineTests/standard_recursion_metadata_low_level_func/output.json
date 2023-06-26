@@ -1,0 +1,41 @@
+{
+    "contracts":
+    {
+        "A":
+        {
+            "CopyTest":
+            {
+                "evm":
+                {
+                    "bytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "deployedBytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "extraMetadata":
+                    {
+                        "recursiveFunctions":
+                        [
+                            {
+                                "name": "$convertRecursiveArrayStorageToMemory_t_struct$_Tree_$6_storage_to_t_struct$_Tree_$6_memory_ptr",
+                                "runtimeTag": 12,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "sources":
+    {
+        "A":
+        {
+            "id": 0
+        }
+    }
+}
