@@ -1208,7 +1208,8 @@ void CompilerUtils::convertType(
 					string name{
 						"$convertRecursiveArrayStorageToMemory_" + typeOnStack.identifier() + "_to_"
 						+ targetType.identifier()};
-					auto tag = m_context.lowLevelFunctionTag(name, 1, 1, conversionImpl);
+					auto tag = m_context.lowLevelFunctionTagIfExists(name);
+					solAssert(tag != evmasm::AssemblyItem(evmasm::UndefinedItem), "");
 					m_context.recursiveLowLevelFuncs.insert({name, tag.data().convert_to<uint32_t>(), 1, 1});
 				}
 				else
