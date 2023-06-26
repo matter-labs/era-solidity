@@ -1,4 +1,4 @@
-name: Build and release binaries manualy
+name: Build and release binaries manually
 
 on:
   workflow_dispatch:
