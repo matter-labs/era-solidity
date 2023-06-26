@@ -3,6 +3,32 @@
     {
         "A":
         {
+            "ClearArray":
+            {
+                "evm":
+                {
+                    "bytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "deployedBytecode":
+                    {
+                        "object": "<BYTECODE REMOVED>"
+                    },
+                    "extraMetadata":
+                    {
+                        "recursiveFunctions":
+                        [
+                            {
+                                "name": "$clearArray_t_array$_t_struct$_S_$52_storage_$dyn_storage",
+                                "runtimeTag": 10,
+                                "totalParamSize": 2,
+                                "totalRetParamSize": 0
+                            }
+                        ]
+                    }
+                }
+            },
             "CopyTest":
             {
                 "evm":

@@ -164,6 +164,8 @@ public:
 		unsigned _outArgs,
 		std::function<void(CompilerContext&)> const& _generator
 	);
+	evmasm::AssemblyItem lowLevelFunctionTagIfExists(std::string const& _name);
+
 	/// Generates the code for missing low-level functions, i.e. calls the generators passed above.
 	void appendMissingLowLevelFunctions();
 	ABIFunctions& abiFunctions() { return m_abiFunctions; }
