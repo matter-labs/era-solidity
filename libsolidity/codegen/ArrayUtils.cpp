@@ -297,6 +297,17 @@ void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType cons
 			_context << Instruction::POP;
 		}
 	);
+
+	if (auto* structType = dynamic_cast<StructType const*>(_sourceType.baseType()))
+	{
+		if (structType->recursive())
+		{
+			string name{"$copyArrayToStorage_" + sourceType->identifier() + "_to_" + targetType->identifier()};
+			auto tag = m_context.lowLevelFunctionTagIfExists(name);
+			solAssert(tag != evmasm::AssemblyItem(evmasm::UndefinedItem), "");
+			m_context.recursiveLowLevelFuncs.insert({name, tag.data().convert_to<uint32_t>(), 3, 1});
+		}
+	}
 }
 
 void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWordBoundaries) const

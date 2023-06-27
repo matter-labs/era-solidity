@@ -20,7 +20,7 @@
                         "recursiveFunctions":
                         [
                             {
-                                "name": "$clearArray_t_array$_t_struct$_S_$52_storage_$dyn_storage",
+                                "name": "$clearArray_t_array$_t_struct$_S_$196_storage_$dyn_storage",
                                 "runtimeTag": 10,
                                 "totalParamSize": 2,
                                 "totalRetParamSize": 0
@@ -46,7 +46,19 @@
                         "recursiveFunctions":
                         [
                             {
-                                "name": "$convertRecursiveArrayStorageToMemory_t_struct$_Tree_$6_storage_to_t_struct$_Tree_$6_memory_ptr",
+                                "creationTag": 70,
+                                "name": "$clearArray_t_array$_t_struct$_Tree_$8_storage_$dyn_storage",
+                                "totalParamSize": 2,
+                                "totalRetParamSize": 0
+                            },
+                            {
+                                "creationTag": 9,
+                                "name": "$copyArrayToStorage_t_array$_t_struct$_Tree_$8_storage_$dyn_storage_to_t_array$_t_struct$_Tree_$8_storage_$dyn_storage",
+                                "totalParamSize": 3,
+                                "totalRetParamSize": 1
+                            },
+                            {
+                                "name": "$convertRecursiveArrayStorageToMemory_t_struct$_Tree_$8_storage_to_t_struct$_Tree_$8_memory_ptr",
                                 "runtimeTag": 12,
                                 "totalParamSize": 1,
                                 "totalRetParamSize": 1
