@@ -17,14 +17,6 @@
                     },
                     "extraMetadata":
                     {
-                        "indirectCallees":
-                        [
-                            {
-                                "creationTag": 7,
-                                "name": "f0",
-                                "runtimeTag": 10
-                            }
-                        ],
                         "recursiveFunctions":
                         [
                             {

@@ -303,7 +303,6 @@ public:
 	/// Current mappings:
 	/// - "recursiveFunctions": array of functions (name, parameters etc.)
 	///   involved in recursion
-	/// - "indirectCallees": array of entry tags of functions that can be called indirectly
 	Json::Value metadata;
 
 	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> inlineAsmContextMap;
