@@ -438,36 +438,6 @@ struct TagConjunctions: SimplePeepholeOptimizerMethod<TagConjunctions>
 	}
 };
 
-struct TagShift: SimplePeepholeOptimizerMethod<TagShift>
-{
-	static bool applySimple(
-		AssemblyItem const& _pushTag,
-		AssemblyItem const& _pushConstShl,
-		AssemblyItem const& _shl,
-		AssemblyItem const& _pushConstShr,
-		AssemblyItem const& _shr,
-		back_insert_iterator<AssemblyItems> _out
-	)
-	{
-		// clang-format off
-		if (_shr != Instruction::SHR
-				|| _pushConstShr.type() != Push
-				|| _shl != Instruction::SHL
-				|| _pushConstShl.type() != Push
-				|| _pushTag.type() != PushTag
-				)
-			return false;
-		// clang-format on
-
-		if (_pushConstShr.data() == u256(0x20) && _pushConstShl.data() == u256(0x20))
-		{
-			*_out = _pushTag;
-			return true;
-		}
-		return false;
-	}
-};
-
 struct TruthyAnd: SimplePeepholeOptimizerMethod<TruthyAnd>
 {
 	static bool applySimple(
@@ -547,7 +517,7 @@ bool PeepholeOptimiser::optimise()
 			state,
 			PushPop(), OpPop(), OpStop(), OpReturnRevert(), DoublePush(), DoubleSwap(), CommutativeSwap(), SwapComparison(),
 			DupSwap(), IsZeroIsZeroJumpI(), EqIsZeroJumpI(), DoubleJump(), JumpToNext(), UnreachableCode(),
-			TagConjunctions(), TagShift(), TruthyAnd(), Identity()
+			TagConjunctions(), TruthyAnd(), Identity()
 		);
 	if (m_optimisedItems.size() < m_items.size() || (
 		m_optimisedItems.size() == m_items.size() && (

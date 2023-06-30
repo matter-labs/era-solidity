@@ -152,8 +152,10 @@ tag_10:
     /* "internal_function_pointer/input.sol":761:768  getD1() */
   tag_13
     /* "internal_function_pointer/input.sol":761:766  getD1 */
-  tag_14
+  shl(0x20, tag_14)
     /* "internal_function_pointer/input.sol":761:768  getD1() */
+  0x20
+  shr
   jump	// in
 tag_13:
     /* "internal_function_pointer/input.sol":756:758  fp */
