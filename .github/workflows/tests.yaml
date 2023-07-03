@@ -47,7 +47,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DUSE_Z3=OFF
+          cmake .. -DCMAKE_BUILD_TYPE='Release' -DSOLC_VERSION_ZKEVM='1.0.0-lts' -DPEDANTIC=OFF -DCMAKE_CXX_FLAGS='-w' -DUSE_Z3=OFF -DUSE_CVC4=OFF
           make -j$(nproc)
 
       - name: Building and running the compiler tester
