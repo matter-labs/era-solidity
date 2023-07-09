@@ -61,5 +61,5 @@ contract C {
 // compileToEwasm: also
 // ----
 // constructor()
-// gas legacy: 126455
+// gas legacy: 128049
 // f(): true, true -> true, true

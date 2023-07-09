@@ -24,5 +24,5 @@ contract CopyTest {
 // ----
 // run() -> 2, 23, 42
 // gas irOptimized: 193756
-// gas legacy: 186016
+// gas legacy: 186426
 // gas legacyOptimized: 184668

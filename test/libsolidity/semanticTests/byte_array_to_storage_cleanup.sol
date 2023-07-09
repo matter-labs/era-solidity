@@ -29,7 +29,7 @@ contract C {
 // ----
 // constructor() ->
 // gas irOptimized: 449704
-// gas legacy: 729908
+// gas legacy: 746341
 // gas legacyOptimized: 493347
 // h() -> 0x20, 0x40, 0x00, 0
 // ~ emit ev(uint256[],uint256): 0x40, 0x21, 0x02, 0x00, 0x00

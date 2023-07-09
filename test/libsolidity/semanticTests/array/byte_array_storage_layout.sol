@@ -46,7 +46,7 @@ contract c {
 // storageEmpty -> 0
 // test_long() -> 67
 // gas irOptimized: 89148
-// gas legacy: 105839
+// gas legacy: 105976
 // gas legacyOptimized: 103293
 // storageEmpty -> 0
 // test_pop() -> 1780731860627700044960722568376592200742329637303199754547598369979433020

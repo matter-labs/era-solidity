@@ -24,7 +24,7 @@ contract C {
 // ----
 // constructor(), 1 ether ->
 // gas irOptimized: 266135
-// gas legacy: 454729
+// gas legacy: 461903
 // gas legacyOptimized: 301679
 // f(uint256): 0 -> FAILURE
 // f(uint256): 1 -> FAILURE

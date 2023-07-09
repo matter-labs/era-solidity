@@ -41,7 +41,7 @@ contract Main {
 // ----
 // constructor(), 22 wei ->
 // gas irOptimized: 268544
-// gas legacy: 402045
+// gas legacy: 413023
 // gas legacyOptimized: 266772
 // getFlag() -> true
 // getName() -> "abc"

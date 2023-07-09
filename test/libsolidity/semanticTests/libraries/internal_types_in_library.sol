@@ -25,5 +25,5 @@ contract Test {
 // library: Lib
 // f() -> 4, 0x11
 // gas irOptimized: 112281
-// gas legacy: 135820
+// gas legacy: 136156
 // gas legacyOptimized: 119448

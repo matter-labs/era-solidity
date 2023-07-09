@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(string_storage)
 			if (evmVersion < EVMVersion::istanbul())
 				CHECK_DEPLOY_GAS(139013, 123969, evmVersion);
 			else
-				CHECK_DEPLOY_GAS(123361, 110969, evmVersion);
+				CHECK_DEPLOY_GAS(124674, 110969, evmVersion);
 		}
 	}
 	else if (evmVersion < EVMVersion::istanbul())

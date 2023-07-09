@@ -59,9 +59,9 @@ contract C {
 // ----
 // testMul(int32,int32): 42, 10 -> 420
 // gas irOptimized: 103347
-// gas legacy: 188203
+// gas legacy: 195466
 // gas legacyOptimized: 126164
 // testInc(int32): 42 -> 43
 // gas irOptimized: 103173
-// gas legacy: 187452
+// gas legacy: 194703
 // gas legacyOptimized: 125851

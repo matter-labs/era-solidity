@@ -54,7 +54,7 @@ contract C {
 // ----
 // from_storage() -> 0x20, 2, 0x40, 0xa0, 2, 10, 11, 3, 12, 13, 14
 // gas irOptimized: 150098
-// gas legacy: 150830
+// gas legacy: 150911
 // gas legacyOptimized: 148728
 // from_storage_ptr() -> 0x20, 2, 0x40, 0xa0, 2, 10, 11, 3, 12, 13, 14
 // from_memory() -> 0x20, 2, 0x40, 0xa0, 2, 10, 11, 3, 12, 13, 14
