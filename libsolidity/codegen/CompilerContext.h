@@ -312,6 +312,11 @@ public:
 
 	RevertStrings revertStrings() const { return m_revertStrings; }
 
+	// HACK!
+	// We track the success tag here for the `TryStatement` lowering. This is to avoid the redundant status check and
+	// the conditional jump. Such patterns can confuse the zksolc translator.
+	evmasm::AssemblyItem currTryCallSuccessTag{evmasm::AssemblyItemType::UndefinedItem};
+
 private:
 	/// @returns a pointer to the contract directly above the given contract.
 	ContractDefinition const* superContract(ContractDefinition const& _contract) const;
