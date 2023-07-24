@@ -619,6 +619,11 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	return false;
 }
 
+// HACK!
+// We track the success tag here for the `TryStatement` lowering. This is to avoid the redundant status check and the
+// conditional jump. Such patterns can confuse the zksolc translator.
+evmasm::AssemblyItem g_tryCallSuccessTag(AssemblyItemType::UndefinedItem);
+
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	auto functionCallKind = *_functionCall.annotation().kind;
@@ -793,7 +798,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// If this is a try call, return "<address> 1" in the success case and
 				// "0" in the error case.
 				AssemblyItem errorCase = m_context.appendConditionalJump();
-				m_context << u256(1);
+				g_tryCallSuccessTag = m_context.appendJumpToNew();
+				m_context.adjustStackOffset(1);
 				m_context << errorCase;
 			}
 			else
@@ -2908,7 +2914,8 @@ void ExpressionCompiler::appendExternalFunctionCall(
 	if (_tryCall)
 	{
 		// Success branch will reach this, failure branch will directly jump to endTag.
-		m_context << u256(1);
+		g_tryCallSuccessTag = m_context.appendJumpToNew();
+		m_context.adjustStackOffset(1);
 		m_context << endTag;
 	}
 }

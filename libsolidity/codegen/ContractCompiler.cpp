@@ -963,6 +963,8 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 	return false;
 }
 
+extern AssemblyItem g_tryCallSuccessTag;
+
 bool ContractCompiler::visit(TryStatement const& _tryStatement)
 {
 	StackHeightChecker checker(m_context);
@@ -972,7 +974,7 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	int const returnSize = static_cast<int>(_tryStatement.externalCall().annotation().type->sizeOnStack());
 
 	// Stack: [ return values] <success flag>
-	evmasm::AssemblyItem successTag = m_context.appendConditionalJump();
+	m_context << Instruction::POP;
 
 	// Catch case.
 	m_context.adjustStackOffset(-returnSize);
@@ -981,7 +983,8 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 
 	evmasm::AssemblyItem endTag = m_context.appendJumpToNew();
 
-	m_context << successTag;
+	solAssert(g_tryCallSuccessTag.type() == AssemblyItemType::Tag, "");
+	m_context << g_tryCallSuccessTag;
 	m_context.adjustStackOffset(returnSize);
 	{
 		// Success case.
