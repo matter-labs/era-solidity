@@ -264,6 +264,11 @@ public:
 
 	void setModifierDepth(size_t _modifierDepth) { m_asm->m_currentModifierDepth = _modifierDepth; }
 
+	// HACK!
+	// We track the success tag here for the `TryStatement` lowering. This is to avoid the redundant status check and
+	// the conditional jump. Such patterns can confuse the zksolc translator.
+	eth::AssemblyItem currTryCallSuccessTag{eth::AssemblyItemType::UndefinedItem};
+
 private:
 	/// Searches the inheritance hierarchy towards the base starting from @a _searchStart and returns
 	/// the first function definition that is overwritten by _function.
