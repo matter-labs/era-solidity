@@ -809,7 +809,7 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	int const returnSize = static_cast<int>(_tryStatement.externalCall().annotation().type->sizeOnStack());
 
 	// Stack: [ return values] <success flag>
-	eth::AssemblyItem successTag = m_context.appendConditionalJump();
+	m_context << Instruction::POP;
 
 	// Catch case.
 	m_context.adjustStackOffset(-returnSize);
@@ -818,7 +818,8 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 
 	eth::AssemblyItem endTag = m_context.appendJumpToNew();
 
-	m_context << successTag;
+	solAssert(m_context.currTryCallSuccessTag.type() == AssemblyItemType::Tag, "");
+	m_context << m_context.currTryCallSuccessTag;
 	m_context.adjustStackOffset(returnSize);
 	{
 		// Success case.
