@@ -691,7 +691,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// If this is a try call, return "<address> 1" in the success case and
 				// "0" in the error case.
 				AssemblyItem errorCase = m_context.appendConditionalJump();
-				m_context << u256(1);
+				m_context.currTryCallSuccessTag = m_context.appendJumpToNew();
+				m_context.adjustStackOffset(1);
 				m_context << errorCase;
 			}
 			else
@@ -2433,7 +2434,8 @@ void ExpressionCompiler::appendExternalFunctionCall(
 	if (_tryCall)
 	{
 		// Success branch will reach this, failure branch will directly jump to endTag.
-		m_context << u256(1);
+		m_context.currTryCallSuccessTag = m_context.appendJumpToNew();
+		m_context.adjustStackOffset(1);
 		m_context << endTag;
 	}
 }
