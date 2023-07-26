@@ -39,6 +39,7 @@ jobs:
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
         with:
           repository: matter-labs/compiler-tester
+          ref: app-cpr-1246-fix-mixed_features_4sol-stack-overflow-error-during-the
           submodules: recursive
           path: compiler-tester
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
@@ -118,6 +119,7 @@ jobs:
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
         with:
           repository: matter-labs/compiler-tester
+          ref: app-cpr-1246-fix-mixed_features_4sol-stack-overflow-error-during-the
           submodules: recursive
           path: compiler-tester
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
@@ -173,6 +175,7 @@ jobs:
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
         with:
           repository: matter-labs/compiler-tester
+          ref: app-cpr-1246-fix-mixed_features_4sol-stack-overflow-error-during-the
           submodules: recursive
           path: compiler-tester
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
