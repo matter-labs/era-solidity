@@ -20,7 +20,7 @@ jobs:
       - name: Preparing workspace. Setting environment.
         run: |
           echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^B3' }}" >> $GITHUB_ENV
-          echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || '' }}" >> $GITHUB_ENV
+          echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || 'tests/solidity/' }}" >> $GITHUB_ENV
           echo "CANDIDATE_BRANCH_NAME=${{ github.event.inputs.compiler_tester_candidate_branch }}" >> $GITHUB_ENV
 
       - name: Getting the branch name (pull request)
@@ -99,7 +99,7 @@ jobs:
       - name: Preparing workspace. Setting environment.
         run: |
           echo "BENCHMARK_MODE=${{ github.event.inputs.compiler_llvm_benchmark_mode || '+M^B3' }}" >> $GITHUB_ENV
-          echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || '' }}" >> $GITHUB_ENV
+          echo "BENCHMARK_PATH=${{ github.event.inputs.compiler_llvm_benchmark_path || 'tests/solidity/' }}" >> $GITHUB_ENV
           echo "REFERENCE_BRANCH_NAME=${{ github.event.inputs.compiler_tester_reference_branch }}" >> $GITHUB_ENV
 
       - name: Getting the branch name (pull request)
@@ -114,7 +114,7 @@ jobs:
           path: solidity
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
 
-      - name: Checking out the compiler-tester candidate
+      - name: Checking out the compiler-tester reference
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2
         with:
           repository: matter-labs/compiler-tester
