@@ -70,6 +70,7 @@ jobs:
           ./target/release/compiler-tester \
             --zksolc './target-zksolc/release/zksolc' \
             --zkvyper './target-zkvyper/release/zkvyper' \
+            --path='tests/solidity/' \
             --solc-bin-config-path="configs/solc-bin-zkevm-candidate-${BRANCH_NAME}.json"
 
       - uses: 8398a7/action-slack@v3
