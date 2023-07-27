@@ -947,6 +947,7 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		m_context.optimizeYul(object, *dialect, m_optimiserSettings);
 
 		code = object.code.get();
+		_inlineAssembly.annotation().optimizedOperations = object.code;
 		analysisInfo = object.analysisInfo.get();
 	}
 

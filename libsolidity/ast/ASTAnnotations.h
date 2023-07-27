@@ -29,6 +29,8 @@
 
 #include <libsolutil/SetOnce.h>
 
+#include <libyul/AST.h>
+
 #include <map>
 #include <memory>
 #include <optional>
@@ -225,6 +227,8 @@ struct InlineAssemblyAnnotation: StatementAnnotation
 	bool markedMemorySafe = false;
 	/// True, if the assembly block involves any memory opcode or assigns to variables in memory.
 	util::SetOnce<bool> hasMemoryEffects;
+	/// The yul block of the InlineAssembly::operations() after optimizations.
+	std::shared_ptr<yul::Block> optimizedOperations;
 };
 
 struct BlockAnnotation: StatementAnnotation, ScopableAnnotation

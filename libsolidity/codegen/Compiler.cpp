@@ -56,8 +56,17 @@ private:
 	Json::Value& m_recFuncs;
 	void endVisit(InlineAssembly const& _asm)
 	{
-		yul::Block const& code = _asm.operations();
-		set<yul::YulString> recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
+		set<yul::YulString> recFuncs;
+		if (_asm.annotation().optimizedOperations)
+		{
+			yul::Block const& code = *_asm.annotation().optimizedOperations;
+			recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
+		}
+		else
+		{
+			recFuncs = yul::CallGraphGenerator::callGraph(_asm.operations()).recursiveFunctions();
+		}
+
 		shared_ptr<yul::CodeTransformContext> yulContext = m_context.inlineAsmContextMap[&_asm];
 		shared_ptr<yul::CodeTransformContext> yulRuntimeContext = m_runtimeContext.inlineAsmContextMap[&_asm];
 		for (auto recFunc: recFuncs)
