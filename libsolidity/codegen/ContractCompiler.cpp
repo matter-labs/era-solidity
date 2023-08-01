@@ -35,6 +35,7 @@
 #include <libyul/backends/evm/AsmCodeGen.h>
 #include <libyul/backends/evm/EVMMetrics.h>
 #include <libyul/backends/evm/EVMDialect.h>
+#include <libyul/optimiser/Disambiguator.h>
 #include <libyul/optimiser/Suite.h>
 #include <libyul/Object.h>
 #include <libyul/optimiser/ASTCopier.h>
@@ -946,6 +947,22 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 
 		m_context.optimizeYul(object, *dialect, m_optimiserSettings);
 
+		code = object.code.get();
+		_inlineAssembly.annotation().optimizedOperations = object.code;
+		analysisInfo = object.analysisInfo.get();
+	}
+	// FIXME: The disambiguator can't handle external references.
+	// We need the disambiguator so that the call-graph analysis works for inputs with functions in different scopes
+	// having the same name.
+	else if (_inlineAssembly.annotation().externalReferences.empty())
+	{
+		yul::EVMDialect const* dialect = dynamic_cast<decltype(dialect)>(&_inlineAssembly.dialect());
+		solAssert(dialect, "");
+
+		yul::Disambiguator disambiguator(*dialect, *analysisInfo, dialect->fixedFunctionNames());
+		object.code = make_shared<yul::Block>(get<yul::Block>(disambiguator(*code)));
+		object.analysisInfo
+			= make_shared<yul::AsmAnalysisInfo>(yul::AsmAnalyzer::analyzeStrictAssertCorrect(*dialect, object));
 		code = object.code.get();
 		_inlineAssembly.annotation().optimizedOperations = object.code;
 		analysisInfo = object.analysisInfo.get();

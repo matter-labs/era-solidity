@@ -73,8 +73,6 @@ private:
 		{
 			if (yulContext)
 			{
-				// FIXME: How does the call-graph of strings represent yul's
-				// scopes?
 				for (auto& func: yulContext->functionInfoMap[recFunc])
 				{
 					Json::Value record(Json::objectValue);
