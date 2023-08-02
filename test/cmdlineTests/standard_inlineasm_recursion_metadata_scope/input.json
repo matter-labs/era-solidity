@@ -22,8 +22,7 @@ contract C {
           yr := yf0(ya)
         }
       }
-      // FIXME: Get libyul's Disambigutor to work with external references
-      // r := 0
+      r := 0
     }
 
     r = 0;

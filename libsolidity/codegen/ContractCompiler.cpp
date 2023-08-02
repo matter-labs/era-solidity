@@ -718,6 +718,20 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 	{
 		solAssert(_context == yul::IdentifierContext::RValue || _context == yul::IdentifierContext::LValue, "");
 		auto ref = _inlineAssembly.annotation().externalReferences.find(&_identifier);
+		if (ref == _inlineAssembly.annotation().externalReferences.end())
+		{
+			// The yul AST might be copied from the original (In case we ran the Disambiguator, for instance). So we'll
+			// search for the identifier's name instead.
+			auto& externalReferences = _inlineAssembly.annotation().externalReferences;
+			for (auto extRef = externalReferences.begin(); extRef != externalReferences.end(); ++extRef)
+			{
+				if (extRef->first->name == _identifier.name)
+				{
+					ref = extRef;
+					break;
+				}
+			}
+		}
 		solAssert(ref != _inlineAssembly.annotation().externalReferences.end(), "");
 		Declaration const* decl = ref->second.declaration;
 		solAssert(!!decl, "");
@@ -951,18 +965,35 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		_inlineAssembly.annotation().optimizedOperations = object.code;
 		analysisInfo = object.analysisInfo.get();
 	}
-	// FIXME: The disambiguator can't handle external references.
-	// We need the disambiguator so that the call-graph analysis works for inputs with functions in different scopes
-	// having the same name.
-	else if (_inlineAssembly.annotation().externalReferences.empty())
+	else
 	{
 		yul::EVMDialect const* dialect = dynamic_cast<decltype(dialect)>(&_inlineAssembly.dialect());
 		solAssert(dialect, "");
 
-		yul::Disambiguator disambiguator(*dialect, *analysisInfo, dialect->fixedFunctionNames());
+		// Run the disambiguator.
+		// We need this so that the yul::CallGraphGenerator runs correctly (which is required for setting the
+		// "recursiveFunctions" record in the extraMetadata for inline assembly)
+		set<yul::YulString> reservedIdentifiers = dialect->fixedFunctionNames();
+		for (auto extRef: _inlineAssembly.annotation().externalReferences)
+		{
+			reservedIdentifiers.insert(extRef.first->name);
+		}
+		yul::Disambiguator disambiguator(*dialect, *analysisInfo, reservedIdentifiers);
 		object.code = make_shared<yul::Block>(get<yul::Block>(disambiguator(*code)));
-		object.analysisInfo
-			= make_shared<yul::AsmAnalysisInfo>(yul::AsmAnalyzer::analyzeStrictAssertCorrect(*dialect, object));
+
+		// Run the AsmAnalyzer on `object.code`.
+		// Create a resolver that accepts any identifiers. This is OK since the TypeChecker already did the resolution
+		// and the disambiguator should have left them as it is.
+		yul::ExternalIdentifierAccess::Resolver resolver
+			= [&](yul::Identifier const& _identifier, yul::IdentifierContext _context, bool) -> bool
+		{
+			(void) _identifier;
+			(void) _context;
+			return true;
+		};
+		object.analysisInfo = make_shared<yul::AsmAnalysisInfo>(
+			yul::AsmAnalyzer::analyzeStrictAssertCorrect(*dialect, object, resolver));
+
 		code = object.code.get();
 		_inlineAssembly.annotation().optimizedOperations = object.code;
 		analysisInfo = object.analysisInfo.get();
