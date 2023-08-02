@@ -46,7 +46,6 @@ bool CallGraph::CompareByID::operator()(int64_t _lhs, Node const& _rhs) const
 	return _lhs < get<CallableDeclaration const*>(_rhs)->id();
 }
 
-// TODO? Merge this with CycleDetector?
 /// Populates reachable cycles from m_src into paths;
 class CycleFinder
 {
