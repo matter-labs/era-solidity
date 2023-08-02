@@ -39,11 +39,10 @@ class InlineAsmRecursiveFuncTracker: public ASTConstVisitor
 public:
 	void run() { m_func.accept(*this); }
 
-	// FIXME: Add const to CompilerContext&
 	InlineAsmRecursiveFuncTracker(
 		CallableDeclaration const& _func,
-		CompilerContext& _context,
-		CompilerContext& _runtimeContext,
+		CompilerContext const& _context,
+		CompilerContext const& _runtimeContext,
 		Json::Value& _recFuncs)
 		: m_func(_func), m_context(_context), m_runtimeContext(_runtimeContext), m_recFuncs(_recFuncs)
 	{
@@ -51,8 +50,8 @@ public:
 
 private:
 	CallableDeclaration const& m_func;
-	CompilerContext& m_context;
-	CompilerContext& m_runtimeContext;
+	CompilerContext const& m_context;
+	CompilerContext const& m_runtimeContext;
 	Json::Value& m_recFuncs;
 	void endVisit(InlineAssembly const& _asm)
 	{
@@ -67,8 +66,16 @@ private:
 			recFuncs = yul::CallGraphGenerator::callGraph(_asm.operations()).recursiveFunctions();
 		}
 
-		shared_ptr<yul::CodeTransformContext> yulContext = m_context.inlineAsmContextMap[&_asm];
-		shared_ptr<yul::CodeTransformContext> yulRuntimeContext = m_runtimeContext.inlineAsmContextMap[&_asm];
+		shared_ptr<yul::CodeTransformContext> yulContext, yulRuntimeContext;
+
+		auto findIt = m_context.inlineAsmContextMap.find(&_asm);
+		if (findIt != m_context.inlineAsmContextMap.end())
+			yulContext = findIt->second;
+
+		findIt = m_runtimeContext.inlineAsmContextMap.find(&_asm);
+		if (findIt != m_runtimeContext.inlineAsmContextMap.end())
+			yulRuntimeContext = findIt->second;
+
 		for (auto recFunc: recFuncs)
 		{
 			if (yulContext)
