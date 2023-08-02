@@ -305,6 +305,7 @@ public:
 	///   involved in recursion
 	Json::Value metadata;
 
+	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
 	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> inlineAsmContextMap;
 
 	/// Set of low level utility functions generated in this context that are recursive
