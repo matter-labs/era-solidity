@@ -85,7 +85,6 @@ private:
 					Json::Value record(Json::objectValue);
 					record["name"] = recFunc.str();
 					record["creationTag"] = func.label;
-					// FIXME: Will this work for custom yul types?
 					record["totalParamSize"] = func.ast->parameters.size();
 					record["totalRetParamSize"] = func.ast->returnVariables.size();
 					m_recFuncs.append(record);
