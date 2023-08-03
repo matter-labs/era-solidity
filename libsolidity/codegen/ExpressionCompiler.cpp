@@ -710,9 +710,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				parameterSize += function.selfType()->sizeOnStack();
 			}
 
-			// There can be cases when ExpressionAnnotation::calledDirectly is
-			// false but we can infer that it is a direct call if the target PC
-			// is a literal tag
+			// There can be cases when ExpressionAnnotation::calledDirectly is false but we can infer that it is a
+			// direct call if the target PC is a literal tag
 			bool directCallInferred = false;
 			if (m_context.assembly().items().back().type() == AssemblyItemType::PushTag)
 				directCallInferred = true;
@@ -752,8 +751,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
 			{
 				FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
-				// ContractDefinitionAnnotation::intFuncPtrRefs should only
-				// contain refs to internal functions
+				// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
 				solAssert(intFuncPtrRefType, "");
 				if (!intFuncPtrRefType->hasEqualParameterTypes(function)
 					|| !intFuncPtrRefType->hasEqualReturnTypes(function) || !intFuncPtrRef->isImplemented())
@@ -761,8 +759,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 
 				// The loaded function pointer
 				m_context << Instruction::DUP1;
-				// We don't need to resolve the function here since
-				// FuncPtrTracker already did that.
+				// We don't need to resolve the function here since FuncPtrTracker already did that.
 				m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
 				m_context << Instruction::EQ;
 
@@ -782,8 +779,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			unsigned int stkOffsetAfterJumpI = m_context.stackHeight();
 			for (TagInfo& tagInfo: tagInfos)
 			{
-				// The PC is set to this tag from the jumpi, so we need to
-				// set the stack offset correctly
+				// The PC is set to this tag from the jumpi, so we need to set the stack offset correctly
 				m_context.setStackOffset((int) stkOffsetAfterJumpI);
 
 				m_context << tagInfo.tag;
@@ -791,12 +787,10 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Pop the original function pointer
 				m_context << Instruction::POP;
 
-				// We don't need to resolve the function here since
-				// FuncPtrTracker already did that.
+				// We don't need to resolve the function here since FuncPtrTracker already did that.
 				m_context << m_context.functionEntryLabel(*tagInfo.func).pushTag();
 				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
-				// After the call, the vm's pc should be set to
-				// `returnLabel` since it is pushed to the stack.
+				// After the call, the vm's pc should be set to `returnLabel` since it is pushed to the stack.
 			}
 
 			m_context << returnLabel;
