@@ -104,9 +104,10 @@ private:
 void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 {
 	// Set "recursiveFunctions"
+
 	Json::Value recFuncs(Json::arrayValue);
 
-	// Report recursive low level calls
+	// Report recursions in low level calls
 	auto reportRecursiveLowLevelFuncs = [&](CompilerContext const& _context)
 	{
 		for (auto fn: _context.recursiveLowLevelFuncs)
@@ -125,6 +126,7 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 	reportRecursiveLowLevelFuncs(m_context);
 	reportRecursiveLowLevelFuncs(m_runtimeContext);
 
+	// Get reachable functions from the call-graphs; And get cycles in the call-graphs
 	auto& creationCallGraph = _contract.annotation().creationCallGraph;
 	auto& runtimeCallGraph = _contract.annotation().deployedCallGraph;
 
@@ -144,12 +146,14 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 		}
 	}
 
+	// Report recursions in inline assembly
 	for (auto* fn: reachableFuncs)
 	{
 		InlineAsmRecursiveFuncTracker inAsmTracker{*fn, m_context, m_runtimeContext, recFuncs};
 		inAsmTracker.run();
 	}
 
+	// Report recursions in the solidity source
 	for (auto* fn: reachableCycleFuncs)
 	{
 		evmasm::AssemblyItem const& creationTag = m_context.functionEntryLabelIfExists(*fn);
