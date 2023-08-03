@@ -53,6 +53,36 @@ private:
 	CompilerContext const& m_context;
 	CompilerContext const& m_runtimeContext;
 	Json::Value& m_recFuncs;
+
+	// Appends recursive function to `m_recFuncs` from @a _recFuncs
+	void
+	appendRecFuncs(InlineAssembly const& _asm, CompilerContext const& _context, set<yul::YulString> const& _recFuncs)
+	{
+		auto findIt = _context.inlineAsmContextMap.find(&_asm);
+		if (findIt == m_context.inlineAsmContextMap.end())
+			return;
+		yul::CodeTransformContext const& yulContext = *findIt->second;
+
+		for (auto recFunc: _recFuncs)
+		{
+			auto findIt = yulContext.functionInfoMap.find(recFunc);
+			if (findIt == yulContext.functionInfoMap.end())
+				continue;
+			for (auto& func: findIt->second)
+			{
+				Json::Value record(Json::objectValue);
+				record["name"] = recFunc.str();
+				if (_context.runtimeContext())
+					record["creationTag"] = func.label;
+				else
+					record["runtimeTag"] = func.label;
+				record["totalParamSize"] = func.ast->parameters.size();
+				record["totalRetParamSize"] = func.ast->returnVariables.size();
+				m_recFuncs.append(record);
+			}
+		}
+	}
+
 	void endVisit(InlineAssembly const& _asm)
 	{
 		set<yul::YulString> recFuncs;
@@ -66,44 +96,8 @@ private:
 			recFuncs = yul::CallGraphGenerator::callGraph(_asm.operations()).recursiveFunctions();
 		}
 
-		shared_ptr<yul::CodeTransformContext> yulContext, yulRuntimeContext;
-
-		auto findIt = m_context.inlineAsmContextMap.find(&_asm);
-		if (findIt != m_context.inlineAsmContextMap.end())
-			yulContext = findIt->second;
-
-		findIt = m_runtimeContext.inlineAsmContextMap.find(&_asm);
-		if (findIt != m_runtimeContext.inlineAsmContextMap.end())
-			yulRuntimeContext = findIt->second;
-
-		for (auto recFunc: recFuncs)
-		{
-			if (yulContext)
-			{
-				for (auto& func: yulContext->functionInfoMap[recFunc])
-				{
-					Json::Value record(Json::objectValue);
-					record["name"] = recFunc.str();
-					record["creationTag"] = func.label;
-					record["totalParamSize"] = func.ast->parameters.size();
-					record["totalRetParamSize"] = func.ast->returnVariables.size();
-					m_recFuncs.append(record);
-				}
-			}
-
-			if (yulRuntimeContext)
-			{
-				for (auto& func: yulRuntimeContext->functionInfoMap[recFunc])
-				{
-					Json::Value record(Json::objectValue);
-					record["name"] = recFunc.str();
-					record["runtimeTag"] = func.label;
-					record["totalParamSize"] = func.ast->parameters.size();
-					record["totalRetParamSize"] = func.ast->returnVariables.size();
-					m_recFuncs.append(record);
-				}
-			}
-		}
+		appendRecFuncs(_asm, m_context, recFuncs);
+		appendRecFuncs(_asm, m_runtimeContext, recFuncs);
 	}
 };
 
