@@ -61,9 +61,10 @@ public:
 
 	std::string generatedYulUtilityCode() const { return m_context.generatedYulUtilityCode(); }
 	std::string runtimeGeneratedYulUtilityCode() const { return m_runtimeContext.generatedYulUtilityCode(); }
-	Json::Value metadata() const { return m_runtimeContext.metadata; }
+	Json::Value metadata() const { return *m_extraMetadata; }
 
 private:
+	std::shared_ptr<Json::Value> m_extraMetadata;
 	void addExtraMetadata(ContractDefinition const& _contract);
 	OptimiserSettings const m_optimiserSettings;
 	CompilerContext m_runtimeContext;
