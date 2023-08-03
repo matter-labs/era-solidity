@@ -308,9 +308,20 @@ public:
 	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
 	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> inlineAsmContextMap;
 
+	struct FunctionInfo
+	{
+		std::string const name;
+		unsigned tag;
+		unsigned ins;
+		unsigned outs;
+
+		bool operator<(FunctionInfo const& _other) const
+		{
+			return tie(name, tag, ins, outs) < tie(_other.name, _other.tag, _other.ins, _other.outs);
+		}
+	};
 	/// Set of low level utility functions generated in this context that are recursive
-	std::set<std::tuple<std::string const /*name*/, unsigned /*tag*/, unsigned /*ins*/, unsigned /*outs*/>>
-		recursiveLowLevelFuncs;
+	std::set<struct FunctionInfo> recursiveLowLevelFuncs;
 
 	/**
 	 * Helper class to pop the visited nodes stack when a scope closes

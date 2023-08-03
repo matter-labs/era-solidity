@@ -106,6 +106,25 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 	// Set "recursiveFunctions"
 	Json::Value recFuncs(Json::arrayValue);
 
+	// Report recursive low level calls
+	auto reportRecursiveLowLevelFuncs = [&](CompilerContext const& _context)
+	{
+		for (auto fn: _context.recursiveLowLevelFuncs)
+		{
+			Json::Value func(Json::objectValue);
+			func["name"] = fn.name;
+			if (_context.runtimeContext())
+				func["creationTag"] = fn.tag;
+			else
+				func["runtimeTag"] = fn.tag;
+			func["totalParamSize"] = fn.ins;
+			func["totalRetParamSize"] = fn.outs;
+			recFuncs.append(func);
+		}
+	};
+	reportRecursiveLowLevelFuncs(m_context);
+	reportRecursiveLowLevelFuncs(m_runtimeContext);
+
 	auto& creationCallGraph = _contract.annotation().creationCallGraph;
 	auto& runtimeCallGraph = _contract.annotation().deployedCallGraph;
 
@@ -123,26 +142,6 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 			(*runtimeCallGraph)->getReachableCycleFuncs(fn, reachableCycleFuncs);
 			(*runtimeCallGraph)->getReachableFuncs(fn, reachableFuncs);
 		}
-	}
-
-	// Report recursive low level calls
-	for (auto fn: m_context.recursiveLowLevelFuncs)
-	{
-		Json::Value func(Json::objectValue);
-		func["name"] = get<0>(fn);
-		func["creationTag"] = get<1>(fn);
-		func["totalParamSize"] = get<2>(fn);
-		func["totalRetParamSize"] = get<3>(fn);
-		recFuncs.append(func);
-	}
-	for (auto fn: m_runtimeContext.recursiveLowLevelFuncs)
-	{
-		Json::Value func(Json::objectValue);
-		func["name"] = get<0>(fn);
-		func["runtimeTag"] = get<1>(fn);
-		func["totalParamSize"] = get<2>(fn);
-		func["totalRetParamSize"] = get<3>(fn);
-		recFuncs.append(func);
 	}
 
 	for (auto* fn: reachableFuncs)
