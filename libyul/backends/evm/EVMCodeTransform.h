@@ -46,6 +46,10 @@ struct CodeTransformContext
 	{
 		FunctionDefinition const* ast;
 		AbstractAssembly::LabelID label;
+		bool operator<(FunctionInfo const& _other) const
+		{
+			return std::less<FunctionDefinition const*>{}(ast, _other.ast);
+		}
 	};
 
 	std::map<Scope::Function const*, AbstractAssembly::LabelID> functionEntryIDs;
@@ -67,8 +71,6 @@ struct CodeTransformContext
 
 	std::stack<ForLoopLabels> forLoopStack;
 };
-
-bool operator<(CodeTransformContext::FunctionInfo const& a, CodeTransformContext::FunctionInfo const& b);
 
 class CodeTransform
 {

@@ -810,8 +810,3 @@ void CodeTransform::expectDeposit(int _deposit, int _oldHeight) const
 {
 	yulAssert(m_assembly.stackHeight() == _oldHeight + _deposit, "Invalid stack deposit.");
 }
-
-bool solidity::yul::operator<(CodeTransformContext::FunctionInfo const& a, CodeTransformContext::FunctionInfo const& b)
-{
-	return less<FunctionDefinition const*>{}(a.ast, b.ast);
-}
