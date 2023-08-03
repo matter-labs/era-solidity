@@ -15,9 +15,6 @@
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 // SPDX-License-Identifier: GPL-3.0
-/**
- * The extra metadata reporter
- */
 
 #include <libsolidity/codegen/ExtraMetadata.h>
 

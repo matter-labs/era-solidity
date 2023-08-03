@@ -28,9 +28,8 @@ namespace solidity::frontend
 {
 
 /**
- * This class is used to add all the function pointer references in the contract
- * and its ancestor contracts to the ContractDefinitionAnnotation::intFuncPtrRefs.
- * The visitor is copied from the yul codegen pipeline's usage of
+ * This class is used to add all the function pointer references in the contract and its ancestor contracts to the
+ * ContractDefinitionAnnotation::intFuncPtrRefs.  The visitor is copied from the yul codegen pipeline's usage of
  * IRGeneratorForStatements::assignInternalFunctionIDIfNotCalledDirectly()
  */
 class FuncPtrTracker: private ASTConstVisitor
