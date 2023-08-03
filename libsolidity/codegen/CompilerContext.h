@@ -299,12 +299,6 @@ public:
 	/// Should be avoided except when adding sub-assemblies.
 	std::shared_ptr<evmasm::Assembly> assemblyPtr() const { return m_asm; }
 
-	/// Per contract metadata map
-	/// Current mappings:
-	/// - "recursiveFunctions": array of functions (name, parameters etc.)
-	///   involved in recursion
-	Json::Value metadata;
-
 	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
 	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> inlineAsmContextMap;
 

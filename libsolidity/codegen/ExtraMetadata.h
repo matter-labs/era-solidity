@@ -38,6 +38,8 @@ class ExtraMetadataReporter
 
 public:
 	/// The root JSON value of the metadata
+	/// Current mappings:
+	/// - "recursiveFunctions": array of functions involved in recursion
 	std::shared_ptr<Json::Value> metadata;
 
 	ExtraMetadataReporter(CompilerContext const& _context, CompilerContext const& _runtimeContext)
