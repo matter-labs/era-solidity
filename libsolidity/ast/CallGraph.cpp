@@ -17,7 +17,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include <libsolidity/ast/CallGraph.h>
-#include <libsolutil/Algorithms.h>
 
 using namespace std;
 using namespace solidity::frontend;
