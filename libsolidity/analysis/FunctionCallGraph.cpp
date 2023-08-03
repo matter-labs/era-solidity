@@ -124,7 +124,7 @@ bool FunctionCallGraphBuilder::visit(FunctionCall const& _functionCall)
 	{
 		for (FunctionDefinition const* funcPtrRef: m_contract.annotation().intFuncPtrRefs)
 		{
-			FunctionType const* funcPtrRefType = funcPtrRef->functionType(true);
+			FunctionType const* funcPtrRefType = funcPtrRef->functionType(/*_internal=*/true);
 			solAssert(funcPtrRefType, "");
 			if (!funcPtrRefType->hasEqualParameterTypes(*functionType)
 				|| !funcPtrRefType->hasEqualReturnTypes(*functionType) || !funcPtrRef->isImplemented())
