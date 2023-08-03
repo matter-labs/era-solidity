@@ -154,34 +154,37 @@ void Compiler::addExtraMetadata(ContractDefinition const& _contract)
 	}
 
 	// Report recursions in the solidity source
-	for (auto* fn: reachableCycleFuncs)
+	auto reportRecursiveSolFuncs = [&](CompilerContext const& _context)
 	{
-		evmasm::AssemblyItem const& creationTag = m_context.functionEntryLabelIfExists(*fn);
-		evmasm::AssemblyItem const& runtimeTag = m_runtimeContext.functionEntryLabelIfExists(*fn);
-		if (creationTag == evmasm::AssemblyItem(evmasm::UndefinedItem)
-			&& runtimeTag == evmasm::AssemblyItem(evmasm::UndefinedItem))
-			continue;
+		for (auto* fn: reachableCycleFuncs)
+		{
+			evmasm::AssemblyItem const& tag = _context.functionEntryLabelIfExists(*fn);
+			if (tag == evmasm::AssemblyItem(evmasm::UndefinedItem))
+				continue;
 
-		Json::Value func(Json::objectValue);
-		func["name"] = fn->name();
+			Json::Value func(Json::objectValue);
+			func["name"] = fn->name();
 
-
-		if (creationTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
 			// Assembly::new[Push]Tag() asserts that the tag is 32 bits
-			func["creationTag"] = creationTag.data().convert_to<uint32_t>();
-		if (runtimeTag != evmasm::AssemblyItem(evmasm::UndefinedItem))
-			func["runtimeTag"] = runtimeTag.data().convert_to<uint32_t>();
+			auto tagNum = tag.data().convert_to<uint32_t>();
+			if (_context.runtimeContext())
+				func["creationTag"] = tagNum;
+			else
+				func["runtimeTag"] = tagNum;
 
-		unsigned totalParamSize = 0, totalRetParamSize = 0;
-		for (auto& param: fn->parameters())
-			totalParamSize += param->type()->sizeOnStack();
-		func["totalParamSize"] = totalParamSize;
-		for (auto& param: fn->returnParameters())
-			totalRetParamSize += param->type()->sizeOnStack();
-		func["totalRetParamSize"] = totalRetParamSize;
+			unsigned totalParamSize = 0, totalRetParamSize = 0;
+			for (auto& param: fn->parameters())
+				totalParamSize += param->type()->sizeOnStack();
+			func["totalParamSize"] = totalParamSize;
+			for (auto& param: fn->returnParameters())
+				totalRetParamSize += param->type()->sizeOnStack();
+			func["totalRetParamSize"] = totalRetParamSize;
 
-		recFuncs.append(func);
-	}
+			recFuncs.append(func);
+		}
+	};
+	reportRecursiveSolFuncs(m_context);
+	reportRecursiveSolFuncs(m_runtimeContext);
 
 	if (!recFuncs.empty())
 		m_runtimeContext.metadata["recursiveFunctions"] = recFuncs;

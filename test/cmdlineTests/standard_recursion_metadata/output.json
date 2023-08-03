@@ -54,12 +54,22 @@
                             {
                                 "creationTag": 11,
                                 "name": "f1",
-                                "runtimeTag": 15,
                                 "totalParamSize": 1,
                                 "totalRetParamSize": 1
                             },
                             {
                                 "creationTag": 7,
+                                "name": "f0",
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
+                            },
+                            {
+                                "name": "f1",
+                                "runtimeTag": 15,
+                                "totalParamSize": 1,
+                                "totalRetParamSize": 1
+                            },
+                            {
                                 "name": "f0",
                                 "runtimeTag": 10,
                                 "totalParamSize": 1,
