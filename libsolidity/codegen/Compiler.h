@@ -65,7 +65,6 @@ public:
 
 private:
 	std::shared_ptr<Json::Value> m_extraMetadata;
-	void addExtraMetadata(ContractDefinition const& _contract);
 	OptimiserSettings const m_optimiserSettings;
 	CompilerContext m_runtimeContext;
 	size_t m_runtimeSub = size_t(-1); ///< Identifier of the runtime sub-assembly, if present.
