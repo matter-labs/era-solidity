@@ -1377,7 +1377,7 @@ void CompilerStack::compileContract(
 		solAssert(false, "Optimizer exception during compilation");
 	}
 
-	compiledContract.extraMetadata = compiler->metadata();
+	compiledContract.extraMetadata = compiler->extraMetadata();
 	_otherCompilers[compiledContract.contract] = compiler;
 
 	assemble(_contract, compiler->assemblyPtr(), compiler->runtimeAssemblyPtr());
