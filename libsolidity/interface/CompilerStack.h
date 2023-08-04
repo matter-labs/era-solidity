@@ -406,8 +406,7 @@ private:
 		mutable std::optional<std::string const> runtimeSourceMapping;
 	};
 
-	/// Populates the function pointer references in the AST annotation of each
-	/// contract
+	/// Populates the function pointer references in the AST annotation of each contract
 	void populateFuncPtrRefs();
 
 	void createAndAssignCallGraphs();
