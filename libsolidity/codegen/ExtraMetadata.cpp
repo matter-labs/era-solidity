@@ -27,12 +27,12 @@ using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
 
-class InlineAsmRecursiveFuncTracker: public ASTConstVisitor
+class InlineAsmRecursiveFuncReporter: public ASTConstVisitor
 {
 public:
 	void run() { m_func.accept(*this); }
 
-	InlineAsmRecursiveFuncTracker(
+	InlineAsmRecursiveFuncReporter(
 		CallableDeclaration const& _func,
 		CompilerContext const& _context,
 		CompilerContext const& _runtimeContext,
@@ -47,16 +47,25 @@ private:
 	CompilerContext const& m_runtimeContext;
 	Json::Value& m_recFuncs;
 
-	// Appends recursive function to `m_recFuncs` from @a _recFuncs
-	void
-	appendRecFuncs(InlineAssembly const& _asm, CompilerContext const& _context, set<yul::YulString> const& _recFuncs)
+	// Report recursions in @_asm for the extra metadata
+	void report(InlineAssembly const& _asm, CompilerContext const& _context)
 	{
 		auto findIt = _context.inlineAsmContextMap.find(&_asm);
 		if (findIt == m_context.inlineAsmContextMap.end())
 			return;
 		yul::CodeTransformContext const& yulContext = *findIt->second;
 
-		for (auto recFunc: _recFuncs)
+		set<yul::YulString> recFuncs;
+		if (_asm.annotation().optimizedOperations)
+		{
+			yul::Block const& code = *_asm.annotation().optimizedOperations;
+			recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
+		}
+		else
+		{
+			recFuncs = yul::CallGraphGenerator::callGraph(_asm.operations()).recursiveFunctions();
+		}
+		for (auto recFunc: recFuncs)
 		{
 			auto findIt = yulContext.functionInfoMap.find(recFunc);
 			if (findIt == yulContext.functionInfoMap.end())
@@ -78,27 +87,16 @@ private:
 
 	void endVisit(InlineAssembly const& _asm)
 	{
-		set<yul::YulString> recFuncs;
-		if (_asm.annotation().optimizedOperations)
-		{
-			yul::Block const& code = *_asm.annotation().optimizedOperations;
-			recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
-		}
-		else
-		{
-			recFuncs = yul::CallGraphGenerator::callGraph(_asm.operations()).recursiveFunctions();
-		}
-
-		appendRecFuncs(_asm, m_context, recFuncs);
-		appendRecFuncs(_asm, m_runtimeContext, recFuncs);
+		report(_asm, m_context);
+		report(_asm, m_runtimeContext);
 	}
 };
 
 void ExtraMetadataReporter::run(ContractDefinition const& _contract)
 {
 	metadata = make_shared<Json::Value>();
-	// Set "recursiveFunctions"
 
+	// Set "recursiveFunctions"
 	Json::Value recFuncs(Json::arrayValue);
 
 	// Report recursions in low level calls
@@ -143,8 +141,8 @@ void ExtraMetadataReporter::run(ContractDefinition const& _contract)
 	// Report recursions in inline assembly
 	for (auto* fn: reachableFuncs)
 	{
-		InlineAsmRecursiveFuncTracker inAsmTracker{*fn, m_context, m_runtimeContext, recFuncs};
-		inAsmTracker.run();
+		InlineAsmRecursiveFuncReporter inAsmReporter{*fn, m_context, m_runtimeContext, recFuncs};
+		inAsmReporter.run();
 	}
 
 	// Report recursions in the solidity source
