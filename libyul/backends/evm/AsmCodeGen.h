@@ -22,7 +22,7 @@
 #pragma once
 
 #include <libyul/backends/evm/AbstractAssembly.h>
-#include "libyul/backends/evm/EVMCodeTransform.h"
+#include <libyul/backends/evm/EVMCodeTransform.h>
 #include <libyul/AsmAnalysis.h>
 #include <liblangutil/EVMVersion.h>
 
