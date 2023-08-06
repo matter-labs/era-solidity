@@ -985,7 +985,7 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		// Create a resolver that accepts any identifiers. This is OK since the TypeChecker already did the resolution
 		// and the disambiguator should have left them as it is.
 		yul::ExternalIdentifierAccess::Resolver resolver
-			= [&](yul::Identifier const& _identifier, yul::IdentifierContext _context, bool) -> bool
+			= [](yul::Identifier const& _identifier, yul::IdentifierContext _context, bool) -> bool
 		{
 			(void) _identifier;
 			(void) _context;
