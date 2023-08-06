@@ -967,7 +967,7 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 	}
 	else
 	{
-		yul::EVMDialect const* dialect = dynamic_cast<decltype(dialect)>(&_inlineAssembly.dialect());
+		auto const* dialect = dynamic_cast<yul::EVMDialect const*>(&_inlineAssembly.dialect());
 		solAssert(dialect, "");
 
 		// Run the disambiguator.
