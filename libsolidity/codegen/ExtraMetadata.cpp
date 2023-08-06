@@ -27,12 +27,12 @@ using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
 
-class InlineAsmRecursiveFuncReporter: public ASTConstVisitor
+class InlineAsmRecursiveFuncRecorder: public ASTConstVisitor
 {
 public:
 	void run() { m_func.accept(*this); }
 
-	InlineAsmRecursiveFuncReporter(
+	InlineAsmRecursiveFuncRecorder(
 		CallableDeclaration const& _func,
 		CompilerContext const& _context,
 		CompilerContext const& _runtimeContext,
@@ -47,8 +47,8 @@ private:
 	CompilerContext const& m_runtimeContext;
 	Json::Value& m_recFuncs;
 
-	// Report recursions in @_asm for the extra metadata
-	void report(InlineAssembly const& _asm, CompilerContext const& _context)
+	// Record recursions in @_asm for the extra metadata
+	void record(InlineAssembly const& _asm, CompilerContext const& _context)
 	{
 		auto findRes = _context.findInlineAsmContextMapping(&_asm);
 		if (!findRes)
@@ -87,20 +87,20 @@ private:
 
 	void endVisit(InlineAssembly const& _asm)
 	{
-		report(_asm, m_context);
-		report(_asm, m_runtimeContext);
+		record(_asm, m_context);
+		record(_asm, m_runtimeContext);
 	}
 };
 
-void ExtraMetadataReporter::run(ContractDefinition const& _contract)
+void ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 {
 	metadata = make_shared<Json::Value>();
 
 	// Set "recursiveFunctions"
 	Json::Value recFuncs(Json::arrayValue);
 
-	// Report recursions in low level calls
-	auto reportRecursiveLowLevelFuncs = [&](CompilerContext const& _context)
+	// Record recursions in low level calls
+	auto recordRecursiveLowLevelFuncs = [&](CompilerContext const& _context)
 	{
 		for (auto fn: _context.recursiveLowLevelFuncs())
 		{
@@ -115,8 +115,8 @@ void ExtraMetadataReporter::run(ContractDefinition const& _contract)
 			recFuncs.append(func);
 		}
 	};
-	reportRecursiveLowLevelFuncs(m_context);
-	reportRecursiveLowLevelFuncs(m_runtimeContext);
+	recordRecursiveLowLevelFuncs(m_context);
+	recordRecursiveLowLevelFuncs(m_runtimeContext);
 
 	// Get reachable functions from the call-graphs; And get cycles in the call-graphs
 	auto& creationCallGraph = _contract.annotation().creationCallGraph;
@@ -138,15 +138,15 @@ void ExtraMetadataReporter::run(ContractDefinition const& _contract)
 		}
 	}
 
-	// Report recursions in inline assembly
+	// Record recursions in inline assembly
 	for (auto* fn: reachableFuncs)
 	{
-		InlineAsmRecursiveFuncReporter inAsmReporter{*fn, m_context, m_runtimeContext, recFuncs};
-		inAsmReporter.run();
+		InlineAsmRecursiveFuncRecorder inAsmRecorder{*fn, m_context, m_runtimeContext, recFuncs};
+		inAsmRecorder.run();
 	}
 
-	// Report recursions in the solidity source
-	auto reportRecursiveSolFuncs = [&](CompilerContext const& _context)
+	// Record recursions in the solidity source
+	auto recordRecursiveSolFuncs = [&](CompilerContext const& _context)
 	{
 		for (auto* fn: reachableCycleFuncs)
 		{
@@ -175,8 +175,8 @@ void ExtraMetadataReporter::run(ContractDefinition const& _contract)
 			recFuncs.append(func);
 		}
 	};
-	reportRecursiveSolFuncs(m_context);
-	reportRecursiveSolFuncs(m_runtimeContext);
+	recordRecursiveSolFuncs(m_context);
+	recordRecursiveSolFuncs(m_runtimeContext);
 
 	if (!recFuncs.empty())
 		(*metadata)["recursiveFunctions"] = recFuncs;

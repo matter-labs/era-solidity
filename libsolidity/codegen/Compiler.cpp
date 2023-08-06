@@ -52,9 +52,9 @@ void Compiler::compileContract(
 
 	m_context.optimise(m_optimiserSettings);
 
-	ExtraMetadataReporter extraMetadataReporter{m_context, m_runtimeContext};
-	extraMetadataReporter.run(_contract);
-	m_extraMetadata = extraMetadataReporter.metadata;
+	ExtraMetadataRecorder extraMetadataRecorder{m_context, m_runtimeContext};
+	extraMetadataRecorder.run(_contract);
+	m_extraMetadata = extraMetadataRecorder.metadata;
 
 	solAssert(m_context.appendYulUtilityFunctionsRan(), "appendYulUtilityFunctions() was not called.");
 	solAssert(m_runtimeContext.appendYulUtilityFunctionsRan(), "appendYulUtilityFunctions() was not called.");

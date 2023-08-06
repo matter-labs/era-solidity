@@ -16,7 +16,7 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 /**
- * The extra metadata reporter
+ * The extra metadata recorder
  */
 
 #include <libsolidity/ast/ASTForward.h>
@@ -31,7 +31,7 @@
 namespace solidity::frontend
 {
 
-class ExtraMetadataReporter
+class ExtraMetadataRecorder
 {
 	CompilerContext const& m_context;
 	CompilerContext const& m_runtimeContext;
@@ -42,7 +42,7 @@ public:
 	/// - "recursiveFunctions": array of functions involved in recursion
 	std::shared_ptr<Json::Value> metadata;
 
-	ExtraMetadataReporter(CompilerContext const& _context, CompilerContext const& _runtimeContext)
+	ExtraMetadataRecorder(CompilerContext const& _context, CompilerContext const& _runtimeContext)
 		: m_context(_context), m_runtimeContext(_runtimeContext)
 	{
 	}
