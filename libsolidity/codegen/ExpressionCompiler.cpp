@@ -713,7 +713,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			// There can be cases when ExpressionAnnotation::calledDirectly is false but we can infer that it is a
 			// direct call if the target PC is a literal tag
 			bool directCallInferred = false;
-			if (m_context.assembly().items().back().type() == AssemblyItemType::PushTag)
+			auto const& currAsmItems = m_context.assembly().items();
+			if (!currAsmItems.empty() && currAsmItems.back().type() == AssemblyItemType::PushTag)
 				directCallInferred = true;
 
 			if (m_context.runtimeContext())
