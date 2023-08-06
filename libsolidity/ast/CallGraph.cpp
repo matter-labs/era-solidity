@@ -54,10 +54,8 @@ class CycleFinder
 	set<CallableDeclaration const*> m_processed;
 	vector<CallGraph::Path> m_paths;
 
-public:
-	CycleFinder(CallGraph const& _callGraph, CallableDeclaration const* _src): m_callGraph(_callGraph), m_src(_src) {}
-
-	void find(CallableDeclaration const* _callable, CallGraph::Path& _path)
+	/// Populates `m_paths` with cycles reachable from @a _callable
+	void getCyclesInternal(CallableDeclaration const* _callable, CallGraph::Path& _path)
 	{
 		if (m_processed.count(_callable))
 			return;
@@ -96,7 +94,7 @@ public:
 				continue;
 			}
 
-			find(callee, _path);
+			getCyclesInternal(callee, _path);
 		}
 
 		m_processing.erase(_callable);
@@ -104,10 +102,13 @@ public:
 		_path.pop_back();
 	}
 
-	vector<CallGraph::Path> run()
+public:
+	CycleFinder(CallGraph const& _callGraph, CallableDeclaration const* _src): m_callGraph(_callGraph), m_src(_src) {}
+
+	vector<CallGraph::Path> getCycles()
 	{
 		CallGraph::Path p;
-		find(m_src, p);
+		getCyclesInternal(m_src, p);
 		return m_paths;
 	}
 
@@ -161,7 +162,7 @@ std::set<CallableDeclaration const*> CallGraph::getReachableCycleFuncs(CallableD
 {
 	std::set<CallableDeclaration const*> funcs;
 	CycleFinder cf{*this, _src};
-	vector<CallGraph::Path> paths = cf.run();
+	vector<CallGraph::Path> paths = cf.getCycles();
 
 	for (CallGraph::Path const& path: paths)
 	{
