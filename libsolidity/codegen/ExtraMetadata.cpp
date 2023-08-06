@@ -92,10 +92,8 @@ private:
 	}
 };
 
-void ExtraMetadataRecorder::run(ContractDefinition const& _contract)
+Json::Value ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 {
-	metadata = make_shared<Json::Value>();
-
 	// Set "recursiveFunctions"
 	Json::Value recFuncs(Json::arrayValue);
 
@@ -179,5 +177,6 @@ void ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 	recordRecursiveSolFuncs(m_runtimeContext);
 
 	if (!recFuncs.empty())
-		(*metadata)["recursiveFunctions"] = recFuncs;
+		m_metadata["recursiveFunctions"] = recFuncs;
+	return m_metadata;
 }

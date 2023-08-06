@@ -61,10 +61,10 @@ public:
 
 	std::string generatedYulUtilityCode() const { return m_context.generatedYulUtilityCode(); }
 	std::string runtimeGeneratedYulUtilityCode() const { return m_runtimeContext.generatedYulUtilityCode(); }
-	Json::Value extraMetadata() const { return *m_extraMetadata; }
+	Json::Value extraMetadata() const { return m_extraMetadata; }
 
 private:
-	std::shared_ptr<Json::Value> m_extraMetadata;
+	Json::Value m_extraMetadata;
 	OptimiserSettings const m_optimiserSettings;
 	CompilerContext m_runtimeContext;
 	size_t m_runtimeSub = size_t(-1); ///< Identifier of the runtime sub-assembly, if present.

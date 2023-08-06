@@ -35,20 +35,19 @@ class ExtraMetadataRecorder
 {
 	CompilerContext const& m_context;
 	CompilerContext const& m_runtimeContext;
-
-public:
 	/// The root JSON value of the metadata
 	/// Current mappings:
 	/// - "recursiveFunctions": array of functions involved in recursion
-	std::shared_ptr<Json::Value> metadata;
+	Json::Value m_metadata;
 
+public:
 	ExtraMetadataRecorder(CompilerContext const& _context, CompilerContext const& _runtimeContext)
 		: m_context(_context), m_runtimeContext(_runtimeContext)
 	{
 	}
 
 	/// Stores the extra metadata of @a _contract in `metadata`
-	void run(ContractDefinition const& _contract);
+	Json::Value run(ContractDefinition const& _contract);
 };
 
 }
