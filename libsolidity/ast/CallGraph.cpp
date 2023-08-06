@@ -52,13 +52,10 @@ class CycleFinder
 	CallableDeclaration const* m_src;
 	set<CallableDeclaration const*> m_processing;
 	set<CallableDeclaration const*> m_processed;
+	vector<CallGraph::Path> m_paths;
 
 public:
-	CycleFinder(CallGraph const& _callGraph, CallableDeclaration const* _src, vector<CallGraph::Path>& _paths)
-		: m_callGraph(_callGraph), m_src(_src), paths(_paths)
-	{
-	}
-	vector<CallGraph::Path>& paths;
+	CycleFinder(CallGraph const& _callGraph, CallableDeclaration const* _src): m_callGraph(_callGraph), m_src(_src) {}
 
 	void find(CallableDeclaration const* _callable, CallGraph::Path& _path)
 	{
@@ -95,7 +92,7 @@ public:
 				// Extract the cycle
 				auto cycleStart = std::find(_path.begin(), _path.end(), callee);
 				solAssert(cycleStart != _path.end(), "");
-				paths.emplace_back(cycleStart, _path.end());
+				m_paths.emplace_back(cycleStart, _path.end());
 				continue;
 			}
 
@@ -107,15 +104,16 @@ public:
 		_path.pop_back();
 	}
 
-	void run()
+	vector<CallGraph::Path> run()
 	{
 		CallGraph::Path p;
 		find(m_src, p);
+		return m_paths;
 	}
 
 	void dump(ostream& _out)
 	{
-		for (CallGraph::Path const& path: paths)
+		for (CallGraph::Path const& path: m_paths)
 		{
 			for (CallableDeclaration const* func: path)
 				_out << func->name() << " -> ";
@@ -162,9 +160,8 @@ std::set<CallableDeclaration const*> CallGraph::getReachableFuncs(CallableDeclar
 std::set<CallableDeclaration const*> CallGraph::getReachableCycleFuncs(CallableDeclaration const* _src) const
 {
 	std::set<CallableDeclaration const*> funcs;
-	vector<CallGraph::Path> paths;
-	CycleFinder cf{*this, _src, paths};
-	cf.run();
+	CycleFinder cf{*this, _src};
+	vector<CallGraph::Path> paths = cf.run();
 
 	for (CallGraph::Path const& path: paths)
 	{
