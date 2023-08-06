@@ -305,7 +305,7 @@ void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType cons
 			string name{"$copyArrayToStorage_" + sourceType->identifier() + "_to_" + targetType->identifier()};
 			auto tag = m_context.lowLevelFunctionTagIfExists(name);
 			solAssert(tag != evmasm::AssemblyItem(evmasm::UndefinedItem), "");
-			m_context.recursiveLowLevelFuncs.insert({name, tag.data().convert_to<uint32_t>(), /*ins=*/3, /*outs=*/1});
+			m_context.addRecursiveLowLevelFunc({name, tag.data().convert_to<uint32_t>(), /*ins=*/3, /*outs=*/1});
 		}
 	}
 }
@@ -618,7 +618,7 @@ void ArrayUtils::clearArray(ArrayType const& _typeIn) const
 			string name{"$clearArray_" + _typeIn.identifier()};
 			auto tag = m_context.lowLevelFunctionTagIfExists(name);
 			solAssert(tag != evmasm::AssemblyItem(evmasm::UndefinedItem), "");
-			m_context.recursiveLowLevelFuncs.insert({name, tag.data().convert_to<uint32_t>(), /*ins=*/2, /*outs=*/0});
+			m_context.addRecursiveLowLevelFunc({name, tag.data().convert_to<uint32_t>(), /*ins=*/2, /*outs=*/0});
 		}
 	}
 }

@@ -102,7 +102,7 @@ void ExtraMetadataReporter::run(ContractDefinition const& _contract)
 	// Report recursions in low level calls
 	auto reportRecursiveLowLevelFuncs = [&](CompilerContext const& _context)
 	{
-		for (auto fn: _context.recursiveLowLevelFuncs)
+		for (auto fn: _context.recursiveLowLevelFuncs())
 		{
 			Json::Value func(Json::objectValue);
 			func["name"] = fn.name;

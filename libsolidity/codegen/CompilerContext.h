@@ -326,8 +326,12 @@ public:
 			return tie(name, tag, ins, outs) < tie(_other.name, _other.tag, _other.ins, _other.outs);
 		}
 	};
-	/// Set of low level utility functions generated in this context that are recursive
-	std::set<struct FunctionInfo> recursiveLowLevelFuncs;
+
+	/// Adds @a _func to the set of low level utility functions that are recursive
+	void addRecursiveLowLevelFunc(FunctionInfo _func) { m_recursiveLowLevelFuncs.insert(_func); }
+
+	/// Returns the set of low level utility functions that are recursive
+	std::set<FunctionInfo> const& recursiveLowLevelFuncs() const { return m_recursiveLowLevelFuncs; }
 
 	/**
 	 * Helper class to pop the visited nodes stack when a scope closes
@@ -433,6 +437,8 @@ private:
 	bool m_appendYulUtilityFunctionsRan = false;
 	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
 	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> m_inlineAsmContextMap;
+	/// Set of low level utility functions generated in this context that are recursive
+	std::set<FunctionInfo> m_recursiveLowLevelFuncs;
 };
 
 }

@@ -1210,7 +1210,7 @@ void CompilerUtils::convertType(
 						+ targetType.identifier()};
 					auto tag = m_context.lowLevelFunctionTagIfExists(name);
 					solAssert(tag != evmasm::AssemblyItem(evmasm::UndefinedItem), "");
-					m_context.recursiveLowLevelFuncs.insert(
+					m_context.addRecursiveLowLevelFunc(
 						{name, tag.data().convert_to<uint32_t>(), /*ins=*/1, /*outs=*/1});
 				}
 				else
