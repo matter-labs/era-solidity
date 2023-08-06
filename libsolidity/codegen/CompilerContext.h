@@ -299,8 +299,20 @@ public:
 	/// Should be avoided except when adding sub-assemblies.
 	std::shared_ptr<evmasm::Assembly> assemblyPtr() const { return m_asm; }
 
-	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
-	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> inlineAsmContextMap;
+	/// Adds the @a _asm -> @a _context mapping in the internal inline assembly to context mapping
+	void addInlineAsmContextMapping(InlineAssembly const* _asm, std::shared_ptr<yul::CodeTransformContext> _context)
+	{
+		m_inlineAsmContextMap[_asm] = _context;
+	}
+
+	/// Returns the context for @a _asm; nullptr if not found
+	std::shared_ptr<yul::CodeTransformContext> findInlineAsmContextMapping(InlineAssembly const* _asm) const
+	{
+		auto findIt = m_inlineAsmContextMap.find(_asm);
+		if (findIt == m_inlineAsmContextMap.end())
+			return nullptr;
+		return findIt->second;
+	}
 
 	struct FunctionInfo
 	{
@@ -419,6 +431,8 @@ private:
 	std::queue<std::tuple<std::string, unsigned, unsigned, std::function<void(CompilerContext&)>>> m_lowLevelFunctionGenerationQueue;
 	/// Flag to check that appendYulUtilityFunctions() was called exactly once
 	bool m_appendYulUtilityFunctionsRan = false;
+	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
+	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> m_inlineAsmContextMap;
 };
 
 }

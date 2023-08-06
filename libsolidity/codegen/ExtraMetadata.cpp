@@ -50,10 +50,10 @@ private:
 	// Report recursions in @_asm for the extra metadata
 	void report(InlineAssembly const& _asm, CompilerContext const& _context)
 	{
-		auto findIt = _context.inlineAsmContextMap.find(&_asm);
-		if (findIt == m_context.inlineAsmContextMap.end())
+		auto findRes = _context.findInlineAsmContextMapping(&_asm);
+		if (!findRes)
 			return;
-		yul::CodeTransformContext const& yulContext = *findIt->second;
+		yul::CodeTransformContext const& yulContext = *findRes;
 
 		set<yul::YulString> recFuncs;
 		if (_asm.annotation().optimizedOperations)
