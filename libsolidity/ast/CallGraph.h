@@ -75,10 +75,14 @@ struct CallGraph
 	/// Errors that are used by functions present in the graph.
 	std::set<ErrorDefinition const*, ASTNode::CompareByID> usedErrors;
 
-	/// Populates @a _funcs with with functions reachable from @a _src that belong to a cycle. Note that the cycle can
-	/// be due to indirect calls.
-	void getReachableCycleFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
+	/// Returns functions reachable from @a _src that belong to a cycle. Note that the cycle can be due to indirect
+	/// calls.
+	std::set<CallableDeclaration const*> getReachableCycleFuncs(CallableDeclaration const* _src) const;
 
+	/// Returns functions reachable (including the ones from indirect calls) from @a _src.
+	std::set<CallableDeclaration const*> getReachableFuncs(CallableDeclaration const* _src) const;
+
+private:
 	/// Populates @a _funcs with the functions reachable (including the ones from indirect calls) from @a _src.
 	void getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
 };

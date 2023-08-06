@@ -152,9 +152,16 @@ void CallGraph::getReachableFuncs(CallableDeclaration const* _src, std::set<Call
 	}
 }
 
-void CallGraph::getReachableCycleFuncs(
-	CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
+std::set<CallableDeclaration const*> CallGraph::getReachableFuncs(CallableDeclaration const* _src) const
 {
+	std::set<CallableDeclaration const*> funcs;
+	getReachableFuncs(_src, funcs);
+	return funcs;
+}
+
+std::set<CallableDeclaration const*> CallGraph::getReachableCycleFuncs(CallableDeclaration const* _src) const
+{
+	std::set<CallableDeclaration const*> funcs;
 	vector<CallGraph::Path> paths;
 	CycleFinder cf{*this, _src, paths};
 	cf.run();
@@ -163,7 +170,8 @@ void CallGraph::getReachableCycleFuncs(
 	{
 		for (CallableDeclaration const* func: path)
 		{
-			_funcs.insert(func);
+			funcs.insert(func);
 		}
 	}
+	return funcs;
 }

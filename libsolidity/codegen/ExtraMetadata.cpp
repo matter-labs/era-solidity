@@ -128,13 +128,13 @@ void ExtraMetadataReporter::run(ContractDefinition const& _contract)
 	{
 		if (fn->isConstructor() && creationCallGraph.set())
 		{
-			(*creationCallGraph)->getReachableCycleFuncs(fn, reachableCycleFuncs);
-			(*creationCallGraph)->getReachableFuncs(fn, reachableFuncs);
+			reachableCycleFuncs += (*creationCallGraph)->getReachableCycleFuncs(fn);
+			reachableFuncs += (*creationCallGraph)->getReachableFuncs(fn);
 		}
 		else if (runtimeCallGraph.set())
 		{
-			(*runtimeCallGraph)->getReachableCycleFuncs(fn, reachableCycleFuncs);
-			(*runtimeCallGraph)->getReachableFuncs(fn, reachableFuncs);
+			reachableCycleFuncs += (*runtimeCallGraph)->getReachableCycleFuncs(fn);
+			reachableFuncs += (*runtimeCallGraph)->getReachableFuncs(fn);
 		}
 	}
 
