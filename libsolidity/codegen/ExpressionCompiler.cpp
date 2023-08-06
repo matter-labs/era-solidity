@@ -619,6 +619,68 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	return false;
 }
 
+void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
+{
+	// Are we in the creation context?
+	if (m_context.runtimeContext())
+	{
+		// Extract only the low 32 bits for matching in the tag selector
+		m_context << u256(0xffffffff) << Instruction::AND;
+	}
+
+	struct TagInfo
+	{
+		evmasm::AssemblyItem const tag;
+		FunctionDefinition const* func;
+	};
+	vector<TagInfo> tagInfos;
+
+	for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
+	{
+		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
+		// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
+		solAssert(intFuncPtrRefType, "");
+		if (!intFuncPtrRefType->hasEqualParameterTypes(_funcType) || !intFuncPtrRefType->hasEqualReturnTypes(_funcType)
+			|| !intFuncPtrRef->isImplemented())
+			continue;
+
+		// The loaded function pointer
+		m_context << Instruction::DUP1;
+		// We don't need to resolve the function here since FuncPtrTracker already did that.
+		m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
+		m_context << Instruction::EQ;
+
+		evmasm::AssemblyItem newTag = m_context.newTag();
+		m_context.appendConditionalJumpTo(newTag);
+		tagInfos.push_back({newTag, intFuncPtrRef});
+	}
+
+	if (tagInfos.empty())
+	{
+		// Pop the original function pointer
+		m_context << Instruction::POP;
+	}
+	// If we can't match the entry tag of any of the internal function
+	m_context.appendPanic(PanicCode::InvalidInternalFunction);
+
+	unsigned int stkOffsetAfterJumpI = m_context.stackHeight();
+	for (TagInfo& tagInfo: tagInfos)
+	{
+		// The PC is set to this tag from the jumpi, so we need to set the stack offset correctly
+		m_context.setStackOffset((int) stkOffsetAfterJumpI);
+
+		m_context << tagInfo.tag;
+
+		// Pop the original function pointer
+		m_context << Instruction::POP;
+
+		// We don't need to resolve the function here since FuncPtrTracker already did that.
+		m_context << m_context.functionEntryLabel(*tagInfo.func).pushTag();
+		m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+		// After the call, the vm's pc should be set to the return label since it is pushed to the stack.
+	}
+}
+
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	auto functionCallKind = *_functionCall.annotation().kind;
@@ -724,75 +786,11 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Extract the runtime part.
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
+			// Is this a direct call?
 			if (_functionCall.expression().annotation().calledDirectly || directCallInferred)
-			{
-				// Then don't generate the selector
 				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
-				m_context << returnLabel;
-
-				unsigned returnParametersSize = CompilerUtils::sizeOnStack(function.returnParameterTypes());
-				// Callee adds return parameters, but removes arguments and return label
-				m_context.adjustStackOffset(static_cast<int>(returnParametersSize - parameterSize) - 1);
-				break;
-			}
-
-			if (m_context.runtimeContext())
-			{
-				// Extract only the low 32 bits for matching in the tag selector
-				m_context << u256(0xffffffff) << Instruction::AND;
-			}
-
-			struct TagInfo
-			{
-				evmasm::AssemblyItem const tag;
-				FunctionDefinition const* func;
-			};
-			vector<TagInfo> tagInfos;
-
-			for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
-			{
-				FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
-				// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
-				solAssert(intFuncPtrRefType, "");
-				if (!intFuncPtrRefType->hasEqualParameterTypes(function)
-					|| !intFuncPtrRefType->hasEqualReturnTypes(function) || !intFuncPtrRef->isImplemented())
-					continue;
-
-				// The loaded function pointer
-				m_context << Instruction::DUP1;
-				// We don't need to resolve the function here since FuncPtrTracker already did that.
-				m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
-				m_context << Instruction::EQ;
-
-				AssemblyItem newTag = m_context.newTag();
-				m_context.appendConditionalJumpTo(newTag);
-				tagInfos.push_back({newTag, intFuncPtrRef});
-			}
-
-			if (tagInfos.empty())
-			{
-				// Pop the original function pointer
-				m_context << Instruction::POP;
-			}
-			// If we can't match the entry tag of any of the internal function
-			m_context.appendPanic(PanicCode::InvalidInternalFunction);
-
-			unsigned int stkOffsetAfterJumpI = m_context.stackHeight();
-			for (TagInfo& tagInfo: tagInfos)
-			{
-				// The PC is set to this tag from the jumpi, so we need to set the stack offset correctly
-				m_context.setStackOffset((int) stkOffsetAfterJumpI);
-
-				m_context << tagInfo.tag;
-
-				// Pop the original function pointer
-				m_context << Instruction::POP;
-
-				// We don't need to resolve the function here since FuncPtrTracker already did that.
-				m_context << m_context.functionEntryLabel(*tagInfo.func).pushTag();
-				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
-				// After the call, the vm's pc should be set to `returnLabel` since it is pushed to the stack.
-			}
+			else
+				generateSelector(function);
 
 			m_context << returnLabel;
 
