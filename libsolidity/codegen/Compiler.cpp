@@ -25,6 +25,7 @@
 
 #include <libsolidity/codegen/ContractCompiler.h>
 #include <libsolidity/codegen/ExtraMetadata.h>
+
 #include <libevmasm/Assembly.h>
 
 using namespace std;
