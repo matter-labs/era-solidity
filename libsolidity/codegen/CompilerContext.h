@@ -164,6 +164,8 @@ public:
 		unsigned _outArgs,
 		std::function<void(CompilerContext&)> const& _generator
 	);
+	/// Returns the entry tag of the low-level function with the name @a _name if already generated; Returns
+	/// evmasm::AssemblyItem(evmasm::UndefinedItem) if the entry tag is not generated.
 	evmasm::AssemblyItem lowLevelFunctionTagIfExists(std::string const& _name);
 
 	/// Generates the code for missing low-level functions, i.e. calls the generators passed above.
