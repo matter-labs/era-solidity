@@ -306,12 +306,12 @@ public:
 	}
 
 	/// Returns the context for @a _asm; nullptr if not found
-	std::shared_ptr<yul::CodeTransformContext> findInlineAsmContextMapping(InlineAssembly const* _asm) const
+	yul::CodeTransformContext const* findInlineAsmContextMapping(InlineAssembly const* _asm) const
 	{
 		auto findIt = m_inlineAsmContextMap.find(_asm);
 		if (findIt == m_inlineAsmContextMap.end())
 			return nullptr;
-		return findIt->second;
+		return findIt->second.get();
 	}
 
 	struct FunctionInfo
