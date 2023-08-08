@@ -24,13 +24,11 @@
 
 #pragma once
 
-#include "libsolidity/ast/AST.h"
-#include "libsolidity/ast/Types.h"
-#include <liblangutil/Exceptions.h>
-#include <liblangutil/SourceLocation.h>
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/codegen/LValue.h>
 #include <libsolidity/interface/DebugSettings.h>
+#include <liblangutil/Exceptions.h>
+#include <liblangutil/SourceLocation.h>
 #include <libsolutil/Common.h>
 
 #include <functional>
