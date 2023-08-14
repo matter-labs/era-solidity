@@ -169,6 +169,15 @@ evmasm::AssemblyItem CompilerContext::lowLevelFunctionTag(
 		return it->second;
 }
 
+evmasm::AssemblyItem CompilerContext::lowLevelFunctionTagIfExists(string const& _name)
+{
+	auto it = m_lowLevelFunctions.find(_name);
+	if (it == m_lowLevelFunctions.end())
+		return evmasm::AssemblyItem(evmasm::UndefinedItem);
+	else
+		return it->second;
+}
+
 void CompilerContext::appendMissingLowLevelFunctions()
 {
 	while (!m_lowLevelFunctionGenerationQueue.empty())
@@ -515,11 +524,13 @@ void CompilerContext::appendInlineAssembly(
 		reportError("Failed to analyze inline assembly block.");
 
 	solAssert(errorReporter.errors().empty(), "Failed to analyze inline assembly block.");
+	shared_ptr<yul::CodeTransformContext> yulContext;
 	yul::CodeGenerator::assemble(
 		*parserResult,
 		analysisInfo,
 		*m_asm,
 		m_evmVersion,
+		yulContext,
 		identifierAccess.generateCode,
 		_system,
 		_optimiserSettings.optimizeStackAllocation
