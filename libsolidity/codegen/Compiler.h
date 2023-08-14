@@ -60,12 +60,14 @@ public:
 
 	std::string generatedYulUtilityCode() const { return m_context.generatedYulUtilityCode(); }
 	std::string runtimeGeneratedYulUtilityCode() const { return m_runtimeContext.generatedYulUtilityCode(); }
+	Json::Value extraMetadata() const { return m_extraMetadata; }
 
 	/// @returns the entry label of the given function. Might return an AssemblyItem of type
 	/// UndefinedItem if it does not exist yet.
 	evmasm::AssemblyItem functionEntryLabel(FunctionDefinition const& _function) const;
 
 private:
+	Json::Value m_extraMetadata;
 	OptimiserSettings const m_optimiserSettings;
 	CompilerContext m_runtimeContext;
 	size_t m_runtimeSub = size_t(-1); ///< Identifier of the runtime sub-assembly, if present.
