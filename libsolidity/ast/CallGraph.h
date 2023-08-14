@@ -47,6 +47,7 @@ struct CallGraph
 	};
 
 	using Node = std::variant<CallableDeclaration const*, SpecialNode>;
+	using Path = std::vector<CallableDeclaration const*>;
 
 	struct CompareByID
 	{
@@ -64,8 +65,22 @@ struct CallGraph
 	/// Contracts that may get created with `new` by functions present in the graph.
 	std::set<ContractDefinition const*, ASTNode::CompareByID> createdContracts;
 
+	/// Graph edges for indirect calls
+	std::map<Node, std::set<Node, CompareByID>, CompareByID> indirectEdges;
+
 	/// Events that may get emitted by functions present in the graph.
 	std::set<EventDefinition const*, ASTNode::CompareByID> emittedEvents;
+
+	/// Returns functions reachable from @a _src that belong to a cycle. Note that the cycle can be due to indirect
+	/// calls.
+	std::set<CallableDeclaration const*> getReachableCycleFuncs(CallableDeclaration const* _src) const;
+
+	/// Returns functions reachable (including the ones from indirect calls) from @a _src.
+	std::set<CallableDeclaration const*> getReachableFuncs(CallableDeclaration const* _src) const;
+
+private:
+	/// Populates @a _funcs with the functions reachable (including the ones from indirect calls) from @a _src.
+	void getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
 };
 
 }
