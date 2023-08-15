@@ -41,6 +41,8 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <range/v3/view/enumerate.hpp>
+
 #include <limits>
 
 using namespace std;

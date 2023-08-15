@@ -87,6 +87,17 @@ public:
 	bool operator()(assembly::ForLoop const& _forLoop);
 	bool operator()(assembly::Block const& _block);
 
+	static AsmAnalysisInfo analyzeStrictAssertCorrect(
+		dev::solidity::EVMVersion _evmVersion,
+		Block const& _ast
+	);
+
+	static AsmAnalysisInfo analyzeStrictAssertCorrect(
+		dev::solidity::EVMVersion _evmVersion,
+		Block const &_ast,
+		yul::ExternalIdentifierAccess::Resolver _resolver
+	);
+
 private:
 	/// Visits the statement and expects it to deposit one item onto the stack.
 	bool expectExpression(Expression const& _expr);
