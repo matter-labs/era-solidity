@@ -79,6 +79,18 @@ AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(Dialect const& _dialect,
 	return analysisInfo;
 }
 
+AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(
+	Dialect const& _dialect, Object const& _object, yul::ExternalIdentifierAccess::Resolver _resolver)
+{
+	ErrorList errorList;
+	langutil::ErrorReporter errors(errorList);
+	AsmAnalysisInfo analysisInfo;
+	bool success = yul::AsmAnalyzer(analysisInfo, errors, _dialect, _resolver, _object.dataNames())
+					   .analyze(*_object.code);
+	yulAssert(success && !errors.hasErrors(), "Invalid assembly/yul code.");
+	return analysisInfo;
+}
+
 vector<YulString> AsmAnalyzer::operator()(Literal const& _literal)
 {
 	expectValidType(_literal.type, _literal.location);
