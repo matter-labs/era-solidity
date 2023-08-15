@@ -52,6 +52,37 @@ bool AsmAnalyzer::analyze(Block const& _block)
 	return (*this)(_block);
 }
 
+AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(
+	Block const& _ast
+)
+{
+	ErrorList errorList;
+	ErrorReporter errors(errorList);
+	AsmAnalysisInfo analysisInfo;
+	bool success = AsmAnalyzer(
+		analysisInfo,
+		errors
+	).analyze(_ast);
+	solAssert(success, "Invalid assembly/yul code.");
+	if (!Error::containsOnlyWarnings(errorList))
+		solAssert(false, "Invalid assembly/yul code.");
+	return analysisInfo;
+}
+
+AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(
+	Block const& _ast,
+	julia::ExternalIdentifierAccess::Resolver _resolver)
+{
+	ErrorList errorList;
+	ErrorReporter errors(errorList);
+	AsmAnalysisInfo analysisInfo;
+	bool success = AsmAnalyzer(analysisInfo, errors, AsmFlavour::Loose, _resolver).analyze(_ast);
+	solAssert(success, "Invalid assembly/yul code.");
+	if (!Error::containsOnlyWarnings(errorList))
+		solAssert(false, "Invalid assembly/yul code.");
+	return analysisInfo;
+}
+
 bool AsmAnalyzer::operator()(Label const& _label)
 {
 	solAssert(m_flavour == AsmFlavour::Loose, "");
