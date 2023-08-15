@@ -29,6 +29,8 @@
 
 #include <libsolutil/SetOnce.h>
 
+#include <libyul/AsmData.h>
+
 #include <map>
 #include <memory>
 #include <optional>
@@ -48,6 +50,8 @@ namespace solidity::frontend
 class Type;
 using TypePointer = Type const*;
 using namespace util;
+
+struct CallGraph;
 
 struct ASTAnnotation
 {
@@ -160,6 +164,12 @@ struct ContractDefinitionAnnotation: TypeDeclarationAnnotation, StructurallyDocu
 	/// Mapping containing the nodes that define the arguments for base constructors.
 	/// These can either be inheritance specifiers or modifier invocations.
 	std::map<FunctionDefinition const*, ASTNode const*> baseConstructorArguments;
+	/// A graph with edges representing calls between functions that may happen during contract construction.
+	SetOnce<std::shared_ptr<CallGraph const>> creationCallGraph;
+	/// A graph with edges representing calls between functions that may happen in a deployed contract.
+	SetOnce<std::shared_ptr<CallGraph const>> deployedCallGraph;
+	/// Set of internal functions referenced as function pointers
+	std::set<FunctionDefinition const*> intFuncPtrRefs;
 };
 
 struct CallableDeclarationAnnotation: DeclarationAnnotation
@@ -206,6 +216,8 @@ struct InlineAssemblyAnnotation: StatementAnnotation
 	std::map<yul::Identifier const*, ExternalIdentifierInfo> externalReferences;
 	/// Information generated during analysis phase.
 	std::shared_ptr<yul::AsmAnalysisInfo> analysisInfo;
+	/// The yul block of the InlineAssembly::operations() after optimizations.
+	std::shared_ptr<yul::Block> optimizedOperations;
 };
 
 struct BlockAnnotation: StatementAnnotation, ScopableAnnotation
@@ -259,6 +271,15 @@ struct ExpressionAnnotation: ASTAnnotation
 	/// Types and - if given - names of arguments if the expr. is a function
 	/// that is called, used for overload resolution
 	std::optional<FuncCallArguments> arguments;
+
+	/// True if the expression consists solely of the name of the function and the function is called immediately
+	/// instead of being stored or processed. The name may be qualified with the name of a contract, library
+	/// module, etc., that clarifies the scope. For example: `m.L.f()`, where `m` is a module, `L` is a library
+	/// and `f` is a function is a direct call. This means that the function to be called is known at compilation
+	/// time and it's not necessary to rely on any runtime dispatch mechanism to resolve it.
+	/// Note that even the simplest expressions, like `(f)()`, result in an indirect call even if they consist of
+	/// values known at compilation time.
+	bool calledDirectly = false;
 };
 
 struct IdentifierAnnotation: ExpressionAnnotation
