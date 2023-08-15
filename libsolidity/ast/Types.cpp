@@ -38,6 +38,8 @@
 #include <boost/range/adaptor/sliced.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
+#include <range/v3/view/enumerate.hpp>
+
 #include <limits>
 
 using namespace std;
@@ -2826,6 +2828,18 @@ bool FunctionType::hasEqualArgumentTypes(FunctionType const& _other) const
 		m_parameterTypes.cbegin(),
 		m_parameterTypes.cend(),
 		_other.m_parameterTypes.cbegin(),
+		[](TypePointer const& _a, TypePointer const& _b) -> bool { return *_a == *_b; }
+	);
+}
+
+bool FunctionType::hasEqualReturnTypes(FunctionType const& _other) const
+{
+	if (m_returnParameterTypes.size() != _other.m_returnParameterTypes.size())
+		return false;
+	return equal(
+		m_returnParameterTypes.cbegin(),
+		m_returnParameterTypes.cend(),
+		_other.m_returnParameterTypes.cbegin(),
 		[](TypePointer const& _a, TypePointer const& _b) -> bool { return *_a == *_b; }
 	);
 }
