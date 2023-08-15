@@ -40,6 +40,7 @@
 #include <libsolidity/ast/TypeProvider.h>
 #include <libsolidity/ast/ASTJsonImporter.h>
 #include <libsolidity/codegen/Compiler.h>
+#include <libsolidity/codegen/FuncPtrTracker.h>
 #include <libsolidity/formal/ModelChecker.h>
 #include <libsolidity/interface/ABI.h>
 #include <libsolidity/interface/Natspec.h>
@@ -95,6 +96,21 @@ CompilerStack::~CompilerStack()
 {
 	--g_compilerStackCounts;
 	TypeProvider::reset();
+}
+
+void CompilerStack::populateFuncPtrRefs()
+{
+	for (Source const* source: m_sourceOrder)
+	{
+		if (!source->ast)
+			continue;
+
+		for (ContractDefinition const* contract: ASTNode::filteredNodes<ContractDefinition>(source->ast->nodes()))
+		{
+			FuncPtrTracker tracker{*contract};
+			tracker.run();
+		}
+	}
 }
 
 std::optional<CompilerStack::Remapping> CompilerStack::parseRemapping(string const& _remapping)
@@ -373,6 +389,34 @@ bool CompilerStack::analyze()
 					if (ContractDefinition* contract = dynamic_cast<ContractDefinition*>(node.get()))
 						if (!typeChecker.checkTypeRequirements(*contract))
 							noErrors = false;
+
+		if (noErrors)
+		{
+			populateFuncPtrRefs();
+		}
+
+		if (noErrors)
+		{
+			for (Source const* source: m_sourceOrder)
+				if (source->ast)
+					for (ASTPointer<ASTNode> const& node: source->ast->nodes())
+						if (auto const* contractDefinition = dynamic_cast<ContractDefinition*>(node.get()))
+						{
+							Contract& contractState = m_contracts.at(contractDefinition->fullyQualifiedName());
+
+							contractState.contract->annotation().creationCallGraph = make_unique<CallGraph>(
+								FunctionCallGraphBuilder::buildCreationGraph(
+									*contractDefinition
+								)
+							);
+							contractState.contract->annotation().deployedCallGraph = make_unique<CallGraph>(
+								FunctionCallGraphBuilder::buildDeployedGraph(
+									*contractDefinition,
+									**contractState.contract->annotation().creationCallGraph
+								)
+							);
+						}
+		}
 
 		if (noErrors)
 		{
@@ -820,6 +864,17 @@ string const& CompilerStack::metadata(Contract const& _contract) const
 	return *_contract.metadata;
 }
 
+Json::Value const& CompilerStack::extraMetadata(string const& _contractName) const
+{
+	Contract const& contr = contract(_contractName);
+	if (m_stackState < AnalysisPerformed)
+		BOOST_THROW_EXCEPTION(CompilerError() << errinfo_comment("Analysis was not successful."));
+
+	solAssert(contr.contract, "");
+
+	return contr.extraMetadata;
+}
+
 Scanner const& CompilerStack::scanner(string const& _sourceName) const
 {
 	if (m_stackState < SourcesSet)
@@ -1100,6 +1155,7 @@ void CompilerStack::compileContract(
 			"turning off revert strings, or using libraries."
 		);
 
+	compiledContract.extraMetadata = compiler->extraMetadata();
 	_otherCompilers[compiledContract.contract] = compiler;
 }
 
