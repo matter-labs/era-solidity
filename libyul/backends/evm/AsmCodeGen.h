@@ -21,6 +21,7 @@
 #pragma once
 
 #include <libyul/backends/evm/AbstractAssembly.h>
+#include <libyul/backends/evm/EVMCodeTransform.h>
 #include <libyul/AsmAnalysis.h>
 #include <liblangutil/SourceLocation.h>
 #include <functional>
@@ -82,6 +83,7 @@ public:
 		AsmAnalysisInfo& _analysisInfo,
 		evmasm::Assembly& _assembly,
 		langutil::EVMVersion _evmVersion,
+		std::shared_ptr<CodeTransformContext>& _context, // out
 		ExternalIdentifierAccess const& _identifierAccess = ExternalIdentifierAccess(),
 		bool _useNamedLabelsForFunctions = false,
 		bool _optimizeStackAllocation = false
