@@ -748,7 +748,10 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 			solAssert(functionType->declaration() == *functionDef, "");
 
 			if (identifier)
+			{
+				solAssert(*identifier->annotation().requiredLookup == VirtualLookup::Virtual, "");
 				functionDef = &functionDef->resolveVirtual(m_context.mostDerivedContract());
+			}
 			else
 			{
 				ContractType const* type = dynamic_cast<ContractType const*>(memberAccess->expression().annotation().type);
@@ -756,6 +759,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 				{
 					ContractDefinition const* super = type->contractDefinition().superContract(m_context.mostDerivedContract());
 					solAssert(super, "Super contract not available.");
+					solAssert(*memberAccess->annotation().requiredLookup == VirtualLookup::Super, "");
 					functionDef = &functionDef->resolveVirtual(m_context.mostDerivedContract(), super);
 				}
 			}
@@ -1987,6 +1991,7 @@ void IRGeneratorForStatements::endVisit(Identifier const& _identifier)
 	}
 	else if (FunctionDefinition const* functionDef = dynamic_cast<FunctionDefinition const*>(declaration))
 	{
+		solAssert(*_identifier.annotation().requiredLookup == VirtualLookup::Virtual, "");
 		FunctionDefinition const& resolvedFunctionDef = functionDef->resolveVirtual(m_context.mostDerivedContract());
 		define(_identifier) << to_string(resolvedFunctionDef.id()) << "\n";
 

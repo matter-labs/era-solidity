@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include <libsolidity/analysis/FunctionCallGraph.h>
 #include <libsolidity/interface/ReadFile.h>
 #include <libsolidity/interface/OptimiserSettings.h>
 #include <libsolidity/interface/Version.h>
@@ -319,6 +320,8 @@ public:
 
 	/// @returns the cbor-encoded metadata.
 	bytes cborMetadata(std::string const& _contractName) const;
+	/// @returns the contract metadata containing miscellaneous information
+	Json::Value const& extraMetadata(std::string const& _contractName) const;
 
 	/// @returns a JSON representing the estimated gas usage for contract creation, internal and external functions
 	Json::Value gasEstimates(std::string const& _contractName) const;
@@ -351,6 +354,7 @@ private:
 		std::string yulIROptimized; ///< Optimized experimental Yul IR code.
 		std::string ewasm; ///< Experimental Ewasm text representation
 		evmasm::LinkerObject ewasmObject; ///< Experimental Ewasm code
+		Json::Value extraMetadata; ///< Misc metadata
 		util::LazyInit<std::string const> metadata; ///< The metadata json that will be hashed into the chain.
 		util::LazyInit<Json::Value const> abi;
 		util::LazyInit<Json::Value const> storageLayout;
@@ -359,6 +363,9 @@ private:
 		mutable std::optional<std::string const> sourceMapping;
 		mutable std::optional<std::string const> runtimeSourceMapping;
 	};
+
+	/// Populates the function pointer references in the AST annotation of each contract
+	void populateFuncPtrRefs();
 
 	/// Loads the missing sources from @a _ast (named @a _path) using the callback
 	/// @a m_readFile and stores the absolute paths of all imports in the AST annotations.
