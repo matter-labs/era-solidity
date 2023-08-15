@@ -1403,6 +1403,18 @@ bool TypeChecker::visit(FunctionCall const& _functionCall)
 	_functionCall.expression().accept(*this);
 	TypePointer expressionType = type(_functionCall.expression());
 
+	if (expressionType->category() == Type::Category::Function)
+	{
+		if (auto memberAccess = dynamic_cast<MemberAccess const*>(&_functionCall.expression()))
+		{
+			if (dynamic_cast<FunctionDefinition const*>(memberAccess->annotation().referencedDeclaration))
+				_functionCall.expression().annotation().calledDirectly = true;
+		}
+		else if (auto identifier = dynamic_cast<Identifier const*>(&_functionCall.expression()))
+			if (dynamic_cast<FunctionDefinition const*>(identifier->annotation().referencedDeclaration))
+				_functionCall.expression().annotation().calledDirectly = true;
+	}
+
 	if (auto const* typeType = dynamic_cast<TypeType const*>(expressionType.get()))
 	{
 		if (typeType->actualType()->category() == Type::Category::Struct)
@@ -1731,13 +1743,24 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 	annotation.referencedDeclaration = possibleMembers.front().declaration;
 	annotation.type = possibleMembers.front().type;
 
+	VirtualLookup requiredLookup = VirtualLookup::Static;
+
 	if (auto funType = dynamic_cast<FunctionType const*>(annotation.type.get()))
+	{
 		if (funType->bound() && !exprType->isImplicitlyConvertibleTo(*funType->selfType()))
 			m_errorReporter.typeError(
 				_memberAccess.location(),
 				"Function \"" + memberName + "\" cannot be called on an object of type " +
 				exprType->toString() + " (expected " + funType->selfType()->toString() + ")"
 			);
+
+		if (!funType->bound())
+			if (auto contractType = dynamic_cast<ContractType const*>(exprType.get()))
+				requiredLookup = contractType->isSuper() ? VirtualLookup::Super : VirtualLookup::Virtual;
+
+	}
+
+	annotation.requiredLookup = requiredLookup;
 
 	if (exprType->category() == Type::Category::Struct)
 		annotation.isLValue = true;
@@ -1940,6 +1963,11 @@ bool TypeChecker::visit(Identifier const& _identifier)
 	else if (dynamic_cast<MagicVariableDeclaration const*>(annotation.referencedDeclaration))
 		if (dynamic_cast<FunctionType const*>(annotation.type.get()))
 			annotation.isPure = true;
+
+	annotation.requiredLookup =
+		dynamic_cast<CallableDeclaration const*>(annotation.referencedDeclaration) ?
+		VirtualLookup::Virtual : VirtualLookup::Static;
+
 	return false;
 }
 

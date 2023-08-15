@@ -23,7 +23,11 @@
 #pragma once
 
 #include <libsolidity/ast/ASTForward.h>
+#include <libsolidity/ast/ASTEnums.h>
 #include <libsolidity/ast/ExperimentalFeatures.h>
+#include <libsolidity/inlineasm/AsmData.h>
+
+#include <libdevcore/SetOnce.h>
 
 #include <map>
 #include <memory>
@@ -37,6 +41,8 @@ namespace solidity
 
 class Type;
 using TypePointer = std::shared_ptr<Type const>;
+
+struct CallGraph;
 
 struct ASTAnnotation
 {
@@ -90,6 +96,12 @@ struct ContractDefinitionAnnotation: TypeDeclarationAnnotation, DocumentedAnnota
 	/// List of contracts this contract creates, i.e. which need to be compiled first.
 	/// Also includes all contracts from @a linearizedBaseContracts.
 	std::set<ContractDefinition const*> contractDependencies;
+	/// A graph with edges representing calls between functions that may happen during contract construction.
+	dev::SetOnce<std::shared_ptr<CallGraph const>> creationCallGraph;
+	/// A graph with edges representing calls between functions that may happen in a deployed contract.
+	dev::SetOnce<std::shared_ptr<CallGraph const>> deployedCallGraph;
+	/// Set of internal functions referenced as function pointers
+	std::set<FunctionDefinition const*> intFuncPtrRefs;
 };
 
 struct FunctionDefinitionAnnotation: ASTAnnotation, DocumentedAnnotation
@@ -137,6 +149,8 @@ struct InlineAssemblyAnnotation: StatementAnnotation
 	std::map<assembly::Identifier const*, ExternalIdentifierInfo> externalReferences;
 	/// Information generated during analysis phase.
 	std::shared_ptr<assembly::AsmAnalysisInfo> analysisInfo;
+	/// The yul block of the InlineAssembly::operations() after optimizations.
+	std::shared_ptr<dev::solidity::assembly::Block> optimizedOperations;
 };
 
 struct ReturnAnnotation: StatementAnnotation
@@ -183,12 +197,22 @@ struct ExpressionAnnotation: ASTAnnotation
 	/// Types of arguments if the expression is a function that is called - used
 	/// for overload resolution.
 	std::shared_ptr<std::vector<TypePointer>> argumentTypes;
+	/// True if the expression consists solely of the name of the function and the function is called immediately
+	/// instead of being stored or processed. The name may be qualified with the name of a contract, library
+	/// module, etc., that clarifies the scope. For example: `m.L.f()`, where `m` is a module, `L` is a library
+	/// and `f` is a function is a direct call. This means that the function to be called is known at compilation
+	/// time and it's not necessary to rely on any runtime dispatch mechanism to resolve it.
+	/// Note that even the simplest expressions, like `(f)()`, result in an indirect call even if they consist of
+	/// values known at compilation time.
+	bool calledDirectly = false;
 };
 
 struct IdentifierAnnotation: ExpressionAnnotation
 {
 	/// Referenced declaration, set at latest during overload resolution stage.
 	Declaration const* referencedDeclaration = nullptr;
+	/// What kind of lookup needs to be done (static, virtual, super) find the declaration.
+	dev::SetOnce<VirtualLookup> requiredLookup;
 	/// List of possible declarations it could refer to.
 	std::vector<Declaration const*> overloadedDeclarations;
 };
@@ -197,6 +221,8 @@ struct MemberAccessAnnotation: ExpressionAnnotation
 {
 	/// Referenced declaration, set at latest during overload resolution stage.
 	Declaration const* referencedDeclaration = nullptr;
+	/// What kind of lookup needs to be done (static, virtual, super) find the declaration.
+	dev::SetOnce<VirtualLookup> requiredLookup;
 };
 
 struct BinaryOperationAnnotation: ExpressionAnnotation
