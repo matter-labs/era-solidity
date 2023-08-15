@@ -52,6 +52,42 @@ bool AsmAnalyzer::analyze(Block const& _block)
 	return (*this)(_block);
 }
 
+AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(
+	EVMVersion _evmVersion,
+	Block const& _ast
+)
+{
+	ErrorList errorList;
+	ErrorReporter errors(errorList);
+	AsmAnalysisInfo analysisInfo;
+	bool success = AsmAnalyzer(
+		analysisInfo,
+		errors,
+		_evmVersion,
+		Error::Type::SyntaxError
+	).analyze(_ast);
+	solAssert(success, "Invalid assembly/yul code.");
+	if (!Error::containsOnlyWarnings(errorList))
+		solAssert(false, "Invalid assembly/yul code.");
+	return analysisInfo;
+}
+
+AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(
+	EVMVersion _evmVersion,
+	Block const& _ast,
+	julia::ExternalIdentifierAccess::Resolver _resolver)
+{
+	ErrorList errorList;
+	ErrorReporter errors(errorList);
+	AsmAnalysisInfo analysisInfo;
+	bool success = AsmAnalyzer(analysisInfo, errors, _evmVersion, Error::Type::SyntaxError,
+			AsmFlavour::Loose, _resolver).analyze(_ast);
+	solAssert(success, "Invalid assembly/yul code.");
+	if (!Error::containsOnlyWarnings(errorList))
+		solAssert(false, "Invalid assembly/yul code.");
+	return analysisInfo;
+}
+
 bool AsmAnalyzer::operator()(Label const& _label)
 {
 	checkLooseFeature(
