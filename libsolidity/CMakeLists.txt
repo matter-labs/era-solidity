@@ -16,6 +16,8 @@ set(sources
 	analysis/DeclarationTypeChecker.h
 	analysis/DocStringAnalyser.cpp
 	analysis/DocStringAnalyser.h
+	analysis/FunctionCallGraph.cpp
+	analysis/FunctionCallGraph.h
 	analysis/ImmutableValidator.cpp
 	analysis/ImmutableValidator.h
 	analysis/GlobalContext.cpp
@@ -52,6 +54,8 @@ set(sources
 	ast/ASTJsonImporter.cpp
 	ast/ASTJsonImporter.h
 	ast/ASTVisitor.h
+	ast/CallGraph.cpp
+	ast/CallGraph.h
 	ast/ExperimentalFeatures.h
 	ast/Types.cpp
 	ast/Types.h
@@ -71,6 +75,10 @@ set(sources
 	codegen/ContractCompiler.h
 	codegen/ExpressionCompiler.cpp
 	codegen/ExpressionCompiler.h
+	codegen/ExtraMetadata.cpp
+	codegen/ExtraMetadata.h
+	codegen/FuncPtrTracker.cpp
+	codegen/FuncPtrTracker.h
 	codegen/LValue.cpp
 	codegen/LValue.h
 	codegen/MultiUseYulFunctionCollector.h
