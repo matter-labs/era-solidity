@@ -103,6 +103,15 @@ eth::AssemblyItem CompilerContext::lowLevelFunctionTag(
 		return it->second;
 }
 
+eth::AssemblyItem CompilerContext::lowLevelFunctionTagIfExists(string const& _name)
+{
+	auto it = m_lowLevelFunctions.find(_name);
+	if (it == m_lowLevelFunctions.end())
+		return eth::AssemblyItem(eth::UndefinedItem);
+	else
+		return it->second;
+}
+
 void CompilerContext::appendMissingLowLevelFunctions()
 {
 	while (!m_lowLevelFunctionGenerationQueue.empty())
@@ -191,6 +200,12 @@ FunctionDefinition const* CompilerContext::nextConstructor(ContractDefinition co
 Declaration const* CompilerContext::nextFunctionToCompile() const
 {
 	return m_functionCompilationQueue.nextFunctionToCompile();
+}
+
+ContractDefinition const& CompilerContext::mostDerivedContract() const
+{
+	solAssert(m_mostDerivedContract, "Most derived contract not set.");
+	return *m_mostDerivedContract;
 }
 
 ModifierDefinition const& CompilerContext::functionModifier(string const& _name) const
@@ -346,7 +361,11 @@ void CompilerContext::appendInlineAssembly(
 	}
 
 	solAssert(errorReporter.errors().empty(), "Failed to analyze inline assembly block.");
-	assembly::CodeGenerator::assemble(*parserResult, analysisInfo, *m_asm, identifierAccess, _system);
+	shared_ptr<julia::CodeTransform::Context> yulContext;
+	assembly::CodeGenerator::assemble(*parserResult, analysisInfo, *m_asm, yulContext, identifierAccess, _system);
+
+	// Reset the source location to the one of the node (instead of the CODEGEN source location)
+	updateSourceLocation();
 }
 
 FunctionDefinition const& CompilerContext::resolveVirtualFunction(
