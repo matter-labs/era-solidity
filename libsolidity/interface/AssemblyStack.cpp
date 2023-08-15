@@ -89,7 +89,8 @@ MachineAssemblyObject AssemblyStack::assemble(Machine _machine) const
 	{
 		MachineAssemblyObject object;
 		eth::Assembly assembly;
-		assembly::CodeGenerator::assemble(*m_parserResult, *m_analysisInfo, assembly);
+		shared_ptr<julia::CodeTransform::Context> yulContext;
+		assembly::CodeGenerator::assemble(*m_parserResult, *m_analysisInfo, assembly, yulContext);
 		object.bytecode = make_shared<eth::LinkerObject>(assembly.assemble());
 		object.assembly = assembly.assemblyString();
 		return object;
