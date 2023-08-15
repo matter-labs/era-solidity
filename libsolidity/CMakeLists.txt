@@ -9,15 +9,16 @@ aux_source_directory(parsing SRC_LIST)
 aux_source_directory(inlineasm SRC_LIST)
 # Until we have a clear separation, libjulia has to be included here
 aux_source_directory(../libjulia SRC_LIST)
+aux_source_directory(../libjulia/optimiser SRC_LIST)
 
 set(EXECUTABLE solidity)
 
 file(GLOB HEADERS "*/*.h" "../libjulia/backends/evm/*")
 
 include_directories(BEFORE ..)
+include_directories(${RANGE_V3_INCLUDE_DIR})
 add_library(${EXECUTABLE} ${SRC_LIST} ${HEADERS})
 
 eth_use(${EXECUTABLE} REQUIRED Dev::soldevcore Solidity::solevmasm)
 
 install( TARGETS ${EXECUTABLE} RUNTIME DESTINATION bin ARCHIVE DESTINATION lib LIBRARY DESTINATION lib )
-
