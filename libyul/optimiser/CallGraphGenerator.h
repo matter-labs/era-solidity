@@ -31,8 +31,20 @@
 namespace yul
 {
 
+struct CallGraph
+{
+	std::map<YulString, std::set<YulString>> functionCalls;
+	std::set<YulString> functionsWithLoops;
+	/// @returns the set of functions contained in cycles in the call graph, i.e.
+	/// functions that are part of a (mutual) recursion.
+	/// Note that this does not include functions that merely call recursive functions.
+	std::set<YulString> recursiveFunctions() const;
+};
+
 /**
  * Specific AST walker that generates the call graph.
+ *
+ * It also generates information about which functions contain for loops.
  *
  * The outermost (non-function) context is denoted by the empty string.
  */
@@ -40,16 +52,19 @@ class CallGraphGenerator: public ASTWalker
 {
 public:
 	static std::map<YulString, std::set<YulString>> callGraph(Block const& _ast);
+	static CallGraph callGraph2(Block const& _ast);
 
 	using ASTWalker::operator();
 	void operator()(FunctionalInstruction const& _functionalInstruction) override;
 	void operator()(FunctionCall const& _functionCall) override;
+	void operator()(ForLoop const& _forLoop) override;
 	void operator()(FunctionDefinition const& _functionDefinition) override;
 
 private:
 	CallGraphGenerator();
 
 	std::map<YulString, std::set<YulString>> m_callGraph;
+	CallGraph m_callGraph2;
 	/// The name of the function we are currently visiting during traversal.
 	YulString m_currentFunction;
 };
