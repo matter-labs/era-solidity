@@ -13,6 +13,8 @@ add_library(yul
 	optimiser/ASTCopier.cpp
 	optimiser/ASTWalker.cpp
 	optimiser/BlockFlattener.cpp
+	optimiser/CallGraphGenerator.cpp
+	optimiser/CallGraphGenerator.h
 	optimiser/CommonSubexpressionEliminator.cpp
 	optimiser/DataFlowAnalyzer.cpp
 	optimiser/Disambiguator.cpp
