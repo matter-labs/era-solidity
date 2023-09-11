@@ -1063,12 +1063,21 @@ void CompilerUtils::convertType(
 					_context << Instruction::POP << Instruction::POP;
 				};
 				if (typeOnStack.recursive())
+				{
 					m_context.callLowLevelFunction(
 						"$convertRecursiveArrayStorageToMemory_" + typeOnStack.identifier() + "_to_" + targetType.identifier(),
 						1,
 						1,
 						conversionImpl
 					);
+					string name{
+						"$convertRecursiveArrayStorageToMemory_" + typeOnStack.identifier() + "_to_"
+						+ targetType.identifier()};
+					auto tag = m_context.lowLevelFunctionTagIfExists(name);
+					solAssert(tag != eth::AssemblyItem(eth::UndefinedItem), "");
+					m_context.addRecursiveLowLevelFunc(
+						{name, tag.data().convert_to<uint32_t>(), /*ins=*/1, /*outs=*/1});
+				}
 				else
 					conversionImpl(m_context);
 				break;
