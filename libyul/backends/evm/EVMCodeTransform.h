@@ -54,8 +54,21 @@ struct StackTooDeepError: virtual YulException
 struct CodeTransformContext
 {
 	std::map<Scope::Label const*, AbstractAssembly::LabelID> labelIDs;
+	struct FunctionInfo
+	{
+		std::string const name;
+		unsigned ins;
+		unsigned outs;
+		AbstractAssembly::LabelID label;
+		bool operator<(FunctionInfo const& _other) const
+		{
+			return tie(name, label, ins, outs) < tie(_other.name, _other.label, _other.ins, _other.outs);
+		}
+	};
+
 	std::map<Scope::Function const*, AbstractAssembly::LabelID> functionEntryIDs;
 	std::map<Scope::Variable const*, int> variableStackHeights;
+	std::map<YulString, std::set<FunctionInfo>> functionInfoMap;
 	std::map<Scope::Variable const*, unsigned> variableReferences;
 
 	struct JumpInfo
@@ -185,6 +198,7 @@ public:
 	void operator()(Continue const&);
 	void operator()(Leave const&);
 	void operator()(Block const& _block);
+	std::shared_ptr<Context> context() { return m_context; }
 
 private:
 	AbstractAssembly::LabelID labelFromIdentifier(Identifier const& _identifier);

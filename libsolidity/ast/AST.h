@@ -64,6 +64,24 @@ class ASTConstVisitor;
 class ASTNode: private boost::noncopyable
 {
 public:
+	struct CompareByID
+	{
+		using is_transparent = void;
+
+		bool operator()(ASTNode const* _lhs, ASTNode const* _rhs) const
+		{
+			return _lhs->id() < _rhs->id();
+		}
+		bool operator()(ASTNode const* _lhs, int64_t _rhs) const
+		{
+			return _lhs->id() < _rhs;
+		}
+		bool operator()(int64_t _lhs, ASTNode const* _rhs) const
+		{
+			return _lhs < _rhs->id();
+		}
+	};
+
 	using SourceLocation = langutil::SourceLocation;
 
 	explicit ASTNode(SourceLocation const& _location);
@@ -446,6 +464,10 @@ public:
 
 	bool abstract() const { return m_abstract; }
 
+	ContractDefinition const* superContract(ContractDefinition const& _mostDerivedContract) const;
+	/// @returns the next constructor in the inheritance hierarchy.
+	FunctionDefinition const* nextConstructor(ContractDefinition const& _mostDerivedContract) const;
+
 private:
 	std::vector<ASTPointer<InheritanceSpecifier>> m_baseContracts;
 	std::vector<ASTPointer<ASTNode>> m_subNodes;
@@ -624,6 +646,18 @@ public:
 
 	CallableDeclarationAnnotation& annotation() const override;
 
+	/// Performs virtual or super function/modifier lookup:
+	/// If @a _searchStart is nullptr, performs virtual function lookup, i.e.
+	/// searches the inheritance hierarchy of @a _mostDerivedContract towards the base
+	/// and returns the first function/modifier definition that
+	/// is overwritten by this callable.
+	/// If @a _searchStart is non-null, starts searching only from that contract, but
+	/// still in the hierarchy of @a _mostDerivedContract.
+	virtual CallableDeclaration const& resolveVirtual(
+		ContractDefinition const& _mostDerivedContract,
+		ContractDefinition const* _searchStart = nullptr
+	) const = 0;
+
 protected:
 	ASTPointer<ParameterList> m_parameters;
 	ASTPointer<OverrideSpecifier> m_overrides;
@@ -727,6 +761,12 @@ public:
 			CallableDeclaration::virtualSemantics() ||
 			annotation().contract->isInterface();
 	}
+
+	FunctionDefinition const& resolveVirtual(
+		ContractDefinition const& _mostDerivedContract,
+		ContractDefinition const* _searchStart = nullptr
+	) const override;
+
 private:
 	StateMutability m_stateMutability;
 	Token const m_kind;
@@ -866,6 +906,12 @@ public:
 
 	ModifierDefinitionAnnotation& annotation() const override;
 
+	ModifierDefinition const& resolveVirtual(
+		ContractDefinition const& _mostDerivedContract,
+		ContractDefinition const* _searchStart = nullptr
+	) const override;
+
+
 private:
 	ASTPointer<Block> m_body;
 };
@@ -925,6 +971,14 @@ public:
 	FunctionTypePointer functionType(bool /*_internal*/) const override;
 
 	EventDefinitionAnnotation& annotation() const override;
+
+	CallableDeclaration const& resolveVirtual(
+		ContractDefinition const&,
+		ContractDefinition const*
+	) const override
+	{
+		solAssert(false, "Tried to resolve virtual event.");
+	}
 
 private:
 	bool m_anonymous = false;

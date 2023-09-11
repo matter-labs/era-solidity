@@ -468,6 +468,68 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	return false;
 }
 
+void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
+{
+	// Are we in the creation context?
+	if (m_context.runtimeContext())
+	{
+		// Extract only the low 32 bits for matching in the tag selector
+		m_context << u256(0xffffffff) << Instruction::AND;
+	}
+
+	struct TagInfo
+	{
+		eth::AssemblyItem const tag;
+		FunctionDefinition const* func;
+	};
+	vector<TagInfo> tagInfos;
+
+	for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
+	{
+		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
+		// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
+		solAssert(intFuncPtrRefType, "");
+		if (!intFuncPtrRefType->hasEqualParameterTypes(_funcType) || !intFuncPtrRefType->hasEqualReturnTypes(_funcType)
+			|| !intFuncPtrRef->isImplemented())
+			continue;
+
+		// The loaded function pointer
+		m_context << Instruction::DUP1;
+		// We don't need to resolve the function here since FuncPtrTracker already did that.
+		m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
+		m_context << Instruction::EQ;
+
+		eth::AssemblyItem newTag = m_context.newTag();
+		m_context.appendConditionalJumpTo(newTag);
+		tagInfos.push_back({newTag, intFuncPtrRef});
+	}
+
+	if (tagInfos.empty())
+	{
+		// Pop the original function pointer
+		m_context << Instruction::POP;
+	}
+	// If we can't match the entry tag of any of the internal function
+	m_context.appendInvalid();
+
+	unsigned int stkOffsetAfterJumpI = m_context.stackHeight();
+	for (TagInfo& tagInfo: tagInfos)
+	{
+		// The PC is set to this tag from the jumpi, so we need to set the stack offset correctly
+		m_context.setStackOffset((int) stkOffsetAfterJumpI);
+
+		m_context << tagInfo.tag;
+
+		// Pop the original function pointer
+		m_context << Instruction::POP;
+
+		// We don't need to resolve the function here since FuncPtrTracker already did that.
+		m_context << m_context.functionEntryLabel(*tagInfo.func).pushTag();
+		m_context.appendJump(eth::AssemblyItem::JumpType::IntoFunction);
+		// After the call, the vm's pc should be set to the return label since it is pushed to the stack.
+	}
+}
+
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	CompilerContext::LocationSetter locationSetter(m_context, _functionCall);
@@ -568,6 +630,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 						// Do not directly visit the identifier, because this way, we can avoid
 						// the runtime entry label to be created at the creation time context.
 						CompilerContext::LocationSetter locationSetter2(m_context, *identifier);
+						solAssert(*identifier->annotation().requiredLookup == VirtualLookup::Virtual, "");
 						utils().pushCombinedFunctionEntryLabel(m_context.resolveVirtualFunction(*functionDef), false);
 						shortcutTaken = true;
 					}
@@ -586,6 +649,13 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				parameterSize += function.selfType()->sizeOnStack();
 			}
 
+			// There can be cases when ExpressionAnnotation::calledDirectly is false but we can infer that it is a
+			// direct call if the target PC is a literal tag
+			bool directCallInferred = false;
+			auto const& currAsmItems = m_context.assembly().items();
+			if (!currAsmItems.empty() && currAsmItems.back().type() == AssemblyItemType::PushTag)
+				directCallInferred = true;
+
 			if (m_context.runtimeContext())
 				// We have a runtime context, so we need the creation part.
 				utils().rightShiftNumberOnStack(32);
@@ -593,7 +663,12 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Extract the runtime part.
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
-			m_context.appendJump(eth::AssemblyItem::JumpType::IntoFunction);
+			// Is this a direct call?
+			if (_functionCall.expression().annotation().calledDirectly || directCallInferred)
+				m_context.appendJump(eth::AssemblyItem::JumpType::IntoFunction);
+			else
+				generateSelector(function);
+
 			m_context << returnLabel;
 
 			unsigned returnParametersSize = CompilerUtils::sizeOnStack(function.returnParameterTypes());
@@ -1207,6 +1282,7 @@ bool ExpressionCompiler::visit(MemberAccess const& _memberAccess)
 			if (funType->kind() == FunctionType::Kind::Internal)
 			{
 				FunctionDefinition const& funDef = dynamic_cast<decltype(funDef)>(funType->declaration());
+				solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static, "");
 				utils().pushCombinedFunctionEntryLabel(funDef);
 				utils().moveIntoStack(funType->selfType()->sizeOnStack(), 1);
 			}
@@ -1240,7 +1316,10 @@ bool ExpressionCompiler::visit(MemberAccess const& _memberAccess)
 					// internal library function call, this would push the library address forcing
 					// us to link against it although we actually do not need it.
 					if (auto const* function = dynamic_cast<FunctionDefinition const*>(_memberAccess.annotation().referencedDeclaration))
+					{
+						solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static, "");
 						utils().pushCombinedFunctionEntryLabel(*function);
+					}
 					else
 						solAssert(false, "Function not found in member access");
 					break;
@@ -1345,6 +1424,7 @@ bool ExpressionCompiler::visit(MemberAccess const& _memberAccess)
 		if (type.isSuper())
 		{
 			solAssert(!!_memberAccess.annotation().referencedDeclaration, "Referenced declaration not resolved.");
+			solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Super, "");
 			utils().pushCombinedFunctionEntryLabel(m_context.superFunction(
 				dynamic_cast<FunctionDefinition const&>(*_memberAccess.annotation().referencedDeclaration),
 				type.contractDefinition()
@@ -1779,11 +1859,14 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 		}
 	}
 	else if (FunctionDefinition const* functionDef = dynamic_cast<FunctionDefinition const*>(declaration))
+	{
 		// If the identifier is called right away, this code is executed in visit(FunctionCall...), because
 		// we want to avoid having a reference to the runtime function entry point in the
 		// constructor context, since this would force the compiler to include unreferenced
 		// internal functions in the runtime contex.
+		solAssert(*_identifier.annotation().requiredLookup == VirtualLookup::Virtual, "");
 		utils().pushCombinedFunctionEntryLabel(m_context.resolveVirtualFunction(*functionDef));
+	}
 	else if (auto variable = dynamic_cast<VariableDeclaration const*>(declaration))
 		appendVariable(*variable, static_cast<Expression const&>(_identifier));
 	else if (auto contract = dynamic_cast<ContractDefinition const*>(declaration))
