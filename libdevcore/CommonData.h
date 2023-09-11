@@ -110,6 +110,31 @@ inline std::set<T>& operator-=(std::set<T>& _a, std::set<T> const& _b)
 namespace dev
 {
 
+namespace detail
+{
+struct allow_copy {};
+}
+static constexpr auto allow_copy = detail::allow_copy{};
+
+/// @returns a reference to the entry of @a _map at @a _key, if there is one, and @a _defaultValue otherwise.
+/// Makes sure no copy is involved, unless allow_copy is passed as fourth argument.
+template<
+	typename MapType,
+	typename KeyType,
+	typename ValueType = std::decay_t<decltype(std::declval<MapType>().find(std::declval<KeyType>())->second)> const&,
+	typename AllowCopyType = void*
+>
+decltype(auto) valueOrDefault(MapType&& _map, KeyType const& _key, ValueType&& _defaultValue = {}, AllowCopyType = nullptr)
+{
+	auto it = _map.find(_key);
+	static_assert(
+		std::is_same_v<AllowCopyType, detail::allow_copy> ||
+		std::is_reference_v<decltype((it == _map.end()) ? _defaultValue : it->second)>,
+		"valueOrDefault does not allow copies by default. Pass allow_copy as additional argument, if you want to allow copies."
+	);
+	return (it == _map.end()) ? _defaultValue : it->second;
+}
+
 // String conversion functions, mainly to/from hex/nibble/byte representations.
 
 enum class WhenError
