@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <libyul/backends/evm/AbstractAssembly.h>
+#include <libyul/backends/evm/EVMCodeTransform.h>
 #include <libyul/AsmAnalysis.h>
 #include <libyul/backends/evm/AbstractAssembly.h>
 #include <liblangutil/SourceLocation.h>
@@ -82,6 +84,7 @@ public:
 		yul::Block const& _parsedData,
 		yul::AsmAnalysisInfo& _analysisInfo,
 		dev::eth::Assembly& _assembly,
+		std::shared_ptr<yul::CodeTransformContext>& _context, // out
 		yul::ExternalIdentifierAccess const& _identifierAccess = yul::ExternalIdentifierAccess(),
 		bool _useNamedLabelsForFunctions = false,
 		bool _optimize = false

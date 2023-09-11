@@ -178,20 +178,25 @@ void CodeGenerator::assemble(
 	Block const& _parsedData,
 	AsmAnalysisInfo& _analysisInfo,
 	eth::Assembly& _assembly,
+	shared_ptr<CodeTransformContext>& _context, // out
 	ExternalIdentifierAccess const& _identifierAccess,
 	bool _useNamedLabelsForFunctions,
 	bool _optimize
 )
 {
 	EthAssemblyAdapter assemblyAdapter(_assembly);
-	CodeTransform(
+	shared_ptr<EVMDialect> dialect = EVMDialect::strictAssemblyForEVM();
+
+	CodeTransform transform(
 		assemblyAdapter,
 		_analysisInfo,
 		_parsedData,
-		*EVMDialect::strictAssemblyForEVM(),
+		*dialect,
 		_optimize,
 		false,
 		_identifierAccess,
 		_useNamedLabelsForFunctions
-	)(_parsedData);
+	);
+	transform(_parsedData);
+	_context = transform.context();
 }
