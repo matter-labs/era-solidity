@@ -178,6 +178,7 @@ void CodeGenerator::assemble(
 	Block const& _parsedData,
 	AsmAnalysisInfo& _analysisInfo,
 	eth::Assembly& _assembly,
+	shared_ptr<CodeTransformContext>& _context, // out
 	ExternalIdentifierAccess const& _identifierAccess,
 	bool _useNamedLabelsForFunctions,
 	bool _optimize
@@ -198,6 +199,7 @@ void CodeGenerator::assemble(
 	try
 	{
 		transform(_parsedData);
+		_context = transform.context();
 	}
 	catch (StackTooDeepError const& _e)
 	{
