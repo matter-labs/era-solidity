@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.0.0)
 set(ETH_CMAKE_DIR   "${CMAKE_CURRENT_LIST_DIR}/cmake"   CACHE PATH "The the path to the cmake directory")
 list(APPEND CMAKE_MODULE_PATH ${ETH_CMAKE_DIR})
 
+include(EthToolchains)
+
 # Set cmake_policies
 include(EthPolicy)
 eth_policy()
@@ -22,6 +24,7 @@ include(EthCcache)
 # Let's find our dependencies
 include(EthDependencies)
 include(jsoncpp)
+include(range-v3)
 include_directories(SYSTEM ${JSONCPP_INCLUDE_DIR})
 
 find_package(Threads)
