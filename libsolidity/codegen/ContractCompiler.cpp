@@ -26,6 +26,12 @@
 #include <libsolidity/codegen/ExpressionCompiler.h>
 
 #include <libyul/backends/evm/AsmCodeGen.h>
+#include <libyul/backends/evm/EVMDialect.h>
+#include <libyul/optimiser/Disambiguator.h>
+#include <libyul/optimiser/Suite.h>
+#include <libyul/Object.h>
+#include <libyul/optimiser/ASTCopier.h>
+#include <libyul/YulString.h>
 
 #include <libevmasm/Instruction.h>
 #include <libevmasm/Assembly.h>
@@ -104,6 +110,7 @@ void ContractCompiler::initializeContext(
 	m_context.setExperimentalFeatures(_contract.sourceUnit().annotation().experimentalFeatures);
 	m_context.setOtherCompilers(_otherCompilers);
 	m_context.setInheritanceHierarchy(_contract.annotation().linearizedBaseContracts);
+	m_context.setMostDerivedContract(_contract);
 	CompilerUtils(m_context).initialiseFreeMemoryPointer();
 	registerStateVariables(_contract);
 	m_context.resetVisitedNodes(&_contract);
@@ -606,6 +613,20 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 	identifierAccess.generateCode = [&](yul::Identifier const& _identifier, yul::IdentifierContext _context, yul::AbstractAssembly& _assembly)
 	{
 		auto ref = _inlineAssembly.annotation().externalReferences.find(&_identifier);
+		if (ref == _inlineAssembly.annotation().externalReferences.end())
+		{
+			// The yul AST might be copied from the original (In case we ran the Disambiguator, for instance). So we'll
+			// search for the identifier's name instead.
+			auto& externalReferences = _inlineAssembly.annotation().externalReferences;
+			for (auto extRef = externalReferences.begin(); extRef != externalReferences.end(); ++extRef)
+			{
+				if (extRef->first->name == _identifier.name)
+				{
+					ref = extRef;
+					break;
+				}
+			}
+		}
 		solAssert(ref != _inlineAssembly.annotation().externalReferences.end(), "");
 		Declaration const* decl = ref->second.declaration;
 		solAssert(!!decl, "");
@@ -715,14 +736,58 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		}
 	};
 	solAssert(_inlineAssembly.annotation().analysisInfo, "");
+
+	yul::Block const* code = &_inlineAssembly.operations();
+	yul::AsmAnalysisInfo* analysisInfo = _inlineAssembly.annotation().analysisInfo.get();
+
+	// Only used in the scope below, but required to live outside to keep the
+	// shared_ptr's alive
+	yul::Object object = {};
+
+	{
+		auto dialect = yul::EVMDialect::looseAssemblyForEVM(m_context.evmVersion());
+		solAssert(dialect, "");
+
+		// Run the disambiguator.
+		// We need this so that the yul::CallGraphGenerator runs correctly (which is required for setting the
+		// "recursiveFunctions" record in the extraMetadata for inline assembly)
+		set<yul::YulString> reservedIdentifiers;
+		for (auto extRef: _inlineAssembly.annotation().externalReferences)
+		{
+			reservedIdentifiers.insert(extRef.first->name);
+		}
+		yul::Disambiguator disambiguator(*dialect, *analysisInfo, reservedIdentifiers);
+		object.code = make_shared<yul::Block>(get<yul::Block>(disambiguator(*code)));
+
+		// Run the AsmAnalyzer on `object.code`.
+		// Create a resolver that accepts any identifiers. This is OK since the TypeChecker already did the resolution
+		// and the disambiguator should have left them as it is.
+		yul::ExternalIdentifierAccess::Resolver resolver
+			= [](yul::Identifier const& _identifier, yul::IdentifierContext _context, bool) -> bool
+		{
+			(void) _identifier;
+			(void) _context;
+			return true;
+		};
+		object.analysisInfo = make_shared<yul::AsmAnalysisInfo>(
+			yul::AsmAnalyzer::analyzeStrictAssertCorrect(dialect, *object.code.get(), resolver));
+
+		code = object.code.get();
+		_inlineAssembly.annotation().optimizedOperations = object.code;
+		analysisInfo = object.analysisInfo.get();
+	}
+
+	shared_ptr<yul::CodeTransformContext> yulContext;
 	yul::CodeGenerator::assemble(
-		_inlineAssembly.operations(),
-		*_inlineAssembly.annotation().analysisInfo,
+		*code,
+		*analysisInfo,
 		*m_context.assemblyPtr(),
 		m_context.evmVersion(),
+		yulContext,
 		identifierAccess
 	);
 	m_context.setStackOffset(startStackHeight);
+	m_context.addInlineAsmContextMapping(&_inlineAssembly, yulContext);
 	return false;
 }
 
@@ -1013,6 +1078,7 @@ void ContractCompiler::appendModifierOrFunctionCode()
 			ModifierDefinition const& nonVirtualModifier = dynamic_cast<ModifierDefinition const&>(
 				*modifierInvocation->name()->annotation().referencedDeclaration
 			);
+			solAssert(*modifierInvocation->name()->annotation().requiredLookup == VirtualLookup::Virtual, "");
 			ModifierDefinition const& modifier = m_context.resolveVirtualFunctionModifier(nonVirtualModifier);
 			CompilerContext::LocationSetter locationSetter(m_context, modifier);
 			std::vector<ASTPointer<Expression>> const& modifierArguments =
