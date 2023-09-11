@@ -76,6 +76,8 @@ public:
 	bool analyze(Block const& _block);
 
 	static AsmAnalysisInfo analyzeStrictAssertCorrect(Dialect const& _dialect, Block const& _ast);
+	static AsmAnalysisInfo analyzeStrictAssertCorrect(
+		Dialect const& _dialect, Block const& _ast, yul::ExternalIdentifierAccess::Resolver _resolver);
 
 	bool operator()(Instruction const&);
 	bool operator()(Literal const& _literal);
