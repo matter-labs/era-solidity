@@ -1,0 +1,166 @@
+# Since this will fail on tags < 0.6.0 it's moved to separate workflow, to prevent fail on other platforms for those tags
+name: Build and release binaries manually for Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      ZKEVM_RELEASE_TAG:
+        description: 'ZK EVM Release tag'
+        required: true
+        default: 'v1.1.0-lts'
+      BRANCH_TAG:
+        description: 'Which branch to build'
+        required: true
+        default: '0.8.19'
+
+jobs:
+  build_win:
+    runs-on: windows-2019-github-hosted-16core
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          ref: ${{ inputs.BRANCH_TAG }}
+
+      - name: Prepare environment
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global user.email "runner@github.com"
+          git fetch --all
+          # try to apply win patch
+          git cherry-pick 860226e25dca397b5afd70680530963712aff050 || git cherry-pick --abort
+          # latest llvm for MSVC
+          git clone -q --depth=1 --branch=main https://github.com/zufuliu/llvm-utils.git c:\projects\llvm-utils
+          Invoke-Item "c:\projects\llvm-utils\VS2017\install.bat"
+          # Patch specific versions with include
+          $tag = git rev-parse --abbrev-ref HEAD
+          echo $tag
+          if ($tag -eq "0.8.5" -or $tag -eq "0.8.6" -or $tag -eq "0.8.7") {
+            sed -i  '/^#pragma once/a #include <optional>' ./libevmasm/AssemblyItem.h
+          }
+          if ($tag -eq "0.8.7") {
+            sed -i  '/^#pragma once/a #include <optional>' ./libyul/Object.h
+          }
+          if ($tag -eq "0.5.9" -or $tag -eq "0.5.10" -or $tag -eq "0.5.11") {
+            sed -i  '/^#pragma once/a #include <memory>' ./libyul/backends/wasm/EWasmAST.h
+          }
+
+
+      - name: Install windows Deps
+        run: |
+          if ( -not (Test-Path "deps\boost") ) {
+            New-Item -ItemType Directory -Force -Path "deps"
+
+            Invoke-WebRequest -URI "https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-windows-x86_64.zip" -OutFile cmake.zip
+
+            tar -xf cmake.zip
+            mv cmake-3.27.1-windows-x86_64 "deps\cmake"
+
+            # and serving it a page that requires JavaScript.
+            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.zip" -OutFile boost.zip
+
+            tar -xf boost.zip
+            cd boost_1_77_0
+            .\bootstrap.bat --with-toolset=clang
+            .\b2 -j4 -d0 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" link=static runtime-link=static variant=release threading=multi address-model=64 --prefix="..\deps\boost" --with-filesystem --with-system --with-program_options --with-test --with-regex --with-thread install
+            if ( -not $? ) { throw "Error building boost." }
+            cd ..
+          }
+          $env:path += ";deps\cmake\bin\"
+          # remove warning-as-erro flag in cmake
+          sed -i '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
+          sed -i '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '/add_compile_options(\\/WX)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '/elseif (DEFINED MSVC)/d' ./cmake/EthCompilerSettings.cmake
+          $env:CXXFLAGS="-Wno-narrowing -Qunused-arguments -Wno-everything -DBOOST_REGEX_NO_LIB -D_REGEX_MAX_STACK_COUNT=200000L -DJSON_USE_INT64_DOUBLE_CONVERSION -std=c++17 -stdlib=libc++"
+          mkdir build
+          cd build
+          $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
+          cmake .. -D SOLC_VERSION_ZKEVM="${{ inputs.ZKEVM_RELEASE_TAG }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang15 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake --build . -j 10 --target install --config Release
+
+      - name: Prepare binary file name
+        run: |
+          mkdir -p releases\windows-amd64
+          ls .\build\solc\Release\
+          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}.exe
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: release_windows_amd64
+          path: releases
+
+  prepare-release:
+    runs-on: [self-hosted, default ]
+    needs:
+      - build_win
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: release_windows_amd64
+          path: releases
+
+      - name: Get version from tag
+        id: tag_name
+        run: |
+          echo "current_version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          ls -la releases/
+
+      - name: Get Changelog Entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          validation_level: warn
+          version: ${{ steps.tag_name.outputs.current_version }}
+          path: ./CHANGELOG.md
+
+      - name: Prepare release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: false
+          name: solidity-zkevm ${{ steps.changelog_reader.outputs.version }}
+          body: ${{ steps.changelog_reader.outputs.changes }}
+          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
+          draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+          files: |
+            releases/**/**
+
+      - name: Prepare release for solidity-zkevm-bin
+        uses: softprops/action-gh-release@v1
+        with:
+          repository: matter-labs/solidity-zkevm-bin
+          generate_release_notes: false
+          name: solidity-zkevm ${{ steps.changelog_reader.outputs.version }}
+          body: ${{ steps.changelog_reader.outputs.changes }}
+          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
+          draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+          files: |
+            releases/**/**
+
+      - name: Checkout source
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          submodules: recursive
+          path: public_repo
+          repository: solidity-zkevm-bin
+
+      - name: Emulate pushing to remote branch
+        run: |
+          cp -R releases/* public_repo/
+          cd public_repo
+          git config --global user.email "dev-robot@matterlabs.dev"
+          git config --global user.name "zksync-admin-bot2"
+          git add .
+          git commit -m "Release: ${{ steps.changelog_reader.outputs.version }}"
+          git push
