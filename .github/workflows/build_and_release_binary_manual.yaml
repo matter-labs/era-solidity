@@ -180,7 +180,7 @@ jobs:
 
 
   prepare-release:
-    runs-on: [ self-hosted, ci-runner-compiler ]
+    runs-on: [ self-hosted, default ]
     needs:
       - build_macos_arm64
       - build_macos_amd64
@@ -227,7 +227,19 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
-          name: compiler-solidity ${{ steps.changelog_reader.outputs.version }}
+          name: solidity-zkevm ${{ steps.changelog_reader.outputs.version }}
+          body: ${{ steps.changelog_reader.outputs.changes }}
+          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
+          draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+          files: |
+            releases/**/**
+
+      - name: Prepare release for solidity-zkevm-bin
+        uses: softprops/action-gh-release@v1
+        with:
+          repository: matter-labs/solidity-zkevm-bin
+          generate_release_notes: false
+          name: solidity-zkevm ${{ steps.changelog_reader.outputs.version }}
           body: ${{ steps.changelog_reader.outputs.changes }}
           prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
           draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
