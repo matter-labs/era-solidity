@@ -126,6 +126,7 @@ jobs:
           generate_release_notes: false
           name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
           body_path: ./tmp_changelog.txt
+          tag_name: ${{ inputs.BRANCH_TAG }}
           files: |
             releases/**/**
 
@@ -136,6 +137,7 @@ jobs:
           generate_release_notes: false
           name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
           body_path: ./tmp_changelog.txt
+          tag_name: ${{ inputs.BRANCH_TAG }}
           files: |
             releases/**/**
 
