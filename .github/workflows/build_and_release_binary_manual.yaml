@@ -226,6 +226,7 @@ jobs:
           name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
           body_path: ./tmp_changelog.txt
           tag_name: ${{ inputs.BRANCH_TAG }}
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
 
@@ -237,6 +238,7 @@ jobs:
           name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
           body_path: ./tmp_changelog.txt
           tag_name: ${{ inputs.BRANCH_TAG }}
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
 
