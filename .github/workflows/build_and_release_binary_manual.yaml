@@ -215,7 +215,6 @@ jobs:
         shell: bash
         run: |
           awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > tmp_changelog.txt
-          sleep 99999s
 
 #      - name: Prepare release
 #        uses: softprops/action-gh-release@v1
@@ -255,5 +254,5 @@ jobs:
           git config --global user.email "dev-robot@matterlabs.dev"
           git config --global user.name "zksync-admin-bot2"
           git add .
-          git commit -m "Release: ${{ steps.changelog_reader.outputs.version }}"
+          git commit -m "Release: ${{ inputs.BRANCH_TAG }}"
           git push
