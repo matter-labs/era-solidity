@@ -215,18 +215,16 @@ jobs:
         run: |
           pwd
           ls -la
-          cat ./Changelog.md
           changelog=$(awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md)
-          echo 'CHANGES<<EOF' >> $GITHUB_ENV
-          curl $changelog >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          echo $changelog
+          echo $changelog >> tmp_changelog.txt
 
       - name: Prepare release
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
           name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
-          body: ${{ env.CHANGES }}
+          body_path: ./tmp_changelog.txt
           files: |
             releases/**/**
 
@@ -236,7 +234,7 @@ jobs:
           repository: matter-labs/solidity-zkevm-bin
           generate_release_notes: false
           name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
-          body: ${{ env.CHANGES }}
+          body_path: ./tmp_changelog.txt
           files: |
             releases/**/**
 
