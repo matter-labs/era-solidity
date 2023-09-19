@@ -214,9 +214,10 @@ jobs:
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
         with:
-          validation_level: warn
+          validation_level: error
           version: ${{ inputs.BRANCH_TAG }}
           path: ./Changelog.md
+          validation_depth: 1
 
       - name: Prepare release
         uses: softprops/action-gh-release@v1
