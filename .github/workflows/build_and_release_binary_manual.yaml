@@ -110,7 +110,7 @@ jobs:
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
-          name: release_macosx_amd64
+          name: release_macos_amd64
           path: releases
 
   build_macos_arm64:
@@ -175,7 +175,7 @@ jobs:
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
-          name: release_macosx_arm64
+          name: release_macos_arm64
           path: releases
 
 
@@ -200,7 +200,7 @@ jobs:
       - name: Download artifact macosx_amd64
         uses: actions/download-artifact@v3
         with:
-          name: release_macosx_amd64
+          name: release_macos_amd64
           path: releases
 
       - name: Download artifact linux_amd64
@@ -213,6 +213,7 @@ jobs:
         id: tag_name
         run: |
           echo "current_version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          echo "current_version=${GITHUB_REF#refs/tags/v}"
           ls -la releases/
 
       - name: Get Changelog Entry
