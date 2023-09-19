@@ -210,6 +210,11 @@ jobs:
           name: release_linux_amd64
           path: releases
 
+      - name: Check changelog
+        run: |
+          pwd
+          ls -la
+          cat ./Changelog.md
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
