@@ -212,23 +212,25 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        shell: bash
         run: |
           pwd
           ls -la
           changelog=$(awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md)
           echo $changelog
           echo $changelog >> tmp_changelog.txt
+          sleep 99999s
 
-      - name: Prepare release
-        uses: softprops/action-gh-release@v1
-        with:
-          generate_release_notes: false
-          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
-          body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          files: |
-            releases/**/**
+#      - name: Prepare release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          generate_release_notes: false
+#          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
+#          body_path: ./tmp_changelog.txt
+#          tag_name: ${{ inputs.BRANCH_TAG }}
+#          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+#          files: |
+#            releases/**/**
 
       - name: Prepare release for solidity-zkevm-bin
         uses: softprops/action-gh-release@v1
@@ -248,7 +250,7 @@ jobs:
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           submodules: recursive
           path: public_repo
-          repository: solidity-zkevm-bin
+          repository: matter-labs/solidity-zkevm-bin
 
       - name: Emulate pushing to remote branch
         run: |
