@@ -111,22 +111,21 @@ jobs:
           name: release_windows_amd64
           path: releases
 
-      - name: Get Changelog Entry
-        id: changelog_reader
-        uses: mindsers/changelog-reader-action@v2
-        with:
-          validation_level: warn
-          version: ${{ inputs.BRANCH_TAG }}
-          path: ./Changelog.md
+      - name: Generate changelog
+        id: changelog
+        run: |
+          pwd
+          ls -la
+          cat ./Changelog.md
+          changelog=$(awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md)
+          echo "changes=$changelog" >> "$GITHUB_OUTPUT"
 
       - name: Prepare release
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
-          name: solidity-zkevm ${{ steps.changelog_reader.outputs.version }}
-          body: ${{ steps.changelog_reader.outputs.changes }}
-          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
-          draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
+          body: ${{ steps.changelog.outputs.changes }}
           files: |
             releases/**/**
 
@@ -135,10 +134,8 @@ jobs:
         with:
           repository: matter-labs/solidity-zkevm-bin
           generate_release_notes: false
-          name: solidity-zkevm ${{ steps.changelog_reader.outputs.version }}
-          body: ${{ steps.changelog_reader.outputs.changes }}
-          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
-          draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
+          body: ${{ steps.changelog.outputs.changes }}
           files: |
             releases/**/**
 
