@@ -95,7 +95,7 @@ jobs:
           path: releases
 
   prepare-release:
-    runs-on: [self-hosted, default ]
+    runs-on: [ matterlabs-default-infra-runners ]
     needs:
       - build_win
     steps:

@@ -180,7 +180,7 @@ jobs:
 
 
   prepare-release:
-    runs-on: [ self-hosted, default ]
+    runs-on: [ matterlabs-default-infra-runners ]
     needs:
       - build_macos_arm64
       - build_macos_amd64
@@ -214,11 +214,7 @@ jobs:
         id: changelog
         shell: bash
         run: |
-          pwd
-          ls -la
-          changelog=$(awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md)
-          echo $changelog
-          echo $changelog >> tmp_changelog.txt
+          awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > tmp_changelog.txt
           sleep 99999s
 
 #      - name: Prepare release
