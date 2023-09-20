@@ -220,7 +220,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
-          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
+          name: era-solidity ${{ inputs.BRANCH_TAG }}
           body_path: ./tmp_changelog.txt
           tag_name: ${{ inputs.BRANCH_TAG }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
@@ -232,7 +232,7 @@ jobs:
         with:
           repository: matter-labs/solidity-zkevm-bin
           generate_release_notes: false
-          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
+          name: era-solidity ${{ inputs.BRANCH_TAG }}
           body_path: ./tmp_changelog.txt
           tag_name: ${{ inputs.BRANCH_TAG }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}

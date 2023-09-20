@@ -60,11 +60,11 @@ jobs:
             mv cmake-3.27.1-windows-x86_64 "deps\cmake"
 
             # and serving it a page that requires JavaScript.
-            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.zip" -OutFile boost.zip
+            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.zip" -OutFile boost.zip
 
             tar -xf boost.zip
-            cd boost_1_83_0
-            .\bootstrap.bat --with-toolset=clang
+            cd boost_1_77_0
+            .\bootstrap.bat --with-toolset=clang-windows
             .\b2 -j4 -d0 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" link=static runtime-link=static variant=release threading=multi address-model=64 --prefix="..\deps\boost" --with-filesystem --with-system --with-program_options --with-test --with-regex --with-thread install
             if ( -not $? ) { throw "Error building boost." }
             cd ..
@@ -80,7 +80,7 @@ jobs:
           mkdir build
           cd build
           $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
-          cmake .. -D SOLC_VERSION_ZKEVM="${{ inputs.ZKEVM_RELEASE_TAG }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang15 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake .. -D SOLC_VERSION_ZKEVM="${{ inputs.ZKEVM_RELEASE_TAG }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang16 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
           cmake --build . -j 10 --target install --config Release
 
       - name: Prepare binary file name
@@ -121,7 +121,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
-          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
+          name: era-solidity ${{ inputs.BRANCH_TAG }} Windows
           body_path: ./tmp_changelog.txt
           tag_name: ${{ inputs.BRANCH_TAG }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
@@ -133,7 +133,7 @@ jobs:
         with:
           repository: matter-labs/solidity-zkevm-bin
           generate_release_notes: false
-          name: solidity-zkevm ${{ inputs.BRANCH_TAG }}
+          name: era-solidity ${{ inputs.BRANCH_TAG }} Windows
           body_path: ./tmp_changelog.txt
           tag_name: ${{ inputs.BRANCH_TAG }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
