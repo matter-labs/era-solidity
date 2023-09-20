@@ -64,8 +64,8 @@ jobs:
 
             tar -xf boost.zip
             cd boost_1_77_0
-            .\bootstrap.bat --with-toolset=clang-windows
-            .\b2 -j4 -d0 toolset=clang link=static runtime-link=static variant=release threading=multi address-model=64 --prefix="..\deps\boost" --with-filesystem --with-system --with-program_options --with-test --with-regex --with-thread install
+            .\bootstrap.bat --with-toolset=clang-windows-16
+            .\b2 -j4 -d2 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" link=static runtime-link=static variant=release threading=multi address-model=64 --prefix="..\deps\boost" --with-filesystem --with-system --with-program_options --with-test --with-regex --with-thread install
             if ( -not $? ) { throw "Error building boost." }
             cd ..
           }
@@ -76,7 +76,7 @@ jobs:
           sed -i '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
           sed -i '/add_compile_options(\\/WX)/d' ./cmake/EthCompilerSettings.cmake
           sed -i '/elseif (DEFINED MSVC)/d' ./cmake/EthCompilerSettings.cmake
-          $env:CXXFLAGS="-Wno-narrowing -Qunused-arguments -Wno-everything -DBOOST_REGEX_NO_LIB -D_REGEX_MAX_STACK_COUNT=200000L -DJSON_USE_INT64_DOUBLE_CONVERSION"
+          $env:CXXFLAGS="-Wno-narrowing -Qunused-arguments -Wno-everything -DBOOST_REGEX_NO_LIB -D_REGEX_MAX_STACK_COUNT=200000L -DJSON_USE_INT64_DOUBLE_CONVERSION -std=c++17 -stdlib=libc++"
           mkdir build
           cd build
           $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
