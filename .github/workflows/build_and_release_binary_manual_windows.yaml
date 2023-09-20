@@ -60,7 +60,7 @@ jobs:
             mv cmake-3.27.1-windows-x86_64 "deps\cmake"
 
             # and serving it a page that requires JavaScript.
-            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_83_0.zip" -OutFile boost.zip
+            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.zip" -OutFile boost.zip
 
             tar -xf boost.zip
             cd boost_1_83_0
