@@ -22,6 +22,7 @@
 
 #include <libsolidity/codegen/ContractCompiler.h>
 #include <libsolidity/inlineasm/AsmCodeGen.h>
+#include <libsolidity/inlineasm/AsmAnalysisInfo.h>
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/interface/ErrorReporter.h>
 #include <libsolidity/codegen/ExpressionCompiler.h>
@@ -102,6 +103,7 @@ void ContractCompiler::initializeContext(
 {
 	m_context.setCompiledContracts(_compiledContracts);
 	m_context.setInheritanceHierarchy(_contract.annotation().linearizedBaseContracts);
+	m_context.setMostDerivedContract(_contract);
 	CompilerUtils(m_context).initialiseFreeMemoryPointer();
 	registerStateVariables(_contract);
 	m_context.resetVisitedNodes(&_contract);
@@ -660,13 +662,17 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		}
 	};
 	solAssert(_inlineAssembly.annotation().analysisInfo, "");
+
+	shared_ptr<julia::CodeTransform::Context> yulContext;
 	assembly::CodeGenerator::assemble(
 		_inlineAssembly.operations(),
 		*_inlineAssembly.annotation().analysisInfo,
 		m_context.nonConstAssembly(),
+		yulContext,
 		identifierAccess
 	);
 	m_context.setStackOffset(startStackHeight);
+	m_context.addInlineAsmContextMapping(&_inlineAssembly, yulContext);
 	return false;
 }
 
