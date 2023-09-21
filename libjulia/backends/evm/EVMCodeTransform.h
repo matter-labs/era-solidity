@@ -18,6 +18,8 @@
  * Common code generator for translating Julia / inline assembly to EVM and EVM1.5.
  */
 
+#pragma once
+
 #include <libjulia/backends/evm/EVMAssembly.h>
 
 #include <libsolidity/inlineasm/AsmScope.h>
@@ -63,15 +65,28 @@ public:
 	{
 	}
 
-protected:
 	struct Context
 	{
 		using Scope = solidity::assembly::Scope;
 		std::map<Scope::Label const*, AbstractAssembly::LabelID> labelIDs;
 		std::map<Scope::Function const*, AbstractAssembly::LabelID> functionEntryIDs;
 		std::map<Scope::Variable const*, int> variableStackHeights;
+
+		struct FunctionInfo
+		{
+			std::string const name;
+			unsigned ins;
+			unsigned outs;
+			AbstractAssembly::LabelID label;
+			bool operator<(FunctionInfo const& _other) const
+			{
+				return tie(name, label, ins, outs) < tie(_other.name, _other.label, _other.ins, _other.outs);
+			}
+		};
+		std::map<std::string, std::set<FunctionInfo>> functionInfoMap;
 	};
 
+protected:
 	CodeTransform(
 		julia::AbstractAssembly& _assembly,
 		solidity::assembly::AsmAnalysisInfo& _analysisInfo,
@@ -104,13 +119,14 @@ public:
 	void operator()(solidity::assembly::FunctionDefinition const&);
 	void operator()(solidity::assembly::ForLoop const&);
 	void operator()(solidity::assembly::Block const& _block);
+	std::shared_ptr<Context> context() { return m_context; }
 
 private:
 	AbstractAssembly::LabelID labelFromIdentifier(solidity::assembly::Identifier const& _identifier);
 	/// @returns the label ID corresponding to the given label, allocating a new one if
 	/// necessary.
 	AbstractAssembly::LabelID labelID(solidity::assembly::Scope::Label const& _label);
-	AbstractAssembly::LabelID functionEntryID(solidity::assembly::Scope::Function const& _function);
+	AbstractAssembly::LabelID functionEntryID(std::string const& _name, solidity::assembly::Scope::Function const& _function);
 	/// Generates code for an expression that is supposed to return a single value.
 	void visitExpression(solidity::assembly::Statement const& _expression);
 

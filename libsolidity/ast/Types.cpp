@@ -36,6 +36,8 @@
 #include <boost/range/adaptor/sliced.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
+#include <range/v3/view/enumerate.hpp>
+
 #include <limits>
 
 using namespace std;
@@ -1797,6 +1799,32 @@ set<string> StructType::membersMissingInMemory() const
 	return missing;
 }
 
+bool StructType::recursive() const
+{
+	if (!m_recursive.is_initialized())
+	{
+		set<StructDefinition const*> structsSeen;
+		function<bool(StructType const*)> check = [&](StructType const* t) -> bool
+		{
+			StructDefinition const* str = &t->structDefinition();
+			if (structsSeen.count(str))
+				return true;
+			structsSeen.insert(str);
+			for (ASTPointer<VariableDeclaration> const& variable: str->members())
+			{
+				Type const* memberType = variable->annotation().type.get();
+				while (dynamic_cast<ArrayType const*>(memberType))
+					memberType = dynamic_cast<ArrayType const*>(memberType)->baseType().get();
+				if (StructType const* innerStruct = dynamic_cast<StructType const*>(memberType))
+					if (check(innerStruct))
+						return true;
+			}
+			return false;
+		};
+		m_recursive = check(this);
+	}
+	return *m_recursive;
+}
 TypePointer EnumType::unaryOperatorResult(Token::Value _operator) const
 {
 	return _operator == Token::Delete ? make_shared<TupleType>() : TypePointer();
@@ -2483,6 +2511,18 @@ bool FunctionType::hasEqualArgumentTypes(FunctionType const& _other) const
 		m_parameterTypes.cbegin(),
 		m_parameterTypes.cend(),
 		_other.m_parameterTypes.cbegin(),
+		[](TypePointer const& _a, TypePointer const& _b) -> bool { return *_a == *_b; }
+	);
+}
+
+bool FunctionType::hasEqualReturnTypes(FunctionType const& _other) const
+{
+	if (m_returnParameterTypes.size() != _other.m_returnParameterTypes.size())
+		return false;
+	return equal(
+		m_returnParameterTypes.cbegin(),
+		m_returnParameterTypes.cend(),
+		_other.m_returnParameterTypes.cbegin(),
 		[](TypePointer const& _a, TypePointer const& _b) -> bool { return *_a == *_b; }
 	);
 }
