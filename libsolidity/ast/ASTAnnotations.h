@@ -29,6 +29,8 @@
 
 #include <libsolutil/SetOnce.h>
 
+#include <libyul/AST.h>
+
 #include <map>
 #include <memory>
 #include <optional>
@@ -165,6 +167,8 @@ struct ContractDefinitionAnnotation: TypeDeclarationAnnotation, StructurallyDocu
 	SetOnce<std::shared_ptr<CallGraph const>> creationCallGraph;
 	/// A graph with edges representing calls between functions that may happen in a deployed contract.
 	SetOnce<std::shared_ptr<CallGraph const>> deployedCallGraph;
+	/// Set of internal functions referenced as function pointers
+	std::set<FunctionDefinition const*, ASTCompareByID<FunctionDefinition>> intFuncPtrRefs;
 
 	/// List of contracts whose bytecode is referenced by this contract, e.g. through "new".
 	/// The Value represents the ast node that referenced the contract.
@@ -220,6 +224,8 @@ struct InlineAssemblyAnnotation: StatementAnnotation
 	std::map<yul::Identifier const*, ExternalIdentifierInfo> externalReferences;
 	/// Information generated during analysis phase.
 	std::shared_ptr<yul::AsmAnalysisInfo> analysisInfo;
+	/// The yul block of the InlineAssembly::operations() after optimizations.
+	std::shared_ptr<yul::Block> optimizedOperations;
 };
 
 struct BlockAnnotation: StatementAnnotation, ScopableAnnotation
