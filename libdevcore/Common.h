@@ -66,10 +66,11 @@
 #include <functional>
 #include <string>
 
-using byte = uint8_t;
 
 namespace dev
 {
+
+using byte = uint8_t;
 
 // Binary data types.
 using bytes = std::vector<byte>;
