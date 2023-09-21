@@ -398,7 +398,7 @@ Assembly& Assembly::optimise(bool _enable, EVMVersion _evmVersion, bool _isCreat
 
 Assembly& Assembly::optimise(OptimiserSettings const& _settings)
 {
-	optimiseInternal(_settings, {});
+	(void) _settings;
 	return *this;
 }
 
