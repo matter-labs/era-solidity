@@ -121,10 +121,21 @@ bool FunctionCallGraphBuilder::visit(FunctionCall const& _functionCall)
 	solAssert(functionType, "");
 
 	if (functionType->kind() == FunctionType::Kind::Internal && !_functionCall.expression().annotation().calledDirectly)
+	{
+		for (FunctionDefinition const* funcPtrRef: m_contract.annotation().intFuncPtrRefs)
+		{
+			FunctionType const* funcPtrRefType = funcPtrRef->functionType(/*_internal=*/true);
+			solAssert(funcPtrRefType, "");
+			if (!funcPtrRefType->hasEqualParameterTypes(*functionType)
+				|| !funcPtrRefType->hasEqualReturnTypes(*functionType) || !funcPtrRef->isImplemented())
+				continue;
+			m_graph.indirectEdges[m_currentNode].insert(funcPtrRef);
+		}
 		// If it's not a direct call, we don't really know which function will be called (it may even
 		// change at runtime). All we can do is to add an edge to the dispatch which in turn has
 		// edges to all functions could possibly be called.
 		add(m_currentNode, CallGraph::SpecialNode::InternalDispatch);
+	}
 
 	return true;
 }

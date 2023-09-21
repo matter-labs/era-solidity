@@ -207,6 +207,7 @@ void CodeGenerator::assemble(
 	AsmAnalysisInfo& _analysisInfo,
 	evmasm::Assembly& _assembly,
 	langutil::EVMVersion _evmVersion,
+	shared_ptr<CodeTransformContext>& _context, // out
 	ExternalIdentifierAccess const& _identifierAccess,
 	bool _useNamedLabelsForFunctions,
 	bool _optimizeStackAllocation
@@ -225,6 +226,7 @@ void CodeGenerator::assemble(
 		_useNamedLabelsForFunctions
 	);
 	transform(_parsedData);
+	_context = transform.context();
 	if (!transform.stackErrors().empty())
 		assertThrow(
 			false,

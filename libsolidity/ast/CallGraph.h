@@ -47,6 +47,7 @@ struct CallGraph
 	};
 
 	using Node = std::variant<CallableDeclaration const*, SpecialNode>;
+	using Path = std::vector<CallableDeclaration const*>;
 
 	struct CompareByID
 	{
@@ -61,12 +62,26 @@ struct CallGraph
 	/// any calls.
 	std::map<Node, std::set<Node, CompareByID>, CompareByID> edges;
 
+	/// Graph edges for indirect calls
+	std::map<Node, std::set<Node, CompareByID>, CompareByID> indirectEdges;
+
 	/// Contracts that need to be compiled before this one can be compiled.
 	/// The value is the ast node that created the dependency.
 	std::map<ContractDefinition const*, ASTNode const*, ASTNode::CompareByID> bytecodeDependency;
 
 	/// Events that may get emitted by functions present in the graph.
 	std::set<EventDefinition const*, ASTNode::CompareByID> emittedEvents;
+
+	/// Returns functions reachable from @a _src that belong to a cycle. Note that the cycle can be due to indirect
+	/// calls.
+	std::set<CallableDeclaration const*> getReachableCycleFuncs(CallableDeclaration const* _src) const;
+
+	/// Returns functions reachable (including the ones from indirect calls) from @a _src.
+	std::set<CallableDeclaration const*> getReachableFuncs(CallableDeclaration const* _src) const;
+
+private:
+	/// Populates @a _funcs with the functions reachable (including the ones from indirect calls) from @a _src.
+	void getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;
 };
 
 }
