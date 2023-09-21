@@ -32,7 +32,6 @@
 
 #include <json/json.h>
 
-#include <optional>
 #include <iostream>
 #include <sstream>
 #include <memory>
