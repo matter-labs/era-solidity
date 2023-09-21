@@ -2280,6 +2280,15 @@ bool TypeChecker::visit(FunctionCall const& _functionCall)
 		functionType = dynamic_cast<FunctionType const*>(expressionType);
 		funcCallAnno.kind = FunctionCallKind::FunctionCall;
 
+		if (auto memberAccess = dynamic_cast<MemberAccess const*>(&_functionCall.expression()))
+		{
+			if (dynamic_cast<FunctionDefinition const*>(memberAccess->annotation().referencedDeclaration))
+				_functionCall.expression().annotation().calledDirectly = true;
+		}
+		else if (auto identifier = dynamic_cast<Identifier const*>(&_functionCall.expression()))
+			if (dynamic_cast<FunctionDefinition const*>(identifier->annotation().referencedDeclaration))
+				_functionCall.expression().annotation().calledDirectly = true;
+
 		// Purity for function calls also depends upon the callee and its FunctionType
 		funcCallAnno.isPure =
 			argumentsArePure &&
@@ -2588,6 +2597,8 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 	TypePointer exprType = type(_memberAccess.expression());
 	ASTString const& memberName = _memberAccess.memberName();
 
+	auto& annotation = _memberAccess.annotation();
+
 	// Retrieve the types of the arguments if this is used to call a function.
 	auto const& arguments = _memberAccess.annotation().arguments;
 	MemberList::MemberMap possibleMembers = exprType->members(m_currentContract).membersByName(memberName);
@@ -2605,7 +2616,7 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 				++it;
 	}
 
-	auto& annotation = _memberAccess.annotation();
+	annotation.isConstant = false;
 
 	if (possibleMembers.empty())
 	{
@@ -2703,6 +2714,8 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 	annotation.referencedDeclaration = possibleMembers.front().declaration;
 	annotation.type = possibleMembers.front().type;
 
+	VirtualLookup requiredLookup = VirtualLookup::Static;
+
 	if (auto funType = dynamic_cast<FunctionType const*>(annotation.type))
 	{
 		solAssert(
@@ -2721,7 +2734,14 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 				_memberAccess.location(),
 				"Using \"." + memberName + "(...)\" is deprecated. Use \"{" + memberName + ": ...}\" instead."
 			);
+
+		if (!funType->bound())
+			if (auto contractType = dynamic_cast<ContractType const*>(exprType))
+				requiredLookup = contractType->isSuper() ? VirtualLookup::Super : VirtualLookup::Virtual;
+
 	}
+
+	annotation.requiredLookup = requiredLookup;
 
 	if (auto const* structType = dynamic_cast<StructType const*>(exprType))
 		annotation.isLValue = !structType->dataStoredIn(DataLocation::CallData);
@@ -3095,6 +3115,10 @@ bool TypeChecker::visit(Identifier const& _identifier)
 		annotation.isPure = true;
 	else if (dynamic_cast<ModuleType const*>(annotation.type))
 		annotation.isPure = true;
+
+	annotation.requiredLookup =
+		dynamic_cast<CallableDeclaration const*>(annotation.referencedDeclaration) ?
+		VirtualLookup::Virtual : VirtualLookup::Static;
 
 	// Check for deprecated function names.
 	// The check is done here for the case without an actual function call.
