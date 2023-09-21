@@ -1847,6 +1847,7 @@ void IRGeneratorForStatements::endVisit(Identifier const& _identifier)
 	}
 	else if (FunctionDefinition const* functionDef = dynamic_cast<FunctionDefinition const*>(declaration))
 	{
+		solAssert(*_identifier.annotation().requiredLookup == VirtualLookup::Virtual, "");
 		FunctionDefinition const& resolvedFunctionDef = functionDef->resolveVirtual(m_context.mostDerivedContract());
 		define(_identifier) << to_string(resolvedFunctionDef.id()) << "\n";
 
