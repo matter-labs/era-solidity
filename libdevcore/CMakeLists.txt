@@ -2,7 +2,7 @@ file(GLOB sources "*.cpp")
 file(GLOB headers "*.h")
 
 add_library(devcore ${sources} ${headers})
-target_link_libraries(devcore PRIVATE ${JSONCPP_LIBRARY} ${Boost_FILESYSTEM_LIBRARIES} ${Boost_REGEX_LIBRARIES} ${Boost_SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(devcore PRIVATE ${JSONCPP_LIBRARY} ${Boost_FILESYSTEM_LIBRARIES} ${Boost_REGEX_LIBRARIES} ${Boost_SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} range-v3)
 target_include_directories(devcore SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories(devcore PUBLIC "${CMAKE_SOURCE_DIR}")
 target_include_directories(devcore PUBLIC "${JSONCPP_INCLUDE_DIR}")

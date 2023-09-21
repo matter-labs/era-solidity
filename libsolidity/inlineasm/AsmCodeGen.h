@@ -23,6 +23,7 @@
 #pragma once
 
 #include <libsolidity/inlineasm/AsmAnalysis.h>
+#include <libjulia/backends/evm/EVMCodeTransform.h>
 
 #include <functional>
 
@@ -46,6 +47,7 @@ public:
 		Block const& _parsedData,
 		AsmAnalysisInfo& _analysisInfo,
 		eth::Assembly& _assembly,
+		std::shared_ptr<julia::CodeTransform::Context>& _context, // out
 		julia::ExternalIdentifierAccess const& _identifierAccess = julia::ExternalIdentifierAccess(),
 		bool _useNamedLabelsForFunctions = false
 	);
