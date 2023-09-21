@@ -145,17 +145,20 @@ void assembly::CodeGenerator::assemble(
 	Block const& _parsedData,
 	AsmAnalysisInfo& _analysisInfo,
 	eth::Assembly& _assembly,
+	shared_ptr<yul::CodeTransform::Context>& _context, // out
 	yul::ExternalIdentifierAccess const& _identifierAccess,
 	bool _useNamedLabelsForFunctions
 )
 {
 	EthAssemblyAdapter assemblyAdapter(_assembly);
-	yul::CodeTransform(
+	yul::CodeTransform transform(
 		assemblyAdapter,
 		_analysisInfo,
 		false,
 		false,
 		_identifierAccess,
 		_useNamedLabelsForFunctions
-	)(_parsedData);
+	);
+	transform(_parsedData);
+	_context = transform.context();
 }
