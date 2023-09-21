@@ -78,6 +78,13 @@ public:
 		Block const& _ast
 	);
 
+	static AsmAnalysisInfo analyzeStrictAssertCorrect(
+		std::shared_ptr<Dialect> _dialect,
+		dev::solidity::EVMVersion _evmVersion,
+		Block const &_ast,
+		yul::ExternalIdentifierAccess::Resolver _resolver
+	);
+
 	bool operator()(Instruction const&);
 	bool operator()(Literal const& _literal);
 	bool operator()(Identifier const&);
