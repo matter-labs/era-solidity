@@ -38,6 +38,7 @@
 
 #include <libyul/AsmAnalysisInfo.h>
 #include <libyul/backends/evm/EVMDialect.h>
+#include <libyul/backends/evm/EVMCodeTransform.h>
 
 #include <functional>
 #include <ostream>
@@ -158,6 +159,10 @@ public:
 		unsigned _outArgs,
 		std::function<void(CompilerContext&)> const& _generator
 	);
+	/// Returns the entry tag of the low-level function with the name @a _name if already generated; Returns
+	/// evmasm::AssemblyItem(evmasm::UndefinedItem) if the entry tag is not generated.
+	evmasm::AssemblyItem lowLevelFunctionTagIfExists(std::string const& _name);
+
 	/// Generates the code for missing low-level functions, i.e. calls the generators passed above.
 	void appendMissingLowLevelFunctions();
 	ABIFunctions& abiFunctions() { return m_abiFunctions; }
@@ -297,6 +302,40 @@ public:
 	evmasm::LinkerObject const& assembledObject() const;
 	evmasm::LinkerObject const& assembledRuntimeObject(size_t _subIndex) const { return m_asm->sub(_subIndex).assemble(); }
 
+	/// Adds the @a _asm -> @a _context mapping in the internal inline assembly to context mapping
+	void addInlineAsmContextMapping(InlineAssembly const* _asm, std::shared_ptr<yul::CodeTransformContext> _context)
+	{
+		m_inlineAsmContextMap[_asm] = _context;
+	}
+
+	/// Returns the context for @a _asm; nullptr if not found
+	yul::CodeTransformContext const* findInlineAsmContextMapping(InlineAssembly const* _asm) const
+	{
+		auto findIt = m_inlineAsmContextMap.find(_asm);
+		if (findIt == m_inlineAsmContextMap.end())
+			return nullptr;
+		return findIt->second.get();
+	}
+
+	struct FunctionInfo
+	{
+		std::string const name;
+		unsigned tag;
+		unsigned ins;
+		unsigned outs;
+
+		bool operator<(FunctionInfo const& _other) const
+		{
+			return tie(name, tag, ins, outs) < tie(_other.name, _other.tag, _other.ins, _other.outs);
+		}
+	};
+
+	/// Adds @a _func to the set of low level utility functions that are recursive
+	void addRecursiveLowLevelFunc(FunctionInfo _func) { m_recursiveLowLevelFuncs.insert(_func); }
+
+	/// Returns the set of low level utility functions that are recursive
+	std::set<FunctionInfo> const& recursiveLowLevelFuncs() const { return m_recursiveLowLevelFuncs; }
+
 	/**
 	 * Helper class to pop the visited nodes stack when a scope closes
 	 */
@@ -397,6 +436,10 @@ private:
 	std::queue<std::tuple<std::string, unsigned, unsigned, std::function<void(CompilerContext&)>>> m_lowLevelFunctionGenerationQueue;
 	/// Flag to check that requestedYulFunctions() was called exactly once
 	bool m_requestedYulFunctionsRan = false;
+	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
+	std::map<InlineAssembly const*, std::shared_ptr<yul::CodeTransformContext>> m_inlineAsmContextMap;
+	/// Set of low level utility functions generated in this context that are recursive
+	std::set<FunctionInfo> m_recursiveLowLevelFuncs;
 };
 
 }
