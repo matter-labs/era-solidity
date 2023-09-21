@@ -347,6 +347,7 @@ void Assembly::injectStart(AssemblyItem const& _i)
 
 Assembly& Assembly::optimise(bool _enable, bool _isCreation, size_t _runs)
 {
+	return *this;
 	OptimiserSettings settings;
 	settings.isCreation = _isCreation;
 	settings.runPeephole = true;
@@ -364,7 +365,7 @@ Assembly& Assembly::optimise(bool _enable, bool _isCreation, size_t _runs)
 
 Assembly& Assembly::optimise(OptimiserSettings _settings)
 {
-	optimiseInternal(_settings);
+	(void) _settings;
 	return *this;
 }
 
