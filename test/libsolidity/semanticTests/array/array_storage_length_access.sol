@@ -12,11 +12,11 @@ contract C {
 // set_get_length(uint256): 10 -> 10
 // set_get_length(uint256): 20 -> 20
 // set_get_length(uint256): 0xFF -> 0xFF
-// gas irOptimized: 96690
-// gas legacy: 129522
-// gas legacyOptimized: 110618
+// gas irOptimized: 100188
+// gas legacy: 627757
+// gas legacyOptimized: 627509
 // set_get_length(uint256): 0xFFF -> 0xFFF
-// gas irOptimized: 1220648
-// gas legacy: 1704919
-// gas legacyOptimized: 1401220
+// gas irOptimized: 1232170
+// gas legacy: 9845754
+// gas legacyOptimized: 9845506
 // set_get_length(uint256): 0xFFFFF -> FAILURE # Out-of-gas #

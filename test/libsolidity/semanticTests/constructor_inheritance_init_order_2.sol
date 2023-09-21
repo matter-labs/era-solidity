@@ -11,7 +11,7 @@ contract B is A {
 // compileToEwasm: also
 // ----
 // constructor() ->
-// gas irOptimized: 121557
-// gas legacy: 135046
-// gas legacyOptimized: 116176
+// gas irOptimized: 124398
+// gas legacy: 140247
+// gas legacyOptimized: 133131
 // y() -> 42

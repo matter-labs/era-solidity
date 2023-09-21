@@ -113,14 +113,14 @@ BOOST_AUTO_TEST_CASE(string_storage)
 			if (evmVersion < EVMVersion::istanbul())
 				CHECK_DEPLOY_GAS(0, 109241, evmVersion);
 			else
-				CHECK_DEPLOY_GAS(0, 97697, evmVersion);
+				CHECK_DEPLOY_GAS(0, 101606, evmVersion);
 		}
 		else
 		{
 			if (evmVersion < EVMVersion::istanbul())
 				CHECK_DEPLOY_GAS(139013, 123969, evmVersion);
 			else
-				CHECK_DEPLOY_GAS(123361, 110969, evmVersion);
+				CHECK_DEPLOY_GAS(124674, 110969, evmVersion);
 		}
 	}
 	else if (evmVersion < EVMVersion::istanbul())
@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(string_storage)
 				if (evmVersion < EVMVersion::istanbul())
 					CHECK_GAS(0, 21526, 20);
 				else
-					CHECK_GAS(0, 21318, 20);
+					CHECK_GAS(0, 21360, 20);
 			}
 			else
 			{

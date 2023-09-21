@@ -24,4 +24,6 @@ contract C {
 // ====
 // compileViaYul: false
 // ----
-// t() -> FAILURE
+// t() -> FAILURE, hex"4e487b71", 0x51
+// gas legacy: 160200
+// gas legacyOptimized: 118891

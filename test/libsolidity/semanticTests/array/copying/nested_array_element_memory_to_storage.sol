@@ -27,4 +27,5 @@ contract C {
 // test(uint8[2][2][2]): 1, 2, 3, 4, 5, 6, 7, 8
 // test2(uint8[2][2]): 1, 2, 3, 4
 // gas irOptimized: 119939
+// gas legacy: 100006
 // gas legacyOptimized: 120228

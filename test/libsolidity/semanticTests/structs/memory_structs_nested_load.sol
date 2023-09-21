@@ -68,7 +68,7 @@ contract Test {
 // compileToEwasm: also
 // ----
 // load() -> 0x01, 0x02, 0x03, 0x04, 0x05, 0x06
-// gas irOptimized: 110327
-// gas legacy: 112999
-// gas legacyOptimized: 110881
+// gas irOptimized: 110344
+// gas legacy: 113179
+// gas legacyOptimized: 112699
 // store() -> 0x01, 0x02, 0x03, 0x04, 0x05, 0x06

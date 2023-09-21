@@ -16,7 +16,7 @@ object "C_6_deployed" {
 
 
 Binary representation:
-6080604052600a600e565b6010565b565b
+6080604052600a600e565b6011565b5b565b
 
 Text representation:
     /* "input.sol":60:101   */
@@ -28,5 +28,6 @@ tag_2:
     /* "input.sol":77:99   */
   jump(tag_3)
 tag_1:
+tag_4:
   jump	// out
 tag_3:

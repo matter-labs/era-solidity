@@ -35,12 +35,13 @@ contract D {
 // EVMVersion: >=byzantium
 // ----
 // f() -> 0x1 # This should work, next should throw #
-// gas legacy: 103716
+// gas legacy: 107985
+// gas legacyOptimized: 101040
 // fview() -> FAILURE
-// gas irOptimized: 98438605
-// gas legacy: 98438801
-// gas legacyOptimized: 98438594
+// gas irOptimized: 98438630
+// gas legacy: 98438867
+// gas legacyOptimized: 98438763
 // fpure() -> FAILURE
-// gas irOptimized: 98438605
-// gas legacy: 98438801
-// gas legacyOptimized: 98438595
+// gas irOptimized: 98438630
+// gas legacy: 98438867
+// gas legacyOptimized: 98438764

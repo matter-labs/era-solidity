@@ -1,0 +1,41 @@
+{
+  "language": "Solidity",
+  "sources":
+  {
+    "A":
+    {
+      "content": "
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity >=0.0;
+function free(uint256 a, uint256 b) pure returns (uint256 r) {
+  assembly {
+      function _out(_a, _b) -> _r {
+          _r := mul(_a, _out(sub(_a, 1), _b))
+      }
+      r := _out(a, b)
+  }
+}
+
+contract C {
+  function f(uint256 a) public pure returns (uint256 r) {
+    assembly {
+      function _in(_a) -> _r {
+          _r := add(_a, _in(sub(_a, 1)))
+      }
+      r := _in(a)
+    }
+
+    r = r + free(a, 12);
+  }
+}
+      "
+    }
+  },
+  "settings":
+  {
+    "outputSelection":
+    {
+      "*": { "*": ["evm.bytecode.object", "evm.deployedBytecode.object"] }
+    }
+  }
+}

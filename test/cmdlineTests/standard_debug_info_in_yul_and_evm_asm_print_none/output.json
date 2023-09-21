@@ -13,11 +13,11 @@
   iszero
   tag_1
   jumpi
-  0x00
-  dup1
-  revert
+  revert(0x00, 0x00)
 tag_1:
   pop
+  jump(tag_2)
+tag_2:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -34,9 +34,7 @@ sub_0: assembly {
       iszero
       tag_1
       jumpi
-      0x00
-      dup1
-      revert
+      revert(0x00, 0x00)
     tag_1:
       pop
       jumpi(tag_2, lt(calldatasize, 0x04))
@@ -46,12 +44,18 @@ sub_0: assembly {
       eq
       tag_3
       jumpi
+      jump(tag_2)
     tag_2:
-      0x00
-      dup1
-      revert
+      revert(0x00, 0x00)
     tag_3:
+      tag_4
+      tag_5
+      jump\t// in
+    tag_4:
       stop
+    tag_5:
+    tag_6:
+      jump\t// out
 
     auxdata: <AUXDATA REMOVED>
 }

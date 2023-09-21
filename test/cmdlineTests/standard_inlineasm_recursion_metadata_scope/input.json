@@ -1,0 +1,41 @@
+{
+	"language": "Solidity",
+	"sources":
+	{
+		"A":
+		{
+			"content": "
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity >=0.0;
+
+contract C {
+  function f() public pure returns (uint r) {
+    assembly {
+      {
+        function yf0(ya, yb) -> yr {
+          yr := yf0(ya, yb)
+        }
+      }
+
+      {
+        function yf0(ya) -> yr {
+          yr := yf0(ya)
+        }
+      }
+      r := 0
+    }
+
+    r = 0;
+  }
+}
+      "
+		}
+	},
+	"settings":
+	{
+		"outputSelection":
+		{
+			"*": { "*": ["evm.bytecode.object", "evm.deployedBytecode.object"] }
+		}
+	}
+}

@@ -9,8 +9,8 @@ contract Creator {
 }
 // ----
 // constructor(): 1, 2, 3, 4 ->
-// gas irOptimized: 128288
-// gas legacy: 176789
-// gas legacyOptimized: 129585
+// gas irOptimized: 131144
+// gas legacy: 182247
+// gas legacyOptimized: 150042
 // r() -> 4
 // ch() -> 3

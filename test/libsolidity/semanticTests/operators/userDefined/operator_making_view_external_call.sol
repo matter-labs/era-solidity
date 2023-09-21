@@ -58,10 +58,10 @@ contract C {
 }
 // ----
 // testMul(int32,int32): 42, 10 -> 420
-// gas irOptimized: 103347
-// gas legacy: 188203
-// gas legacyOptimized: 126164
+// gas irOptimized: 110620
+// gas legacy: 200771
+// gas legacyOptimized: 151372
 // testInc(int32): 42 -> 43
-// gas irOptimized: 103173
-// gas legacy: 187452
-// gas legacyOptimized: 125851
+// gas irOptimized: 110477
+// gas legacy: 199990
+// gas legacyOptimized: 151034

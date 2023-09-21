@@ -14,9 +14,9 @@ contract c {
 // ----
 // storageEmpty -> 1
 // fill() ->
-// gas irOptimized: 519361
-// gas legacy: 521584
-// gas legacyOptimized: 517027
+// gas irOptimized: 519702
+// gas legacy: 522202
+// gas legacyOptimized: 518989
 // storageEmpty -> 0
 // halfClear() ->
 // gas irOptimized: 113961

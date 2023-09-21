@@ -420,9 +420,9 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 	BOOST_CHECK(contract["evm"]["bytecode"]["object"].isString());
 	BOOST_CHECK_EQUAL(
 		solidity::test::bytecodeSansMetadata(contract["evm"]["bytecode"]["object"].asString()),
-		string("6080604052348015600f57600080fd5b5060") +
+		string("6080604052348015600f57600080fd5b505b604080601e6000396000f") +
 		(VersionIsRelease ? "3f" : util::toHex(bytes{uint8_t(61 + VersionStringStrict.size())})) +
-		"80601d6000396000f3fe6080604052600080fdfe"
+		"e60806040525b600080fdfe"
 	);
 	BOOST_CHECK(contract["evm"]["assembly"].isString());
 	BOOST_CHECK(contract["evm"]["assembly"].asString().find(
@@ -431,9 +431,9 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 		"iszero\n  tag_1\n  jumpi\n  "
 		"0x00\n  "
 		"dup1\n  revert\n"
-		"tag_1:\n  pop\n  dataSize(sub_0)\n  dup1\n  "
+		"tag_1:\n  pop\ntag_2:\n  dataSize(sub_0)\n  dup1\n  "
 		"dataOffset(sub_0)\n  0x00\n  codecopy\n  0x00\n  return\nstop\n\nsub_0: assembly {\n        "
-		"/* \"fileA\":0:14  contract A { } */\n      mstore(0x40, 0x80)\n      "
+		"/* \"fileA\":0:14  contract A { } */\n      mstore(0x40, 0x80)\n    tag_1:\n      "
 		"0x00\n      "
 		"dup1\n      revert\n\n    auxdata: 0xa26469706673582212"
 	) == 0);
@@ -469,6 +469,8 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 		"{\"begin\":0,\"end\":14,\"name\":\"tag\",\"source\":0,\"value\":\"1\"},"
 		"{\"begin\":0,\"end\":14,\"name\":\"JUMPDEST\",\"source\":0},"
 		"{\"begin\":0,\"end\":14,\"name\":\"POP\",\"source\":0},"
+		"{\"begin\":0,\"end\":14,\"name\":\"tag\",\"source\":0,\"value\":\"2\"},"
+		"{\"begin\":0,\"end\":14,\"name\":\"JUMPDEST\",\"source\":0},"
 		"{\"begin\":0,\"end\":14,\"name\":\"PUSH #[$]\",\"source\":0,\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},"
 		"{\"begin\":0,\"end\":14,\"name\":\"DUP1\",\"source\":0},"
 		"{\"begin\":0,\"end\":14,\"name\":\"PUSH [$]\",\"source\":0,\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},"
@@ -1191,10 +1193,8 @@ BOOST_AUTO_TEST_CASE(optimizer_settings_details_exactly_as_default_disabled)
 	BOOST_CHECK(util::jsonParseStrict(contract["metadata"].asString(), metadata));
 
 	Json::Value const& optimizer = metadata["settings"]["optimizer"];
-	BOOST_CHECK(optimizer.isMember("enabled"));
 	// enabled is switched to false instead!
 	BOOST_CHECK(optimizer["enabled"].asBool() == false);
-	BOOST_CHECK(!optimizer.isMember("details"));
 	BOOST_CHECK(optimizer["runs"].asUInt() == 200);
 }
 

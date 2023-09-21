@@ -25,7 +25,7 @@ object "C_6" {
 
 
 Binary representation:
-608060405234601557600e601b600039600e6000f35b600080fdfe60806040523615600055600080fd
+6080604052346016575b6014601c60003960146000f35b600080fdfe60806040526004361015503615600055600080fd
 
 Text representation:
     /* "strict_asm_optimizer_steps/input.yul":45:48   */
@@ -39,6 +39,8 @@ Text representation:
     /* "strict_asm_optimizer_steps/input.yul":58:89   */
   tag_1
   jumpi
+    /* "strict_asm_optimizer_steps/input.yul":24:213   */
+tag_2:
     /* "strict_asm_optimizer_steps/input.yul":138:162   */
   dataSize(sub_0)
     /* "strict_asm_optimizer_steps/input.yul":110:136   */
@@ -69,6 +71,16 @@ sub_0: assembly {
       0x40
         /* "strict_asm_optimizer_steps/input.yul":287:302   */
       mstore
+        /* "strict_asm_optimizer_steps/input.yul":348:349   */
+      0x04
+        /* "strict_asm_optimizer_steps/input.yul":332:346   */
+      calldatasize
+        /* "strict_asm_optimizer_steps/input.yul":329:350   */
+      lt
+        /* "strict_asm_optimizer_steps/input.yul":322:351   */
+      iszero
+        /* "strict_asm_optimizer_steps/input.yul":319:499   */
+      pop
         /* "strict_asm_optimizer_steps/input.yul":533:547   */
       calldatasize
         /* "strict_asm_optimizer_steps/input.yul":526:548   */

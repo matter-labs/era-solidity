@@ -16,6 +16,7 @@ tag_2:
     /* \"input.sol\":77:99   */
   jump(tag_3)
 tag_1:
+tag_4:
   jump\t// out
 tag_3:
 "

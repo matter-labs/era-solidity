@@ -3,12 +3,14 @@
 EVM assembly:
     /* "optimizer_user_yul/input.sol":60:518  contract C... */
   mstore(0x40, 0x80)
+    /* "optimizer_user_yul/input.sol":74:516  constructor() payable... */
+tag_1:
     /* "optimizer_user_yul/input.sol":101:106  int a */
   0x00
     /* "optimizer_user_yul/input.sol":181:190  let x,y,z */
-  dup1
   0x00
-  dup1
+  0x00
+  0x00
     /* "optimizer_user_yul/input.sol":205:206  1 */
   0x01
     /* "optimizer_user_yul/input.sol":202:203  0 */
@@ -25,12 +27,17 @@ tag_3:
   iszero
   tag_5
   jumpi
-  pop
+    /* "optimizer_user_yul/input.sol":251:252  y */
+  dup2
+    /* "optimizer_user_yul/input.sol":248:249  x */
+  dup4
     /* "optimizer_user_yul/input.sol":244:253  exp(x, y) */
-  dup1
-  dup3
   exp
+    /* "optimizer_user_yul/input.sol":239:253  z := exp(x, y) */
+  swap1
+  pop
     /* "optimizer_user_yul/input.sol":212:258  for { } sload(4) { } {... */
+tag_4:
   jump(tag_3)
 tag_5:
     /* "optimizer_user_yul/input.sol":216:219  { } */
@@ -57,15 +64,23 @@ tag_5:
 tag_6:
     /* "optimizer_user_yul/input.sol":384:392  sload(5) */
   dup1
+  iszero
     /* "optimizer_user_yul/input.sol":376:509  for { } sload(5) { } {... */
   iszero
-  tag_6
+  tag_8
   jumpi
+tag_7:
+  jump(tag_6)
+tag_8:
     /* "optimizer_user_yul/input.sol":380:383  { } */
   pop
     /* "optimizer_user_yul/input.sol":340:513  {... */
   pop
+    /* "optimizer_user_yul/input.sol":74:516  constructor() payable... */
+tag_2:
     /* "optimizer_user_yul/input.sol":60:518  contract C... */
+  jump(tag_9)
+tag_9:
   dataSize(sub_0)
   dup1
   dataOffset(sub_0)
@@ -78,9 +93,9 @@ stop
 sub_0: assembly {
         /* "optimizer_user_yul/input.sol":60:518  contract C... */
       mstore(0x40, 0x80)
-      0x00
-      dup1
-      revert
+      jumpi(tag_1, lt(calldatasize, 0x04))
+    tag_1:
+      revert(0x00, 0x00)
 
     auxdata: <AUXDATA REMOVED>
 }
