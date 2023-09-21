@@ -27,6 +27,9 @@
 #include <libsolidity/codegen/ExpressionCompiler.h>
 #include <libsolidity/codegen/CompilerUtils.h>
 
+#include <libjulia/optimiser/Disambiguator.h>
+#include <libjulia/optimiser/ASTCopier.h>
+
 #include <libevmasm/Instruction.h>
 #include <libevmasm/Assembly.h>
 #include <libevmasm/GasMeter.h>
@@ -119,6 +122,7 @@ void ContractCompiler::initializeContext(
 	m_context.setExperimentalFeatures(_contract.sourceUnit().annotation().experimentalFeatures);
 	m_context.setCompiledContracts(_compiledContracts);
 	m_context.setInheritanceHierarchy(_contract.annotation().linearizedBaseContracts);
+	m_context.setMostDerivedContract(_contract);
 	CompilerUtils(m_context).initialiseFreeMemoryPointer();
 	registerStateVariables(_contract);
 	m_context.resetVisitedNodes(&_contract);
@@ -522,6 +526,20 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 	identifierAccess.generateCode = [&](assembly::Identifier const& _identifier, julia::IdentifierContext _context, julia::AbstractAssembly& _assembly)
 	{
 		auto ref = _inlineAssembly.annotation().externalReferences.find(&_identifier);
+		if (ref == _inlineAssembly.annotation().externalReferences.end())
+		{
+			// The yul AST might be copied from the original (In case we ran the Disambiguator, for instance). So we'll
+			// search for the identifier's name instead.
+			auto& externalReferences = _inlineAssembly.annotation().externalReferences;
+			for (auto extRef = externalReferences.begin(); extRef != externalReferences.end(); ++extRef)
+			{
+				if (extRef->first->name == _identifier.name)
+				{
+					ref = extRef;
+					break;
+				}
+			}
+		}
 		solAssert(ref != _inlineAssembly.annotation().externalReferences.end(), "");
 		Declaration const* decl = ref->second.declaration;
 		solAssert(!!decl, "");
@@ -631,13 +649,52 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		}
 	};
 	solAssert(_inlineAssembly.annotation().analysisInfo, "");
+
+	assembly::Block const* code = &_inlineAssembly.operations();
+	assembly::AsmAnalysisInfo* analysisInfo = _inlineAssembly.annotation().analysisInfo.get();
+
+	shared_ptr<assembly::Block> codeShrdPtr;
+	shared_ptr<assembly::AsmAnalysisInfo> analysisInfoShrdPtr;
+	{
+		// Run the disambiguator.
+		// We need this so that the yul::CallGraphGenerator runs correctly (which is required for setting the
+		// "recursiveFunctions" record in the extraMetadata for inline assembly)
+		set<string> reservedIdentifiers;
+		for (auto extRef: _inlineAssembly.annotation().externalReferences)
+		{
+			reservedIdentifiers.insert(extRef.first->name);
+		}
+		julia::Disambiguator disambiguator(*analysisInfo, reservedIdentifiers);
+		codeShrdPtr = make_shared<assembly::Block>(get<assembly::Block>(disambiguator(*code)));
+
+		// Run the AsmAnalyzer on `object.code`.
+		// Create a resolver that accepts any identifiers. This is OK since the TypeChecker already did the resolution
+		// and the disambiguator should have left them as it is.
+		julia::ExternalIdentifierAccess::Resolver resolver
+			= [](assembly::Identifier const& _identifier, julia::IdentifierContext _context, bool) -> bool
+		{
+			(void) _identifier;
+			(void) _context;
+			return true;
+		};
+		analysisInfoShrdPtr = make_shared<assembly::AsmAnalysisInfo>(
+			assembly::AsmAnalyzer::analyzeStrictAssertCorrect(m_context.evmVersion(), *codeShrdPtr.get(), resolver));
+
+		code = codeShrdPtr.get();
+		_inlineAssembly.annotation().optimizedOperations = codeShrdPtr;
+		analysisInfo = analysisInfoShrdPtr.get();
+	}
+
+	shared_ptr<julia::CodeTransform::Context> yulContext;
 	assembly::CodeGenerator::assemble(
-		_inlineAssembly.operations(),
-		*_inlineAssembly.annotation().analysisInfo,
+		*code,
+		*analysisInfo,
 		m_context.nonConstAssembly(),
+		yulContext,
 		identifierAccess
 	);
 	m_context.setStackOffset(startStackHeight);
+	m_context.addInlineAsmContextMapping(&_inlineAssembly, yulContext);
 	return false;
 }
 
@@ -897,6 +954,7 @@ void ContractCompiler::appendModifierOrFunctionCode()
 			ModifierDefinition const& nonVirtualModifier = dynamic_cast<ModifierDefinition const&>(
 				*modifierInvocation->name()->annotation().referencedDeclaration
 			);
+			solAssert(*modifierInvocation->name()->annotation().requiredLookup == VirtualLookup::Virtual, "");
 			ModifierDefinition const& modifier = m_context.resolveVirtualFunctionModifier(nonVirtualModifier);
 			CompilerContext::LocationSetter locationSetter(m_context, modifier);
 			std::vector<ASTPointer<Expression>> const& modifierArguments =
