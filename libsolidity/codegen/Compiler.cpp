@@ -23,6 +23,8 @@
 #include <libsolidity/codegen/Compiler.h>
 
 #include <libsolidity/codegen/ContractCompiler.h>
+#include <libsolidity/codegen/ExtraMetadata.h>
+
 #include <libevmasm/Assembly.h>
 
 using namespace std;
@@ -49,6 +51,9 @@ void Compiler::compileContract(
 	m_runtimeSub = creationCompiler.compileConstructor(_contract, _otherCompilers);
 
 	m_context.optimise(m_optimiserSettings);
+
+	ExtraMetadataRecorder extraMetadataRecorder{m_context, m_runtimeContext};
+	m_extraMetadata = extraMetadataRecorder.run(_contract);
 
 	solAssert(m_context.requestedYulFunctionsRan(), "requestedYulFunctions() was not called.");
 	solAssert(m_runtimeContext.requestedYulFunctionsRan(), "requestedYulFunctions() was not called.");
