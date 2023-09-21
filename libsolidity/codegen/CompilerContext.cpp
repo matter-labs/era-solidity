@@ -127,6 +127,15 @@ evmasm::AssemblyItem CompilerContext::lowLevelFunctionTag(
 		return it->second;
 }
 
+evmasm::AssemblyItem CompilerContext::lowLevelFunctionTagIfExists(string const& _name)
+{
+	auto it = m_lowLevelFunctions.find(_name);
+	if (it == m_lowLevelFunctions.end())
+		return evmasm::AssemblyItem(evmasm::UndefinedItem);
+	else
+		return it->second;
+}
+
 void CompilerContext::appendMissingLowLevelFunctions()
 {
 	while (!m_lowLevelFunctionGenerationQueue.empty())
@@ -254,6 +263,12 @@ FunctionDefinition const* CompilerContext::nextConstructor(ContractDefinition co
 Declaration const* CompilerContext::nextFunctionToCompile() const
 {
 	return m_functionCompilationQueue.nextFunctionToCompile();
+}
+
+ContractDefinition const& CompilerContext::mostDerivedContract() const
+{
+	solAssert(m_mostDerivedContract, "Most derived contract not set.");
+	return *m_mostDerivedContract;
 }
 
 ModifierDefinition const& CompilerContext::resolveVirtualFunctionModifier(
@@ -463,11 +478,13 @@ void CompilerContext::appendInlineAssembly(
 		reportError("Failed to analyze inline assembly block.");
 
 	solAssert(errorReporter.errors().empty(), "Failed to analyze inline assembly block.");
+	shared_ptr<yul::CodeTransformContext> yulContext;
 	yul::CodeGenerator::assemble(
 		*parserResult,
 		analysisInfo,
 		*m_asm,
 		m_evmVersion,
+		yulContext,
 		identifierAccess,
 		_system,
 		_optimiserSettings.optimizeStackAllocation
