@@ -54,6 +54,38 @@ bool AsmAnalyzer::analyze(Block const& _block)
 	return (*this)(_block);
 }
 
+AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(
+	EVMVersion _evmVersion,
+	Block const& _ast
+)
+{
+	ErrorList errorList;
+	langutil::ErrorReporter errors(errorList);
+	yul::AsmAnalysisInfo analysisInfo;
+	bool success = yul::AsmAnalyzer(
+		analysisInfo,
+		errors,
+		_evmVersion,
+		Error::Type::SyntaxError
+	).analyze(_ast);
+	solAssert(success && errorList.empty(), "Invalid assembly/yul code.");
+	return analysisInfo;
+}
+
+AsmAnalysisInfo AsmAnalyzer::analyzeStrictAssertCorrect(
+	EVMVersion _evmVersion,
+	Block const& _ast,
+	yul::ExternalIdentifierAccess::Resolver _resolver)
+{
+	ErrorList errorList;
+	langutil::ErrorReporter errors(errorList);
+	AsmAnalysisInfo analysisInfo;
+	bool success = yul::AsmAnalyzer(analysisInfo, errors, _evmVersion, Error::Type::SyntaxError,
+			AsmFlavour::Loose, _resolver).analyze(_ast);
+	solAssert(success && !errors.hasErrors(), "Invalid assembly/yul code.");
+	return analysisInfo;
+}
+
 bool AsmAnalyzer::operator()(Label const& _label)
 {
 	solAssert(!_label.name.empty(), "");

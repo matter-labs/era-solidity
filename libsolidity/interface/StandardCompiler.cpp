@@ -587,6 +587,10 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 		if (isArtifactRequested(outputSelection, file, name, "evm.gasEstimates"))
 			evmData["gasEstimates"] = m_compilerStack.gasEstimates(contractName);
 
+		Json::Value extraMetadata = m_compilerStack.extraMetadata(contractName);
+		if (compilationSuccess && !extraMetadata.empty())
+			evmData["extraMetadata"] = extraMetadata;
+
 		if (isArtifactRequested(
 			outputSelection,
 			file,

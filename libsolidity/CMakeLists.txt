@@ -7,6 +7,8 @@ set(sources
 	analysis/ControlFlowGraph.cpp
 	analysis/DeclarationContainer.cpp
 	analysis/DocStringAnalyser.cpp
+	analysis/FunctionCallGraph.cpp
+	analysis/FunctionCallGraph.h
 	analysis/GlobalContext.cpp
 	analysis/NameAndTypeResolver.cpp
 	analysis/PostTypeChecker.cpp
@@ -20,6 +22,8 @@ set(sources
 	ast/ASTAnnotations.cpp
 	ast/ASTJsonConverter.cpp
 	ast/ASTPrinter.cpp
+	ast/CallGraph.cpp
+	ast/CallGraph.h
 	ast/Types.cpp
 	codegen/ABIFunctions.cpp
 	codegen/ArrayUtils.cpp
@@ -28,6 +32,10 @@ set(sources
 	codegen/CompilerUtils.cpp
 	codegen/ContractCompiler.cpp
 	codegen/ExpressionCompiler.cpp
+	codegen/ExtraMetadata.cpp
+	codegen/ExtraMetadata.h
+	codegen/FuncPtrTracker.cpp
+	codegen/FuncPtrTracker.h
 	codegen/LValue.cpp
 	formal/SMTChecker.cpp
 	formal/SMTLib2Interface.cpp

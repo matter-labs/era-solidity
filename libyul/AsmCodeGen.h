@@ -23,6 +23,7 @@
 #pragma once
 
 #include <libyul/AsmAnalysis.h>
+#include <libyul/backends/evm/EVMCodeTransform.h>
 
 #include <functional>
 
@@ -46,6 +47,7 @@ public:
 		Block const& _parsedData,
 		AsmAnalysisInfo& _analysisInfo,
 		dev::eth::Assembly& _assembly,
+		std::shared_ptr<CodeTransform::Context>& _context, // out
 		yul::ExternalIdentifierAccess const& _identifierAccess = yul::ExternalIdentifierAccess(),
 		bool _useNamedLabelsForFunctions = false
 	);

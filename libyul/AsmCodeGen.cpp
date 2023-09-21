@@ -147,17 +147,21 @@ void CodeGenerator::assemble(
 	Block const& _parsedData,
 	AsmAnalysisInfo& _analysisInfo,
 	eth::Assembly& _assembly,
+	shared_ptr<CodeTransform::Context>& _context, // out
 	ExternalIdentifierAccess const& _identifierAccess,
 	bool _useNamedLabelsForFunctions
 )
 {
 	EthAssemblyAdapter assemblyAdapter(_assembly);
-	CodeTransform(
+
+	CodeTransform transform(
 		assemblyAdapter,
 		_analysisInfo,
 		false,
 		false,
 		_identifierAccess,
 		_useNamedLabelsForFunctions
-	)(_parsedData);
+	);
+	transform(_parsedData);
+	_context = transform.context();
 }

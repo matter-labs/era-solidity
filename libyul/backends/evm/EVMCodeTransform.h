@@ -18,6 +18,8 @@
  * Common code generator for translating Yul / inline assembly to EVM and EVM1.5.
  */
 
+#pragma once
+
 #include <libyul/backends/evm/EVMAssembly.h>
 
 #include <libyul/AsmDataForward.h>
@@ -62,14 +64,27 @@ public:
 	{
 	}
 
-protected:
 	struct Context
 	{
 		std::map<Scope::Label const*, AbstractAssembly::LabelID> labelIDs;
 		std::map<Scope::Function const*, AbstractAssembly::LabelID> functionEntryIDs;
 		std::map<Scope::Variable const*, int> variableStackHeights;
+
+		struct FunctionInfo
+		{
+			std::string const name;
+			unsigned ins;
+			unsigned outs;
+			AbstractAssembly::LabelID label;
+			bool operator<(FunctionInfo const& _other) const
+			{
+				return tie(name, label, ins, outs) < tie(_other.name, _other.label, _other.ins, _other.outs);
+			}
+		};
+		std::map<YulString, std::set<FunctionInfo>> functionInfoMap;
 	};
 
+protected:
 	CodeTransform(
 		AbstractAssembly& _assembly,
 		AsmAnalysisInfo& _analysisInfo,
@@ -106,6 +121,7 @@ public:
 	void operator()(FunctionDefinition const&);
 	void operator()(ForLoop const&);
 	void operator()(Block const& _block);
+	std::shared_ptr<Context> context() { return m_context; }
 
 private:
 	AbstractAssembly::LabelID labelFromIdentifier(Identifier const& _identifier);
