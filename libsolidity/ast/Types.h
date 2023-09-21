@@ -998,6 +998,8 @@ public:
 	bool canTakeArguments(TypePointers const& _arguments, TypePointer const& _selfType = TypePointer()) const;
 	/// @returns true if the types of parameters are equal (does't check return parameter types)
 	bool hasEqualArgumentTypes(FunctionType const& _other) const;
+	/// @returns true iff the return types are equal (does not check parameter types)
+	bool hasEqualReturnTypes(FunctionType const& _other) const;
 
 	/// @returns true if the ABI is used for this call (only meaningful for external calls)
 	bool isBareCall() const;
