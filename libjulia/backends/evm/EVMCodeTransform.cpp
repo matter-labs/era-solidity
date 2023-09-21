@@ -455,6 +455,13 @@ AbstractAssembly::LabelID CodeTransform::functionEntryID(string const& _name, Sc
 			m_assembly.newLabelId();
 		m_context->functionEntryIDs[&_function] = id;
 	}
+
+	m_context->functionInfoMap[_name].emplace(CodeTransform::Context::FunctionInfo{
+		_name,
+		(unsigned) _function.arguments.size(),
+		(unsigned) _function.returns.size(),
+		m_context->functionEntryIDs[&_function]});
+
 	return m_context->functionEntryIDs[&_function];
 }
 
