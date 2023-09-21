@@ -42,6 +42,8 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
+#include <range/v3/view/enumerate.hpp>
+
 #include <limits>
 #include <utility>
 
