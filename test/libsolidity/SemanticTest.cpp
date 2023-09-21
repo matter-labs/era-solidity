@@ -105,7 +105,7 @@ void SemanticTest::parseExpectations(istream& _stream)
 {
 	TestFileParser parser{_stream};
 	auto functionCalls = parser.parseFunctionCalls();
-	move(functionCalls.begin(), functionCalls.end(), back_inserter(m_tests));
+	std::move(functionCalls.begin(), functionCalls.end(), back_inserter(m_tests));
 }
 
 bool SemanticTest::deploy(string const& _contractName, u256 const& _value, bytes const& _arguments)
