@@ -36,6 +36,8 @@ add_library(yul
 	optimiser/ASTWalker.h
 	optimiser/BlockFlattener.cpp
 	optimiser/BlockFlattener.h
+	optimiser/CallGraphGenerator.cpp
+	optimiser/CallGraphGenerator.h
 	optimiser/CommonSubexpressionEliminator.cpp
 	optimiser/CommonSubexpressionEliminator.h
 	optimiser/DataFlowAnalyzer.cpp
