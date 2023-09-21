@@ -400,6 +400,10 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 		evmData["methodIdentifiers"] = m_compilerStack.methodIdentifiers(contractName);
 		evmData["gasEstimates"] = m_compilerStack.gasEstimates(contractName);
 
+		Json::Value extraMetadata = m_compilerStack.extraMetadata(contractName);
+		if (compilationSuccess && !extraMetadata.empty())
+			evmData["extraMetadata"] = extraMetadata;
+
 		evmData["bytecode"] = collectEVMObject(
 			m_compilerStack.object(contractName),
 			m_compilerStack.sourceMapping(contractName)
