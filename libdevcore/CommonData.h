@@ -156,6 +156,55 @@ T convertContainer(U&& _from)
 	};
 }
 
+/// Gets a @a K -> @a V map and returns a map where values from the original map are keys and keys
+/// from the original map are values.
+///
+/// @pre @a originalMap must have unique values.
+template <typename K, typename V>
+std::map<V, K> invertMap(std::map<K, V> const& originalMap)
+{
+	std::map<V, K> inverseMap;
+	for (auto const& originalPair: originalMap)
+	{
+		assert(inverseMap.count(originalPair.second) == 0);
+		inverseMap.insert({originalPair.second, originalPair.first});
+	}
+
+	return inverseMap;
+}
+
+/// Returns a set of keys of a map.
+template <typename K, typename V>
+std::set<K> keys(std::map<K, V> const& _map)
+{
+	return applyMap(_map, [](auto const& _elem) { return _elem.first; }, std::set<K>{});
+}
+
+namespace detail
+{
+struct allow_copy {};
+}
+static constexpr auto allow_copy = detail::allow_copy{};
+
+/// @returns a reference to the entry of @a _map at @a _key, if there is one, and @a _defaultValue otherwise.
+/// Makes sure no copy is involved, unless allow_copy is passed as fourth argument.
+template<
+	typename MapType,
+	typename KeyType,
+	typename ValueType = std::decay_t<decltype(std::declval<MapType>().find(std::declval<KeyType>())->second)> const&,
+	typename AllowCopyType = void*
+>
+decltype(auto) valueOrDefault(MapType&& _map, KeyType const& _key, ValueType&& _defaultValue = {}, AllowCopyType = nullptr)
+{
+	auto it = _map.find(_key);
+	static_assert(
+		std::is_same_v<AllowCopyType, detail::allow_copy> ||
+		std::is_reference_v<decltype((it == _map.end()) ? _defaultValue : it->second)>,
+		"valueOrDefault does not allow copies by default. Pass allow_copy as additional argument, if you want to allow copies."
+	);
+	return (it == _map.end()) ? _defaultValue : it->second;
+}
+
 // String conversion functions, mainly to/from hex/nibble/byte representations.
 
 enum class WhenError
