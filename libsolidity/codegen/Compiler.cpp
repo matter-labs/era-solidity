@@ -21,6 +21,10 @@
  */
 
 #include <libsolidity/codegen/Compiler.h>
+
+#include <libsolidity/codegen/ContractCompiler.h>
+#include <libsolidity/codegen/ExtraMetadata.h>
+
 #include <libevmasm/Assembly.h>
 #include <libsolidity/codegen/ContractCompiler.h>
 
@@ -44,6 +48,9 @@ void Compiler::compileContract(
 	m_runtimeSub = creationCompiler.compileConstructor(_contract, _contracts);
 
 	m_context.optimise(m_optimize, m_optimizeRuns);
+
+	ExtraMetadataRecorder extraMetadataRecorder{m_context, m_runtimeContext};
+	m_extraMetadata = extraMetadataRecorder.run(_contract);
 }
 
 void Compiler::compileClone(
