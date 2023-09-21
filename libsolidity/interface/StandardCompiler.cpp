@@ -1097,6 +1097,10 @@ Json::Value StandardCompiler::compileSolidity(StandardCompiler::InputsAndSetting
 		if (compilationSuccess && isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "evm.gasEstimates", wildcardMatchesExperimental))
 			evmData["gasEstimates"] = compilerStack.gasEstimates(contractName);
 
+		Json::Value extraMetadata = compilerStack.extraMetadata(contractName);
+		if (compilationSuccess && !extraMetadata.empty())
+			evmData["extraMetadata"] = extraMetadata;
+
 		if (compilationSuccess && isArtifactRequested(
 			_inputsAndSettings.outputSelection,
 			file,
