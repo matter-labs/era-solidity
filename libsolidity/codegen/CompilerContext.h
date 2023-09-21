@@ -35,6 +35,9 @@
 
 #include <libdevcore/Common.h>
 
+#include <libjulia/backends/evm/EVMCodeTransform.h>
+
+#include <functional>
 #include <ostream>
 #include <stack>
 #include <queue>
@@ -96,6 +99,9 @@ public:
 	FunctionDefinition const* nextConstructor(ContractDefinition const& _contract) const;
 	/// Sets the current inheritance hierarchy from derived to base.
 	void setInheritanceHierarchy(std::vector<ContractDefinition const*> const& _hierarchy) { m_inheritanceHierarchy = _hierarchy; }
+    /// Sets the contract currently being compiled - the most derived one.
+    void setMostDerivedContract(ContractDefinition const& _contract) { m_mostDerivedContract = &_contract; }
+    ContractDefinition const& mostDerivedContract() const;
 
 	/// @returns the next function in the queue of functions that are still to be compiled
 	/// (i.e. that were referenced during compilation but where we did not yet generate code for).
@@ -126,6 +132,10 @@ public:
 		unsigned _outArgs,
 		std::function<void(CompilerContext&)> const& _generator
 	);
+	/// Returns the entry tag of the low-level function with the name @a _name if already generated; Returns
+	/// eth::AssemblyItem(eth::UndefinedItem) if the entry tag is not generated.
+	eth::AssemblyItem lowLevelFunctionTagIfExists(std::string const& _name);
+
 	/// Generates the code for missing low-level functions, i.e. calls the generators passed above.
 	void appendMissingLowLevelFunctions();
 	ABIFunctions& abiFunctions() { return m_abiFunctions; }
@@ -215,7 +225,7 @@ public:
 	void optimise(bool _fullOptimsation, unsigned _runs = 200) { m_asm->optimise(_fullOptimsation, m_evmVersion, true, _runs); }
 
 	/// @returns the runtime context if in creation mode and runtime context is set, nullptr otherwise.
-	CompilerContext* runtimeContext() { return m_runtimeContext; }
+	CompilerContext* runtimeContext() const { return m_runtimeContext; }
 	/// @returns the identifier of the runtime subroutine.
 	size_t runtimeSub() const { return m_runtimeSub; }
 
@@ -239,6 +249,40 @@ public:
 
 	eth::LinkerObject const& assembledObject() const { return m_asm->assemble(); }
 	eth::LinkerObject const& assembledRuntimeObject(size_t _subIndex) const { return m_asm->sub(_subIndex).assemble(); }
+
+	/// Adds the @a _asm -> @a _context mapping in the internal inline assembly to context mapping
+	void addInlineAsmContextMapping(InlineAssembly const* _asm, std::shared_ptr<julia::CodeTransform::Context> _context)
+	{
+		m_inlineAsmContextMap[_asm] = _context;
+	}
+
+	/// Returns the context for @a _asm; nullptr if not found
+	julia::CodeTransform::Context const* findInlineAsmContextMapping(InlineAssembly const* _asm) const
+	{
+		auto findIt = m_inlineAsmContextMap.find(_asm);
+		if (findIt == m_inlineAsmContextMap.end())
+			return nullptr;
+		return findIt->second.get();
+	}
+
+	struct FunctionInfo
+	{
+		std::string const name;
+		unsigned tag;
+		unsigned ins;
+		unsigned outs;
+
+		bool operator<(FunctionInfo const& _other) const
+		{
+			return tie(name, tag, ins, outs) < tie(_other.name, _other.tag, _other.ins, _other.outs);
+		}
+	};
+
+	/// Adds @a _func to the set of low level utility functions that are recursive
+	void addRecursiveLowLevelFunc(FunctionInfo _func) { m_recursiveLowLevelFuncs.insert(_func); }
+
+	/// Returns the set of low level utility functions that are recursive
+	std::set<FunctionInfo> const& recursiveLowLevelFuncs() const { return m_recursiveLowLevelFuncs; }
 
 	/**
 	 * Helper class to pop the visited nodes stack when a scope closes
@@ -310,6 +354,8 @@ private:
 	std::map<Declaration const*, std::vector<unsigned>> m_localVariables;
 	/// List of current inheritance hierarchy from derived to base.
 	std::vector<ContractDefinition const*> m_inheritanceHierarchy;
+    /// The contract currently being compiled. Virtual function lookup starts from this contarct.
+    ContractDefinition const* m_mostDerivedContract = nullptr;
 	/// Stack of current visited AST nodes, used for location attachment
 	std::stack<ASTNode const*> m_visitedNodes;
 	/// The runtime context if in Creation mode, this is used for generating tags that would be stored into the storage and then used at runtime.
@@ -322,6 +368,10 @@ private:
 	ABIFunctions m_abiFunctions;
 	/// The queue of low-level functions to generate.
 	std::queue<std::tuple<std::string, unsigned, unsigned, std::function<void(CompilerContext&)>>> m_lowLevelFunctionGenerationQueue;
+	/// Maps an InlineAssembly AST node to its CodeTransformContext created during its lowering
+	std::map<InlineAssembly const*, std::shared_ptr<julia::CodeTransform::Context>> m_inlineAsmContextMap;
+	/// Set of low level utility functions generated in this context that are recursive
+	std::set<FunctionInfo> m_recursiveLowLevelFuncs;
 };
 
 }
