@@ -79,6 +79,8 @@ public:
 		std::shared_ptr<Dialect> _dialect,
 		Block const& _ast
 	);
+	static AsmAnalysisInfo analyzeStrictAssertCorrect(
+		std::shared_ptr<Dialect> _dialect, Block const& _ast, yul::ExternalIdentifierAccess::Resolver _resolver);
 
 	bool operator()(Instruction const&);
 	bool operator()(Literal const& _literal);

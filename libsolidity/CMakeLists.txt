@@ -14,6 +14,8 @@ set(sources
 	analysis/DeclarationContainer.h
 	analysis/DocStringAnalyser.cpp
 	analysis/DocStringAnalyser.h
+	analysis/FunctionCallGraph.cpp
+	analysis/FunctionCallGraph.h
 	analysis/GlobalContext.cpp
 	analysis/GlobalContext.h
 	analysis/NameAndTypeResolver.cpp
@@ -44,6 +46,8 @@ set(sources
 	ast/ASTPrinter.cpp
 	ast/ASTPrinter.h
 	ast/ASTVisitor.h
+	ast/CallGraph.cpp
+	ast/CallGraph.h
 	ast/ExperimentalFeatures.h
 	ast/Types.cpp
 	ast/Types.h
@@ -61,6 +65,10 @@ set(sources
 	codegen/ContractCompiler.h
 	codegen/ExpressionCompiler.cpp
 	codegen/ExpressionCompiler.h
+	codegen/ExtraMetadata.cpp
+	codegen/ExtraMetadata.h
+	codegen/FuncPtrTracker.cpp
+	codegen/FuncPtrTracker.h
 	codegen/LValue.cpp
 	codegen/LValue.h
 	codegen/MultiUseYulFunctionCollector.h
