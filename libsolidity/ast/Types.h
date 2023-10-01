@@ -32,6 +32,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/rational.hpp>
+#include <boost/optional.hpp>
 
 #include <memory>
 #include <string>
@@ -757,8 +758,14 @@ public:
 	/// @returns the set of all members that are removed in the memory version (typically mappings).
 	std::set<std::string> membersMissingInMemory() const;
 
+	/// @returns true if the same struct is used recursively in one of its members. Only
+	/// analyses the "memory" representation, i.e. mappings are ignored in all structs.
+	bool recursive() const;
+
 private:
 	StructDefinition const& m_struct;
+	/// Cache for the recursive() function.
+	mutable boost::optional<bool> m_recursive;
 };
 
 /**
@@ -978,6 +985,8 @@ public:
 	bool canTakeArguments(TypePointers const& _arguments, TypePointer const& _selfType = TypePointer()) const;
 	/// @returns true if the types of parameters are equal (does't check return parameter types)
 	bool hasEqualArgumentTypes(FunctionType const& _other) const;
+	/// @returns true iff the return types are equal (does not check parameter types)
+	bool hasEqualReturnTypes(FunctionType const& _other) const;
 
 	/// @returns true if the ABI is used for this call (only meaningful for external calls)
 	bool isBareCall() const;

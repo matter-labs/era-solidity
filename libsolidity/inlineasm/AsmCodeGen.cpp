@@ -141,9 +141,12 @@ void assembly::CodeGenerator::assemble(
 	Block const& _parsedData,
 	AsmAnalysisInfo& _analysisInfo,
 	eth::Assembly& _assembly,
+	shared_ptr<julia::CodeTransform::Context>& _context, // out
 	julia::ExternalIdentifierAccess const& _identifierAccess
 )
 {
 	EthAssemblyAdapter assemblyAdapter(_assembly);
-	julia::CodeTransform(assemblyAdapter, _analysisInfo, false, false, _identifierAccess)(_parsedData);
+	julia::CodeTransform transform(assemblyAdapter, _analysisInfo, false, false, _identifierAccess);
+	transform(_parsedData);
+	_context = transform.context();
 }

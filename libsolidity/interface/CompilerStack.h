@@ -23,6 +23,18 @@
 
 #pragma once
 
+#include <libsolidity/interface/ErrorReporter.h>
+#include <libsolidity/analysis/FunctionCallGraph.h>
+#include <libsolidity/interface/ReadFile.h>
+
+#include <libevmasm/SourceLocation.h>
+#include <libevmasm/LinkerObject.h>
+
+#include <libdevcore/Common.h>
+#include <libdevcore/FixedHash.h>
+
+#include <json/json.h>
+
 #include <ostream>
 #include <string>
 #include <memory>
@@ -212,6 +224,9 @@ public:
 	std::string const& metadata(std::string const& _contractName) const;
 	void useMetadataLiteralSources(bool _metadataLiteralSources) { m_metadataLiteralSources = _metadataLiteralSources; }
 
+	/// @returns the contract metadata containing miscellaneous information
+	Json::Value const& extraMetadata(std::string const& _contractName) const;
+
 	/// @returns a JSON representing the estimated gas usage for contract creation, internal and external functions
 	Json::Value gasEstimates(std::string const& _contractName) const;
 
@@ -240,7 +255,11 @@ private:
 		mutable std::unique_ptr<Json::Value const> devDocumentation;
 		mutable std::unique_ptr<std::string const> sourceMapping;
 		mutable std::unique_ptr<std::string const> runtimeSourceMapping;
+		Json::Value extraMetadata; ///< Misc metadata
 	};
+
+	/// Populates the function pointer references in the AST annotation of each contract
+	void populateFuncPtrRefs();
 
 	/// Loads the missing sources from @a _ast (named @a _path) using the callback
 	/// @a m_readFile and stores the absolute paths of all imports in the AST annotations.
