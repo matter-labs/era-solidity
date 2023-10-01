@@ -15,43 +15,25 @@
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
- * @author Christian <c@ethdev.com>
- * @date 2016
- * Code-generating part of inline assembly.
+ * Small useful snippets for the optimiser.
  */
 
 #pragma once
 
-#include <libsolidity/inlineasm/AsmAnalysis.h>
-#include <libjulia/backends/evm/EVMCodeTransform.h>
+#include <libjulia/ASTDataForward.h>
 
-#include <functional>
+#include <libdevcore/Exceptions.h>
 
 namespace dev
 {
-namespace eth
+namespace julia
 {
-class Assembly;
-}
-namespace solidity
-{
-namespace assembly
-{
-struct Block;
 
-class CodeGenerator
-{
-public:
-	/// Performs code generation and appends generated to to _assembly.
-	static void assemble(
-		Block const& _parsedData,
-		AsmAnalysisInfo& _analysisInfo,
-		eth::Assembly& _assembly,
-		std::shared_ptr<julia::CodeTransform::Context>& _context, // out
-		julia::ExternalIdentifierAccess const& _identifierAccess = julia::ExternalIdentifierAccess()
-	);
-};
+struct IuliaException: virtual Exception {};
+struct OptimizerException: virtual IuliaException {};
 
-}
+/// Removes statements that are just empty blocks (non-recursive).
+void removeEmptyBlocks(Block& _block);
+
 }
 }
