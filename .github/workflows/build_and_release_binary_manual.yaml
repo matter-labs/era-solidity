@@ -14,7 +14,7 @@ on:
 
 jobs:
   build_linux_amd64:
-    runs-on: [self-hosted, ci-runner]
+    runs-on: [matterlabs-ci-runner]
     container:
       image: matterlabs/llvm_runner:latest
       credentials:
