@@ -82,6 +82,10 @@ set(sources
 	codegen/ContractCompiler.h
 	codegen/ExpressionCompiler.cpp
 	codegen/ExpressionCompiler.h
+	codegen/ExtraMetadata.cpp
+	codegen/ExtraMetadata.h
+	codegen/FuncPtrTracker.cpp
+	codegen/FuncPtrTracker.h
 	codegen/LValue.cpp
 	codegen/LValue.h
 	codegen/MultiUseYulFunctionCollector.h
