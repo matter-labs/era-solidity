@@ -3,8 +3,8 @@ name: Build and release binaries manually for Linux\Macos
 on:
   workflow_dispatch:
     inputs:
-      ZKEVM_RELEASE_TAG:
-        description: 'zkEVM Release tag'
+      ZKVM_RELEASE_TAG:
+        description: 'zkVM Release tag'
         required: true
         default: '1.0.0'
       BRANCH_TAG:
@@ -38,7 +38,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKEVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
           make -j$(nproc)
           pwd
           ls -la ./solc/
@@ -47,7 +47,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-amd64
-          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -94,7 +94,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKEVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
 
       - name: Building the Solidity compiler
         run: |
@@ -158,7 +158,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKEVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
 
       - name: Building the Solidity compiler
         shell: zsh {0}
@@ -171,7 +171,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-arm64
-          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -220,9 +220,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
-          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
           body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
@@ -232,9 +232,9 @@ jobs:
         with:
           repository: matter-labs/solc-bin
           generate_release_notes: false
-          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
           body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
