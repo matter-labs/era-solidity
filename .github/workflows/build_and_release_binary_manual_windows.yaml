@@ -4,10 +4,10 @@ name: Build and release binaries manually for Windows
 on:
   workflow_dispatch:
     inputs:
-      ZKEVM_RELEASE_TAG:
-        description: 'ZK EVM Release tag'
+      ZKVM_RELEASE_TAG:
+        description: 'zkVM Release tag'
         required: true
-        default: 'v1.1.0-lts'
+        default: '1.0.0'
       BRANCH_TAG:
         description: 'Which branch to build'
         required: true
@@ -80,14 +80,14 @@ jobs:
           mkdir build
           cd build
           $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
-          cmake .. -D SOLC_VERSION_ZKEVM="${{ inputs.ZKEVM_RELEASE_TAG }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang16 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake .. -D SOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang16 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
           cmake --build . -j 10 --target install --config Release
 
       - name: Prepare binary file name
         run: |
           mkdir -p releases\windows-amd64
           ls .\build\solc\Release\
-          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}.exe
+          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}.exe
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -121,21 +121,21 @@ jobs:
 #        uses: softprops/action-gh-release@v1
 #        with:
 #          generate_release_notes: false
-#          name: era-solidity ${{ inputs.BRANCH_TAG }} Windows
+#          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }} Windows
 #          body_path: ./tmp_changelog.txt
-#          tag_name: ${{ inputs.BRANCH_TAG }}
+#          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
 #          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
 #          files: |
 #            releases/**/**
 
-      - name: Prepare release for solidity-zkevm-bin
+      - name: Prepare release for solc-bin
         uses: softprops/action-gh-release@v1
         with:
-          repository: matter-labs/solidity-zkevm-bin
+          repository: matter-labs/solc-bin
           generate_release_notes: false
-          name: era-solidity ${{ inputs.BRANCH_TAG }} Windows
+          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }} Windows
           body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}
+          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
