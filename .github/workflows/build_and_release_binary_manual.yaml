@@ -178,7 +178,6 @@ jobs:
           name: release_macos_arm64
           path: releases
 
-
   prepare-release:
     runs-on: [ matterlabs-default-infra-runners ]
     needs:

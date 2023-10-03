@@ -1,4 +1,5 @@
 # Since this will fail on tags < 0.6.0 it's moved to separate workflow, to prevent fail on other platforms for those tags
+# Temporary disabled
 name: Build and release binaries manually for Windows
 
 on:
@@ -117,21 +118,9 @@ jobs:
         run: |
           awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > tmp_changelog.txt
 
-#      - name: Prepare release
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          generate_release_notes: false
-#          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }} Windows
-#          body_path: ./tmp_changelog.txt
-#          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
-#          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-#          files: |
-#            releases/**/**
-
-      - name: Prepare release for solc-bin
+      - name: Prepare release
         uses: softprops/action-gh-release@v1
         with:
-          repository: matter-labs/solc-bin
           generate_release_notes: false
           name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }} Windows
           body_path: ./tmp_changelog.txt
