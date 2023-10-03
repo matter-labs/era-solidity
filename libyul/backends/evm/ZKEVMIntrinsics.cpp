@@ -17,7 +17,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include <libyul/backends/evm/ZKEVMIntrinsics.h>
-#include <array>
 
 using namespace solidity::zkevm;
 

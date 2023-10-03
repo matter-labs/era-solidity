@@ -48,6 +48,7 @@
 #include <libsolidity/ast/TypeProvider.h>
 #include <libsolidity/ast/ASTJsonImporter.h>
 #include <libsolidity/codegen/Compiler.h>
+#include <libsolidity/codegen/FuncPtrTracker.h>
 #include <libsolidity/formal/ModelChecker.h>
 #include <libsolidity/interface/ABI.h>
 #include <libsolidity/interface/Natspec.h>
@@ -118,6 +119,21 @@ CompilerStack::~CompilerStack()
 {
 	--g_compilerStackCounts;
 	TypeProvider::reset();
+}
+
+void CompilerStack::populateFuncPtrRefs()
+{
+	for (Source const* source: m_sourceOrder)
+	{
+		if (!source->ast)
+			continue;
+
+		for (ContractDefinition const* contract: ASTNode::filteredNodes<ContractDefinition>(source->ast->nodes()))
+		{
+			FuncPtrTracker tracker{*contract};
+			tracker.run();
+		}
+	}
 }
 
 void CompilerStack::createAndAssignCallGraphs()
@@ -540,6 +556,7 @@ bool CompilerStack::analyze()
 		// Create & assign callgraphs and check for contract dependency cycles
 		if (noErrors)
 		{
+			populateFuncPtrRefs();
 			createAndAssignCallGraphs();
 			annotateInternalFunctionIDs();
 			findAndReportCyclicContractDependencies();
@@ -1098,6 +1115,17 @@ string const& CompilerStack::metadata(Contract const& _contract) const
 	return _contract.metadata.init([&]{ return createMetadata(_contract, m_viaIR); });
 }
 
+Json::Value const& CompilerStack::extraMetadata(string const& _contractName) const
+{
+	Contract const& contr = contract(_contractName);
+	if (m_stackState < AnalysisPerformed)
+		solThrow(CompilerError, "Analysis was not successful.");
+
+	solAssert(contr.contract, "");
+
+	return contr.extraMetadata;
+}
+
 CharStream const& CompilerStack::charStream(string const& _sourceName) const
 {
 	if (m_stackState < SourcesSet)
@@ -1431,6 +1459,7 @@ void CompilerStack::compileContract(
 		solAssert(false, "Optimizer exception during compilation");
 	}
 
+	compiledContract.extraMetadata = compiler->extraMetadata();
 	_otherCompilers[compiledContract.contract] = compiler;
 
 	assembleYul(_contract, compiler->assemblyPtr(), compiler->runtimeAssemblyPtr());
