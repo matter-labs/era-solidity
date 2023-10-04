@@ -48,6 +48,7 @@ void LinkerObject::link(map<string, h160> const& _libraryAddresses)
 
 string LinkerObject::toHex() const
 {
+	return "The EVM bytecode is unavailable in the zkEVM edition of solc";
 	string hex = solidity::util::toHex(bytecode);
 	for (auto const& ref: linkReferences)
 	{
