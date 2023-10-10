@@ -155,7 +155,7 @@ jobs:
           path: compiler-tester/reference.json
 
   benchmarks_analysis:
-    runs-on: [self-hosted, ci-runner]
+    runs-on: [matterlabs-ci-runner]
     needs: [benchmarks_candidate, benchmarks_reference]
     container:
       image: matterlabs/llvm_runner:latest
