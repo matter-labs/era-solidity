@@ -76,6 +76,9 @@ jobs:
             if ( -not $? ) { throw "Error building boost." }
             cd ..
           }
+
+      - name: Building the Solidity compiler
+        run: |
           $env:path += ";deps\cmake\bin\"
           # remove warning-as-erro flag in cmake
           sed -i '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
