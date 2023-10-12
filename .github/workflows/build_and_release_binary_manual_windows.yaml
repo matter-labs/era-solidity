@@ -39,8 +39,8 @@ jobs:
           # try to apply win patch
           git cherry-pick 860226e25dca397b5afd70680530963712aff050 || git cherry-pick --abort
           # latest llvm for MSVC
-          # git clone -q --depth=1 --branch=main https://github.com/zufuliu/llvm-utils.git c:\projects\llvm-utils
-          # Invoke-Item "c:\projects\llvm-utils\VS2017\install.bat"
+          git clone -q --depth=1 --branch=main https://github.com/zufuliu/llvm-utils.git c:\projects\llvm-utils
+          Invoke-Item "c:\projects\llvm-utils\VS2017\install.bat"
           # Patch specific versions with include
           $tag = git rev-parse --abbrev-ref HEAD
           echo $tag
