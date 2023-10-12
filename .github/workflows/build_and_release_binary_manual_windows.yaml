@@ -16,7 +16,7 @@ on:
 
 jobs:
   build_win:
-    runs-on: windows-2019-github-hosted-16core
+    runs-on: matterlabs-win-self-hosted
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
