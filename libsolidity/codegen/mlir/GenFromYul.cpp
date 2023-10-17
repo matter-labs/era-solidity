@@ -75,7 +75,9 @@ bool solidity::frontend::runMLIRGenFromYul(yul::Block const& _blk)
 		return false;
 	}
 
-	gen.getModule().print(llvm::errs());
+	gen.getModule().print(llvm::outs());
+	llvm::outs() << "\n";
+	llvm::outs().flush();
 
 	return true;
 }

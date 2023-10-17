@@ -1081,6 +1081,15 @@ void CommandLineInterface::assemble(yul::YulStack::Language _language, yul::YulS
 
 	for (auto const& src: m_fileReader.sourceUnits())
 	{
+		if (m_options.compiler.outputs.mlir)
+		{
+			if (!runMLIRGenFromYul(*yulStacks[src.first].parserResult()->code))
+			{
+				successful = false;
+			}
+			continue;
+		}
+
 		string machine =
 			_targetMachine == yul::YulStack::Machine::EVM ? "EVM" :
 			"Ewasm";
@@ -1111,14 +1120,6 @@ void CommandLineInterface::assemble(yul::YulStack::Language _language, yul::YulS
 
 		yul::MachineAssemblyObject object;
 		object = stack.assemble(_targetMachine);
-		if (m_options.compiler.outputs.mlir)
-		{
-			if (!runMLIRGenFromYul(*stack.parserResult()->code))
-			{
-				successful = false;
-			}
-		}
-
 		object.bytecode->link(m_options.linker.libraries);
 
 		if (m_options.compiler.outputs.binary)
