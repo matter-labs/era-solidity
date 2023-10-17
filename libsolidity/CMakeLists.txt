@@ -196,10 +196,6 @@ set(mlir_solidity_dialect_sources
 	codegen/mlir/Solidity/SolidityOps.cpp
 )
 
-# Solidity build warning flags conflict with that of llvm (mostly `PEDANTIC`
-# ones).
-set_source_files_properties(${mlir_sources} ${mlir_solidity_dialect_sources} PROPERTIES COMPILE_OPTIONS "-Wno-sign-conversion;-Wno-unused-parameter;-Wno-shorten-64-to-32;-Wno-extra-semi;-Wno-implicit-int-conversion")
-
 include_directories(${PROJECT_BINARY_DIR}/libsolidity/codegen/mlir)
 
 add_subdirectory(codegen/mlir/Solidity)

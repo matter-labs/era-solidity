@@ -53,7 +53,6 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 	if(PEDANTIC)
 		add_compile_options(-Wall)
 		add_compile_options(-Wextra)
-		add_compile_options(-Werror)
 		add_compile_options(-pedantic)
 		add_compile_options(-Wmissing-declarations)
 		add_compile_options(-Wno-unknown-pragmas)
