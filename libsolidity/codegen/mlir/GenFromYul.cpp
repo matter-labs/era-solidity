@@ -16,6 +16,10 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
+#include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "llvm/Support/raw_ostream.h"
 #include <libsolidity/codegen/mlir/GenFromYul.h>
 
 #include <libyul/AST.h>
@@ -32,10 +36,23 @@ namespace solidity::frontend
 
 class MLIRGenFromYul: public ASTWalker
 {
+	mlir::OpBuilder b;
+	mlir::ModuleOp mod;
+
 public:
+	mlir::ModuleOp getModule() { return mod; }
+
+	explicit MLIRGenFromYul(mlir::MLIRContext& _ctx): b(&_ctx)
+	{
+		mod = mlir::ModuleOp::create(b.getUnknownLoc());
+		b.setInsertionPointToEnd(mod.getBody());
+	}
+
 	void operator()(Block const& _blk)
 	{
-		solUnimplementedAssert(false, "TODO: Lower yul blocks");
+		// TODO: Add real source location
+		auto op = b.create<mlir::solidity::YulBlockOp>(b.getUnknownLoc());
+		solUnimplementedAssert(_blk.statements.empty(), "TODO: Lower non-empty yul blocks");
 		return;
 	}
 
@@ -46,6 +63,9 @@ private:
 
 void solidity::frontend::runMLIRGenFromYul(yul::Block const& _blk)
 {
-	MLIRGenFromYul gen;
+	mlir::MLIRContext ctx;
+	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
+	MLIRGenFromYul gen(ctx);
 	gen(_blk);
+	gen.getModule().print(llvm::errs());
 }

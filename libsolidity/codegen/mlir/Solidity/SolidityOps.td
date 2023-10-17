@@ -57,4 +57,20 @@ def Solidity_ContractOp : Solidity_Op<"contract", [Symbol, SingleBlock,
 	let builders = [OpBuilder<(ins CArg<"StringRef", "{}">:$name)>];
 }
 
+// TODO? Move this to a "yul" dialect? Do we need a lot of yul specific ops for
+// a new dialect?
+def Solidity_YulBlockOp : Solidity_Op<"yul_block", [SingleBlock,
+									  NoTerminator]> {
+	let summary = "Represents a block in yul";
+	let description = [{
+		Example:
+		solidity.yul_block {
+			...
+		}
+    }];
+
+	let regions = (region SizedRegion<1>:$bodyRegion);
+	let assemblyFormat = "$bodyRegion attr-dict";
+}
+
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD
