@@ -1,4 +1,5 @@
-// RUN: solc --mlir --yul %s | FileCheck %s
+// RUN: solc --yul --mlir %s | FileCheck %s
+// RUN: solc --yul --mlir --mmlir --mlir-print-debuginfo %s | FileCheck --check-prefix=DBG %s
 
 {
 }
@@ -7,3 +8,9 @@
 // CHECK-NEXT:   solidity.yul_block {
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+// DBG: module {
+// DBG-NEXT:   solidity.yul_block {
+// DBG-NEXT:   } loc(#loc1)
+// DBG-NEXT: } loc(#loc0)
+// DBG-NEXT: #loc0 = loc(unknown)
+// DBG-NEXT: #loc1 = loc({{.*}}:3:0)

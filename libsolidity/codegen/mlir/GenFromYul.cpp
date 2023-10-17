@@ -30,6 +30,7 @@
 
 #include <iostream>
 
+using namespace solidity::langutil;
 using namespace solidity::yul;
 
 namespace solidity::frontend
@@ -39,20 +40,29 @@ class MLIRGenFromYul: public ASTWalker
 {
 	mlir::OpBuilder b;
 	mlir::ModuleOp mod;
+	CharStream const& m_stream;
 
 public:
 	mlir::ModuleOp getModule() { return mod; }
 
-	explicit MLIRGenFromYul(mlir::MLIRContext& _ctx): b(&_ctx)
+	explicit MLIRGenFromYul(mlir::MLIRContext& _ctx, CharStream const& _stream): b(&_ctx), m_stream(_stream)
 	{
 		mod = mlir::ModuleOp::create(b.getUnknownLoc());
 		b.setInsertionPointToEnd(mod.getBody());
 	}
 
+	/// Returns the mlir location for the solidity source location `_loc`
+	mlir::Location loc(SourceLocation _loc)
+	{
+		// FIXME: Track _loc.end as well
+		LineColumn lineCol = m_stream.translatePositionToLineColumn(_loc.start);
+		return mlir::FileLineColLoc::get(b.getStringAttr(m_stream.name()), lineCol.line, lineCol.column);
+	}
+
 	void operator()(Block const& _blk)
 	{
 		// TODO: Add real source location
-		auto op = b.create<mlir::solidity::YulBlockOp>(b.getUnknownLoc());
+		auto op = b.create<mlir::solidity::YulBlockOp>(loc(_blk.debugData->nativeLocation));
 		solUnimplementedAssert(_blk.statements.empty(), "TODO: Lower non-empty yul blocks");
 		return;
 	}
@@ -62,11 +72,11 @@ private:
 
 }
 
-bool solidity::frontend::runMLIRGenFromYul(yul::Block const& _blk)
+bool solidity::frontend::runMLIRGenFromYul(yul::Block const& _blk, CharStream const& _stream)
 {
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
-	MLIRGenFromYul gen(ctx);
+	MLIRGenFromYul gen(ctx, _stream);
 	gen(_blk);
 
 	if (failed(mlir::verify(gen.getModule())))

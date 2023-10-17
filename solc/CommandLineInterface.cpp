@@ -1083,7 +1083,8 @@ void CommandLineInterface::assemble(yul::YulStack::Language _language, yul::YulS
 	{
 		if (m_options.compiler.outputs.mlir)
 		{
-			if (!runMLIRGenFromYul(*yulStacks[src.first].parserResult()->code))
+			auto const& yulStk = yulStacks[src.first];
+			if (!runMLIRGenFromYul(*yulStk.parserResult()->code, yulStk.charStream(src.first)))
 			{
 				successful = false;
 			}

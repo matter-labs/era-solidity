@@ -18,12 +18,13 @@
  * MLIR generator from yul source
  */
 
+#include "liblangutil/CharStream.h"
 #include "libyul/AST.h"
 
 
 namespace solidity::frontend
 {
 
-extern bool runMLIRGenFromYul(yul::Block const&);
+extern bool runMLIRGenFromYul(yul::Block const&, langutil::CharStream const&);
 
 }
