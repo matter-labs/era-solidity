@@ -71,6 +71,9 @@ def Solidity_YulBlockOp : Solidity_Op<"yul_block", [SingleBlock,
 
 	let regions = (region SizedRegion<1>:$bodyRegion);
 	let assemblyFormat = "$bodyRegion attr-dict";
+
+	let skipDefaultBuilders = 1;
+	let builders = [OpBuilder<(ins)>];
 }
 
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD

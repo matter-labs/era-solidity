@@ -39,5 +39,7 @@ void ContractOp::build(OpBuilder& builder, OperationState& state, StringRef name
 		builder.getNamedAttr(mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
 
+void YulBlockOp::build(OpBuilder& builder, OperationState& state) { state.addRegion()->emplaceBlock(); }
+
 #define GET_OP_CLASSES
 #include "Solidity/SolidityOps.cpp.inc"
