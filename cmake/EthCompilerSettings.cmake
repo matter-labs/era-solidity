@@ -53,17 +53,20 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 	if(PEDANTIC)
 		add_compile_options(-Wall)
 		add_compile_options(-Wextra)
+		# add_compile_options(-Werror) # llvm-15 build cfg
 		add_compile_options(-pedantic)
 		add_compile_options(-Wmissing-declarations)
 		add_compile_options(-Wno-unknown-pragmas)
 		add_compile_options(-Wimplicit-fallthrough)
-		add_compile_options(-Wsign-conversion)
-		add_compile_options(-Wconversion)
+		# add_compile_options(-Wsign-conversion) # llvm-15 build cfg
+		# add_compile_options(-Wconversion) # llvm-15 build cfg
+		add_compile_options(-Wno-unused-parameter) # llvm-15 build cfg
 
-		check_cxx_compiler_flag(-Wextra-semi WEXTRA_SEMI)
-		if(WEXTRA_SEMI)
-			add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>)
-		endif()
+		# llvm-15 build cfg:
+		# check_cxx_compiler_flag(-Wextra-semi WEXTRA_SEMI)
+		# if(WEXTRA_SEMI)
+		# 	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>)
+		# endif()
 		eth_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
 		eth_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
 		eth_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
