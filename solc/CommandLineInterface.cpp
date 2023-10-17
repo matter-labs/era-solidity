@@ -32,6 +32,7 @@
 #include <libsolidity/ast/ASTJsonExporter.h>
 #include <libsolidity/ast/ASTJsonImporter.h>
 #include <libsolidity/analysis/NameAndTypeResolver.h>
+#include <libsolidity/codegen/mlir/GenFromYul.h>
 #include <libsolidity/interface/CompilerStack.h>
 #include <libsolidity/interface/StandardCompiler.h>
 #include <libsolidity/interface/GasEstimator.h>
@@ -1110,6 +1111,11 @@ void CommandLineInterface::assemble(yul::YulStack::Language _language, yul::YulS
 
 		yul::MachineAssemblyObject object;
 		object = stack.assemble(_targetMachine);
+		if (m_options.compiler.outputs.mlir)
+		{
+			runMLIRGenFromYul(*stack.parserResult()->code);
+		}
+
 		object.bytecode->link(m_options.linker.libraries);
 
 		if (m_options.compiler.outputs.binary)

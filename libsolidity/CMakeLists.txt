@@ -186,6 +186,7 @@ set(sources
 
 set(mlir_sources
 	codegen/mlir/Gen.cpp
+	codegen/mlir/GenFromYul.cpp
 	codegen/mlir/Gen.h
 	codegen/mlir/Passes.h
 	codegen/mlir/LowerToLLVM.cpp

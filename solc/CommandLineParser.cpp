@@ -479,6 +479,7 @@ void CommandLineParser::parseOutputSelection()
 			CompilerOutputs::componentName(&CompilerOutputs::irOptimized),
 			CompilerOutputs::componentName(&CompilerOutputs::ewasm),
 			CompilerOutputs::componentName(&CompilerOutputs::ewasmIR),
+			CompilerOutputs::componentName(&CompilerOutputs::mlir)
 		};
 
 		switch (_mode)
