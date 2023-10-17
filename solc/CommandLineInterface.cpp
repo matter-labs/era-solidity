@@ -1113,7 +1113,10 @@ void CommandLineInterface::assemble(yul::YulStack::Language _language, yul::YulS
 		object = stack.assemble(_targetMachine);
 		if (m_options.compiler.outputs.mlir)
 		{
-			runMLIRGenFromYul(*stack.parserResult()->code);
+			if (!runMLIRGenFromYul(*stack.parserResult()->code))
+			{
+				successful = false;
+			}
 		}
 
 		object.bytecode->link(m_options.linker.libraries);

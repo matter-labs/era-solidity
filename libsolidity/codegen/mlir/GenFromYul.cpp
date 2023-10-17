@@ -19,6 +19,7 @@
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 #include <libsolidity/codegen/mlir/GenFromYul.h>
 
@@ -61,11 +62,20 @@ private:
 
 }
 
-void solidity::frontend::runMLIRGenFromYul(yul::Block const& _blk)
+bool solidity::frontend::runMLIRGenFromYul(yul::Block const& _blk)
 {
 	mlir::MLIRContext ctx;
 	ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
 	MLIRGenFromYul gen(ctx);
 	gen(_blk);
+
+	if (failed(mlir::verify(gen.getModule())))
+	{
+		gen.getModule().emitError("Module verification error");
+		return false;
+	}
+
 	gen.getModule().print(llvm::errs());
+
+	return true;
 }

@@ -24,6 +24,6 @@
 namespace solidity::frontend
 {
 
-extern void runMLIRGenFromYul(yul::Block const&);
+extern bool runMLIRGenFromYul(yul::Block const&);
 
 }
