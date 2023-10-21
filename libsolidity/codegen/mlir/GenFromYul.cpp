@@ -48,6 +48,10 @@ public:
     b.setInsertionPointToEnd(mod.getBody());
   }
 
+  /// Lowers a block
+  void operator()(Block const &blk);
+
+private:
   /// Returns the mlir location for the solidity source location `loc`
   mlir::Location loc(SourceLocation loc) {
     // FIXME: Track loc.end as well
@@ -56,62 +60,71 @@ public:
                                      lineCol.line, lineCol.column);
   }
 
-  /// Returns the mlir expression for the function call `call`
-  mlir::Value genExpr(FunctionCall const &call) {
-    BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
-    if (builtin) {
-      solUnimplementedAssert(builtin->name.str() == "return",
-                             "TODO: Lower other builtins");
-      b.create<mlir::solidity::ReturnOp>(loc(call.debugData->nativeLocation),
-                                         genExpr(call.arguments[0]),
-                                         genExpr(call.arguments[1]));
-      return {};
-
-    } else {
-      solUnimplementedAssert(false, "TODO: Lower non builtin function call");
-    }
-
-    solAssert(false);
-  }
+  /// Returns the mlir expression for the literal `lit`
+  mlir::Value genExpr(Literal const &lit);
 
   /// Returns the mlir expression for the identifier `id`
-  mlir::Value genExpr(Identifier const &id) {
-    solUnimplementedAssert(false, "TODO: Lower identifier");
-  }
+  mlir::Value genExpr(Identifier const &id);
 
-  /// Returns the mlir expression for the literal `lit`
-  mlir::Value genExpr(Literal const &lit) {
-    mlir::Location lc = loc(lit.debugData->nativeLocation);
-
-    // Do we need to represent constants as u256? Can we do that in
-    // arith::ConstantOp?
-    auto i256Ty = b.getIntegerType(256);
-    return b.create<mlir::arith::ConstantOp>(
-        lc, b.getIntegerAttr(i256Ty, llvm::APInt(256, lit.value.str(),
-                                                 /*radix=*/10)));
-  }
+  /// Returns the mlir expression for the function call `call`
+  mlir::Value genExpr(FunctionCall const &call);
 
   /// Returns the mlir expression for the expression `expr`
-  mlir::Value genExpr(Expression const &expr) {
-    return std::visit(
-        [&](auto &&resolvedExpr) { return this->genExpr(resolvedExpr); }, expr);
-  }
+  mlir::Value genExpr(Expression const &expr);
 
   /// Lowers an expression statement
-  void operator()(ExpressionStatement const &expr) { genExpr(expr.expression); }
+  void operator()(ExpressionStatement const &expr);
+};
 
-  void operator()(Block const &blk) {
-    // TODO: Add real source location
-    auto op = b.create<mlir::solidity::YulBlockOp>(
-        loc(blk.debugData->nativeLocation));
+mlir::Value MLIRGenFromYul::genExpr(Literal const &lit) {
+  mlir::Location lc = this->loc(lit.debugData->nativeLocation);
 
-    b.setInsertionPointToEnd(op.getBody());
-    ASTWalker::operator()(blk);
-    return;
+  // Do we need to represent constants as u256? Can we do that in
+  // arith::ConstantOp?
+  auto i256Ty = b.getIntegerType(256);
+  return b.create<mlir::arith::ConstantOp>(
+      lc, b.getIntegerAttr(i256Ty, llvm::APInt(256, lit.value.str(),
+                                               /*radix=*/10)));
+}
+
+mlir::Value MLIRGenFromYul::genExpr(Identifier const &id) {
+  solUnimplementedAssert(false, "TODO: Lower identifier");
+}
+
+mlir::Value MLIRGenFromYul::genExpr(FunctionCall const &call) {
+  BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
+  if (builtin) {
+    solUnimplementedAssert(builtin->name.str() == "return",
+                           "TODO: Lower other builtins");
+    b.create<mlir::solidity::ReturnOp>(loc(call.debugData->nativeLocation),
+                                       genExpr(call.arguments[0]),
+                                       genExpr(call.arguments[1]));
+    return {};
+
+  } else {
+    solUnimplementedAssert(false, "TODO: Lower non builtin function call");
   }
 
-private:
-};
+  solAssert(false);
+}
+
+mlir::Value MLIRGenFromYul::genExpr(Expression const &expr) {
+  return std::visit(
+      [&](auto &&resolvedExpr) { return this->genExpr(resolvedExpr); }, expr);
+}
+
+void MLIRGenFromYul::operator()(ExpressionStatement const &expr) {
+  genExpr(expr.expression);
+}
+
+void MLIRGenFromYul::operator()(Block const &blk) {
+  auto op =
+      b.create<mlir::solidity::YulBlockOp>(loc(blk.debugData->nativeLocation));
+
+  b.setInsertionPointToEnd(op.getBody());
+  ASTWalker::operator()(blk);
+  return;
+}
 
 } // namespace solidity::frontend
 
