@@ -77,11 +77,23 @@ def Solidity_YulBlockOp : Solidity_Op<"yul_block", [SingleBlock,
   let builders = [OpBuilder<(ins)>];
 }
 
+// TODO: The op definitions of yul builtins should be auto-generated from
+// evmasm::InstructionInfo
+
 def Solidity_ReturnOp : Solidity_Op<"return"> {
   let summary = "Represents the `return` call in yul";
   let description = [{
     Example:
     solidity.return %a %b
+  }];
+  let arguments = (ins I<256>:$lhs, I<256>:$rhs);
+}
+
+def Solidity_MstoreOp : Solidity_Op<"mstore"> {
+  let summary = "Represents the `mstore` call in yul";
+  let description = [{
+    Example:
+    solidity.mstore %a %b
   }];
   let arguments = (ins I<256>:$lhs, I<256>:$rhs);
 }

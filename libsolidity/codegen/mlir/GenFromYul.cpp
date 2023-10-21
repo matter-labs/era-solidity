@@ -94,13 +94,23 @@ mlir::Value MLIRGenFromYul::genExpr(Identifier const &id) {
 mlir::Value MLIRGenFromYul::genExpr(FunctionCall const &call) {
   BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
   if (builtin) {
-    solUnimplementedAssert(builtin->name.str() == "return",
-                           "TODO: Lower other builtins");
-    b.create<mlir::solidity::ReturnOp>(loc(call.debugData->nativeLocation),
-                                       genExpr(call.arguments[0]),
-                                       genExpr(call.arguments[1]));
-    return {};
 
+    // TODO: The lowering of builtin function should be auto generated from
+    // evmasm::InstructionInfo and the corresponding mlir ops
+    if (builtin->name.str() == "return") {
+      b.create<mlir::solidity::ReturnOp>(loc(call.debugData->nativeLocation),
+                                         genExpr(call.arguments[0]),
+                                         genExpr(call.arguments[1]));
+      return {};
+
+    } else if (builtin->name.str() == "mstore") {
+      b.create<mlir::solidity::MstoreOp>(loc(call.debugData->nativeLocation),
+                                         genExpr(call.arguments[0]),
+                                         genExpr(call.arguments[1]));
+      return {};
+    } else {
+      solUnimplementedAssert(false, "TODO: Lower other builtin function call");
+    }
   } else {
     solUnimplementedAssert(false, "TODO: Lower non builtin function call");
   }
