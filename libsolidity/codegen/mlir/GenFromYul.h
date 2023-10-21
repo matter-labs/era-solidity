@@ -21,9 +21,10 @@
 
 #include "liblangutil/CharStream.h"
 #include "libyul/AST.h"
+#include "libyul/Dialect.h"
 
 namespace solidity::frontend {
 
-extern bool runMLIRGenFromYul(yul::Block const &, langutil::CharStream const &);
-
+extern bool runMLIRGenFromYul(yul::Block const &, langutil::CharStream const &,
+                              yul::Dialect const &);
 }

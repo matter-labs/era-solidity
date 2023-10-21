@@ -43,6 +43,7 @@
 #include <libsolidity/lsp/Transport.h>
 
 #include <libyul/YulStack.h>
+#include <libyul/backends/evm/EVMDialect.h>
 
 #include <libevmasm/Instruction.h>
 #include <libevmasm/Disassemble.h>
@@ -1083,8 +1084,10 @@ void CommandLineInterface::assemble(yul::YulStack::Language _language, yul::YulS
 	{
 		if (m_options.compiler.outputs.mlir)
 		{
+			solUnimplementedAssert(_language == yul::YulStack::Language::Yul, "Language::Yul is only supported");
 			auto const& yulStk = yulStacks[src.first];
-			if (!runMLIRGenFromYul(*yulStk.parserResult()->code, yulStk.charStream(src.first)))
+			yul::EVMDialectTyped const* dialect = &yul::EVMDialectTyped::instance(m_options.output.evmVersion);
+			if (!runMLIRGenFromYul(*yulStk.parserResult()->code, yulStk.charStream(src.first), *dialect))
 			{
 				successful = false;
 			}

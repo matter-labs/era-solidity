@@ -77,4 +77,13 @@ def Solidity_YulBlockOp : Solidity_Op<"yul_block", [SingleBlock,
   let builders = [OpBuilder<(ins)>];
 }
 
+def Solidity_ReturnOp : Solidity_Op<"return"> {
+  let summary = "Represents the `return` call in yul";
+  let description = [{
+    Example:
+    solidity.return %a %b
+  }];
+  let arguments = (ins I<256>:$lhs, I<256>:$rhs);
+}
+
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD

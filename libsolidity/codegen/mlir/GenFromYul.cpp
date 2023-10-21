@@ -20,6 +20,7 @@
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "libyul/AST.h"
 #include "libyul/optimiser/ASTWalker.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
@@ -35,12 +36,14 @@ class MLIRGenFromYul : public ASTWalker {
   mlir::OpBuilder b;
   mlir::ModuleOp mod;
   CharStream const &stream;
+  Dialect const &yulDialect;
 
 public:
   mlir::ModuleOp getModule() { return mod; }
 
-  explicit MLIRGenFromYul(mlir::MLIRContext &ctx, CharStream const &stream)
-      : b(&ctx), stream(stream) {
+  explicit MLIRGenFromYul(mlir::MLIRContext &ctx, CharStream const &stream,
+                          Dialect const &yulDialect)
+      : b(&ctx), stream(stream), yulDialect(yulDialect) {
     mod = mlir::ModuleOp::create(b.getUnknownLoc());
     b.setInsertionPointToEnd(mod.getBody());
   }
@@ -53,12 +56,57 @@ public:
                                      lineCol.line, lineCol.column);
   }
 
+  /// Returns the mlir expression for the function call `call`
+  mlir::Value genExpr(FunctionCall const &call) {
+    BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
+    if (builtin) {
+      solUnimplementedAssert(builtin->name.str() == "return",
+                             "TODO: Lower other builtins");
+      b.create<mlir::solidity::ReturnOp>(loc(call.debugData->nativeLocation),
+                                         genExpr(call.arguments[0]),
+                                         genExpr(call.arguments[1]));
+      return {};
+
+    } else {
+      solUnimplementedAssert(false, "TODO: Lower non builtin function call");
+    }
+
+    solAssert(false);
+  }
+
+  /// Returns the mlir expression for the identifier `id`
+  mlir::Value genExpr(Identifier const &id) {
+    solUnimplementedAssert(false, "TODO: Lower identifier");
+  }
+
+  /// Returns the mlir expression for the literal `lit`
+  mlir::Value genExpr(Literal const &lit) {
+    mlir::Location lc = loc(lit.debugData->nativeLocation);
+
+    // Do we need to represent constants as u256? Can we do that in
+    // arith::ConstantOp?
+    auto i256Ty = b.getIntegerType(256);
+    return b.create<mlir::arith::ConstantOp>(
+        lc, b.getIntegerAttr(i256Ty, llvm::APInt(256, lit.value.str(),
+                                                 /*radix=*/10)));
+  }
+
+  /// Returns the mlir expression for the expression `expr`
+  mlir::Value genExpr(Expression const &expr) {
+    return std::visit(
+        [&](auto &&resolvedExpr) { return this->genExpr(resolvedExpr); }, expr);
+  }
+
+  /// Lowers an expression statement
+  void operator()(ExpressionStatement const &expr) { genExpr(expr.expression); }
+
   void operator()(Block const &blk) {
     // TODO: Add real source location
     auto op = b.create<mlir::solidity::YulBlockOp>(
         loc(blk.debugData->nativeLocation));
-    solUnimplementedAssert(blk.statements.empty(),
-                           "TODO: Lower non-empty yul blocks");
+
+    b.setInsertionPointToEnd(op.getBody());
+    ASTWalker::operator()(blk);
     return;
   }
 
@@ -67,14 +115,17 @@ private:
 
 } // namespace solidity::frontend
 
-bool solidity::frontend::runMLIRGenFromYul(yul::Block const &blk,
-                                           CharStream const &stream) {
+bool solidity::frontend::runMLIRGenFromYul(Block const &blk,
+                                           CharStream const &stream,
+                                           Dialect const &yulDialect) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
-  MLIRGenFromYul gen(ctx, stream);
+  ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+  MLIRGenFromYul gen(ctx, stream, yulDialect);
   gen(blk);
 
   if (failed(mlir::verify(gen.getModule()))) {
+    gen.getModule().print(llvm::errs());
     gen.getModule().emitError("Module verification error");
     return false;
   }
