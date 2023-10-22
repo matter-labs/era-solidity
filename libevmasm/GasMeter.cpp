@@ -20,7 +20,6 @@
 
 #include <libevmasm/KnownState.h>
 
-using namespace std;
 using namespace solidity;
 using namespace solidity::util;
 using namespace solidity::evmasm;
@@ -32,7 +31,7 @@ GasMeter::GasConsumption& GasMeter::GasConsumption::operator+=(GasConsumption co
 	if (isInfinite)
 		return *this;
 	bigint v = bigint(value) + _other.value;
-	if (v > numeric_limits<u256>::max())
+	if (v > std::numeric_limits<u256>::max())
 		*this = infinite();
 	else
 		value = u256(v);
@@ -45,6 +44,12 @@ GasMeter::GasConsumption GasMeter::estimateMax(AssemblyItem const& _item, bool _
 	switch (_item.type())
 	{
 	case Push:
+		if (m_evmVersion.hasPush0() && _item.data() == 0)
+		{
+			gas = runGas(Instruction::PUSH0, m_evmVersion);
+			break;
+		}
+		[[fallthrough]];
 	case PushTag:
 	case PushData:
 	case PushSub:

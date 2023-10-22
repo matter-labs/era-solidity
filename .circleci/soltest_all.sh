@@ -31,8 +31,8 @@ REPODIR="$(realpath "$(dirname "$0")"/..)"
 # shellcheck source=scripts/common.sh
 source "${REPODIR}/scripts/common.sh"
 
-EVM_VALUES=(homestead byzantium constantinople petersburg istanbul berlin london paris)
-DEFAULT_EVM=paris
+EVM_VALUES=(homestead byzantium constantinople petersburg istanbul berlin london paris shanghai)
+DEFAULT_EVM=shanghai
 [[ " ${EVM_VALUES[*]} " =~ $DEFAULT_EVM ]]
 OPTIMIZE_VALUES=(0 1)
 

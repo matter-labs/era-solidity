@@ -511,8 +511,8 @@ bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 		m_currentLValue.reset();
 		break;
 	case Token::Add: // +
-		// unary add, so basically no-op
-		break;
+		// According to SyntaxChecker...
+		solAssert(false, "Use of unary + is disallowed.");
 	case Token::Sub: // -
 		solUnimplementedAssert(
 			type.category() != Type::Category::FixedPoint,
@@ -1659,6 +1659,10 @@ bool ExpressionCompiler::visit(MemberAccess const& _memberAccess)
 	{
 		if (functionType->hasDeclaration())
 		{
+			// Still visit the expression in case it has side effects.
+			_memberAccess.expression().accept(*this);
+			utils().popStackElement(*functionType);
+
 			if (functionType->kind() == FunctionType::Kind::Event)
 				m_context << u256(h256::Arith(util::keccak256(functionType->externalSignature())));
 			else

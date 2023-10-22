@@ -22,7 +22,6 @@
 
 #include <libevmasm/Instruction.h>
 
-using namespace std;
 using namespace solidity;
 using namespace solidity::util;
 using namespace solidity::evmasm;
@@ -94,6 +93,7 @@ std::map<std::string, Instruction> const solidity::evmasm::c_instructions =
 	{ "MSIZE", Instruction::MSIZE },
 	{ "GAS", Instruction::GAS },
 	{ "JUMPDEST", Instruction::JUMPDEST },
+	{ "PUSH0", Instruction::PUSH0 },
 	{ "PUSH1", Instruction::PUSH1 },
 	{ "PUSH2", Instruction::PUSH2 },
 	{ "PUSH3", Instruction::PUSH3 },
@@ -242,6 +242,7 @@ static std::map<Instruction, InstructionInfo> const c_instructionInfo =
 	{ Instruction::MSIZE,		{ "MSIZE",			0, 0, 1, false, Tier::Base } },
 	{ Instruction::GAS,			{ "GAS",			0, 0, 1, false, Tier::Base } },
 	{ Instruction::JUMPDEST,	{ "JUMPDEST",		0, 0, 0, true, Tier::Special } },
+	{ Instruction::PUSH0,		{ "PUSH0",			0, 0, 1, false, Tier::Base } },
 	{ Instruction::PUSH1,		{ "PUSH1",			1, 0, 1, false, Tier::VeryLow } },
 	{ Instruction::PUSH2,		{ "PUSH2",			2, 0, 1, false, Tier::VeryLow } },
 	{ Instruction::PUSH3,		{ "PUSH3",			3, 0, 1, false, Tier::VeryLow } },
@@ -333,7 +334,7 @@ InstructionInfo solidity::evmasm::instructionInfo(Instruction _inst, langutil::E
 	}
 	catch (...)
 	{
-		return InstructionInfo({"<INVALID_INSTRUCTION: " + to_string(static_cast<unsigned>(_inst)) + ">", 0, 0, 0, false, Tier::Invalid});
+		return InstructionInfo({"<INVALID_INSTRUCTION: " + std::to_string(static_cast<unsigned>(_inst)) + ">", 0, 0, 0, false, Tier::Invalid});
 	}
 }
 

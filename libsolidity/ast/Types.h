@@ -174,9 +174,26 @@ public:
 
 	enum class Category
 	{
-		Address, Integer, RationalNumber, StringLiteral, Bool, FixedPoint, Array, ArraySlice,
-		FixedBytes, Contract, Struct, Function, Enum, UserDefinedValueType, Tuple,
-		Mapping, TypeType, Modifier, Magic, Module,
+		Address,
+		Integer,
+		RationalNumber,
+		StringLiteral,
+		Bool,
+		FixedPoint,
+		Array,
+		ArraySlice,
+		FixedBytes,
+		Contract,
+		Struct,
+		Function,
+		Enum,
+		UserDefinedValueType,
+		Tuple,
+		Mapping,
+		TypeType,
+		Modifier,
+		Magic,
+		Module,
 		InaccessibleDynamic
 	};
 
@@ -786,7 +803,7 @@ public:
 	/// if the type has an interfaceType.
 	virtual BoolResult validForLocation(DataLocation _loc) const = 0;
 
-	bool operator==(ReferenceType const& _other) const
+	bool equals(ReferenceType const& _other) const
 	{
 		return location() == _other.location() && isPointer() == _other.isPointer();
 	}
@@ -1581,6 +1598,7 @@ public:
 	bool hasSimpleZeroValueInMemory() const override { solAssert(false, ""); }
 	std::string toString(bool _withoutDataLocation) const override { return "type(" + m_actualType->toString(_withoutDataLocation) + ")"; }
 	MemberList::MemberMap nativeMembers(ASTNode const* _currentScope) const override;
+	Type const* mobileType() const override { return nullptr; }
 
 	BoolResult isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 protected:
@@ -1676,6 +1694,8 @@ public:
 	Kind kind() const { return m_kind; }
 
 	Type const* typeArgument() const;
+
+	Type const* mobileType() const override { return nullptr; }
 
 protected:
 	std::vector<std::tuple<std::string, Type const*>> makeStackItems() const override { return {}; }

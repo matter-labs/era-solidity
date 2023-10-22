@@ -62,15 +62,17 @@ using namespace solidity::frontend::smt;
 CHC::CHC(
 	EncodingContext& _context,
 	UniqueErrorReporter& _errorReporter,
+	UniqueErrorReporter& _unsupportedErrorReporter,
 	map<util::h256, string> const& _smtlib2Responses,
 	ReadCallback::Callback const& _smtCallback,
 	ModelCheckerSettings _settings,
 	CharStreamProvider const& _charStreamProvider
 ):
-	SMTEncoder(_context, _settings, _errorReporter, _charStreamProvider),
+	SMTEncoder(_context, _settings, _errorReporter, _unsupportedErrorReporter, _charStreamProvider),
 	m_smtlib2Responses(_smtlib2Responses),
 	m_smtCallback(_smtCallback)
 {
+	solAssert(!_settings.printQuery || _settings.solvers == smtutil::SMTSolverChoice::SMTLIB2(), "Only SMTLib2 solver can be enabled to print queries");
 }
 
 void CHC::analyze(SourceUnit const& _source)
@@ -838,9 +840,10 @@ void CHC::internalFunctionCall(FunctionCall const& _funCall)
 	connectBlocks(
 		m_currentBlock,
 		predicate(*m_errorDest),
-		errorFlag().currentValue() > 0
+		errorFlag().currentValue() > 0 && currentPathConditions()
 	);
-	m_context.addAssertion(errorFlag().currentValue() == 0);
+	m_context.addAssertion(smtutil::Expression::implies(currentPathConditions(), errorFlag().currentValue() == 0));
+	m_context.addAssertion(errorFlag().increaseIndex() == 0);
 }
 
 void CHC::addNondetCalls(ContractDefinition const& _contract)
@@ -969,7 +972,7 @@ void CHC::externalFunctionCall(FunctionCall const& _funCall)
 
 	m_context.addAssertion(nondetCall);
 	solAssert(m_errorDest, "");
-	connectBlocks(m_currentBlock, predicate(*m_errorDest), errorFlag().currentValue() > 0);
+	connectBlocks(m_currentBlock, predicate(*m_errorDest), errorFlag().currentValue() > 0 && currentPathConditions());
 
 	// To capture the possibility of a reentrant call, we record in the call graph that the  current function
 	// can call any of the external methods of the current contract.
@@ -997,6 +1000,12 @@ void CHC::externalFunctionCallToTrustedCode(FunctionCall const& _funCall)
 	auto function = functionCallToDefinition(_funCall, currentScopeContract(), m_currentContract);
 	if (!function)
 		return;
+
+	// Remember the external call in the call graph to properly detect verification targets for the current function
+	if (m_currentFunction && !m_currentFunction->isConstructor())
+		m_callGraph[m_currentFunction].insert(function);
+	else
+		m_callGraph[m_currentContract].insert(function);
 
 	// External call creates a new transaction.
 	auto originalTx = state().tx();
@@ -1799,6 +1808,16 @@ tuple<CheckResult, smtutil::Expression, CHCSolverInterface::CexGraph> CHC::query
 	CheckResult result;
 	smtutil::Expression invariant(true);
 	CHCSolverInterface::CexGraph cex;
+	if (m_settings.printQuery)
+	{
+		auto smtLibInterface = dynamic_cast<CHCSmtLib2Interface*>(m_interface.get());
+		solAssert(smtLibInterface, "Requested to print queries but CHCSmtLib2Interface not available");
+		string smtLibCode = smtLibInterface->dumpQuery(_query);
+		m_errorReporter.info(
+			2339_error,
+			"CHC: Requested query:\n" + smtLibCode
+		);
+	}
 	tie(result, invariant, cex) = m_interface->query(_query);
 	switch (result)
 	{
@@ -1865,6 +1884,7 @@ void CHC::verificationTargetEncountered(
 		m_functionTargetIds[m_currentContract].push_back(errorId);
 	auto previousError = errorFlag().currentValue();
 	errorFlag().increaseIndex();
+	auto extendedErrorCondition = currentPathConditions() && _errorCondition;
 
 	Predicate const* localBlock = m_currentFunction ?
 		createBlock(m_currentFunction, PredicateType::FunctionErrorBlock) :
@@ -1874,12 +1894,54 @@ void CHC::verificationTargetEncountered(
 	connectBlocks(
 		m_currentBlock,
 		pred,
-		_errorCondition && errorFlag().currentValue() == errorId
+		extendedErrorCondition && errorFlag().currentValue() == errorId
 	);
 	solAssert(m_errorDest, "");
 	addRule(smtutil::Expression::implies(pred, predicate(*m_errorDest)), pred.name);
 
 	m_context.addAssertion(errorFlag().currentValue() == previousError);
+}
+
+pair<string, ErrorId> CHC::targetDescription(CHCVerificationTarget const& _target)
+{
+	if (_target.type == VerificationTargetType::PopEmptyArray)
+	{
+		solAssert(dynamic_cast<FunctionCall const*>(_target.errorNode), "");
+		return {"Empty array \"pop\"", 2529_error};
+	}
+	else if (_target.type == VerificationTargetType::OutOfBounds)
+	{
+		solAssert(dynamic_cast<IndexAccess const*>(_target.errorNode), "");
+		return {"Out of bounds access", 6368_error};
+	}
+	else if (
+		_target.type == VerificationTargetType::Underflow ||
+		_target.type == VerificationTargetType::Overflow
+	)
+	{
+		auto const* expr = dynamic_cast<Expression const*>(_target.errorNode);
+		solAssert(expr, "");
+		auto const* intType = dynamic_cast<IntegerType const*>(expr->annotation().type);
+		if (!intType)
+			intType = TypeProvider::uint256();
+
+		if (_target.type == VerificationTargetType::Underflow)
+			return {
+				"Underflow (resulting value less than " + formatNumberReadable(intType->minValue()) + ")",
+				3944_error
+			};
+
+		return {
+			"Overflow (resulting value larger than " + formatNumberReadable(intType->maxValue()) + ")",
+			4984_error
+		};
+	}
+	else if (_target.type == VerificationTargetType::DivByZero)
+		return {"Division by zero", 4281_error};
+	else if (_target.type == VerificationTargetType::Assert)
+		return {"Assertion violation", 6328_error};
+	else
+		solAssert(false);
 }
 
 void CHC::checkVerificationTargets()
@@ -1900,57 +1962,8 @@ void CHC::checkVerificationTargets()
 	set<unsigned> checkedErrorIds;
 	for (auto const& [targetId, placeholders]: targetEntryPoints)
 	{
-		string errorType;
-		ErrorId errorReporterId;
-
 		auto const& target = m_verificationTargets.at(targetId);
-
-		if (target.type == VerificationTargetType::PopEmptyArray)
-		{
-			solAssert(dynamic_cast<FunctionCall const*>(target.errorNode), "");
-			errorType = "Empty array \"pop\"";
-			errorReporterId = 2529_error;
-		}
-		else if (target.type == VerificationTargetType::OutOfBounds)
-		{
-			solAssert(dynamic_cast<IndexAccess const*>(target.errorNode), "");
-			errorType = "Out of bounds access";
-			errorReporterId = 6368_error;
-		}
-		else if (
-			target.type == VerificationTargetType::Underflow ||
-			target.type == VerificationTargetType::Overflow
-		)
-		{
-			auto const* expr = dynamic_cast<Expression const*>(target.errorNode);
-			solAssert(expr, "");
-			auto const* intType = dynamic_cast<IntegerType const*>(expr->annotation().type);
-			if (!intType)
-				intType = TypeProvider::uint256();
-
-			if (target.type == VerificationTargetType::Underflow)
-			{
-				errorType = "Underflow (resulting value less than " + formatNumberReadable(intType->minValue()) + ")";
-				errorReporterId = 3944_error;
-			}
-			else if (target.type == VerificationTargetType::Overflow)
-			{
-				errorType = "Overflow (resulting value larger than " + formatNumberReadable(intType->maxValue()) + ")";
-				errorReporterId = 4984_error;
-			}
-		}
-		else if (target.type == VerificationTargetType::DivByZero)
-		{
-			errorType = "Division by zero";
-			errorReporterId = 4281_error;
-		}
-		else if (target.type == VerificationTargetType::Assert)
-		{
-			errorType = "Assertion violation";
-			errorReporterId = 6328_error;
-		}
-		else
-			solAssert(false, "");
+		auto [errorType, errorReporterId] = targetDescription(target);
 
 		checkAndReportTarget(target, placeholders, errorReporterId, errorType + " happens here.", errorType + " might happen here.");
 		checkedErrorIds.insert(target.errorId);
@@ -1981,6 +1994,25 @@ void CHC::checkVerificationTargets()
 			" Consider choosing a specific contract to be verified in order to reduce the solving problems." +
 			" Consider increasing the timeout per query."
 		);
+
+	if (!m_settings.showProvedSafe && !m_safeTargets.empty())
+		m_errorReporter.info(
+			1391_error,
+			"CHC: " +
+			to_string(m_safeTargets.size()) +
+			" verification condition(s) proved safe!" +
+			" Enable the model checker option \"show proved safe\" to see all of them."
+		);
+	else if (m_settings.showProvedSafe)
+		for (auto const& [node, targets]: m_safeTargets)
+			for (auto const& target: targets)
+				m_errorReporter.info(
+					9576_error,
+					node->location(),
+					"CHC: " +
+					targetDescription(target).first +
+					" check is safe!"
+				);
 
 	if (!m_settings.invariants.invariants.empty())
 	{
@@ -2040,7 +2072,7 @@ void CHC::checkVerificationTargets()
 		inserter(unreachableErrorIds, unreachableErrorIds.begin())
 	);
 	for (auto id: unreachableErrorIds)
-		m_safeTargets[m_verificationTargets.at(id).errorNode].insert(m_verificationTargets.at(id).type);
+		m_safeTargets[m_verificationTargets.at(id).errorNode].insert(m_verificationTargets.at(id));
 }
 
 void CHC::checkAndReportTarget(
@@ -2065,7 +2097,7 @@ void CHC::checkAndReportTarget(
 	auto [result, invariant, model] = query(error(), location);
 	if (result == CheckResult::UNSATISFIABLE)
 	{
-		m_safeTargets[_target.errorNode].insert(_target.type);
+		m_safeTargets[_target.errorNode].insert(_target);
 		set<Predicate const*> predicates;
 		for (auto const* pred: m_interfaces | ranges::views::values)
 			predicates.insert(pred);

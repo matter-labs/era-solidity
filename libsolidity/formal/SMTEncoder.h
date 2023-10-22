@@ -56,6 +56,7 @@ public:
 		smt::EncodingContext& _context,
 		ModelCheckerSettings _settings,
 		langutil::UniqueErrorReporter& _errorReporter,
+		langutil::UniqueErrorReporter& _unsupportedErrorReporter,
 		langutil::CharStreamProvider const& _charStreamProvider
 	);
 
@@ -167,7 +168,9 @@ protected:
 	void endVisit(IndexAccess const& _node) override;
 	void endVisit(IndexRangeAccess const& _node) override;
 	bool visit(InlineAssembly const& _node) override;
+	bool visit(Break const&) override { return false; }
 	void endVisit(Break const&) override {}
+	bool visit(Continue const&) override { return false; }
 	void endVisit(Continue const&) override {}
 	bool visit(TryCatchClause const&) override { return true; }
 	void endVisit(TryCatchClause const&) override {}
@@ -440,6 +443,7 @@ protected:
 	bool m_checked = true;
 
 	langutil::UniqueErrorReporter& m_errorReporter;
+	langutil::UniqueErrorReporter& m_unsupportedErrors;
 
 	/// Stores the current function/modifier call/invocation path.
 	std::vector<CallStackEntry> m_callStack;

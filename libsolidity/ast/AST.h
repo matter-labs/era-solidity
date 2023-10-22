@@ -167,9 +167,14 @@ public:
 		int64_t _id,
 		SourceLocation const& _location,
 		std::optional<std::string> _licenseString,
-		std::vector<ASTPointer<ASTNode>> _nodes
+		std::vector<ASTPointer<ASTNode>> _nodes,
+		bool _experimentalSolidity
 	):
-		ASTNode(_id, _location), m_licenseString(std::move(_licenseString)), m_nodes(std::move(_nodes)) {}
+		ASTNode(_id, _location),
+		m_licenseString(std::move(_licenseString)),
+		m_nodes(std::move(_nodes)),
+		m_experimentalSolidity(_experimentalSolidity)
+	{}
 
 	void accept(ASTVisitor& _visitor) override;
 	void accept(ASTConstVisitor& _visitor) const override;
@@ -180,10 +185,12 @@ public:
 
 	/// @returns a set of referenced SourceUnits. Recursively if @a _recurse is true.
 	std::set<SourceUnit const*> referencedSourceUnits(bool _recurse = false, std::set<SourceUnit const*> _skipList = std::set<SourceUnit const*>()) const;
+	bool experimentalSolidity() const { return m_experimentalSolidity; }
 
 private:
 	std::optional<std::string> m_licenseString;
 	std::vector<ASTPointer<ASTNode>> m_nodes;
+	bool m_experimentalSolidity = false;
 };
 
 /**
@@ -522,6 +529,10 @@ public:
 	std::vector<EventDefinition const*> events() const { return filteredNodes<EventDefinition>(m_subNodes); }
 	std::vector<EventDefinition const*> const& definedInterfaceEvents() const;
 	std::vector<EventDefinition const*> const usedInterfaceEvents() const;
+	/// @return all events defined in this contract and its base contracts and all events
+	/// that are emitted during the execution of the contract.
+	/// @param _requireCallGraph if false, do not fail if the call graph has not been computed yet.
+	std::vector<EventDefinition const*> interfaceEvents(bool _requireCallGraph = true) const;
 	/// @returns all errors defined in this contract or any base contract
 	/// and all errors referenced during execution.
 	/// @param _requireCallGraph if false, do not fail if the call graph has not been computed yet.
@@ -709,7 +720,7 @@ private:
 	bool m_global = false;
 };
 
-class StructDefinition: public Declaration, public ScopeOpener
+class StructDefinition: public Declaration, public StructurallyDocumented, public ScopeOpener
 {
 public:
 	StructDefinition(
@@ -717,9 +728,13 @@ public:
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _name,
 		SourceLocation _nameLocation,
-		std::vector<ASTPointer<VariableDeclaration>> _members
+		std::vector<ASTPointer<VariableDeclaration>> _members,
+		ASTPointer<StructuredDocumentation> _documentation
 	):
-		Declaration(_id, _location, _name, std::move(_nameLocation)), m_members(std::move(_members)) {}
+		Declaration(_id, _location, _name, std::move(_nameLocation)),
+		StructurallyDocumented(std::move(_documentation)),
+		m_members(std::move(_members))
+	{}
 
 	void accept(ASTVisitor& _visitor) override;
 	void accept(ASTConstVisitor& _visitor) const override;
@@ -737,7 +752,7 @@ private:
 	std::vector<ASTPointer<VariableDeclaration>> m_members;
 };
 
-class EnumDefinition: public Declaration, public ScopeOpener
+class EnumDefinition: public Declaration, public StructurallyDocumented, public ScopeOpener
 {
 public:
 	EnumDefinition(
@@ -745,9 +760,14 @@ public:
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _name,
 		SourceLocation _nameLocation,
-		std::vector<ASTPointer<EnumValue>> _members
+		std::vector<ASTPointer<EnumValue>> _members,
+		ASTPointer<StructuredDocumentation> _documentation
 	):
-		Declaration(_id, _location, _name, std::move(_nameLocation)), m_members(std::move(_members)) {}
+		Declaration(_id, _location, _name, std::move(_nameLocation)),
+		StructurallyDocumented(std::move(_documentation)),
+		m_members(std::move(_members))
+	{}
+
 	void accept(ASTVisitor& _visitor) override;
 	void accept(ASTConstVisitor& _visitor) const override;
 
@@ -1241,7 +1261,7 @@ public:
 	FunctionTypePointer functionType(bool /*_internal*/) const override;
 
 	bool isVisibleInDerivedContracts() const override { return true; }
-	bool isVisibleViaContractTypeAccess() const override { return false; /* TODO */ }
+	bool isVisibleViaContractTypeAccess() const override { return true; }
 
 	EventDefinitionAnnotation& annotation() const override;
 

@@ -84,7 +84,7 @@ ASTPointer<T> ASTJsonImporter::createASTNode(Json::Value const& _node, Args&&...
 	auto n = make_shared<T>(
 		id,
 		createSourceLocation(_node),
-		forward<Args>(_args)...
+		std::forward<Args>(_args)...
 	);
 	return n;
 }
@@ -271,11 +271,15 @@ ASTPointer<SourceUnit> ASTJsonImporter::createSourceUnit(Json::Value const& _nod
 	if (_node.isMember("license") && !_node["license"].isNull())
 		license = _node["license"].asString();
 
+	bool experimentalSolidity = false;
+	if (_node.isMember("experimentalSolidity") && !_node["experimentalSolidity"].isNull())
+		experimentalSolidity = _node["experimentalSolidity"].asBool();
+
 	vector<ASTPointer<ASTNode>> nodes;
 	for (auto& child: member(_node, "nodes"))
 		nodes.emplace_back(convertJsonToASTNode(child));
 
-	ASTPointer<SourceUnit> tmp = createASTNode<SourceUnit>(_node, license, nodes);
+	ASTPointer<SourceUnit> tmp = createASTNode<SourceUnit>(_node, license, nodes, experimentalSolidity);
 	tmp->annotation().path = _srcName;
 	return tmp;
 }
@@ -449,7 +453,8 @@ ASTPointer<ASTNode> ASTJsonImporter::createStructDefinition(Json::Value const& _
 		_node,
 		memberAsASTString(_node, "name"),
 		createNameSourceLocation(_node),
-		members
+		members,
+		_node["documentation"].isNull() ? nullptr : createDocumentation(member(_node, "documentation"))
 	);
 }
 
@@ -462,7 +467,8 @@ ASTPointer<EnumDefinition> ASTJsonImporter::createEnumDefinition(Json::Value con
 		_node,
 		memberAsASTString(_node, "name"),
 		createNameSourceLocation(_node),
-		members
+		members,
+		_node["documentation"].isNull() ? nullptr : createDocumentation(member(_node, "documentation"))
 	);
 }
 

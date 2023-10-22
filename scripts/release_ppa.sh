@@ -68,7 +68,7 @@ packagename=solc
 # This needs to be a still active release
 static_build_distribution=focal
 
-DISTRIBUTIONS="focal jammy kinetic"
+DISTRIBUTIONS="focal jammy kinetic lunar"
 
 if is_release
 then
@@ -156,15 +156,15 @@ cp "/tmp/${packagename}_${debversion}.orig.tar.gz" ../
 # Create debian package information
 
 mkdir debian
-echo 13 > debian/compat
+echo 9 > debian/compat
 cat <<EOF > debian/control
 Source: solc
 Section: science
 Priority: extra
 Maintainer: Christian (Buildserver key) <builds@ethereum.org>
-Build-Depends: ${SMTDEPENDENCY}debhelper (>= 13.0.0),
+Build-Depends: ${SMTDEPENDENCY}debhelper (>= 9.0.0),
                cmake,
-               g++ (>= 9.0),
+               g++ (>= 5.0),
                git,
                libgmp-dev,
                libboost-all-dev,
@@ -173,7 +173,7 @@ Build-Depends: ${SMTDEPENDENCY}debhelper (>= 13.0.0),
                scons
 Standards-Version: 3.9.5
 Homepage: https://ethereum.org
-Vcs-Git: git://github.com/ethereum/solidity.git
+Vcs-Git: https://github.com/ethereum/solidity.git
 Vcs-Browser: https://github.com/ethereum/solidity
 
 Package: solc
