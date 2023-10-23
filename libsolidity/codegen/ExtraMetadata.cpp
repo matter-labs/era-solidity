@@ -48,22 +48,22 @@ private:
 	Json::Value& m_recFuncs;
 
 	// Record recursions in @_asm for the extra metadata
-	void record(InlineAssembly const& _asm, CompilerContext const& _context)
+	void record(InlineAssembly const& _p_asm, CompilerContext const& _context)
 	{
-		auto findRes = _context.findInlineAsmContextMapping(&_asm);
+		auto findRes = _context.findInlineAsmContextMapping(&_p_asm);
 		if (!findRes)
 			return;
 		yul::CodeTransformContext const& yulContext = *findRes;
 
 		set<yul::YulString> recFuncs;
-		if (_asm.annotation().optimizedOperations)
+		if (_p_asm.annotation().optimizedOperations)
 		{
-			yul::Block const& code = *_asm.annotation().optimizedOperations;
+			yul::Block const& code = *_p_asm.annotation().optimizedOperations;
 			recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
 		}
 		else
 		{
-			recFuncs = yul::CallGraphGenerator::callGraph(_asm.operations()).recursiveFunctions();
+			recFuncs = yul::CallGraphGenerator::callGraph(_p_asm.operations()).recursiveFunctions();
 		}
 		for (auto recFunc: recFuncs)
 		{
@@ -85,10 +85,10 @@ private:
 		}
 	}
 
-	void endVisit(InlineAssembly const& _asm)
+	void endVisit(InlineAssembly const& _p_asm)
 	{
-		record(_asm, m_context);
-		record(_asm, m_runtimeContext);
+		record(_p_asm, m_context);
+		record(_p_asm, m_runtimeContext);
 	}
 };
 
