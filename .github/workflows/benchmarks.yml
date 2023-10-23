@@ -121,7 +121,7 @@ jobs:
           repository: matter-labs/compiler-tester
           submodules: recursive
           path: compiler-tester
-          ref: az-cpr-532-implement-the-recursion-workaround
+          ref: main
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
 
       - name: Preparing workspace
