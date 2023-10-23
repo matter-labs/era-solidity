@@ -303,16 +303,16 @@ public:
 	evmasm::LinkerObject const& assembledObject() const;
 	evmasm::LinkerObject const& assembledRuntimeObject(size_t _subIndex) const { return m_asm->sub(_subIndex).assemble(); }
 
-	/// Adds the @a _asm -> @a _context mapping in the internal inline assembly to context mapping
-	void addInlineAsmContextMapping(InlineAssembly const* _asm, std::shared_ptr<yul::CodeTransformContext> _context)
+	/// Adds the @a _p_asm -> @a _context mapping in the internal inline assembly to context mapping
+	void addInlineAsmContextMapping(InlineAssembly const* _p_asm, std::shared_ptr<yul::CodeTransformContext> _context)
 	{
-		m_inlineAsmContextMap[_asm] = _context;
+		m_inlineAsmContextMap[_p_asm] = _context;
 	}
 
-	/// Returns the context for @a _asm; nullptr if not found
-	yul::CodeTransformContext const* findInlineAsmContextMapping(InlineAssembly const* _asm) const
+	/// Returns the context for @a _p_asm; nullptr if not found
+	yul::CodeTransformContext const* findInlineAsmContextMapping(InlineAssembly const* _p_asm) const
 	{
-		auto findIt = m_inlineAsmContextMap.find(_asm);
+		auto findIt = m_inlineAsmContextMap.find(_p_asm);
 		if (findIt == m_inlineAsmContextMap.end())
 			return nullptr;
 		return findIt->second.get();
