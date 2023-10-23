@@ -8,11 +8,9 @@ on:
       ZKVM_RELEASE_TAG:
         description: 'zkVM Release tag'
         required: true
-        default: '1.0.0'
       BRANCH_TAG:
         description: 'Which branch to build'
         required: true
-        default: '0.8.19'
 
 jobs:
   build_win:
