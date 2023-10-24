@@ -18,8 +18,6 @@
 
 #include <libsolidity/analysis/FunctionCallGraph.h>
 
-#include <libsolutil/StringUtils.h>
-
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/view/transform.hpp>
@@ -301,9 +299,6 @@ ostream& solidity::frontend::operator<<(ostream& _out, CallGraph::Node const& _n
 		auto const* event = dynamic_cast<EventDefinition const *>(callableDeclaration);
 		auto const* modifier = dynamic_cast<ModifierDefinition const *>(callableDeclaration);
 
-		auto typeToString = [](auto const& _var) -> string { return _var->type()->toString(true); };
-		vector<string> parameters = callableDeclaration->parameters() | views::transform(typeToString) | to<vector<string>>();
-
 		string scopeName;
 		if (!function)
 		{
@@ -314,7 +309,7 @@ ostream& solidity::frontend::operator<<(ostream& _out, CallGraph::Node const& _n
 		}
 
 		if (function)
-			_out << "function " << function->name() << "(" << joinHumanReadable(parameters, ",") << ")";
+			_out << "function " << function->name();
 		else if (function && function->isConstructor())
 			_out << "constructor of " << scopeName;
 		else if (function && function->isFallback())
@@ -322,9 +317,9 @@ ostream& solidity::frontend::operator<<(ostream& _out, CallGraph::Node const& _n
 		else if (function && function->isReceive())
 			_out << "receive of " << scopeName;
 		else if (function)
-			_out << "function " << scopeName << "." << function->name() << "(" << joinHumanReadable(parameters, ",") << ")";
+			_out << "function " << scopeName << "." << function->name();
 		else if (event)
-			_out << "event " << scopeName << "." << event->name() << "(" << joinHumanReadable(parameters, ",") << ")";
+			_out << "event " << scopeName << "." << event->name();
 		else if (modifier)
 			_out << "modifier " << scopeName << "." << modifier->name();
 		else
