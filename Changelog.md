@@ -1,3 +1,16 @@
+### solc v0.8.23-legacy for zkVM - revision 1.0.0 - Legacy edition
+
+This release has changes in the lowering of EVM assembly in order to get the zkSync's translator (targeting LLVM IR) to work correctly.
+
+Added:
+* A new metadata output field called "extraMetadata" in standard-json that stores information of recursive functions
+
+Changed:
+* Internal function pointers are lowered to static jump tables
+* Disabled evmasm optimizations to avoid any potential invalidation of the new metadata for recursive functions
+* Minor changes in the control-flow when lowering a try-catch block
+
+
 ### 0.8.23 (2023-11-08)
 
 Important Bugfixes:
@@ -7,6 +20,7 @@ Important Bugfixes:
 Compiler Features:
  * Commandline Interface: An empty ``--yul-optimizations`` sequence can now be always provided.
  * Standard JSON Interface: An empty ``optimizerSteps`` sequence can now always be provided.
+=======
 
 
 ### 0.8.22 (2023-10-25)
