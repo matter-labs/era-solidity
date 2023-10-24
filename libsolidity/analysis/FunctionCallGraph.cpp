@@ -18,8 +18,6 @@
 
 #include <libsolidity/analysis/FunctionCallGraph.h>
 
-#include <libdevcore/StringUtils.h>
-
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/view/transform.hpp>
@@ -301,13 +299,10 @@ ostream& dev::solidity::operator<<(ostream& _out, CallGraph::Node const& _node)
 		auto const* event = dynamic_cast<EventDefinition const *>(callableDeclaration);
 		auto const* modifier = dynamic_cast<ModifierDefinition const *>(callableDeclaration);
 
-		auto typeToString = [](auto const& _var) -> string { return _var->type()->toString(true); };
-		vector<string> parameters = callableDeclaration->parameters() | views::transform(typeToString) | to<vector<string>>();
-
 		if (function)
-			_out << "function " << function->name() << "(" << joinHumanReadable(parameters, ",") << ")";
+			_out << "function " << function->name();
 		else if (event)
-			_out << "event " << event->name() << "(" << joinHumanReadable(parameters, ",") << ")";
+			_out << "event " << event->name();
 		else if (modifier)
 			_out << "modifier " << modifier->name();
 		else
