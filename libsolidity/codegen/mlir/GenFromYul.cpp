@@ -48,8 +48,11 @@ public:
     b.setInsertionPointToEnd(mod.getBody());
   }
 
-  /// Lowers a block
-  void operator()(Block const &blk);
+  /// Translates a subobject
+  void translateObj(Object const &obj);
+
+  /// Translates a top level object
+  void translateTopLevelObj(Object const &obj);
 
 private:
   /// Returns the mlir location for the solidity source location `loc`
@@ -74,6 +77,9 @@ private:
 
   /// Lowers an expression statement
   void operator()(ExpressionStatement const &expr);
+
+  /// Lowers a block
+  void operator()(Block const &blk);
 };
 
 mlir::Value MLIRGenFromYul::genExpr(Literal const &lit) {
@@ -136,16 +142,39 @@ void MLIRGenFromYul::operator()(Block const &blk) {
   return;
 }
 
+void MLIRGenFromYul::translateObj(Object const &obj) {
+  // TODO: Where is the source location info for Object? Do we need to track it?
+  auto objOp =
+      b.create<mlir::solidity::ObjectOp>(b.getUnknownLoc(), obj.name.str());
+  b.setInsertionPointToEnd(objOp.getBody());
+  // TODO? Do we need a separate op for the `code` block?
+  operator()(*obj.code);
+}
+
+void MLIRGenFromYul::translateTopLevelObj(Object const &obj) {
+  translateObj(obj);
+
+  // TODO: Does it make sense to nest subobjects in the top level ObjectOp's
+  // body?
+  for (auto const &subNode : obj.subObjects) {
+    if (auto *subObj = dynamic_cast<Object const *>(subNode.get())) {
+      translateObj(*subObj);
+    } else {
+      solUnimplementedAssert(false, "TODO: Metadata translation");
+    }
+  }
+}
+
 } // namespace solidity::frontend
 
-bool solidity::frontend::runMLIRGenFromYul(Block const &blk,
+bool solidity::frontend::runMLIRGenFromYul(Object const &obj,
                                            CharStream const &stream,
                                            Dialect const &yulDialect) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   MLIRGenFromYul gen(ctx, stream, yulDialect);
-  gen(blk);
+  gen.translateTopLevelObj(obj);
 
   if (failed(mlir::verify(gen.getModule()))) {
     gen.getModule().print(llvm::errs());

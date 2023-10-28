@@ -36,6 +36,13 @@ void ContractOp::build(OpBuilder &builder, OperationState &state,
       mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
 
+void ObjectOp::build(OpBuilder &builder, OperationState &state,
+                     StringRef name) {
+  state.addRegion()->emplaceBlock();
+  state.attributes.push_back(builder.getNamedAttr(
+      mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+}
+
 void YulBlockOp::build(OpBuilder &builder, OperationState &state) {
   state.addRegion()->emplaceBlock();
 }
