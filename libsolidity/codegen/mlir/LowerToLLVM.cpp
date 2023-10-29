@@ -28,6 +28,7 @@
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Support/LogicalResult.h"
@@ -37,6 +38,63 @@
 using namespace mlir;
 
 namespace {
+
+// FIXME: The high level dialects are translated to the llvm dialect tailored to
+// the EraVM backend in llvm. How should we perform the translation when we
+// support other targets?
+//
+// (a) If we do a condition translation in this pass, the code can quickly get
+// messy
+//
+// (b) If we have a high level dialect for each target, the lowering will be,
+// for instance, solidity.object -> eravm.object -> llvm.func with eravm
+// details. Unnecessary abstractions?
+//
+// (c) I think a sensible design is to create different ModuleOp passes for each
+// target that translate high level dialects to the llvm dialect.
+//
+
+enum EraVMAddrSpace : unsigned { Generic = 3 };
+
+class ObjectOpTranslation : public ConversionPattern {
+public:
+  explicit ObjectOpTranslation(MLIRContext *ctx)
+      : ConversionPattern(solidity::ObjectOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto i256Ty = rewriter.getIntegerType(256);
+    auto genericAddrSpacePtrTy = LLVM::LLVMPointerType::get(
+        rewriter.getContext(), EraVMAddrSpace::Generic);
+    std::vector<Type> inTys{genericAddrSpacePtrTy};
+    constexpr unsigned argCnt = 2 /* Entry::MANDATORY_ARGUMENTS_COUNT */ +
+                                10 /* eravm::EXTRA_ABI_DATA_SIZE */;
+    for (unsigned i = 0; i < argCnt - 1; ++i) {
+      inTys.push_back(i256Ty);
+    }
+    auto funcType = rewriter.getFunctionType(inTys, {i256Ty});
+
+    rewriter.create<func::FuncOp>(op->getLoc(), "__entry", funcType);
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+class YulBlockOpTranslation : public ConversionPattern {
+public:
+  explicit YulBlockOpTranslation(MLIRContext *ctx)
+      : ConversionPattern(solidity::YulBlockOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
 
 class ContractOpLowering : public ConversionPattern {
 public:
@@ -87,6 +145,8 @@ struct LowerToLLVMPass
     populateMemRefToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
     pats.add<ContractOpLowering>(&getContext());
+    pats.add<ObjectOpTranslation>(&getContext());
+    pats.add<YulBlockOpTranslation>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))

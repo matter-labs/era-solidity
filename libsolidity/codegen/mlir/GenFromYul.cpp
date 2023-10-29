@@ -17,13 +17,16 @@
 
 #include "libsolidity/codegen/mlir/GenFromYul.h"
 #include "liblangutil/Exceptions.h"
+#include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "libyul/AST.h"
 #include "libyul/optimiser/ASTWalker.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Pass/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 
@@ -173,6 +176,7 @@ bool solidity::frontend::runMLIRGenFromYul(Object const &obj,
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+  ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   MLIRGenFromYul gen(ctx, stream, yulDialect);
   gen.translateTopLevelObj(obj);
 
@@ -181,6 +185,11 @@ bool solidity::frontend::runMLIRGenFromYul(Object const &obj,
     gen.getModule().emitError("Module verification error");
     return false;
   }
+
+  // mlir::PassManager passMgr(&ctx);
+  // passMgr.addPass(mlir::solidity::createLowerToLLVMPass());
+  // if (mlir::failed(passMgr.run(gen.getModule())))
+  //   ; // return false;
 
   gen.getModule().print(llvm::outs());
   llvm::outs() << "\n";
