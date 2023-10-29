@@ -54,7 +54,14 @@ namespace {
 // target that translate high level dialects to the llvm dialect.
 //
 
-enum EraVMAddrSpace : unsigned { Generic = 3 };
+enum EraVMAddrSpace : unsigned {
+  Stack = 0,
+  Heap = 1,
+  HeapAuxiliary = 2,
+  Generic = 3,
+  Code = 4,
+  Storage = 5,
+};
 
 class ObjectOpTranslation : public ConversionPattern {
 public:
