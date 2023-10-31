@@ -72,18 +72,25 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
     auto i256Ty = rewriter.getIntegerType(256);
     auto genericAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), EraVMAddrSpace::Generic);
+
     std::vector<Type> inTys{genericAddrSpacePtrTy};
     constexpr unsigned argCnt = 2 /* Entry::MANDATORY_ARGUMENTS_COUNT */ +
                                 10 /* eravm::EXTRA_ABI_DATA_SIZE */;
     for (unsigned i = 0; i < argCnt - 1; ++i) {
       inTys.push_back(i256Ty);
     }
-    auto funcType = rewriter.getFunctionType(inTys, {i256Ty});
+    FunctionType funcType = rewriter.getFunctionType(inTys, {i256Ty});
+    func::FuncOp entryFunc =
+        rewriter.create<func::FuncOp>(loc, "__entry", funcType);
+    Block *entryBlk = rewriter.createBlock(&entryFunc.getRegion());
+    for (auto inTy : inTys) {
+      entryBlk->addArgument(inTy, loc);
+    }
 
-    rewriter.create<func::FuncOp>(op->getLoc(), "__entry", funcType);
     rewriter.eraseOp(op);
     return success();
   }
