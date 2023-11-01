@@ -57,7 +57,8 @@ namespace {
 // target that translate high level dialects to the llvm dialect.
 //
 
-enum EraVMAddrSpace : unsigned {
+namespace eravm {
+enum AddrSpace : unsigned {
   Stack = 0,
   Heap = 1,
   HeapAuxiliary = 2,
@@ -66,7 +67,6 @@ enum EraVMAddrSpace : unsigned {
   Storage = 5,
 };
 
-namespace eravm {
 enum ByteLen { Byte = 1, X32 = 4, X64 = 8, EthAddr = 20, Field = 32 };
 enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
 } // namespace eravm
@@ -99,7 +99,7 @@ public:
     BuilderHelper b(rewriter, loc);
 
     auto heapAuxAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), EraVMAddrSpace::HeapAuxiliary);
+        rewriter.getContext(), eravm::AddrSpace::HeapAuxiliary);
 
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
@@ -122,8 +122,8 @@ public:
                                        b.getConst(eravm::ByteLen::Field * 2));
     auto returnFunc = rewriter.getAttr<SymbolRefAttr>("__return");
     bool isCreation = true; // TODO: Implement this!
-    auto returnOpMode = b.getConst(isCreation ? EraVMAddrSpace::HeapAuxiliary
-                                              : EraVMAddrSpace::Heap);
+    auto returnOpMode = b.getConst(isCreation ? eravm::AddrSpace::HeapAuxiliary
+                                              : eravm::AddrSpace::Heap);
     rewriter.create<func::CallOp>(
         loc, returnFunc,
         ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData),
@@ -146,7 +146,7 @@ public:
     auto loc = op->getLoc();
     auto i256Ty = rewriter.getIntegerType(256);
     auto genericAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), EraVMAddrSpace::Generic);
+        rewriter.getContext(), eravm::AddrSpace::Generic);
 
     std::vector<Type> inTys{genericAddrSpacePtrTy};
     constexpr unsigned argCnt = 2 /* Entry::MANDATORY_ARGUMENTS_COUNT */ +
