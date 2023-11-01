@@ -26,11 +26,14 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <algorithm>
@@ -61,6 +64,74 @@ enum EraVMAddrSpace : unsigned {
   Generic = 3,
   Code = 4,
   Storage = 5,
+};
+
+namespace eravm {
+enum ByteLen { Byte = 1, X32 = 4, X64 = 8, EthAddr = 20, Field = 32 };
+enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
+} // namespace eravm
+
+class BuilderHelper {
+  OpBuilder b;
+  Location loc;
+
+public:
+  explicit BuilderHelper(OpBuilder &b, Location loc) : b(b), loc(loc) {}
+
+  Value getConst(int64_t val, unsigned width = 256) {
+    IntegerType ty = b.getIntegerType(width);
+    auto op = b.create<arith::ConstantOp>(
+        loc, b.getIntegerAttr(ty, llvm::APInt(width, val, /*radix=*/10)));
+    return op.getResult();
+  }
+};
+
+class ReturnOpLowering : public ConversionPattern {
+public:
+  explicit ReturnOpLowering(MLIRContext *ctx)
+      : ConversionPattern(solidity::ReturnOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    BuilderHelper b(rewriter, loc);
+
+    auto heapAuxAddrSpacePtrTy = LLVM::LLVMPointerType::get(
+        rewriter.getContext(), EraVMAddrSpace::HeapAuxiliary);
+
+    auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
+        loc, heapAuxAddrSpacePtrTy,
+        b.getConst(eravm::HeapAuxOffsetCtorRetData));
+    rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen::Field),
+                                   immutablesOffsetPtr);
+
+    auto immutablesSize = 0; // TODO: Implement this!
+    auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
+        loc, heapAuxAddrSpacePtrTy,
+        b.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen::Field));
+    rewriter.create<LLVM::StoreOp>(
+        loc, b.getConst(immutablesSize / eravm::ByteLen::Field),
+        immutablesNumPtr);
+
+    auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
+        loc, b.getConst(immutablesSize), b.getConst(2));
+    auto returnDataLen =
+        rewriter.create<arith::AddIOp>(loc, immutablesCalcSize.getResult(),
+                                       b.getConst(eravm::ByteLen::Field * 2));
+    auto returnFunc = rewriter.getAttr<SymbolRefAttr>("__return");
+    bool isCreation = true; // TODO: Implement this!
+    auto returnOpMode = b.getConst(isCreation ? EraVMAddrSpace::HeapAuxiliary
+                                              : EraVMAddrSpace::Heap);
+    rewriter.create<func::CallOp>(
+        loc, returnFunc,
+        ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData),
+                   returnDataLen.getResult(), returnOpMode});
+
+    rewriter.eraseOp(op);
+    return success();
+  }
 };
 
 class ObjectOpTranslation : public ConversionPattern {
@@ -161,6 +232,7 @@ struct LowerToLLVMPass
     pats.add<ContractOpLowering>(&getContext());
     pats.add<ObjectOpTranslation>(&getContext());
     pats.add<YulBlockOpTranslation>(&getContext());
+    pats.add<ReturnOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
