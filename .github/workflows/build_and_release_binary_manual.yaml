@@ -1,18 +1,62 @@
 name: Build and release binaries manually for Linux\Macos
 
 on:
-  workflow_dispatch:
-    inputs:
-      ZKVM_RELEASE_TAG:
-        description: 'zkVM Release tag'
-        required: true
-      BRANCH_TAG:
-        description: 'Which branch to build'
-        required: true
+  push:
+    branches:
+      - os-zkd-1195-make-a-few-fixes-to-the-era-solidity-release-workflow
+  # workflow_dispatch:
+  #   inputs:
+  #     ZKVM_RELEASE_TAG:
+  #       description: 'zkVM Release tag'
+  #       required: true
+  #     BRANCH_TAG:
+  #       description: 'Which branch to build'
+  #       required: true
 
 jobs:
-  build_linux_amd64:
-    runs-on: [matterlabs-ci-runner]
+  # build_linux_amd64:
+  #   runs-on: [matterlabs-ci-runner]
+  #   container:
+  #     image: matterlabs/llvm_runner:latest
+  #     credentials:
+  #       username: ${{ secrets.DOCKERHUB_USER }}
+  #       password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   steps:
+  #     - name: Checkout source
+  #       uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+  #       with:
+  #         submodules: recursive
+  #         token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+  #         ref: ${{ inputs.BRANCH_TAG }}
+
+  #     - name: Prepare environment
+  #       run: |
+  #         git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+  #         git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+  #         git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
+
+  #     - name: Building the Solidity compiler
+  #       run: |
+  #         mkdir -p ./build
+  #         cd ./build
+  #         cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+  #         make -j$(nproc)
+  #         pwd
+  #         ls -la ./solc/
+  #         ls -la ./solc/solc
+
+  #     - name: Prepare binary file name
+  #       run: |
+  #         mkdir -p releases/linux-amd64
+  #         mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+
+  #     - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+  #       with:
+  #         name: release_linux_amd64
+  #         path: releases
+
+  build_linux_arm64:
+    runs-on: [matterlabs-ci-runner-arm]
     container:
       image: matterlabs/llvm_runner:latest
       credentials:
@@ -44,194 +88,189 @@ jobs:
 
       - name: Prepare binary file name
         run: |
-          mkdir -p releases/linux-amd64
-          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mkdir -p releases/linux-arm64
+          stat ./build/solc/solc
+          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
 
-      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
-        with:
-          name: release_linux_amd64
-          path: releases
+      # - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+      #   with:
+      #     name: release_linux_arm64
+      #     path: releases
 
-  build_macos_amd64:
-    runs-on: macos-12-xl
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+  # build_macos_amd64:
+  #   runs-on: macos-12-xl
+  #   steps:
+  #     - name: Checkout source
+  #       uses: actions/checkout@v3
+  #       with:
+  #         submodules: recursive
+  #         token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+  #         ref: ${{ inputs.BRANCH_TAG }}
 
-      - name: Prepare environment
-        shell: zsh {0}
-        run: |
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+  #     - name: Prepare environment
+  #       shell: zsh {0}
+  #       run: |
+  #         git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+  #         git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
 
-      # It is needed as we use some commands which a deprecated in newer versions of boost
-      - name: Install BOOST
-        shell: zsh {0}
-        run: |
-          curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
-          tar xzf ./boost_1_71_0.tar.gz
-          cd ./boost_1_71_0
-          ./bootstrap.sh --prefix=/usr/local
-          ./b2 -j12
-          ./b2 install -j12
+  #     # It is needed as we use some commands which a deprecated in newer versions of boost
+  #     - name: Install BOOST
+  #       shell: zsh {0}
+  #       run: |
+  #         curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
+  #         tar xzf ./boost_1_71_0.tar.gz
+  #         cd ./boost_1_71_0
+  #         ./bootstrap.sh --prefix=/usr/local
+  #         ./b2 -j12
+  #         ./b2 install -j12
 
-      - name: Warns not errs
-        run: |
-          sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
-          sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
-          sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
+  #     - name: Warns not errs
+  #       run: |
+  #         sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
+  #         sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
+  #         sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
 
-      - name: Cmake gen
-        shell: zsh {0}
-        env:
-          CXXFLAGS: "-Wno-narrowing"
-        run: |
-          mkdir -p ./build
-          cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+  #     - name: Cmake gen
+  #       shell: zsh {0}
+  #       env:
+  #         CXXFLAGS: "-Wno-narrowing"
+  #       run: |
+  #         mkdir -p ./build
+  #         cd ./build
+  #         cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
 
-      - name: Building the Solidity compiler
-        run: |
-          cd ./build
-          make -j12
-          ./solc/solc --version
+  #     - name: Building the Solidity compiler
+  #       run: |
+  #         cd ./build
+  #         make -j12
+  #         ./solc/solc --version
 
-      - name: Prepare binary file name
-        shell: zsh {0}
-        run: |
-          mkdir -p ./releases/macosx-amd64
-          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+  #     - name: Prepare binary file name
+  #       shell: zsh {0}
+  #       run: |
+  #         mkdir -p ./releases/macosx-amd64
+  #         mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
 
-      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
-        with:
-          name: release_macos_amd64
-          path: releases
+  #     - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+  #       with:
+  #         name: release_macos_amd64
+  #         path: releases
 
-  build_macos_arm64:
-    runs-on: [self-hosted, macOS, ARM64]
-    steps:
-      - name: Clear repository
-        run: rm -rf ~/.gitconfig; rm -rf {*,.*} || true
+  # build_macos_arm64:
+  #   runs-on: [self-hosted, macOS, ARM64]
+  #   steps:
+  #     - name: Clear repository
+  #       run: rm -rf ~/.gitconfig; rm -rf {*,.*} || true
 
-      - name: Checkout source
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+  #     - name: Checkout source
+  #       uses: actions/checkout@v3
+  #       with:
+  #         submodules: recursive
+  #         token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+  #         ref: ${{ inputs.BRANCH_TAG }}
 
-      - name: Prepare environment
-        shell: zsh {0}
-        run: |
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+  #     - name: Prepare environment
+  #       shell: zsh {0}
+  #       run: |
+  #         git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+  #         git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
 
-      # It is needed as we use some commands which a deprecated in newer versions of boost
-      - name: Install BOOST
-        shell: zsh {0}
-        run: |
-          curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
-          tar xzf ./boost_1_71_0.tar.gz
-          cd ./boost_1_71_0
-          export BOOST_DIR=$(pwd)/boost
-          mkdir $BOOST_DIR
-          ./bootstrap.sh --prefix=$BOOST_DIR
-          ./b2 -j12
-          ./b2 install -j12
+  #     # It is needed as we use some commands which a deprecated in newer versions of boost
+  #     - name: Install BOOST
+  #       shell: zsh {0}
+  #       run: |
+  #         curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
+  #         tar xzf ./boost_1_71_0.tar.gz
+  #         cd ./boost_1_71_0
+  #         export BOOST_DIR=$(pwd)/boost
+  #         mkdir $BOOST_DIR
+  #         ./bootstrap.sh --prefix=$BOOST_DIR
+  #         ./b2 -j12
+  #         ./b2 install -j12
 
-      - name: Warns not errs
-        run: |
-          sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
-          sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
-          sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
+  #     - name: Warns not errs
+  #       run: |
+  #         sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
+  #         sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
+  #         sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
 
-      - name: Cmake gen
-        shell: zsh {0}
-        env:
-          CXXFLAGS: "-Wno-narrowing"
-        run: |
-          mkdir -p ./build
-          cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+  #     - name: Cmake gen
+  #       shell: zsh {0}
+  #       env:
+  #         CXXFLAGS: "-Wno-narrowing"
+  #       run: |
+  #         mkdir -p ./build
+  #         cd ./build
+  #         cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
 
-      - name: Building the Solidity compiler
-        shell: zsh {0}
-        run: |
-          cd ./build
-          make -j12
-          ./solc/solc --version
+  #     - name: Building the Solidity compiler
+  #       shell: zsh {0}
+  #       run: |
+  #         cd ./build
+  #         make -j12
+  #         ./solc/solc --version
 
-      - name: Prepare binary file name
-        shell: zsh {0}
-        run: |
-          mkdir -p ./releases/macosx-arm64
-          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+  #     - name: Prepare binary file name
+  #       shell: zsh {0}
+  #       run: |
+  #         mkdir -p ./releases/macosx-arm64
+  #         mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
 
-      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
-        with:
-          name: release_macos_arm64
-          path: releases
+  #     - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+  #       with:
+  #         name: release_macos_arm64
+  #         path: releases
 
-  prepare-release:
-    runs-on: [ matterlabs-default-infra-runners ]
-    needs:
-      - build_macos_arm64
-      - build_macos_amd64
-      - build_linux_amd64
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+  # prepare-release:
+  #   runs-on: [ matterlabs-default-infra-runners ]
+  #   needs:
+  #     - build_macos_arm64
+  #     - build_macos_amd64
+  #     - build_linux_amd64
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+  #         ref: ${{ inputs.BRANCH_TAG }}
 
-      - name: Download artifact macos_arm64
-        uses: actions/download-artifact@v3
-        with:
-          name: release_macos_arm64
-          path: releases
+  #     - name: Download artifact macos_arm64
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: release_macos_arm64
+  #         path: releases
 
-      - name: Download artifact macosx_amd64
-        uses: actions/download-artifact@v3
-        with:
-          name: release_macos_amd64
-          path: releases
+  #     - name: Download artifact macosx_amd64
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: release_macos_amd64
+  #         path: releases
 
-      - name: Download artifact linux_amd64
-        uses: actions/download-artifact@v3
-        with:
-          name: release_linux_amd64
-          path: releases
+  #     - name: Download artifact linux_amd64
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: release_linux_amd64
+  #         path: releases
 
-      - name: Generate changelog
-        id: changelog
-        shell: bash
-        run: |
-          awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > tmp_changelog.txt
+  #     - name: Download artifact linux_arm64
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: release_linux_arm64
+  #         path: releases
 
-      - name: Prepare release
-        uses: softprops/action-gh-release@v1
-        with:
-          generate_release_notes: false
-          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
-          body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          files: |
-            releases/**/**
+  #     - name: Generate changelog
+  #       id: changelog
+  #       shell: bash
+  #       run: |
+  #         awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > tmp_changelog.txt
 
-      - name: Prepare release for solc-bin
-        uses: softprops/action-gh-release@v1
-        with:
-          repository: matter-labs/solc-bin
-          generate_release_notes: false
-          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
-          body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          files: |
-            releases/**/**
+  #     - name: Prepare release
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         generate_release_notes: false
+  #         name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+  #         body_path: ./tmp_changelog.txt
+  #         tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+  #         token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+  #         files: |
+  #           releases/**/**
