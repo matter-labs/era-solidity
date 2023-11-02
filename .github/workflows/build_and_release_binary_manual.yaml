@@ -68,7 +68,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.8.18-1.0.0
 
       - name: Prepare environment
         run: |
