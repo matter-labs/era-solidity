@@ -90,7 +90,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-arm64
-          stat ./build/solc/solc
+          file ./build/solc/solc
           mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
 
       # - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
