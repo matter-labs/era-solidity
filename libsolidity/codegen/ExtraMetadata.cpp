@@ -75,11 +75,11 @@ private:
 				Json::Value record(Json::objectValue);
 				record["name"] = recFunc.str();
 				if (_context.runtimeContext())
-					record["creationTag"] = func.label;
+					record["creationTag"] = Json::Value(Json::LargestUInt(func.label));
 				else
-					record["runtimeTag"] = func.label;
-				record["totalParamSize"] = func.ast->parameters.size();
-				record["totalRetParamSize"] = func.ast->returnVariables.size();
+					record["runtimeTag"] = Json::Value(Json::LargestUInt(func.label));
+				record["totalParamSize"] = Json::Value(Json::LargestUInt(func.ast->parameters.size()));
+				record["totalRetParamSize"] = Json::Value(Json::LargestUInt(func.ast->returnVariables.size()));
 				m_recFuncs.append(record);
 			}
 		}
