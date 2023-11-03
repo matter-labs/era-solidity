@@ -75,7 +75,6 @@ jobs:
 
       - name: Building the Solidity compiler
         run: |
-          cat CMakeLists.txt
           mkdir -p ./build
           cd ./build
           cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
