@@ -155,9 +155,16 @@ public:
       inTys.push_back(i256Ty);
     }
     FunctionType funcType = rewriter.getFunctionType(inTys, {i256Ty});
+    auto mod = op->getParentOfType<ModuleOp>();
+    rewriter.setInsertionPointToEnd(mod.getBody());
     func::FuncOp entryFunc =
         rewriter.create<func::FuncOp>(loc, "__entry", funcType);
-    Block *entryBlk = rewriter.createBlock(&entryFunc.getRegion());
+    assert(op->getNumRegions() == 1);
+
+    auto &entryFuncRegion = entryFunc.getRegion();
+    rewriter.inlineRegionBefore(op->getRegion(0), entryFuncRegion,
+                                entryFuncRegion.begin());
+    Block *entryBlk = &entryFuncRegion.getBlocks().front();
     for (auto inTy : inTys) {
       entryBlk->addArgument(inTy, loc);
     }
