@@ -43,9 +43,5 @@ void ObjectOp::build(OpBuilder &builder, OperationState &state,
       mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
 
-void YulBlockOp::build(OpBuilder &builder, OperationState &state) {
-  state.addRegion()->emplaceBlock();
-}
-
 #define GET_OP_CLASSES
 #include "Solidity/SolidityOps.cpp.inc"

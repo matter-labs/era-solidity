@@ -137,12 +137,7 @@ void MLIRGenFromYul::operator()(ExpressionStatement const &expr) {
 }
 
 void MLIRGenFromYul::operator()(Block const &blk) {
-  auto op =
-      b.create<mlir::solidity::YulBlockOp>(loc(blk.debugData->nativeLocation));
-
-  b.setInsertionPointToEnd(op.getBody());
   ASTWalker::operator()(blk);
-  return;
 }
 
 void MLIRGenFromYul::translateObj(Object const &obj) {

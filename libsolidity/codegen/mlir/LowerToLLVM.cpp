@@ -174,20 +174,6 @@ public:
   }
 };
 
-class YulBlockOpTranslation : public ConversionPattern {
-public:
-  explicit YulBlockOpTranslation(MLIRContext *ctx)
-      : ConversionPattern(solidity::YulBlockOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 class ContractOpLowering : public ConversionPattern {
 public:
   explicit ContractOpLowering(MLIRContext *ctx)
@@ -238,7 +224,6 @@ struct LowerToLLVMPass
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
     pats.add<ContractOpLowering>(&getContext());
     pats.add<ObjectOpTranslation>(&getContext());
-    pats.add<YulBlockOpTranslation>(&getContext());
     pats.add<ReturnOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
