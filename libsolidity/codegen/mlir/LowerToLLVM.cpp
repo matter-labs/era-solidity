@@ -117,12 +117,15 @@ public:
     auto heapAuxAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), eravm::AddrSpace::HeapAuxiliary);
 
+    // Store ByteLen::Field to the immutables offset
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
         b.getConst(eravm::HeapAuxOffsetCtorRetData));
     rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen::Field),
                                    immutablesOffsetPtr);
 
+    // Store size of immutables in terms of ByteLen::Field to the immutables
+    // number offset
     auto immutablesSize = 0; // TODO: Implement this!
     auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
@@ -131,6 +134,8 @@ public:
         loc, b.getConst(immutablesSize / eravm::ByteLen::Field),
         immutablesNumPtr);
 
+    // Calculate the return data length (i.e. immutablesSize * 2 +
+    // ByteLen::Field * 2
     auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
         loc, b.getConst(immutablesSize), b.getConst(2));
     auto returnDataLen =
@@ -138,6 +143,9 @@ public:
                                        b.getConst(eravm::ByteLen::Field * 2));
     auto returnFunc =
         getOrInsertReturn(rewriter, op->getParentOfType<ModuleOp>());
+
+    // Create the call: __return(HeapAuxOffsetCtorRetData, returnDataLen,
+    // returnOpMode)
     bool isCreation = true; // TODO: Implement this!
     auto returnOpMode = b.getConst(isCreation ? eravm::AddrSpace::HeapAuxiliary
                                               : eravm::AddrSpace::Heap);
@@ -146,7 +154,9 @@ public:
         ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(), returnOpMode});
 
+    // Create unreachable
     rewriter.create<LLVM::UnreachableOp>(loc);
+
     rewriter.eraseOp(op);
     return success();
   }
