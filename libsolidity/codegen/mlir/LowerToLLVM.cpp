@@ -86,6 +86,22 @@ public:
   }
 };
 
+static SymbolRefAttr getOrInsertReturn(PatternRewriter &rewriter,
+                                       ModuleOp mod) {
+  auto *ctx = mod.getContext();
+  if (mod.lookupSymbol<LLVM::LLVMFuncOp>("__return"))
+    return SymbolRefAttr::get(ctx, "__return");
+
+  auto i256Ty = IntegerType::get(ctx, 256);
+  auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx),
+                                            {i256Ty, i256Ty, i256Ty});
+
+  PatternRewriter::InsertionGuard insertGuard(rewriter);
+  rewriter.setInsertionPointToStart(mod.getBody());
+  rewriter.create<LLVM::LLVMFuncOp>(mod.getLoc(), "__return", fnType);
+  return SymbolRefAttr::get(ctx, "__return");
+}
+
 class ReturnOpLowering : public ConversionPattern {
 public:
   explicit ReturnOpLowering(MLIRContext *ctx)
@@ -120,15 +136,17 @@ public:
     auto returnDataLen =
         rewriter.create<arith::AddIOp>(loc, immutablesCalcSize.getResult(),
                                        b.getConst(eravm::ByteLen::Field * 2));
-    auto returnFunc = rewriter.getAttr<SymbolRefAttr>("__return");
+    auto returnFunc =
+        getOrInsertReturn(rewriter, op->getParentOfType<ModuleOp>());
     bool isCreation = true; // TODO: Implement this!
     auto returnOpMode = b.getConst(isCreation ? eravm::AddrSpace::HeapAuxiliary
                                               : eravm::AddrSpace::Heap);
     rewriter.create<func::CallOp>(
-        loc, returnFunc,
+        loc, returnFunc, TypeRange{},
         ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(), returnOpMode});
 
+    rewriter.create<LLVM::UnreachableOp>(loc);
     rewriter.eraseOp(op);
     return success();
   }
