@@ -32,7 +32,7 @@
 #include <libsolidity/ast/ASTJsonExporter.h>
 #include <libsolidity/ast/ASTJsonImporter.h>
 #include <libsolidity/analysis/NameAndTypeResolver.h>
-#include <libsolidity/codegen/mlir/GenFromYul.h>
+#include <libsolidity/codegen/mlir/YulToMLIR.h>
 #include <libsolidity/interface/CompilerStack.h>
 #include <libsolidity/interface/StandardCompiler.h>
 #include <libsolidity/interface/GasEstimator.h>

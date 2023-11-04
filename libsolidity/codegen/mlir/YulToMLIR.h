@@ -28,4 +28,5 @@ namespace solidity::frontend {
 
 extern bool runYulToMLIRPass(yul::Object const &, langutil::CharStream const &,
                              yul::Dialect const &);
+
 }

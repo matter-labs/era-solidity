@@ -15,7 +15,7 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-#include "libsolidity/codegen/mlir/GenFromYul.h"
+#include "libsolidity/codegen/mlir/YulToMLIR.h"
 #include "liblangutil/Exceptions.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
