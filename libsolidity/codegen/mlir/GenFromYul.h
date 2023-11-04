@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// MLIR generator from yul source
+// Yul to MLIR pass
 //
 
 #include "liblangutil/CharStream.h"
@@ -26,6 +26,6 @@
 
 namespace solidity::frontend {
 
-extern bool runMLIRGenFromYul(yul::Object const &, langutil::CharStream const &,
-                              yul::Dialect const &);
+extern bool runYulToMLIRPass(yul::Object const &, langutil::CharStream const &,
+                             yul::Dialect const &);
 }

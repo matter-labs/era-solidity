@@ -1121,7 +1121,7 @@ void CommandLineInterface::assembleYul(yul::YulStack::Language _language, yul::Y
 			solUnimplementedAssert(_language == yul::YulStack::Language::Yul, "Language::Yul is only supported");
 			auto const& yulStk = yulStacks[src.first];
 			yul::EVMDialectTyped const* dialect = &yul::EVMDialectTyped::instance(m_options.output.evmVersion);
-			if (!runMLIRGenFromYul(*yulStk.parserResult(), yulStk.charStream(src.first), *dialect))
+			if (!runYulToMLIRPass(*yulStk.parserResult(), yulStk.charStream(src.first), *dialect))
 			{
 				successful = false;
 			}

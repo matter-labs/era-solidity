@@ -34,7 +34,7 @@ using namespace solidity::yul;
 
 namespace solidity::frontend {
 
-class MLIRGenFromYul : public ASTWalker {
+class YulToMLIRPass : public ASTWalker {
   mlir::OpBuilder b;
   mlir::ModuleOp mod;
   CharStream const &stream;
@@ -43,18 +43,18 @@ class MLIRGenFromYul : public ASTWalker {
 public:
   mlir::ModuleOp getModule() { return mod; }
 
-  explicit MLIRGenFromYul(mlir::MLIRContext &ctx, CharStream const &stream,
-                          Dialect const &yulDialect)
+  explicit YulToMLIRPass(mlir::MLIRContext &ctx, CharStream const &stream,
+                         Dialect const &yulDialect)
       : b(&ctx), stream(stream), yulDialect(yulDialect) {
     mod = mlir::ModuleOp::create(b.getUnknownLoc());
     b.setInsertionPointToEnd(mod.getBody());
   }
 
-  /// Translates a subobject
-  void translateObj(Object const &obj);
+  /// Lowers a subobject
+  void lowerObj(Object const &obj);
 
-  /// Translates a top level object
-  void translateTopLevelObj(Object const &obj);
+  /// Lowers a top level object
+  void lowerTopLevelObj(Object const &obj);
 
 private:
   /// Returns the mlir location for the solidity source location `loc`
@@ -84,7 +84,7 @@ private:
   void operator()(Block const &blk);
 };
 
-mlir::Value MLIRGenFromYul::genExpr(Literal const &lit) {
+mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
   mlir::Location lc = this->loc(lit.debugData->nativeLocation);
 
   // Do we need to represent constants as u256? Can we do that in
@@ -95,11 +95,11 @@ mlir::Value MLIRGenFromYul::genExpr(Literal const &lit) {
                                                /*radix=*/10)));
 }
 
-mlir::Value MLIRGenFromYul::genExpr(Identifier const &id) {
+mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
   solUnimplementedAssert(false, "TODO: Lower identifier");
 }
 
-mlir::Value MLIRGenFromYul::genExpr(FunctionCall const &call) {
+mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
   BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
   if (builtin) {
 
@@ -126,20 +126,18 @@ mlir::Value MLIRGenFromYul::genExpr(FunctionCall const &call) {
   solAssert(false);
 }
 
-mlir::Value MLIRGenFromYul::genExpr(Expression const &expr) {
+mlir::Value YulToMLIRPass::genExpr(Expression const &expr) {
   return std::visit(
       [&](auto &&resolvedExpr) { return this->genExpr(resolvedExpr); }, expr);
 }
 
-void MLIRGenFromYul::operator()(ExpressionStatement const &expr) {
+void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
   genExpr(expr.expression);
 }
 
-void MLIRGenFromYul::operator()(Block const &blk) {
-  ASTWalker::operator()(blk);
-}
+void YulToMLIRPass::operator()(Block const &blk) { ASTWalker::operator()(blk); }
 
-void MLIRGenFromYul::translateObj(Object const &obj) {
+void YulToMLIRPass::lowerObj(Object const &obj) {
   // TODO: Where is the source location info for Object? Do we need to track it?
   auto objOp =
       b.create<mlir::solidity::ObjectOp>(b.getUnknownLoc(), obj.name.str());
@@ -148,14 +146,14 @@ void MLIRGenFromYul::translateObj(Object const &obj) {
   operator()(*obj.code);
 }
 
-void MLIRGenFromYul::translateTopLevelObj(Object const &obj) {
-  translateObj(obj);
+void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
+  lowerObj(obj);
 
   // TODO: Does it make sense to nest subobjects in the top level ObjectOp's
   // body?
   for (auto const &subNode : obj.subObjects) {
     if (auto *subObj = dynamic_cast<Object const *>(subNode.get())) {
-      translateObj(*subObj);
+      lowerObj(*subObj);
     } else {
       solUnimplementedAssert(false, "TODO: Metadata translation");
     }
@@ -164,18 +162,18 @@ void MLIRGenFromYul::translateTopLevelObj(Object const &obj) {
 
 } // namespace solidity::frontend
 
-bool solidity::frontend::runMLIRGenFromYul(Object const &obj,
-                                           CharStream const &stream,
-                                           Dialect const &yulDialect) {
+bool solidity::frontend::runYulToMLIRPass(Object const &obj,
+                                          CharStream const &stream,
+                                          Dialect const &yulDialect) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
-  MLIRGenFromYul gen(ctx, stream, yulDialect);
-  gen.translateTopLevelObj(obj);
+  YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
+  yulToMLIR.lowerTopLevelObj(obj);
 
-  if (failed(mlir::verify(gen.getModule()))) {
-    gen.getModule().print(llvm::errs());
-    gen.getModule().emitError("Module verification error");
+  if (failed(mlir::verify(yulToMLIR.getModule()))) {
+    yulToMLIR.getModule().print(llvm::errs());
+    yulToMLIR.getModule().emitError("Module verification error");
     return false;
   }
 
@@ -184,7 +182,7 @@ bool solidity::frontend::runMLIRGenFromYul(Object const &obj,
   // if (mlir::failed(passMgr.run(gen.getModule())))
   //   ; // return false;
 
-  gen.getModule().print(llvm::outs());
+  yulToMLIR.getModule().print(llvm::outs());
   llvm::outs() << "\n";
   llvm::outs().flush();
 
