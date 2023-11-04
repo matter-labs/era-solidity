@@ -22,7 +22,6 @@
 #include "libyul/AST.h"
 #include "libyul/optimiser/ASTWalker.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
@@ -171,7 +170,6 @@ bool solidity::frontend::runMLIRGenFromYul(Object const &obj,
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
-  ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   MLIRGenFromYul gen(ctx, stream, yulDialect);
   gen.translateTopLevelObj(obj);
 

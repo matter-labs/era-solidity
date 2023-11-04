@@ -236,7 +236,8 @@ struct LowerToLLVMPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LowerToLLVMPass)
 
   void getDependentDialects(DialectRegistry &reg) const override {
-    reg.insert<LLVM::LLVMDialect>();
+    reg.insert<LLVM::LLVMDialect, func::FuncDialect,
+               arith::ArithmeticDialect>();
   }
 
   void runOnOperation() override {
