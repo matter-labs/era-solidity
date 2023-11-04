@@ -189,7 +189,7 @@ set(mlir_sources
 	codegen/mlir/GenFromYul.cpp
 	codegen/mlir/Gen.h
 	codegen/mlir/Passes.h
-	codegen/mlir/LowerToLLVM.cpp
+	codegen/mlir/Target/EraVM/SolidityDialectLowering.cpp
 )
 
 set(mlir_solidity_dialect_sources

@@ -262,8 +262,9 @@ struct SolidityDialectLowering
       signalPassFailure();
   }
 };
+
 } // namespace
 
-std::unique_ptr<Pass> solidity::createSolidityDialectLoweringPass() {
+std::unique_ptr<Pass> solidity::createSolidityDialectLoweringPassForEraVM() {
   return std::make_unique<SolidityDialectLowering>();
 }

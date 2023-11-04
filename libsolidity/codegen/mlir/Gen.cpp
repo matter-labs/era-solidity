@@ -344,7 +344,8 @@ bool solidity::frontend::runMLIRGen(
 
   mlir::PassManager passMgr(&ctx);
   if (stage >= MLIRGenStage::LLVMIR)
-    passMgr.addPass(mlir::solidity::createSolidityDialectLoweringPass());
+    passMgr.addPass(
+        mlir::solidity::createSolidityDialectLoweringPassForEraVM());
   if (mlir::failed(passMgr.run(gen.mod)))
     return false;
 
