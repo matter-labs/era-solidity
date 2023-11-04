@@ -28,7 +28,6 @@ namespace mlir {
 class Pass;
 
 namespace solidity {
-std::unique_ptr<Pass> createLowerToLLVMPass();
-
+std::unique_ptr<Pass> createSolidityDialectLoweringPass();
 }
 } // namespace mlir

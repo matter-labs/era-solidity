@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// LLVM dialect generator
+// Solidity dialect lowering pass
 //
 
 #include "libsolidity/codegen/mlir/Passes.h"
@@ -42,11 +42,11 @@ using namespace mlir;
 
 namespace {
 
-// FIXME: The high level dialects are translated to the llvm dialect tailored to
-// the EraVM backend in llvm. How should we perform the translation when we
-// support other targets?
+// FIXME: The high level dialects are lowered to the llvm dialect tailored to
+// the EraVM backend in llvm. How should we perform the lowering when we support
+// other targets?
 //
-// (a) If we do a condition translation in this pass, the code can quickly get
+// (a) If we do a condition lowering in this pass, the code can quickly get
 // messy
 //
 // (b) If we have a high level dialect for each target, the lowering will be,
@@ -54,10 +54,11 @@ namespace {
 // details. Unnecessary abstractions?
 //
 // (c) I think a sensible design is to create different ModuleOp passes for each
-// target that translate high level dialects to the llvm dialect.
+// target that lower high level dialects to the llvm dialect.
 //
 
 namespace eravm {
+
 enum AddrSpace : unsigned {
   Stack = 0,
   Heap = 1,
@@ -69,6 +70,7 @@ enum AddrSpace : unsigned {
 
 enum ByteLen { Byte = 1, X32 = 4, X64 = 8, EthAddr = 20, Field = 32 };
 enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
+
 } // namespace eravm
 
 class BuilderHelper {
@@ -162,9 +164,9 @@ public:
   }
 };
 
-class ObjectOpTranslation : public ConversionPattern {
+class ObjectOpLowering : public ConversionPattern {
 public:
-  explicit ObjectOpTranslation(MLIRContext *ctx)
+  explicit ObjectOpLowering(MLIRContext *ctx)
       : ConversionPattern(solidity::ObjectOp::getOperationName(),
                           /*benefit=*/1, ctx) {}
 
@@ -231,9 +233,9 @@ public:
   }
 };
 
-struct LowerToLLVMPass
-    : public PassWrapper<LowerToLLVMPass, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LowerToLLVMPass)
+struct SolidityDialectLowering
+    : public PassWrapper<SolidityDialectLowering, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SolidityDialectLowering)
 
   void getDependentDialects(DialectRegistry &reg) const override {
     reg.insert<LLVM::LLVMDialect, func::FuncDialect,
@@ -252,7 +254,7 @@ struct LowerToLLVMPass
     populateMemRefToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
     pats.add<ContractOpLowering>(&getContext());
-    pats.add<ObjectOpTranslation>(&getContext());
+    pats.add<ObjectOpLowering>(&getContext());
     pats.add<ReturnOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
@@ -262,6 +264,6 @@ struct LowerToLLVMPass
 };
 } // namespace
 
-std::unique_ptr<Pass> solidity::createLowerToLLVMPass() {
-  return std::make_unique<LowerToLLVMPass>();
+std::unique_ptr<Pass> solidity::createSolidityDialectLoweringPass() {
+  return std::make_unique<SolidityDialectLowering>();
 }
