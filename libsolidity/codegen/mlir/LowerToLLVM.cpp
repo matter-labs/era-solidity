@@ -72,7 +72,7 @@ enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
 } // namespace eravm
 
 class BuilderHelper {
-  OpBuilder b;
+  OpBuilder &b;
   Location loc;
 
 public:
