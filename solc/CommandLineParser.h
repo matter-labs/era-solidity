@@ -25,7 +25,7 @@
 #include <libsolidity/interface/FileReader.h>
 #include <libsolidity/interface/ImportRemapper.h>
 
-#include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
 
 #include <libyul/YulStack.h>
 

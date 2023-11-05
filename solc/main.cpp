@@ -25,7 +25,7 @@
 
 #include <liblangutil/Exceptions.h>
 
-#include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
 
 #include <boost/exception/all.hpp>
 

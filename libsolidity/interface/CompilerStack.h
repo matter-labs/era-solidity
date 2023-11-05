@@ -31,7 +31,7 @@
 #include <libsolidity/interface/Version.h>
 #include <libsolidity/interface/DebugSettings.h>
 
-#include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
 
 #include <libsolidity/formal/ModelCheckerSettings.h>
 

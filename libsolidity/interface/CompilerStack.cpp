@@ -58,7 +58,7 @@
 
 #include <libsolidity/codegen/ir/Common.h>
 #include <libsolidity/codegen/ir/IRGenerator.h>
-#include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
 
 #include <libstdlib/stdlib.h>
 

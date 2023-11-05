@@ -24,7 +24,7 @@
 
 #include <liblangutil/EVMVersion.h>
 
-#include <libsolidity/codegen/mlir/Gen.h>
+#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
 
 #include <boost/algorithm/string.hpp>
 

@@ -185,8 +185,8 @@ set(sources
 )
 
 set(mlir_sources
-	codegen/mlir/Gen.cpp
-	codegen/mlir/Gen.h
+	codegen/mlir/SolidityToMLIR.cpp
+	codegen/mlir/SolidityToMLIR.h
 	codegen/mlir/YulToMLIR.cpp
 	codegen/mlir/YulToMLIR.h
 	codegen/mlir/Passes.h
