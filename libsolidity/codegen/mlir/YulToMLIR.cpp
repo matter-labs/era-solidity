@@ -179,7 +179,7 @@ bool solidity::frontend::runYulToMLIRPass(Object const &obj,
 
   // mlir::PassManager passMgr(&ctx);
   // passMgr.addPass(mlir::solidity::createSolidityDialectLoweringPassForEraVM());
-  // if (mlir::failed(passMgr.run(gen.getModule())))
+  // if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
   //   ; // return false;
 
   yulToMLIR.getModule().print(llvm::outs());

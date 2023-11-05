@@ -22,20 +22,27 @@
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/Types.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
 
 using namespace mlir;
@@ -71,6 +78,12 @@ enum AddrSpace : unsigned {
 enum ByteLen { Byte = 1, X32 = 4, X64 = 8, EthAddr = 20, Field = 32 };
 enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
 
+enum EntryInfo {
+  ArgIndexCallDataABI = 0,
+  ArgIndexCallFlags = 1,
+  MandatoryArgCnt = 2,
+};
+
 } // namespace eravm
 
 class BuilderHelper {
@@ -88,20 +101,32 @@ public:
   }
 };
 
+static LLVM::LLVMFuncOp getOrInsertLLVMFuncOp(llvm::StringRef name, Type resTy,
+                                              llvm::ArrayRef<Type> argTys,
+                                              OpBuilder &b, ModuleOp mod) {
+  if (LLVM::LLVMFuncOp found = mod.lookupSymbol<LLVM::LLVMFuncOp>(name))
+    return found;
+
+  auto fnType = LLVM::LLVMFunctionType::get(resTy, argTys);
+
+  OpBuilder::InsertionGuard insertGuard(b);
+  b.setInsertionPointToStart(mod.getBody());
+  return b.create<LLVM::LLVMFuncOp>(mod.getLoc(), name, fnType);
+}
+
+static SymbolRefAttr getOrInsertLLVMFuncSym(llvm::StringRef name, Type resTy,
+                                            llvm::ArrayRef<Type> argTys,
+                                            OpBuilder &b, ModuleOp mod) {
+  getOrInsertLLVMFuncOp(name, resTy, argTys, b, mod);
+  return SymbolRefAttr::get(mod.getContext(), name);
+}
+
 static SymbolRefAttr getOrInsertReturn(PatternRewriter &rewriter,
                                        ModuleOp mod) {
   auto *ctx = mod.getContext();
-  if (mod.lookupSymbol<LLVM::LLVMFuncOp>("__return"))
-    return SymbolRefAttr::get(ctx, "__return");
-
   auto i256Ty = IntegerType::get(ctx, 256);
-  auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx),
-                                            {i256Ty, i256Ty, i256Ty});
-
-  PatternRewriter::InsertionGuard insertGuard(rewriter);
-  rewriter.setInsertionPointToStart(mod.getBody());
-  rewriter.create<LLVM::LLVMFuncOp>(mod.getLoc(), "__return", fnType);
-  return SymbolRefAttr::get(ctx, "__return");
+  return getOrInsertLLVMFuncSym("__return", LLVM::LLVMVoidType::get(ctx),
+                                {i256Ty, i256Ty, i256Ty}, rewriter, mod);
 }
 
 class ReturnOpLowering : public ConversionPattern {
@@ -192,12 +217,60 @@ public:
     assert(op->getNumRegions() == 1);
 
     auto &entryFuncRegion = entryFunc.getRegion();
-    rewriter.inlineRegionBefore(op->getRegion(0), entryFuncRegion,
-                                entryFuncRegion.begin());
-    Block *entryBlk = &entryFuncRegion.getBlocks().front();
+    Block *entryBlk = rewriter.createBlock(&entryFuncRegion);
     for (auto inTy : inTys) {
       entryBlk->addArgument(inTy, loc);
     }
+
+    // Check Deploy call flag
+    rewriter.setInsertionPointToStart(entryBlk);
+    BuilderHelper b(rewriter, loc);
+    auto deployCallFlag = rewriter.create<arith::AndIOp>(
+        loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
+        b.getConst(1));
+    auto isDeployCallFlag = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, deployCallFlag.getResult(),
+        b.getConst(1));
+
+    auto objOp = cast<mlir::solidity::ObjectOp>(op);
+    auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
+
+    // Create the __runtime function
+    auto runtimeFunc =
+        getOrInsertLLVMFuncOp("__runtime", voidTy, {}, rewriter, mod);
+    Region &runtimeFuncRegion = runtimeFunc.getRegion();
+    // Move the runtime object getter under the ObjectOp public API
+    for (auto const &op : *objOp.getBody()) {
+      if (auto runtimeObj = llvm::dyn_cast<solidity::ObjectOp>(&op)) {
+        assert(runtimeObj.getSymName().endswith("_deployed"));
+        rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
+                                    runtimeFuncRegion.begin());
+      }
+    }
+
+    // Create the __deploy function
+    auto deployFunc =
+        getOrInsertLLVMFuncOp("__deploy", voidTy, {}, rewriter, mod);
+    Region &deployFuncRegion = deployFunc.getRegion();
+    rewriter.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
+                                deployFuncRegion.begin());
+
+    // If the deploy call flag is set, call __deploy()
+    auto ifOp = rewriter.create<scf::IfOp>(loc, isDeployCallFlag.getResult(),
+                                           /*withElseRegion=*/true);
+    OpBuilder thenBuilder = ifOp.getThenBodyBuilder();
+    thenBuilder.create<LLVM::CallOp>(loc, deployFunc, ValueRange{});
+    // FIXME: Why the following fails with a "does not reference a valid
+    // function" error but generating the func::CallOp to __return is fine
+    // thenBuilder.create<func::CallOp>(
+    //     loc, SymbolRefAttr::get(mod.getContext(), "__deploy"), TypeRange{},
+    //     ValueRange{});
+
+    // Else call __runtime()
+    OpBuilder elseBuilder = ifOp.getElseBodyBuilder();
+    elseBuilder.create<LLVM::CallOp>(loc, runtimeFunc, ValueRange{});
+    rewriter.setInsertionPointAfter(ifOp);
+    rewriter.create<LLVM::UnreachableOp>(loc);
 
     rewriter.eraseOp(op);
     return success();
@@ -238,19 +311,22 @@ struct SolidityDialectLowering
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SolidityDialectLowering)
 
   void getDependentDialects(DialectRegistry &reg) const override {
-    reg.insert<LLVM::LLVMDialect, func::FuncDialect,
-               arith::ArithmeticDialect>();
+    reg.insert<LLVM::LLVMDialect, func::FuncDialect, arith::ArithmeticDialect,
+               scf::SCFDialect>();
   }
 
   void runOnOperation() override {
     // We only lower till the llvm dialect
     LLVMConversionTarget llConv(getContext());
     llConv.addLegalOp<ModuleOp>();
+    llConv.addLegalOp<scf::YieldOp>();
     LLVMTypeConverter llTyConv(&getContext());
 
     // Lower arith, memref and func dialects to the llvm dialect
     RewritePatternSet pats(&getContext());
     arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
+    populateSCFToControlFlowConversionPatterns(pats);
+    cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateMemRefToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
     pats.add<ContractOpLowering>(&getContext());
