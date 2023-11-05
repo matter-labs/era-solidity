@@ -45,9 +45,9 @@ using namespace solidity::frontend;
 
 namespace solidity::frontend {
 
-class MLIRGen : public ASTConstVisitor {
+class SolidityToMLIRPass : public ASTConstVisitor {
 public:
-  explicit MLIRGen(mlir::MLIRContext &ctx, CharStream const &stream)
+  explicit SolidityToMLIRPass(mlir::MLIRContext &ctx, CharStream const &stream)
       : b(&ctx), stream(stream) {
     mod = mlir::ModuleOp::create(b.getUnknownLoc());
     b.setInsertionPointToEnd(mod.getBody());
@@ -107,7 +107,7 @@ private:
 
 } // namespace solidity::frontend
 
-mlir::Type MLIRGen::type(Type const *ty) {
+mlir::Type SolidityToMLIRPass::type(Type const *ty) {
   // Integer type
   if (auto *i = dynamic_cast<IntegerType const *>(ty)) {
     return b.getIntegerType(i->numBits());
@@ -126,20 +126,20 @@ mlir::Type MLIRGen::type(Type const *ty) {
   solUnimplemented("Unhandled type\n");
 }
 
-mlir::Value MLIRGen::getMemRef(Declaration const *decl) {
+mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
   return varMemRef[decl];
 }
 
-void MLIRGen::setMemRef(Declaration const *decl, mlir::Value addr) {
+void SolidityToMLIRPass::setMemRef(Declaration const *decl, mlir::Value addr) {
   varMemRef[decl] = addr;
 }
 
-mlir::Value MLIRGen::getMemRef(Identifier const *ident) {
+mlir::Value SolidityToMLIRPass::getMemRef(Identifier const *ident) {
   return getMemRef(ident->annotation().referencedDeclaration);
 }
 
-mlir::Value MLIRGen::genCast(mlir::Value val, Type const *srcTy,
-                             Type const *dstTy) {
+mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
+                                        Type const *dstTy) {
   // Don't cast if we're casting to the same type
   if (srcTy == dstTy)
     return val;
@@ -183,7 +183,7 @@ mlir::Value MLIRGen::genCast(mlir::Value val, Type const *srcTy,
   solUnimplemented("Unhandled cast\n");
 }
 
-mlir::Value MLIRGen::genExpr(BinaryOperation const *binOp) {
+mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
   auto resTy = binOp->annotation().type;
   auto lc = loc(binOp->location());
 
@@ -201,8 +201,8 @@ mlir::Value MLIRGen::genExpr(BinaryOperation const *binOp) {
   solUnimplemented("Unhandled binary operation");
 }
 
-mlir::Value MLIRGen::genExpr(Expression const *expr,
-                             std::optional<Type const *> resTy) {
+mlir::Value SolidityToMLIRPass::genExpr(Expression const *expr,
+                                        std::optional<Type const *> resTy) {
   mlir::Value val;
 
   // Generate literals
@@ -227,7 +227,7 @@ mlir::Value MLIRGen::genExpr(Expression const *expr,
   return val;
 }
 
-mlir::Value MLIRGen::genExpr(Literal const *lit) {
+mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
   mlir::Location lc = loc(lit->location());
   Type const *ty = lit->annotation().type;
 
@@ -250,7 +250,7 @@ mlir::Value MLIRGen::genExpr(Literal const *lit) {
   }
 }
 
-bool MLIRGen::visit(Return const &ret) {
+bool SolidityToMLIRPass::visit(Return const &ret) {
   auto currFuncResTys =
       currFunc->functionType(/*FIXME*/ true)->returnParameterTypes();
 
@@ -267,7 +267,7 @@ bool MLIRGen::visit(Return const &ret) {
   return true;
 }
 
-void MLIRGen::run(FunctionDefinition const &func) {
+void SolidityToMLIRPass::run(FunctionDefinition const &func) {
   currFunc = &func;
   std::vector<mlir::Type> inpTys, outTys;
   std::vector<mlir::Location> inpLocs;
@@ -312,7 +312,7 @@ void MLIRGen::run(FunctionDefinition const &func) {
   b.setInsertionPointAfter(op);
 }
 
-void MLIRGen::run(ContractDefinition const &cont) {
+void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   auto op =
       b.create<mlir::solidity::ContractOp>(loc(cont.location()), cont.name());
   b.setInsertionPointToStart(op.getBody());
@@ -323,7 +323,7 @@ void MLIRGen::run(ContractDefinition const &cont) {
   b.setInsertionPointAfter(op);
 }
 
-bool solidity::frontend::runMLIRGen(
+bool solidity::frontend::runSolidityToMLIRPass(
     std::vector<ContractDefinition const *> const &contracts,
     CharStream const &stream, MLIRGenStage stage) {
   mlir::MLIRContext ctx;
@@ -332,7 +332,7 @@ bool solidity::frontend::runMLIRGen(
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   ctx.getOrLoadDialect<mlir::memref::MemRefDialect>();
 
-  MLIRGen gen(ctx, stream);
+  SolidityToMLIRPass gen(ctx, stream);
   for (auto *contract : contracts) {
     gen.run(*contract);
   }

@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// MLIR generator
+// Solidity to MLIR pass
 //
 
 #pragma once
@@ -41,7 +41,8 @@ extern bool parseMLIROpts(std::vector<const char *> &_argv);
 /// MLIRGen stages
 enum class MLIRGenStage { Init, LLVMIR };
 
-extern bool runMLIRGen(std::vector<ContractDefinition const *> const &contracts,
-                       langutil::CharStream const &stream,
-                       MLIRGenStage stage = MLIRGenStage::Init);
+extern bool
+runSolidityToMLIRPass(std::vector<ContractDefinition const *> const &contracts,
+                      langutil::CharStream const &stream,
+                      MLIRGenStage stage = MLIRGenStage::Init);
 } // namespace solidity::frontend

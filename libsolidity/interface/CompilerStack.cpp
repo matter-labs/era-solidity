@@ -699,7 +699,7 @@ bool CompilerStack::compile(State _stopAfter)
 				if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
 					if (isRequestedContract(*contract))
 						contracts.push_back(contract);
-			if (!runMLIRGen(contracts, *source->charStream, m_MLIRGenStage))
+			if (!runSolidityToMLIRPass(contracts, *source->charStream, m_MLIRGenStage))
 				return false;
 		}
 	}
