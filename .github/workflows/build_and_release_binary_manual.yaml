@@ -24,7 +24,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         run: |
@@ -65,7 +65,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         run: |
@@ -101,7 +101,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         shell: zsh {0}
@@ -163,7 +163,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         shell: zsh {0}
@@ -225,7 +225,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
@@ -319,7 +319,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Download artifact macos_arm64
         uses: actions/download-artifact@v3
@@ -357,13 +357,13 @@ jobs:
         run: |
           awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > tmp_changelog.txt
 
-      - name: Prepare release
-        uses: softprops/action-gh-release@v1
-        with:
-          generate_release_notes: false
-          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
-          body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          files: |
-            releases/**/**
+      # - name: Prepare release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     generate_release_notes: false
+      #     name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+      #     body_path: ./tmp_changelog.txt
+      #     tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+      #     token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+      #     files: |
+      #       releases/**/**
