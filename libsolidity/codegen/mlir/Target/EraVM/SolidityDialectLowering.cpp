@@ -198,8 +198,25 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
+    auto objOp = cast<mlir::solidity::ObjectOp>(op);
     auto loc = op->getLoc();
+    auto mod = op->getParentOfType<ModuleOp>();
+    auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
     auto i256Ty = rewriter.getIntegerType(256);
+
+    // Is this a runtime object?
+    // FIXME: Is there a better way to check this?
+    if (objOp.getSymName().endswith("_deployed")) {
+      // Move the runtime object region under the __runtime function
+      auto runtimeFunc =
+          getOrInsertLLVMFuncOp("__runtime", voidTy, {}, rewriter, mod);
+      Region &runtimeFuncRegion = runtimeFunc.getRegion();
+      rewriter.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
+                                  runtimeFuncRegion.begin());
+      rewriter.eraseOp(op);
+      return success();
+    }
+
     auto genericAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), eravm::AddrSpace::Generic);
 
@@ -210,7 +227,6 @@ public:
       inTys.push_back(i256Ty);
     }
     FunctionType funcType = rewriter.getFunctionType(inTys, {i256Ty});
-    auto mod = op->getParentOfType<ModuleOp>();
     rewriter.setInsertionPointToEnd(mod.getBody());
     func::FuncOp entryFunc =
         rewriter.create<func::FuncOp>(loc, "__entry", funcType);
@@ -232,9 +248,6 @@ public:
         loc, arith::CmpIPredicate::eq, deployCallFlag.getResult(),
         b.getConst(1));
 
-    auto objOp = cast<mlir::solidity::ObjectOp>(op);
-    auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
-
     // Create the __runtime function
     auto runtimeFunc =
         getOrInsertLLVMFuncOp("__runtime", voidTy, {}, rewriter, mod);
@@ -245,6 +258,7 @@ public:
         assert(runtimeObj.getSymName().endswith("_deployed"));
         rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
                                     runtimeFuncRegion.begin());
+        rewriter.eraseOp(runtimeObj);
       }
     }
 
