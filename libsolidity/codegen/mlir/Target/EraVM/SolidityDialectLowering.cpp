@@ -33,6 +33,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -101,9 +102,11 @@ public:
   }
 };
 
-static LLVM::LLVMFuncOp getOrInsertLLVMFuncOp(llvm::StringRef name, Type resTy,
-                                              llvm::ArrayRef<Type> argTys,
-                                              OpBuilder &b, ModuleOp mod) {
+static LLVM::LLVMFuncOp
+getOrInsertLLVMFuncOp(llvm::StringRef name, Type resTy,
+                      llvm::ArrayRef<Type> argTys, OpBuilder &b, ModuleOp mod,
+                      LLVM::Linkage linkage = LLVM::Linkage::External,
+                      llvm::ArrayRef<NamedAttribute> attrs = {}) {
   if (LLVM::LLVMFuncOp found = mod.lookupSymbol<LLVM::LLVMFuncOp>(name))
     return found;
 
@@ -111,7 +114,28 @@ static LLVM::LLVMFuncOp getOrInsertLLVMFuncOp(llvm::StringRef name, Type resTy,
 
   OpBuilder::InsertionGuard insertGuard(b);
   b.setInsertionPointToStart(mod.getBody());
-  return b.create<LLVM::LLVMFuncOp>(mod.getLoc(), name, fnType);
+  return b.create<LLVM::LLVMFuncOp>(mod.getLoc(), name, fnType, linkage,
+                                    /*dsoLocal=*/false, LLVM::CConv::C, attrs);
+}
+
+static LLVM::LLVMFuncOp getOrInsertCreationFuncOp(llvm::StringRef name,
+                                                  Type resTy,
+                                                  llvm::ArrayRef<Type> argTys,
+                                                  OpBuilder &b, ModuleOp mod) {
+
+  return getOrInsertLLVMFuncOp(
+      name, resTy, argTys, b, mod, LLVM::Linkage::Private,
+      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(false)}});
+}
+
+static LLVM::LLVMFuncOp getOrInsertRuntimeFuncOp(llvm::StringRef name,
+                                                 Type resTy,
+                                                 llvm::ArrayRef<Type> argTys,
+                                                 OpBuilder &b, ModuleOp mod) {
+
+  return getOrInsertLLVMFuncOp(
+      name, resTy, argTys, b, mod, LLVM::Linkage::Private,
+      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(true)}});
 }
 
 static SymbolRefAttr getOrInsertLLVMFuncSym(llvm::StringRef name, Type resTy,
@@ -186,7 +210,7 @@ public:
 
     rewriter.eraseOp(op);
     return success();
-  }
+  } // namespace
 };
 
 class ObjectOpLowering : public ConversionPattern {
@@ -209,7 +233,7 @@ public:
     if (objOp.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
       auto runtimeFunc =
-          getOrInsertLLVMFuncOp("__runtime", voidTy, {}, rewriter, mod);
+          getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, rewriter, mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
       rewriter.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
                                   runtimeFuncRegion.begin());
@@ -250,7 +274,7 @@ public:
 
     // Create the __runtime function
     auto runtimeFunc =
-        getOrInsertLLVMFuncOp("__runtime", voidTy, {}, rewriter, mod);
+        getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, rewriter, mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
     for (auto const &op : *objOp.getBody()) {
@@ -264,7 +288,7 @@ public:
 
     // Create the __deploy function
     auto deployFunc =
-        getOrInsertLLVMFuncOp("__deploy", voidTy, {}, rewriter, mod);
+        getOrInsertCreationFuncOp("__deploy", voidTy, {}, rewriter, mod);
     Region &deployFuncRegion = deployFunc.getRegion();
     rewriter.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
                                 deployFuncRegion.begin());
