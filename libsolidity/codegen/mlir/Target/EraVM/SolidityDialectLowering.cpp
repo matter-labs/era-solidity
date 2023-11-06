@@ -44,6 +44,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 
 using namespace mlir;
@@ -153,6 +154,30 @@ static SymbolRefAttr getOrInsertReturn(PatternRewriter &rewriter,
                                 {i256Ty, i256Ty, i256Ty}, rewriter, mod);
 }
 
+/// Returns true if `op` is defined in a runtime context
+static bool inRuntimeContext(Operation *op) {
+  assert(!isa<LLVM::LLVMFuncOp>(op) && !isa<solidity::ObjectOp>(op));
+
+  // Check if the parent FuncOp has isRuntime attribute set
+  auto parentFunc = op->getParentOfType<LLVM::LLVMFuncOp>();
+  if (parentFunc) {
+    auto isRuntimeAttr = parentFunc->getAttr("isRuntime");
+    assert(isRuntimeAttr);
+    return isRuntimeAttr.cast<BoolAttr>().getValue();
+    // TODO: The following doesn't work. Find the rationale (or fix?) for the
+    // inconsistent behaviour of llvm::cast and .cast with MLIR data structures
+    // return llvm::cast<BoolAttr>(isRuntimeAttr).getValue();
+  }
+
+  // If there's no parent FuncOp, check the parent ObjectOp
+  auto parentObj = op->getParentOfType<solidity::ObjectOp>();
+  if (parentObj) {
+    return parentObj.getSymName().endswith("_deployed");
+  }
+
+  llvm_unreachable("op has no parent FuncOp or ObjectOp");
+}
+
 class ReturnOpLowering : public ConversionPattern {
 public:
   explicit ReturnOpLowering(MLIRContext *ctx)
@@ -197,9 +222,9 @@ public:
 
     // Create the call: __return(HeapAuxOffsetCtorRetData, returnDataLen,
     // returnOpMode)
-    bool isCreation = true; // TODO: Implement this!
-    auto returnOpMode = b.getConst(isCreation ? eravm::AddrSpace::HeapAuxiliary
-                                              : eravm::AddrSpace::Heap);
+    bool isRuntime = inRuntimeContext(op);
+    auto returnOpMode = b.getConst(isRuntime ? eravm::AddrSpace::Heap
+                                             : eravm::AddrSpace::HeapAuxiliary);
     rewriter.create<func::CallOp>(
         loc, returnFunc, TypeRange{},
         ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData),
