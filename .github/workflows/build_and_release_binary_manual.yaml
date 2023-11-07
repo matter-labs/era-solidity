@@ -1,4 +1,4 @@
-name: Build and release binaries manually for Linux\Macos
+name: Build and release binaries manually.
 
 on:
   push:
@@ -249,7 +249,7 @@ jobs:
 
       - name: Checkout source
         uses: actions/checkout@v3
-        if: steps.compare_version.outputs.result == 'true'
+        if: steps.compare_version.outputs.result != 'true'
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
@@ -257,12 +257,12 @@ jobs:
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
-        if: steps.compare_version.outputs.result == 'true'
+        if: steps.compare_version.outputs.result != 'true'
         with:
           version: "15.0.7"
 
       - name: Prepare environment
-        if: steps.compare_version.outputs.result == 'true'
+        if: steps.compare_version.outputs.result != 'true'
         run: |
           git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
           git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
@@ -289,7 +289,7 @@ jobs:
 
 
       - name: Install windows Deps
-        if: steps.compare_version.outputs.result == 'true'
+        if: steps.compare_version.outputs.result != 'true'
         run: |
           if ( -not (Test-Path "deps\boost") ) {
             New-Item -ItemType Directory -Force -Path "deps"
@@ -311,7 +311,7 @@ jobs:
           }
 
       - name: Building the Solidity compiler
-        if: steps.compare_version.outputs.result == 'true'
+        if: steps.compare_version.outputs.result != 'true'
         run: |
           $env:path += ";deps\cmake\bin\"
           # remove warning-as-erro flag in cmake
@@ -328,14 +328,14 @@ jobs:
           cmake --build . -j 10 --target install --config Release
 
       - name: Prepare binary file name
-        if: steps.compare_version.outputs.result == 'true'
+        if: steps.compare_version.outputs.result != 'true'
         run: |
           mkdir -p releases\windows-amd64
           ls .\build\solc\Release\
           mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}.exe
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
-        if: steps.compare_version.outputs.result == 'true'
+        if: steps.compare_version.outputs.result != 'true'
         with:
           name: release_windows_amd64
           path: releases
@@ -380,7 +380,7 @@ jobs:
           path: releases
 
       - name: Download artifact release_windows_amd64
-        if: needs.build_windows_amd64.outputs.version_to_skip == 'true'
+        if: needs.build_windows_amd64.outputs.version_to_skip != 'true'
         uses: actions/download-artifact@v3
         with:
           name: release_windows_amd64
