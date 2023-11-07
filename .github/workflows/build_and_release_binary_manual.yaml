@@ -225,6 +225,16 @@ jobs:
     outputs:
       version_to_skip: ${{ steps.compare_version.outputs.result }}
     steps:
+
+      # Had to install node to determine release version.
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install semver
+        run: npm install semver
+
       - name: Check that version is >= 0.6.0
         id: compare_version
         uses: actions/github-script@v5
