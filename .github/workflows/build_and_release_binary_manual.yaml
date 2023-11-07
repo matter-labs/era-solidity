@@ -27,7 +27,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: 0.4.12
+          ref: 0.8.21
 
       - name: Prepare environment
         run: |
@@ -68,7 +68,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: 0.4.12
+          ref: 0.8.21
 
       - name: Prepare environment
         run: |
@@ -104,7 +104,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: 0.4.12
+          ref: 0.8.21
 
       - name: Prepare environment
         shell: zsh {0}
@@ -166,7 +166,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: 0.4.12
+          ref: 0.8.21
 
       - name: Prepare environment
         shell: zsh {0}
@@ -241,7 +241,7 @@ jobs:
         with:
           script: |
             const semver = require('semver');
-            const currentVersion = '0.4.12';
+            const currentVersion = '0.8.21';
             const result = semver.lt(currentVersion, '0.6.0');
             console.log(`Is the version < 0.6.0? ${result}`);
             return result;
@@ -253,7 +253,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: 0.4.12
+          ref: 0.8.21
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
@@ -353,7 +353,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: 0.4.12
+          ref: 0.8.21
 
       - name: Download artifact macos_arm64
         uses: actions/download-artifact@v3
