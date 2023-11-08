@@ -17,7 +17,7 @@ jobs:
   build_linux_amd64:
     runs-on: [matterlabs-ci-runner]
     container:
-      image: matterlabs/llvm_runner:latest
+      image: matterlabs/llvm_runner:rc-54
       credentials:
         username: ${{ secrets.DOCKERHUB_USER }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
