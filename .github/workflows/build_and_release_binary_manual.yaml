@@ -1,9 +1,6 @@
 name: Build and release binaries manually.
 
 on:
-  push:
-    branches:
-      - os-zkd-1195-make-a-few-fixes-to-the-era-solidity-release-workflow
   workflow_dispatch:
     inputs:
       ZKVM_RELEASE_TAG:
