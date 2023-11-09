@@ -1,5 +1,6 @@
 name: Build and release binaries manually.
 
+# delete-me
 on:
   push:
    branches:
