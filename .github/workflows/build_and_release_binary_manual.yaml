@@ -1,6 +1,9 @@
 name: Build and release binaries manually.
 
 on:
+  push:
+    branches:
+      - os-zkd-1195-make-a-few-fixes-to-the-era-solidity-release-workflow
   workflow_dispatch:
     inputs:
       ZKVM_RELEASE_TAG:
@@ -24,7 +27,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         run: |
@@ -45,7 +48,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-amd64
-          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-0.4.12-${{ inputs.ZKVM_RELEASE_TAG }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -65,7 +68,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         run: |
@@ -86,7 +89,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-arm64
-          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-0.4.12-${{ inputs.ZKVM_RELEASE_TAG }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -101,7 +104,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         shell: zsh {0}
@@ -145,7 +148,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-amd64
-          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKEVM_RELEASE_TAG }}
+          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-0.4.12-${{ inputs.ZKEVM_RELEASE_TAG }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -163,7 +166,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Prepare environment
         shell: zsh {0}
@@ -210,7 +213,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-arm64
-          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-0.4.12-${{ inputs.ZKVM_RELEASE_TAG }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -238,7 +241,7 @@ jobs:
         with:
           script: |
             const semver = require('semver');
-            const currentVersion = '${{ inputs.BRANCH_TAG }}';
+            const currentVersion = '0.4.12';
             const result = semver.lt(currentVersion, '0.6.0');
             console.log(`Is the version < 0.6.0? ${result}`);
             return result;
@@ -250,7 +253,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
@@ -329,7 +332,7 @@ jobs:
         run: |
           mkdir -p releases\windows-amd64
           ls .\build\solc\Release\
-          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}.exe
+          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-0.4.12-${{ inputs.ZKVM_RELEASE_TAG }}.exe
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         if: steps.compare_version.outputs.result != 'true'
@@ -350,7 +353,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: 0.4.12
 
       - name: Download artifact macos_arm64
         uses: actions/download-artifact@v3
@@ -393,9 +396,9 @@ jobs:
       #   uses: softprops/action-gh-release@v1
       #   with:
       #     generate_release_notes: false
-      #     name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+      #     name: zkVM solc 0.4.12-${{ inputs.ZKVM_RELEASE_TAG }}
       #     body_path: ./tmp_changelog.txt
-      #     tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+      #     tag_name: 0.4.12-${{ inputs.ZKVM_RELEASE_TAG }}
       #     token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
       #     files: |
       #       releases/**/**
