@@ -115,7 +115,7 @@ jobs:
 
       - uses: actions/setup-python@v4
         with:
-          python-version: '2.7'
+          python-version: 'pypy2.7'
 
       # It is needed as we use some commands which a deprecated in newer versions of boost
       - name: Install BOOST
