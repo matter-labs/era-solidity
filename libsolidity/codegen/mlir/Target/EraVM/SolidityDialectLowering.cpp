@@ -79,6 +79,7 @@ enum AddrSpace : unsigned {
 
 enum ByteLen { Byte = 1, X32 = 4, X64 = 8, EthAddr = 20, Field = 32 };
 enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
+enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
 
 enum EntryInfo {
   ArgIndexCallDataABI = 0,
@@ -189,7 +190,29 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     BuilderHelper b(rewriter, loc);
+    auto retOp = cast<solidity::ReturnOp>(op);
+    auto returnFunc =
+        getOrInsertReturn(rewriter, op->getParentOfType<ModuleOp>());
 
+    //
+    // Lowering in the runtime context
+    //
+    if (inRuntimeContext(op)) {
+      // Create the return call (__return(offset, length,
+      // RetForwardPageType::UseHeap)) and the unreachable op
+      rewriter.create<func::CallOp>(
+          loc, returnFunc, TypeRange{},
+          ValueRange{retOp.getLhs(), retOp.getRhs(),
+                     b.getConst(eravm::RetForwardPageType::UseHeap)});
+      rewriter.create<LLVM::UnreachableOp>(loc);
+
+      rewriter.eraseOp(op);
+      return success();
+    }
+
+    //
+    // Lowering in the creation context
+    //
     auto heapAuxAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), eravm::AddrSpace::HeapAuxiliary);
 
@@ -217,20 +240,14 @@ public:
     auto returnDataLen =
         rewriter.create<arith::AddIOp>(loc, immutablesCalcSize.getResult(),
                                        b.getConst(eravm::ByteLen::Field * 2));
-    auto returnFunc =
-        getOrInsertReturn(rewriter, op->getParentOfType<ModuleOp>());
 
-    // Create the call: __return(HeapAuxOffsetCtorRetData, returnDataLen,
-    // returnOpMode)
-    bool isRuntime = inRuntimeContext(op);
-    auto returnOpMode = b.getConst(isRuntime ? eravm::AddrSpace::Heap
-                                             : eravm::AddrSpace::HeapAuxiliary);
+    // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
+    // RetForwardPageType::UseAuxHeap)) and the unreachable op
     rewriter.create<func::CallOp>(
         loc, returnFunc, TypeRange{},
         ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData),
-                   returnDataLen.getResult(), returnOpMode});
-
-    // Create unreachable
+                   returnDataLen.getResult(),
+                   b.getConst(eravm::RetForwardPageType::UseAuxHeap)});
     rewriter.create<LLVM::UnreachableOp>(loc);
 
     rewriter.eraseOp(op);
