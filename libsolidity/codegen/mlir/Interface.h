@@ -21,11 +21,22 @@
 
 #pragma once
 
-#include "liblangutil/CharStream.h"
 #include "libsolidity/ast/ASTForward.h"
 #include "libyul/ASTForward.h"
-#include "libyul/Dialect.h"
-#include "libyul/Object.h"
+#include <vector>
+
+namespace solidity::langutil {
+
+class CharStream;
+
+};
+
+namespace solidity::yul {
+
+struct Dialect;
+struct Object;
+
+}; // namespace solidity::yul
 
 namespace solidity::mlirgen {
 
@@ -55,4 +66,5 @@ extern bool runSolidityToMLIRPass(
 
 extern bool runYulToMLIRPass(yul::Object const &, langutil::CharStream const &,
                              yul::Dialect const &, Action);
+
 } // namespace solidity::mlirgen
