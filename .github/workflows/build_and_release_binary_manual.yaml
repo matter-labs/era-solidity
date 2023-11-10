@@ -122,44 +122,44 @@ jobs:
         shell: zsh {0}
         run: |
           python --version
-      #     curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
-      #     tar xzf ./boost_1_71_0.tar.gz
-      #     cd ./boost_1_71_0
-      #     ./bootstrap.sh --prefix=/usr/local
-      #     ./b2 -j8
-      #     ./b2 install -j8
+          curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
+          tar xzf ./boost_1_71_0.tar.gz
+          cd ./boost_1_71_0
+          ./bootstrap.sh --prefix=/usr/local
+          ./b2 -j8
+          ./b2 install -j8
 
-      # - name: Warns not errs
-      #   run: |
-      #     sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
-      #     sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
-      #     sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
+      - name: Warns not errs
+        run: |
+          sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
+          sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
 
-      # - name: Cmake gen
-      #   shell: zsh {0}
-      #   env:
-      #     CXXFLAGS: "-Wno-narrowing"
-      #   run: |
-      #     mkdir -p ./build
-      #     cd ./build
-      #     cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+      - name: Cmake gen
+        shell: zsh {0}
+        env:
+          CXXFLAGS: "-Wno-narrowing"
+        run: |
+          mkdir -p ./build
+          cd ./build
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
 
-      # - name: Building the Solidity compiler
-      #   run: |
-      #     cd ./build
-      #     make -j12
-      #     ./solc/solc --version
+      - name: Building the Solidity compiler
+        run: |
+          cd ./build
+          make -j12
+          ./solc/solc --version
 
-      # - name: Prepare binary file name
-      #   shell: zsh {0}
-      #   run: |
-      #     mkdir -p ./releases/macosx-amd64
-      #     mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-0.4.12-${{ inputs.ZKEVM_RELEASE_TAG }}
+      - name: Prepare binary file name
+        shell: zsh {0}
+        run: |
+          mkdir -p ./releases/macosx-amd64
+          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-0.4.12-${{ inputs.ZKEVM_RELEASE_TAG }}
 
-      # - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
-      #   with:
-      #     name: release_macos_amd64
-      #     path: releases
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: release_macos_amd64
+          path: releases
 
   # build_macos_arm64:
   #   runs-on: [self-hosted, macOS, ARM64]
