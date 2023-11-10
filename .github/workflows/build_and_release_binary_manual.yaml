@@ -2,6 +2,7 @@ name: Build and release binaries manually.
 
 # delete-me delete-me delete-me delete-me delete-me delete-me delete-me delete-me delete-me
 # delete-me delete-me delete-me delete-me delete-me delete-me delete-me delete-me delete-me
+# delete-me delete-me delete-me delete-me delete-me delete-me delete-me delete-me delete-me
 
 on:
   push:
