@@ -19,10 +19,10 @@
 // MLIR Passes
 //
 
+#pragma once
+
 #include "mlir/Pass/Pass.h"
 #include <memory>
-
-#pragma once
 
 namespace mlir {
 class Pass;
@@ -30,4 +30,5 @@ class Pass;
 namespace solidity {
 std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 }
+
 } // namespace mlir
