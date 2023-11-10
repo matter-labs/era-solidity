@@ -25,7 +25,7 @@
 
 #include <liblangutil/Exceptions.h>
 
-#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
+#include <libsolidity/codegen/mlir/Interface.h>
 
 #include <boost/exception/all.hpp>
 
@@ -37,7 +37,7 @@ using namespace solidity;
 
 int main(int argc, char** argv)
 {
-	frontend::registerMLIRCLOpts();
+	mlirgen::registerMLIRCLOpts();
 
 	try
 	{

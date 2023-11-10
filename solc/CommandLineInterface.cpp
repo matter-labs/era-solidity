@@ -32,7 +32,7 @@
 #include <libsolidity/ast/ASTJsonExporter.h>
 #include <libsolidity/ast/ASTJsonImporter.h>
 #include <libsolidity/analysis/NameAndTypeResolver.h>
-#include <libsolidity/codegen/mlir/YulToMLIR.h>
+#include <libsolidity/codegen/mlir/Interface.h>
 #include <libsolidity/interface/CompilerStack.h>
 #include <libsolidity/interface/StandardCompiler.h>
 #include <libsolidity/interface/GasEstimator.h>
@@ -752,7 +752,6 @@ void CommandLineInterface::compile()
 			m_options.compiler.outputs.irOptimizedAstJson
 		);
 		m_compiler->enableMLIRGeneration(m_options.compiler.outputs.mlir);
-		m_compiler->setMLIRGenStage(m_options.output.mlirGenStage);
 		m_compiler->enableEvmBytecodeGeneration(
 			m_options.compiler.estimateGas ||
 			m_options.compiler.outputs.asm_ ||
@@ -1121,7 +1120,8 @@ void CommandLineInterface::assembleYul(yul::YulStack::Language _language, yul::Y
 			solUnimplementedAssert(_language == yul::YulStack::Language::Yul, "Language::Yul is only supported");
 			auto const& yulStk = yulStacks[src.first];
 			yul::EVMDialectTyped const* dialect = &yul::EVMDialectTyped::instance(m_options.output.evmVersion);
-			if (!runYulToMLIRPass(*yulStk.parserResult(), yulStk.charStream(src.first), *dialect))
+			auto stg = mlirgen::Action::PrintInitStg;
+			if (!mlirgen::runYulToMLIRPass(*yulStk.parserResult(), yulStk.charStream(src.first), *dialect, stg))
 			{
 				successful = false;
 			}

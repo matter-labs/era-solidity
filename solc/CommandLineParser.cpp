@@ -16,6 +16,7 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
+#include "liblangutil/Exceptions.h"
 #include <solc/CommandLineParser.h>
 
 #include <solc/Exceptions.h>
@@ -24,7 +25,7 @@
 
 #include <liblangutil/EVMVersion.h>
 
-#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
+#include <libsolidity/codegen/mlir/Interface.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -39,16 +40,6 @@ namespace po = boost::program_options;
 
 namespace solidity::frontend
 {
-
-static MLIRGenStage strToMLIRGenStage(std::string const& _str)
-{
-	if (_str == "init")
-		return MLIRGenStage::Init;
-	else if (_str == "llvm-ir")
-		return MLIRGenStage::LLVMIR;
-
-	solAssert(false, "Invalid MLIRGenStage");
-}
 
 static string const g_strAllowPaths = "allow-paths";
 static string const g_strBasePath = "base-path";
@@ -1100,7 +1091,7 @@ void CommandLineParser::processArgs()
 	if (!m_args[g_strMLIRGenStage].defaulted())
 	{
 		string val = m_args[g_strMLIRGenStage].as<string>();
-		m_options.output.mlirGenStage = strToMLIRGenStage(val);
+		solUnimplementedAssert("TODO: Fix -mlir-stg");
 	}
 
 	parseCombinedJsonOption();
@@ -1210,7 +1201,7 @@ void CommandLineParser::processArgs()
 				solThrow(CommandLineValidationError, "Empty values are not allowed in --" + g_strMMLIR + ".");
 			argv.push_back(flag.c_str());
 		}
-		if (!parseMLIROpts(argv))
+		if (!mlirgen::parseMLIROpts(argv))
 			solThrow(CommandLineValidationError, "Invalid option for --" + g_strMMLIR + ".");
 	}
 

@@ -15,8 +15,12 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-#include "libsolidity/codegen/mlir/YulToMLIR.h"
+//
+// Yul to MLIR pass
+//
+
 #include "liblangutil/Exceptions.h"
+#include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "libyul/AST.h"
@@ -32,7 +36,7 @@
 using namespace solidity::langutil;
 using namespace solidity::yul;
 
-namespace solidity::frontend {
+namespace solidity::mlirgen {
 
 class YulToMLIRPass : public ASTWalker {
   mlir::OpBuilder b;
@@ -160,15 +164,16 @@ void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
   }
 }
 
-} // namespace solidity::frontend
+} // namespace solidity::mlirgen
 
-bool solidity::frontend::runYulToMLIRPass(Object const &obj,
-                                          CharStream const &stream,
-                                          Dialect const &yulDialect) {
+bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
+                                         CharStream const &stream,
+                                         Dialect const &yulDialect,
+                                         solidity::mlirgen::Action action) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
-  YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
+  solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
   yulToMLIR.lowerTopLevelObj(obj);
 
   if (failed(mlir::verify(yulToMLIR.getModule()))) {

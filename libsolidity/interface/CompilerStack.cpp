@@ -58,7 +58,7 @@
 
 #include <libsolidity/codegen/ir/Common.h>
 #include <libsolidity/codegen/ir/IRGenerator.h>
-#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
+#include <libsolidity/codegen/mlir/Interface.h>
 
 #include <libstdlib/stdlib.h>
 
@@ -699,7 +699,8 @@ bool CompilerStack::compile(State _stopAfter)
 				if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
 					if (isRequestedContract(*contract))
 						contracts.push_back(contract);
-			if (!runSolidityToMLIRPass(contracts, *source->charStream, m_MLIRGenStage))
+			auto stg = mlirgen::Action::PrintInitStg;
+			if (!runSolidityToMLIRPass(contracts, *source->charStream, stg))
 				return false;
 		}
 	}

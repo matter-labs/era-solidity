@@ -15,13 +15,17 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-#include "libsolidity/codegen/mlir/SolidityToMLIR.h"
+//
+// Solidity to MLIR pass
+//
+
 #include "Solidity/SolidityOps.h"
 #include "liblangutil/CharStream.h"
 #include "liblangutil/Exceptions.h"
 #include "liblangutil/SourceLocation.h"
 #include "libsolidity/ast/AST.h"
 #include "libsolidity/ast/ASTVisitor.h"
+#include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -323,9 +327,9 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   b.setInsertionPointAfter(op);
 }
 
-bool solidity::frontend::runSolidityToMLIRPass(
+bool solidity::mlirgen::runSolidityToMLIRPass(
     std::vector<ContractDefinition const *> const &contracts,
-    CharStream const &stream, MLIRGenStage stage) {
+    CharStream const &stream, solidity::mlirgen::Action action) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::func::FuncDialect>();
@@ -343,11 +347,12 @@ bool solidity::frontend::runSolidityToMLIRPass(
   }
 
   mlir::PassManager passMgr(&ctx);
-  if (stage >= MLIRGenStage::LLVMIR)
+  if (action == solidity::mlirgen::Action::PrintLLVMIR) {
     passMgr.addPass(
         mlir::solidity::createSolidityDialectLoweringPassForEraVM());
-  if (mlir::failed(passMgr.run(gen.mod)))
-    return false;
+    if (mlir::failed(passMgr.run(gen.mod)))
+      return false;
+  }
 
   gen.mod.print(llvm::outs());
   llvm::outs() << "\n";
@@ -356,11 +361,11 @@ bool solidity::frontend::runSolidityToMLIRPass(
   return true;
 }
 
-void solidity::frontend::registerMLIRCLOpts() {
+void solidity::mlirgen::registerMLIRCLOpts() {
   mlir::registerAsmPrinterCLOptions();
 }
 
-bool solidity::frontend::parseMLIROpts(std::vector<const char *> &argv) {
+bool solidity::mlirgen::parseMLIROpts(std::vector<const char *> &argv) {
   // ParseCommandLineOptions() expects argv[0] to be the name of a program
   std::vector<const char *> fooArgv{"foo"};
   for (const char *arg : argv) {

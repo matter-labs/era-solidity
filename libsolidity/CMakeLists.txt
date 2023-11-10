@@ -186,10 +186,7 @@ set(sources
 
 set(mlir_sources
 	codegen/mlir/SolidityToMLIR.cpp
-	codegen/mlir/SolidityToMLIR.h
 	codegen/mlir/YulToMLIR.cpp
-	codegen/mlir/YulToMLIR.h
-	codegen/mlir/Passes.h
 	codegen/mlir/Target/EraVM/SolidityDialectLowering.cpp
 )
 

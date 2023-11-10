@@ -31,7 +31,7 @@
 #include <libsolidity/interface/Version.h>
 #include <libsolidity/interface/DebugSettings.h>
 
-#include <libsolidity/codegen/mlir/SolidityToMLIR.h>
+#include <libsolidity/codegen/mlir/Interface.h>
 
 #include <libsolidity/formal/ModelCheckerSettings.h>
 
@@ -207,9 +207,6 @@ public:
 
 	/// Enable generation of MLIR
 	void enableMLIRGeneration(bool _enable = true) { m_generateMLIR = _enable; }
-
-	/// Set the stage of MLIR generation
-	void setMLIRGenStage(MLIRGenStage _stage) { m_MLIRGenStage = _stage; }
 
 	/// @arg _metadataLiteralSources When true, store sources as literals in the contract metadata.
 	/// Must be set before parsing.
@@ -512,7 +509,6 @@ private:
 	bool m_generateEvmBytecode = true;
 	bool m_generateIR = false;
 	bool m_generateMLIR = false;
-	MLIRGenStage m_MLIRGenStage = MLIRGenStage::Init;
 	std::map<std::string, util::h160> m_libraries;
 	ImportRemapper m_importRemapper;
 	std::map<std::string const, Source> m_sources;
