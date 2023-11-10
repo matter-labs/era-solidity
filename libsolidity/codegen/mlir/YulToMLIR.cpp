@@ -200,7 +200,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
       return false;
     mod.print(llvm::outs());
     break;
-  case Action::LowerToAsm:
+  case Action::PrintAsm:
     llvm_unreachable("TODO: Implement lowering to asm");
   }
 

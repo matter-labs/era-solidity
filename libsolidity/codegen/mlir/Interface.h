@@ -9,10 +9,17 @@
 namespace solidity::mlirgen {
 
 enum class Action {
+  /// Print the MLIR generated from the AST
   PrintInitStg,
+
+  /// Print the MLIR after lowering dialect(s) in solc
   PrintPostSolcDialLowering,
+
+  /// Print the LLVM-IR
   PrintLLVMIR,
-  LowerToAsm,
+
+  /// Print the assembly
+  PrintAsm,
 };
 
 /// Registers required command line options in the MLIR framework
