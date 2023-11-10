@@ -116,9 +116,9 @@ jobs:
           curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
           tar xzf ./boost_1_71_0.tar.gz
           cd ./boost_1_71_0
-          ./bootstrap.sh --prefix=/usr/local
-          ./b2 -j12
-          ./b2 install -j12
+          ./bootstrap.sh --prefix=/usr/local --with-python-version=2.7
+          ./b2 -j$(sysctl -n hw.ncpu)
+          ./b2 install -j$(sysctl -n hw.ncpu)
 
       - name: Warns not errs
         run: |
