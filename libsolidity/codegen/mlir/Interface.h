@@ -26,16 +26,12 @@
 #include <vector>
 
 namespace solidity::langutil {
-
 class CharStream;
-
 };
 
 namespace solidity::yul {
-
 struct Dialect;
 struct Object;
-
 }; // namespace solidity::yul
 
 namespace solidity::mlirgen {
