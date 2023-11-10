@@ -30,6 +30,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 
@@ -176,20 +177,32 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
   yulToMLIR.lowerTopLevelObj(obj);
 
-  if (failed(mlir::verify(yulToMLIR.getModule()))) {
-    yulToMLIR.getModule().print(llvm::errs());
-    yulToMLIR.getModule().emitError("Module verification error");
+  mlir::ModuleOp mod = yulToMLIR.getModule();
+  if (failed(mlir::verify(mod))) {
+    mod.print(llvm::errs());
+    mod.emitError("Module verification error");
     return false;
   }
 
-  // mlir::PassManager passMgr(&ctx);
-  // passMgr.addPass(mlir::solidity::createSolidityDialectLoweringPassForEraVM());
-  // if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
-  //   ; // return false;
+  mlir::PassManager passMgr(&ctx);
 
-  yulToMLIR.getModule().print(llvm::outs());
-  llvm::outs() << "\n";
-  llvm::outs().flush();
+  switch (action) {
+  case Action::PrintInitStg:
+    mod.print(llvm::outs());
+    break;
+  case Action::PrintPostSolcDialLowering:
+    llvm_unreachable(
+        "TODO: Support dumping the IR after solc dialect lowering");
+  case Action::PrintLLVMIR:
+    passMgr.addPass(
+        mlir::solidity::createSolidityDialectLoweringPassForEraVM());
+    if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
+      return false;
+    mod.print(llvm::outs());
+    break;
+  case Action::LowerToAsm:
+    llvm_unreachable("TODO: Implement lowering to asm");
+  }
 
   return true;
 }
