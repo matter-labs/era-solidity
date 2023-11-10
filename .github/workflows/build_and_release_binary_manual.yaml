@@ -121,8 +121,8 @@ jobs:
           tar xzf ./boost_1_71_0.tar.gz
           cd ./boost_1_71_0
           ./bootstrap.sh --prefix=/usr/local
-          ./b2 -j$(sysctl -n hw.ncpu)
-          ./b2 install -j$(sysctl -n hw.ncpu)
+          ./b2 -j8
+          ./b2 install -j8
 
       - name: Warns not errs
         run: |
