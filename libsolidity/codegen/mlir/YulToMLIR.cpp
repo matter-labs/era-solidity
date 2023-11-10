@@ -173,7 +173,8 @@ void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
 bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
                                          CharStream const &stream,
                                          Dialect const &yulDialect,
-                                         solidity::mlirgen::Action action) {
+                                         Action action,
+                                         std::optional<Target> tgt) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
@@ -194,16 +195,23 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     mod.print(llvm::outs());
     break;
   case Action::PrintPostSolcDialLowering:
+    assert(tgt);
     llvm_unreachable(
         "TODO: Support dumping the IR after solc dialect lowering");
   case Action::PrintLLVMIR:
-    passMgr.addPass(
-        mlir::solidity::createSolidityDialectLoweringPassForEraVM());
+    assert(tgt);
+    switch (*tgt) {
+    case Target::EraVM:
+      passMgr.addPass(
+          mlir::solidity::createSolidityDialectLoweringPassForEraVM());
+      break;
+    }
     if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
       return false;
     mod.print(llvm::outs());
     break;
   case Action::PrintAsm:
+    assert(tgt);
     llvm_unreachable("TODO: Implement lowering to asm");
   }
 

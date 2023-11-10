@@ -23,6 +23,7 @@
 
 #include "libsolidity/ast/ASTForward.h"
 #include "libyul/ASTForward.h"
+#include <optional>
 #include <vector>
 
 namespace solidity::langutil {
@@ -50,6 +51,10 @@ enum class Action {
   PrintAsm,
 };
 
+enum class Target {
+  EraVM,
+};
+
 /// Registers required command line options in the MLIR framework
 extern void registerMLIRCLOpts();
 
@@ -61,6 +66,7 @@ extern bool runSolidityToMLIRPass(
     langutil::CharStream const &stream, Action);
 
 extern bool runYulToMLIRPass(yul::Object const &, langutil::CharStream const &,
-                             yul::Dialect const &, Action);
+                             yul::Dialect const &, Action,
+                             std::optional<Target> = std::nullopt);
 
 } // namespace solidity::mlirgen
