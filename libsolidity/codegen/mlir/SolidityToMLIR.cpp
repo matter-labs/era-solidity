@@ -73,7 +73,7 @@ private:
   std::map<Declaration const *, mlir::Value> varMemRef;
 
   /// Returns the mlir location for the solidity source location `loc`
-  mlir::Location loc(SourceLocation loc) {
+  mlir::Location loc(SourceLocation const &loc) {
     // FIXME: Track loc.end as well
     LineColumn lineCol = stream.translatePositionToLineColumn(loc.start);
     return mlir::FileLineColLoc::get(b.getStringAttr(stream.name()),
@@ -259,7 +259,7 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
       currFunc->functionType(/*FIXME*/ true)->returnParameterTypes();
 
   // The function generator emits `ReturnOp` for empty result
-  if (currFuncResTys.size() == 0)
+  if (currFuncResTys.empty())
     return true;
 
   solUnimplementedAssert(currFuncResTys.size() == 1,

@@ -99,7 +99,7 @@ public:
   Value getConst(int64_t val, unsigned width = 256) {
     IntegerType ty = b.getIntegerType(width);
     auto op = b.create<arith::ConstantOp>(
-        loc, b.getIntegerAttr(ty, llvm::APInt(width, val, /*radix=*/10)));
+        loc, b.getIntegerAttr(ty, llvm::APInt(width, val, /*isSigned=*/true)));
     return op.getResult();
   }
 };

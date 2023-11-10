@@ -62,7 +62,7 @@ public:
 
 private:
   /// Returns the mlir location for the solidity source location `loc`
-  mlir::Location loc(SourceLocation loc) {
+  mlir::Location loc(SourceLocation const &loc) {
     // FIXME: Track loc.end as well
     LineColumn lineCol = stream.translatePositionToLineColumn(loc.start);
     return mlir::FileLineColLoc::get(b.getStringAttr(stream.name()),
@@ -82,10 +82,10 @@ private:
   mlir::Value genExpr(Expression const &expr);
 
   /// Lowers an expression statement
-  void operator()(ExpressionStatement const &expr);
+  void operator()(ExpressionStatement const &expr) override;
 
   /// Lowers a block
-  void operator()(Block const &blk);
+  void operator()(Block const &blk) override;
 };
 
 mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
