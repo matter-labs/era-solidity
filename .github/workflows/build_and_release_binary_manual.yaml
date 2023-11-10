@@ -113,19 +113,14 @@ jobs:
           git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
           git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '2.7'
-
       # It is needed as we use some commands which a deprecated in newer versions of boost
       - name: Install BOOST
         shell: zsh {0}
         run: |
-          python --version
           curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
           tar xzf ./boost_1_71_0.tar.gz
           cd ./boost_1_71_0
-          ./bootstrap.sh --prefix=/usr/local
+          ./bootstrap.sh --prefix=/usr/local --with-python-version 2.7
           ./b2 -j8
           ./b2 install -j8
 
