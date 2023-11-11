@@ -157,7 +157,7 @@ static SymbolRefAttr getOrInsertReturn(PatternRewriter &rewriter,
 
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
-  assert(!isa<LLVM::LLVMFuncOp>(op) && !isa<solidity::ObjectOp>(op));
+  assert(!isa<LLVM::LLVMFuncOp>(op) && !isa<sol::ObjectOp>(op));
 
   // Check if the parent FuncOp has isRuntime attribute set
   auto parentFunc = op->getParentOfType<LLVM::LLVMFuncOp>();
@@ -171,7 +171,7 @@ static bool inRuntimeContext(Operation *op) {
   }
 
   // If there's no parent FuncOp, check the parent ObjectOp
-  auto parentObj = op->getParentOfType<solidity::ObjectOp>();
+  auto parentObj = op->getParentOfType<sol::ObjectOp>();
   if (parentObj) {
     return parentObj.getSymName().endswith("_deployed");
   }
@@ -182,7 +182,7 @@ static bool inRuntimeContext(Operation *op) {
 class ReturnOpLowering : public ConversionPattern {
 public:
   explicit ReturnOpLowering(MLIRContext *ctx)
-      : ConversionPattern(solidity::ReturnOp::getOperationName(),
+      : ConversionPattern(sol::ReturnOp::getOperationName(),
                           /*benefit=*/1, ctx) {}
 
   LogicalResult
@@ -190,7 +190,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     BuilderHelper b(rewriter, loc);
-    auto retOp = cast<solidity::ReturnOp>(op);
+    auto retOp = cast<sol::ReturnOp>(op);
     auto returnFunc =
         getOrInsertReturn(rewriter, op->getParentOfType<ModuleOp>());
 
@@ -258,13 +258,13 @@ public:
 class ObjectOpLowering : public ConversionPattern {
 public:
   explicit ObjectOpLowering(MLIRContext *ctx)
-      : ConversionPattern(solidity::ObjectOp::getOperationName(),
+      : ConversionPattern(sol::ObjectOp::getOperationName(),
                           /*benefit=*/1, ctx) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto objOp = cast<mlir::solidity::ObjectOp>(op);
+    auto objOp = cast<sol::ObjectOp>(op);
     auto loc = op->getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
     auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
@@ -320,7 +320,7 @@ public:
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
     for (auto const &op : *objOp.getBody()) {
-      if (auto runtimeObj = llvm::dyn_cast<solidity::ObjectOp>(&op)) {
+      if (auto runtimeObj = llvm::dyn_cast<sol::ObjectOp>(&op)) {
         assert(runtimeObj.getSymName().endswith("_deployed"));
         rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
                                     runtimeFuncRegion.begin());
@@ -360,13 +360,13 @@ public:
 class ContractOpLowering : public ConversionPattern {
 public:
   explicit ContractOpLowering(MLIRContext *ctx)
-      : ConversionPattern(solidity::ContractOp::getOperationName(),
+      : ConversionPattern(sol::ContractOp::getOperationName(),
                           /*benefit=*/1, ctx) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto contOp = cast<solidity::ContractOp>(op);
+    auto contOp = cast<sol::ContractOp>(op);
     assert(isa<ModuleOp>(contOp->getParentOp()));
     auto modOp = cast<ModuleOp>(contOp->getParentOp());
     Block *modBody = modOp.getBody();
@@ -421,6 +421,6 @@ struct SolidityDialectLowering
 
 } // namespace
 
-std::unique_ptr<Pass> solidity::createSolidityDialectLoweringPassForEraVM() {
+std::unique_ptr<Pass> sol::createSolidityDialectLoweringPassForEraVM() {
   return std::make_unique<SolidityDialectLowering>();
 }

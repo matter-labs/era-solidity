@@ -27,7 +27,7 @@
 namespace mlir {
 class Pass;
 
-namespace solidity {
+namespace sol {
 std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 }
 

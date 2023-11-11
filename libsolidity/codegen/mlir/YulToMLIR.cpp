@@ -114,15 +114,15 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     // TODO: The lowering of builtin function should be auto generated from
     // evmasm::InstructionInfo and the corresponding mlir ops
     if (builtin->name.str() == "return") {
-      b.create<mlir::solidity::ReturnOp>(loc(call.debugData->nativeLocation),
-                                         genExpr(call.arguments[0]),
-                                         genExpr(call.arguments[1]));
+      b.create<mlir::sol::ReturnOp>(loc(call.debugData->nativeLocation),
+                                    genExpr(call.arguments[0]),
+                                    genExpr(call.arguments[1]));
       return {};
 
     } else if (builtin->name.str() == "mstore") {
-      b.create<mlir::solidity::MstoreOp>(loc(call.debugData->nativeLocation),
-                                         genExpr(call.arguments[0]),
-                                         genExpr(call.arguments[1]));
+      b.create<mlir::sol::MstoreOp>(loc(call.debugData->nativeLocation),
+                                    genExpr(call.arguments[0]),
+                                    genExpr(call.arguments[1]));
       return {};
     } else {
       solUnimplementedAssert(false, "TODO: Lower other builtin function call");
@@ -147,8 +147,7 @@ void YulToMLIRPass::operator()(Block const &blk) { ASTWalker::operator()(blk); }
 
 void YulToMLIRPass::lowerObj(Object const &obj) {
   // TODO: Where is the source location info for Object? Do we need to track it?
-  auto objOp =
-      b.create<mlir::solidity::ObjectOp>(b.getUnknownLoc(), obj.name.str());
+  auto objOp = b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), obj.name.str());
   b.setInsertionPointToEnd(objOp.getBody());
   // TODO? Do we need a separate op for the `code` block?
   operator()(*obj.code);
@@ -176,7 +175,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
                                          Action action,
                                          std::optional<Target> tgt) {
   mlir::MLIRContext ctx;
-  ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
+  ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
   yulToMLIR.lowerTopLevelObj(obj);
@@ -202,8 +201,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     assert(tgt);
     switch (*tgt) {
     case Target::EraVM:
-      passMgr.addPass(
-          mlir::solidity::createSolidityDialectLoweringPassForEraVM());
+      passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
       break;
     }
     if (mlir::failed(passMgr.run(yulToMLIR.getModule())))

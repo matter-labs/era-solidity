@@ -317,8 +317,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 }
 
 void SolidityToMLIRPass::run(ContractDefinition const &cont) {
-  auto op =
-      b.create<mlir::solidity::ContractOp>(loc(cont.location()), cont.name());
+  auto op = b.create<mlir::sol::ContractOp>(loc(cont.location()), cont.name());
   b.setInsertionPointToStart(op.getBody());
 
   for (auto *f : cont.definedFunctions()) {
@@ -331,7 +330,7 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
     std::vector<ContractDefinition const *> const &contracts,
     CharStream const &stream, solidity::mlirgen::Action action) {
   mlir::MLIRContext ctx;
-  ctx.getOrLoadDialect<mlir::solidity::SolidityDialect>();
+  ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   ctx.getOrLoadDialect<mlir::memref::MemRefDialect>();
@@ -348,8 +347,7 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
 
   mlir::PassManager passMgr(&ctx);
   if (action == solidity::mlirgen::Action::PrintLLVMIR) {
-    passMgr.addPass(
-        mlir::solidity::createSolidityDialectLoweringPassForEraVM());
+    passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
     if (mlir::failed(passMgr.run(gen.mod)))
       return false;
   }

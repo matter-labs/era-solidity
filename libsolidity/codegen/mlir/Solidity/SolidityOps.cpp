@@ -20,7 +20,7 @@
 #include "mlir/IR/OpImplementation.h"
 
 using namespace mlir;
-using namespace mlir::solidity;
+using namespace mlir::sol;
 
 void SolidityDialect::initialize() {
   addOperations<

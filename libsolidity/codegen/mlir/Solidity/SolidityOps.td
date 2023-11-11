@@ -31,7 +31,7 @@ def Solidity_Dialect : Dialect {
   let description = [{
     This dialect has high level ops for representing solidity.
   }];
-  let cppNamespace = "::mlir::solidity";
+  let cppNamespace = "::mlir::sol";
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
