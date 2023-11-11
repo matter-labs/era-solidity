@@ -15,26 +15,15 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-//
-// MLIR Passes
-//
-
-#pragma once
-
+#include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Interface.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include <memory>
 
-namespace mlir {
-class Pass;
-
-namespace sol {
-std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
-}
-
-} // namespace mlir
-
-namespace solidity::mlirgen {
-void addPassesForTarget(mlir::PassManager &, Target tgt);
+void solidity::mlirgen::addPassesForTarget(mlir::PassManager &passMgr,
+                                           Target tgt) {
+  switch (tgt) {
+  case Target::EraVM:
+    passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
+    break;
+  }
 }
