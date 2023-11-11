@@ -26,7 +26,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 def Solidity_Dialect : Dialect {
-  let name = "solidity";
+  let name = "sol";
   let summary = "Solidity dialect";
   let description = [{
     This dialect has high level ops for representing solidity.
@@ -36,16 +36,14 @@ def Solidity_Dialect : Dialect {
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
-class Solidity_Op<string mnemonic,
-                  list<Trait> traits = []> : Op<Solidity_Dialect, mnemonic,
-                                                traits>;
+class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Solidity_Dialect,
+                                                            mnemonic, traits>;
 
-def Solidity_ContractOp : Solidity_Op<"contract", [Symbol, SingleBlock,
-                                      NoTerminator]> {
+def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
   let summary = "An operation that represents a contract";
   let description = [{
     Example:
-    solidity.contract @C {
+    sol.contract @C {
       ...
     }
   }];
@@ -60,12 +58,11 @@ def Solidity_ContractOp : Solidity_Op<"contract", [Symbol, SingleBlock,
 
 // TODO? Move this to a "yul" dialect? Do we need a lot of yul specific ops for
 // a new dialect?
-def Solidity_ObjectOp : Solidity_Op<"object", [Symbol, SingleBlock,
-                                    NoTerminator]> {
+def Sol_ObjectOp : Sol_Op<"object", [Symbol, SingleBlock, NoTerminator]> {
   let summary = "An operation that represents a yul object";
   let description = [{
     Example:
-    solidity.object @C {
+    sol.object @C {
       ...
     }
   }];
@@ -81,20 +78,20 @@ def Solidity_ObjectOp : Solidity_Op<"object", [Symbol, SingleBlock,
 // TODO: The op definitions of yul builtins should be auto-generated from
 // evmasm::InstructionInfo
 
-def Solidity_ReturnOp : Solidity_Op<"return"> {
+def Sol_ReturnOp : Sol_Op<"return"> {
   let summary = "Represents the `return` call in yul";
   let description = [{
     Example:
-    solidity.return %a %b
+    sol.return %a %b
   }];
   let arguments = (ins I<256>:$lhs, I<256>:$rhs);
 }
 
-def Solidity_MstoreOp : Solidity_Op<"mstore"> {
+def Sol_MstoreOp : Sol_Op<"mstore"> {
   let summary = "Represents the `mstore` call in yul";
   let description = [{
     Example:
-    solidity.mstore %a %b
+    sol.mstore %a %b
   }];
   let arguments = (ins I<256>:$lhs, I<256>:$rhs);
 }
