@@ -33,9 +33,14 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
+#include <memory>
 
 using namespace solidity::langutil;
 using namespace solidity::yul;
@@ -188,6 +193,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   }
 
   mlir::PassManager passMgr(&ctx);
+  llvm::LLVMContext llvmCtx;
 
   switch (action) {
   case Action::PrintInitStg:
@@ -197,13 +203,17 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     assert(tgt);
     llvm_unreachable(
         "TODO: Support dumping the IR after solc dialect lowering");
-  case Action::PrintLLVMIR:
+  case Action::PrintLLVMIR: {
     assert(tgt);
     addPassesForTarget(passMgr, *tgt);
     if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
       return false;
-    mod.print(llvm::outs());
+    mlir::registerLLVMDialectTranslation(ctx);
+    std::unique_ptr<llvm::Module> llvmMod =
+        mlir::translateModuleToLLVMIR(mod, llvmCtx);
+    llvm::outs() << *llvmMod;
     break;
+  }
   case Action::PrintAsm:
     assert(tgt);
     addPassesForTarget(passMgr, *tgt);
