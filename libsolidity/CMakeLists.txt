@@ -215,11 +215,13 @@ set(mlir_libs
 	${dialect_libs}
 	${conversion_libs}
 	${translation_libs}
+	MLIRSupport
 	MLIRPass
-	MLIRSolidity
-	MLIRFuncDialect
-	MLIRArithmeticDialect
-	MLIRMemRefDialect
+	MLIRTransforms
+	MLIRTransformUtils
+	MLIRRewrite
+	MLIRIR
+	MLIRDialect
 )
 
 set(LLVM_TARGETS_TO_BUILD "EraVM")
