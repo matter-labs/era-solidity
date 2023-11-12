@@ -18,6 +18,9 @@
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include <mutex>
 
 void solidity::mlirgen::addPassesForTarget(mlir::PassManager &passMgr,
                                            Target tgt) {
@@ -26,4 +29,51 @@ void solidity::mlirgen::addPassesForTarget(mlir::PassManager &passMgr,
     passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
     break;
   }
+}
+
+std::unique_ptr<llvm::TargetMachine>
+solidity::mlirgen::createTargetMachine(Target tgt) {
+  static std::once_flag initTargetOnceFlag;
+
+  switch (tgt) {
+  case Target::EraVM: {
+    // Initialize and register the target
+    std::call_once(initTargetOnceFlag, []() {
+      LLVMInitializeEraVMTarget();
+      LLVMInitializeEraVMTargetInfo();
+      LLVMInitializeEraVMTargetMC();
+      LLVMInitializeEraVMAsmPrinter();
+    });
+
+    // Lookup llvm::Target
+    std::string errMsg;
+    llvm::Target const *llvmTgt =
+        llvm::TargetRegistry::lookupTarget("eravm", errMsg);
+    if (!llvmTgt)
+      llvm_unreachable(errMsg.c_str());
+
+    // Create and return the llvm::TargetMachine
+    llvm::TargetOptions Options;
+    return std::unique_ptr<llvm::TargetMachine>(
+        llvmTgt->createTargetMachine("eravm", /*CPU=*/"", /*Features=*/"",
+                                     Options, /*Reloc::Model=*/llvm::None));
+
+    // TODO: Set code-model?
+    // tgtMach->setCodeModel(?);
+    break;
+  }
+  }
+}
+
+void solidity::mlirgen::setTgtSpecificInfoInModule(
+    Target tgt, llvm::Module &llvmMod, llvm::TargetMachine const &tgtMach) {
+  std::string triple;
+  switch (tgt) {
+  case Target::EraVM:
+    triple = "eravm-unknown-unknown";
+    break;
+  }
+
+  llvmMod.setTargetTriple(llvm::Triple::normalize("eravm-unknown-unknown"));
+  llvmMod.setDataLayout(tgtMach.createDataLayout());
 }

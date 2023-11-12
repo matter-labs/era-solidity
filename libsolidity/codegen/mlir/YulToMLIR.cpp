@@ -35,22 +35,13 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <iostream>
 #include <memory>
-#include <mutex>
-#include <string>
 
 using namespace solidity::langutil;
 using namespace solidity::yul;
@@ -184,38 +175,6 @@ void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
 
 } // namespace solidity::mlirgen
 
-static std::unique_ptr<llvm::TargetMachine>
-createTargetMachine(solidity::mlirgen::Target tgt) {
-  static std::once_flag initTargetOnceFlag;
-
-  switch (tgt) {
-  case solidity::mlirgen::Target::EraVM: {
-    // Initialize and register the target
-    std::call_once(initTargetOnceFlag, []() {
-      LLVMInitializeEraVMTarget();
-      LLVMInitializeEraVMTargetInfo();
-      LLVMInitializeEraVMTargetMC();
-      LLVMInitializeEraVMAsmPrinter();
-    });
-
-    // Lookup llvm::Target
-    std::string errMsg;
-    llvm::Target const *llvmTgt =
-        llvm::TargetRegistry::lookupTarget("eravm", errMsg);
-    if (!llvmTgt)
-      llvm_unreachable(errMsg.c_str());
-
-    // Create and return the llvm::TargetMachine
-    llvm::TargetOptions Options;
-    return std::unique_ptr<llvm::TargetMachine>(llvmTgt->createTargetMachine(
-        "eravm", /*CPU=*/"", /*Features=*/"", Options, llvm::None, llvm::None));
-
-    // TODO: Set code-model?
-    // tgtMach->setCodeModel(?);
-  }
-  }
-}
-
 bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
                                          CharStream const &stream,
                                          Dialect const &yulDialect,
@@ -265,15 +224,12 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     std::unique_ptr<llvm::Module> llvmMod =
         mlir::translateModuleToLLVMIR(mod, llvmCtx);
 
-    // Set triple in llvm::Module
-    llvmMod->setTargetTriple(llvm::Triple::normalize("eravm-unknown-unknown"));
-
-    // Create TargetMachine
+    // Create TargetMachine from `tgt`
     std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(*tgt);
     assert(tgtMach);
 
-    // Set data-layout in llvm::Module from TargetMachine
-    llvmMod->setDataLayout(tgtMach->createDataLayout());
+    // Set target specfic info in `llvmMod`
+    setTgtSpecificInfoInModule(*tgt, *llvmMod, *tgtMach);
 
     // Set up and run the asm printer
     llvm::legacy::PassManager llvmPassMgr;

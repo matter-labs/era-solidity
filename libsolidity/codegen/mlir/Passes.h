@@ -24,6 +24,8 @@
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
 #include <memory>
 
 namespace mlir {
@@ -36,5 +38,14 @@ std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 } // namespace mlir
 
 namespace solidity::mlirgen {
+
 void addPassesForTarget(mlir::PassManager &, Target tgt);
-}
+
+/// Creates and return the llvm::TargetMachine for `tgt`
+std::unique_ptr<llvm::TargetMachine> createTargetMachine(Target tgt);
+
+/// Sets target specific info in `llvmMod` from `tgt`
+void setTgtSpecificInfoInModule(Target tgt, llvm::Module &llvmMod,
+                                llvm::TargetMachine const &tgtMach);
+
+} // namespace solidity::mlirgen
