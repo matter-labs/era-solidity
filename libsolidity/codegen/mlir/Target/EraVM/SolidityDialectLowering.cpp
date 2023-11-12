@@ -396,22 +396,18 @@ struct SolidityDialectLowering
   }
 
   void runOnOperation() override {
-    // We only lower till the llvm dialect
     LLVMConversionTarget llConv(getContext());
     llConv.addLegalOp<ModuleOp>();
     llConv.addLegalOp<scf::YieldOp>();
     LLVMTypeConverter llTyConv(&getContext());
 
-    // Lower arith, memref and func dialects to the llvm dialect
     RewritePatternSet pats(&getContext());
     arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
+    populateMemRefToLLVMConversionPatterns(llTyConv, pats);
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
-    populateMemRefToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
-    pats.add<ContractOpLowering>(&getContext());
-    pats.add<ObjectOpLowering>(&getContext());
-    pats.add<ReturnOpLowering>(&getContext());
+    pats.add<ObjectOpLowering, ReturnOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
