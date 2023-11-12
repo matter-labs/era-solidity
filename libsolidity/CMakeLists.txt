@@ -211,7 +211,7 @@ add_mlir_dialect_library(MLIRSolidity
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 get_property(translation_libs GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
-set(LIBS
+set(mlir_libs
 	${dialect_libs}
 	${conversion_libs}
 	${translation_libs}
@@ -222,6 +222,17 @@ set(LIBS
 	MLIRMemRefDialect
 )
 
+set(LLVM_TARGETS_TO_BUILD "EraVM")
+
+llvm_map_components_to_libnames(llvm_libs
+	${LLVM_TARGETS_TO_BUILD}
+	Core
+	Support
+	Target
+	MC
+)
+
 add_library(solidity ${sources} ${mlir_sources})
-target_link_libraries(solidity PUBLIC yul evmasm langutil smtutil solutil Boost::boost fmt::fmt-header-only Threads::Threads ${LIBS})
+target_link_libraries(solidity PUBLIC yul evmasm langutil smtutil solutil Boost::boost fmt::fmt-header-only Threads::Threads
+	${mlir_libs} ${llvm_libs})
 
