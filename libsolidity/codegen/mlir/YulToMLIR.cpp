@@ -178,8 +178,7 @@ void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
 bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
                                          CharStream const &stream,
                                          Dialect const &yulDialect,
-                                         Action action,
-                                         std::optional<Target> tgt) {
+                                         JobSpec const &job) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
@@ -196,17 +195,17 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   mlir::PassManager passMgr(&ctx);
   llvm::LLVMContext llvmCtx;
 
-  switch (action) {
+  switch (job.action) {
   case Action::PrintInitStg:
     mod.print(llvm::outs());
     break;
   case Action::PrintPostSolcDialLowering:
-    assert(tgt);
+    assert(job.tgt != Target::Undefined);
     llvm_unreachable(
         "TODO: Support dumping the IR after solc dialect lowering");
   case Action::PrintLLVMIR: {
-    assert(tgt);
-    addMLIRPassesForTgt(passMgr, *tgt);
+    assert(job.tgt != Target::Undefined);
+    addMLIRPassesForTgt(passMgr, job.tgt);
     if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);
@@ -216,8 +215,8 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     break;
   }
   case Action::PrintAsm: {
-    assert(tgt);
-    addMLIRPassesForTgt(passMgr, *tgt);
+    assert(job.tgt != Target::Undefined);
+    addMLIRPassesForTgt(passMgr, job.tgt);
     if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);
@@ -225,11 +224,11 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
         mlir::translateModuleToLLVMIR(mod, llvmCtx);
 
     // Create TargetMachine from `tgt`
-    std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(*tgt);
+    std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(job.tgt);
     assert(tgtMach);
 
     // Set target specfic info in `llvmMod`
-    setTgtSpecificInfoInModule(*tgt, *llvmMod, *tgtMach);
+    setTgtSpecificInfoInModule(job.tgt, *llvmMod, *tgtMach);
 
     // Set up and run the asm printer
     llvm::legacy::PassManager llvmPassMgr;

@@ -239,11 +239,7 @@ struct CommandLineOptions
 		ModelCheckerSettings settings;
 	} modelChecker;
 
-	struct
-	{
-		mlirgen::Target tgt;
-		mlirgen::Action action = mlirgen::Action::Undefined;
-	} mlirGen;
+	mlirgen::JobSpec mlirGenJob;
 };
 
 /// Parses the command-line arguments and produces a filled-out CommandLineOptions structure.

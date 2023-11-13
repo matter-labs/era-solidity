@@ -55,6 +55,15 @@ enum class Action {
 
 enum class Target {
   EraVM,
+
+  Undefined,
+};
+
+struct JobSpec {
+  // TODO: Add other codegen info like optimization level, debug info, output
+  // file?
+  Action action = Action::Undefined;
+  Target tgt = Target::Undefined;
 };
 
 /// Registers required command line options in the MLIR framework
@@ -68,7 +77,6 @@ extern bool runSolidityToMLIRPass(
     langutil::CharStream const &stream, Action);
 
 extern bool runYulToMLIRPass(yul::Object const &, langutil::CharStream const &,
-                             yul::Dialect const &, Action,
-                             std::optional<Target> = std::nullopt);
+                             yul::Dialect const &, JobSpec const &);
 
 } // namespace solidity::mlirgen

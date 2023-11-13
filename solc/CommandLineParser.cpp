@@ -97,15 +97,14 @@ static string const g_strParsing = "parsing";
 
 //
 // It would be nice to reuse the pre-existing cmdline options like --ir, --asm etc. to control the mlir based codegen,
-// but I feel it would complicate things. The mlir based codegen has different constraints like:
+// but I feel it would complicate things at the moment. The mlir based codegen has different constraints like:
 // - Assembly output requires target specification
 // - IR output requires the specification of the compilation stage (i.e. initial mlir, mlir after lowering solc
 //   dialects, llvm-ir etc.)
+// TODO: Should we also support something like "--via-mlir" which would affect the --ir, --asm etc.?
 //
-// I feel it makes sense to have a different cmdline interface for mlir based codgen. AFAIK, --mlir-target (to specify
-// the target) and --mlir-action (to specify the action) should be sufficient for the mlir based codegen and preserve
-// the pre-existing options
-//
+// TODO: Add mlir specific optimization and debug-info options
+// TODO: Support writing output to files
 static string const g_strMLIRTarget = "mlir-target";
 static string const g_strMLIRAction = "mlir-action";
 
@@ -1118,26 +1117,25 @@ void CommandLineParser::processArgs()
 		solUnimplementedAssert("TODO: Fix -mlir-stg");
 	}
 
-	if (m_args.count(g_strMLIRTarget))
-	{
-		string val = m_args[g_strMLIRTarget].as<string>();
-		if (val == "eravm")
-			m_options.mlirGen.tgt = mlirgen::Target::EraVM;
-		else
-			solThrow(CommandLineValidationError, "Invalid target");
-	}
-
 	if (m_args.count(g_strMLIRAction))
 	{
 		string val = m_args[g_strMLIRAction].as<string>();
 		if (val == "print-init")
-			m_options.mlirGen.action = mlirgen::Action::PrintInitStg;
+			m_options.mlirGenJob.action = mlirgen::Action::PrintInitStg;
 		else if (val == "print-llvm-ir")
-			m_options.mlirGen.action = mlirgen::Action::PrintLLVMIR;
+			m_options.mlirGenJob.action = mlirgen::Action::PrintLLVMIR;
 		else if (val == "print-asm")
-			m_options.mlirGen.action = mlirgen::Action::PrintAsm;
+			m_options.mlirGenJob.action = mlirgen::Action::PrintAsm;
 		else
 			solThrow(CommandLineValidationError, "Invalid action");
+		if (m_args.count(g_strMLIRTarget))
+		{
+			string val = m_args[g_strMLIRTarget].as<string>();
+			if (val == "eravm")
+				m_options.mlirGenJob.tgt = mlirgen::Target::EraVM;
+			else
+				solThrow(CommandLineValidationError, "Invalid target");
+		}
 	}
 
 	parseCombinedJsonOption();

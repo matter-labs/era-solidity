@@ -19,6 +19,7 @@
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetSelect.h"
 #include <mutex>
 
@@ -28,6 +29,8 @@ void solidity::mlirgen::addMLIRPassesForTgt(mlir::PassManager &passMgr,
   case Target::EraVM:
     passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
     break;
+  case Target::Undefined:
+    llvm_unreachable("Undefined target");
   }
 }
 
@@ -62,6 +65,8 @@ solidity::mlirgen::createTargetMachine(Target tgt) {
     // tgtMach->setCodeModel(?);
     break;
   }
+  case Target::Undefined:
+    llvm_unreachable("Undefined target");
   }
 }
 
@@ -72,6 +77,8 @@ void solidity::mlirgen::setTgtSpecificInfoInModule(
   case Target::EraVM:
     triple = "eravm-unknown-unknown";
     break;
+  case Target::Undefined:
+    llvm_unreachable("Undefined target");
   }
 
   llvmMod.setTargetTriple(llvm::Triple::normalize("eravm-unknown-unknown"));
