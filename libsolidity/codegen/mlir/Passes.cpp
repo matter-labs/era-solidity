@@ -22,8 +22,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include <mutex>
 
-void solidity::mlirgen::addPassesForTarget(mlir::PassManager &passMgr,
-                                           Target tgt) {
+void solidity::mlirgen::addMLIRPassesForTgt(mlir::PassManager &passMgr,
+                                            Target tgt) {
   switch (tgt) {
   case Target::EraVM:
     passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());

@@ -39,7 +39,8 @@ std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 
 namespace solidity::mlirgen {
 
-void addPassesForTarget(mlir::PassManager &, Target tgt);
+/// Adds `tgt` specfic MLIR passes (including the lowering passes)
+void addMLIRPassesForTgt(mlir::PassManager &, Target tgt);
 
 /// Creates and return the llvm::TargetMachine for `tgt`
 std::unique_ptr<llvm::TargetMachine> createTargetMachine(Target tgt);

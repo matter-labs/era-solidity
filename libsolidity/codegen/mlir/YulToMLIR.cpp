@@ -206,7 +206,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
         "TODO: Support dumping the IR after solc dialect lowering");
   case Action::PrintLLVMIR: {
     assert(tgt);
-    addPassesForTarget(passMgr, *tgt);
+    addMLIRPassesForTgt(passMgr, *tgt);
     if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);
@@ -217,7 +217,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   }
   case Action::PrintAsm: {
     assert(tgt);
-    addPassesForTarget(passMgr, *tgt);
+    addMLIRPassesForTgt(passMgr, *tgt);
     if (mlir::failed(passMgr.run(yulToMLIR.getModule())))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);
