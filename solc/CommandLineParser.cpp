@@ -16,7 +16,6 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
-#include "liblangutil/Exceptions.h"
 #include <solc/CommandLineParser.h>
 
 #include <solc/Exceptions.h>
@@ -44,7 +43,6 @@ namespace solidity::frontend
 static string const g_strAllowPaths = "allow-paths";
 static string const g_strBasePath = "base-path";
 static string const g_strIncludePath = "include-path";
-static string const g_strMMLIR = "mmlir";
 static string const g_strAssemble = "assemble";
 static string const g_strCombinedJson = "combined-json";
 static string const g_strErrorRecovery = "error-recovery";
@@ -60,7 +58,6 @@ static string const g_strInputFile = "input-file";
 static string const g_strYul = "yul";
 static string const g_strYulDialect = "yul-dialect";
 static string const g_strDebugInfo = "debug-info";
-static string const g_strMLIRGenStage = "mlir-stg";
 static string const g_strIPFS = "ipfs";
 static string const g_strLicense = "license";
 static string const g_strLibraries = "libraries";
@@ -96,12 +93,17 @@ static string const g_strStopAfter = "stop-after";
 static string const g_strParsing = "parsing";
 
 //
+// MLIR based codegen options
+//
+static string const g_strMMLIR = "mmlir";
+//
 // It would be nice to reuse the pre-existing cmdline options like --ir, --asm etc. to control the mlir based codegen,
 // but I feel it would complicate things at the moment. The mlir based codegen has different constraints like:
 // - Assembly output requires target specification
 // - IR output requires the specification of the compilation stage (i.e. initial mlir, mlir after lowering solc
 //   dialects, llvm-ir etc.)
-// TODO: Should we also support something like "--via-mlir" which would affect the --ir, --asm etc.?
+// TODO: Should we also support something like "--via-mlir" which would affect the --ir, --asm etc. (including imposing
+// the aforementioned constraints) ?
 //
 // TODO: Add mlir specific optimization and debug-info options
 // TODO: Support writing output to files
@@ -485,7 +487,6 @@ void CommandLineParser::parseOutputSelection()
 			CompilerOutputs::componentName(&CompilerOutputs::asm_),
 			CompilerOutputs::componentName(&CompilerOutputs::binary),
 			CompilerOutputs::componentName(&CompilerOutputs::irOptimized),
-			CompilerOutputs::componentName(&CompilerOutputs::mlir),
 			CompilerOutputs::componentName(&CompilerOutputs::astCompactJson),
 		};
 
@@ -646,24 +647,19 @@ General Information)").c_str(),
 			"following components: " + util::joinHumanReadable(DebugInfoSelection::componentMap() | ranges::views::keys) + ".").c_str()
 		)
 		(
-			g_strMLIRGenStage.c_str(),
-			po::value<string>()->default_value("init"),
-			"Stop MLIR generator at the specified stage"
-		)
-		(
 			g_strStopAfter.c_str(),
 			po::value<string>()->value_name("stage"),
 			"Stop execution after the given compiler stage. Valid options: \"parsing\"."
 		)
 		(
-			g_strMLIRTarget.c_str(),
-			po::value<string>()->value_name("target"),
-			"Target for the MLIR based codegen"
-		)
-		(
 			g_strMLIRAction.c_str(),
 			po::value<string>()->value_name("action"),
 			"MLIR based codegen's desired action"
+		)
+		(
+			g_strMLIRTarget.c_str(),
+			po::value<string>()->value_name("target"),
+			"Target for the MLIR based codegen"
 		)
 		(
 			g_strMMLIR.c_str(),
@@ -774,7 +770,6 @@ General Information)").c_str(),
 		(CompilerOutputs::componentName(&CompilerOutputs::binaryRuntime).c_str(), "Binary of the runtime part of the contracts in hex.")
 		(CompilerOutputs::componentName(&CompilerOutputs::abi).c_str(), "ABI specification of the contracts.")
 		(CompilerOutputs::componentName(&CompilerOutputs::ir).c_str(), "Intermediate Representation (IR) of all contracts.")
-		(CompilerOutputs::componentName(&CompilerOutputs::mlir).c_str(), "MLIR of all contracts.")
 		(CompilerOutputs::componentName(&CompilerOutputs::irAstJson).c_str(), "AST of Intermediate Representation (IR) of all contracts in a compact JSON format.")
 		(CompilerOutputs::componentName(&CompilerOutputs::irOptimized).c_str(), "Optimized Intermediate Representation (IR) of all contracts.")
 		(CompilerOutputs::componentName(&CompilerOutputs::irOptimizedAstJson).c_str(), "AST of optimized Intermediate Representation (IR) of all contracts in a compact JSON format.")
@@ -1111,11 +1106,6 @@ void CommandLineParser::processArgs()
 			solThrow(CommandLineValidationError, "To use 'snippet' with --" + g_strDebugInfo + " you must select also 'location'.");
 	}
 
-	if (!m_args[g_strMLIRGenStage].defaulted())
-	{
-		string val = m_args[g_strMLIRGenStage].as<string>();
-		solUnimplementedAssert("TODO: Fix -mlir-stg");
-	}
 
 	if (m_args.count(g_strMLIRAction))
 	{

@@ -205,9 +205,6 @@ public:
 	/// Enable generation of Yul IR code.
 	void enableIRGeneration(bool _enable = true) { m_generateIR = _enable; }
 
-	/// Enable generation of MLIR
-	void enableMLIRGeneration(bool _enable = true) { m_generateMLIR = _enable; }
-
 	/// Sets the mlir codegen's job specification
 	void setMLIRGenJobSpec(mlirgen::JobSpec const& _jobSpec) { m_mlirGenJob = _jobSpec; }
 
@@ -511,7 +508,6 @@ private:
 	std::map<std::string, std::set<std::string>> m_requestedContractNames;
 	bool m_generateEvmBytecode = true;
 	bool m_generateIR = false;
-	bool m_generateMLIR = false;
 	mlirgen::JobSpec m_mlirGenJob;
 	std::map<std::string, util::h160> m_libraries;
 	ImportRemapper m_importRemapper;

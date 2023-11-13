@@ -81,7 +81,6 @@ struct CompilerOutputs
 			{"ir", &CompilerOutputs::ir},
 			{"ir-ast-json", &CompilerOutputs::irAstJson},
 			{"ir-optimized", &CompilerOutputs::irOptimized},
-			{"mlir", &CompilerOutputs::mlir},
 			{"ir-optimized-ast-json", &CompilerOutputs::irOptimizedAstJson},
 			{"hashes", &CompilerOutputs::signatureHashes},
 			{"userdoc", &CompilerOutputs::natspecUser},
@@ -100,7 +99,6 @@ struct CompilerOutputs
 	bool binaryRuntime = false;
 	bool abi = false;
 	bool ir = false;
-	bool mlir = false;
 	bool irAstJson = false;
 	bool irOptimized = false;
 	bool irOptimizedAstJson = false;
