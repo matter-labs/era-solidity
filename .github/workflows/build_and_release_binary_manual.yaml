@@ -11,8 +11,7 @@ on:
         required: true
   push:
     tags:
-      - core-v**
-      - prover-v**
+      - "**"
 jobs:
   setup:
     name: Setup
@@ -29,7 +28,7 @@ jobs:
           if [[ -z "${{ inputs.ZKVM_RELEASE_TAG }}" ]]; then
             git_tag="${GITHUB_REF#refs/*/}"
           else
-            git_tag="${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}"
+            git_tag="${{ inputs.BRANCH_TAGs }}-${{ inputs.ZKVM_RELEASE_TAGs }}"
           fi
           version=$(cut -d "-" -f2 <<< ${git_tag})
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
@@ -69,7 +68,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-amd64
-          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ needs.setup.outputs.release_tag }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -111,7 +110,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-arm64
-          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ needs.setup.outputs.release_tag }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -171,7 +170,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-amd64
-          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ needs.setup.outputs.release_tag }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -237,7 +236,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-arm64
-          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ needs.setup.outputs.release_tag }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -357,7 +356,7 @@ jobs:
         run: |
           mkdir -p releases\windows-amd64
           ls .\build\solc\Release\
-          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}.exe
+          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ needs.setup.outputs.release_tag }}.exe
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         if: steps.compare_version.outputs.result != 'true'
@@ -421,9 +420,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
-          name: zkVM solc ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          name: zkVM solc ${{ needs.setup.outputs.release_tag }}
           body_path: ./tmp_changelog.txt
-          tag_name: ${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}
+          tag_name: ${{ needs.setup.outputs.release_tag }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
