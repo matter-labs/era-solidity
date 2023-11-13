@@ -8,8 +8,10 @@
 // CHECK-NEXT:   sol.object @object {
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+// CHECK-EMPTY:
 // DBG: module {
 // DBG-NEXT:   sol.object @object {
 // DBG-NEXT:   } loc(#loc)
 // DBG-NEXT: } loc(#loc)
 // DBG-NEXT: #loc = loc(unknown)
+// DBG-EMPTY:

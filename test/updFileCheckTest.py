@@ -59,8 +59,19 @@ def main():
     for i, val in enumerate(run_lines):
         run_lines[i].cmd = val.cmd.replace('%s', args.input)
 
+
+    # Compile regex for matching file paths
+    # "loc(<path>:<line-col>)" in mlir
+    path_res = [re.compile(r' loc\((?P<path>".*?"):\d+:\d+\)')]
+
+    # "filename: <path>" and "directory: <path>" in llvm's debug info
+    path_res.append(re.compile(r'filename: (?P<path>".*?")'))
+    path_res.append(re.compile(r'directory: (?P<path>".*?")'))
+
+    # ".file ..." in asm
+    path_res.append(re.compile(r'\s.file\s(?P<path>.*)'))
+
     # Write assertions with the corresponding prefix to the input file
-    loc_re = re.compile(r' loc\((?P<file>".*?"):\d+:\d+\)')
     with open(args.input, 'r+', encoding='utf-8') as handle:
         handle.seek(insert_pt)
         handle.writelines([HEADER])
@@ -69,14 +80,18 @@ def main():
             for line in subprocess.check_output(run_line.cmd.split(),
                                                 stderr=subprocess.DEVNULL,
                                                 text=True).split('\n'):
-                if line != '':
-                    assertion = COMMENT_PREFIX + ' ' + run_line.check_prefix
-                    assertion += '-NEXT: ' if wrote_first_line else ': '
-                    if (mat_loc := loc_re.search(line)):
-                        line = line.replace(mat_loc.group('file'), '{{.*}}')
-                    assertion += line
-                    handle.writelines([assertion + '\n'])
+                assertion = COMMENT_PREFIX + ' ' + run_line.check_prefix
+                if line == '':
+                    handle.writelines([assertion + '-EMPTY:\n'])
                     wrote_first_line |= True
+                    continue
+                assertion += '-NEXT: ' if wrote_first_line else ': '
+                for path_re in path_res:
+                    if (mat_loc := path_re.search(line)):
+                        line = line.replace(mat_loc.group('path'), '{{.*}}')
+                assertion += line
+                handle.writelines([assertion + '\n'])
+                wrote_first_line |= True
         handle.truncate()
 
 if __name__ == '__main__':

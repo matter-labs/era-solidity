@@ -16,6 +16,7 @@
 // CHECK-NEXT:     "sol.return"(%c0_i256_0, %c0_i256_1) : (i256, i256) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+// CHECK-EMPTY:
 // DBG: module {
 // DBG-NEXT:   sol.object @object {
 // DBG-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc1)
@@ -33,3 +34,4 @@
 // DBG-NEXT: #loc4 = loc({{.*}}:5:9)
 // DBG-NEXT: #loc5 = loc({{.*}}:5:12)
 // DBG-NEXT: #loc6 = loc({{.*}}:5:2)
+// DBG-EMPTY:

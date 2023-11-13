@@ -14,6 +14,7 @@ object "Foo" {
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+// CHECK-EMPTY:
 // DBG: module {
 // DBG-NEXT:   sol.object @Foo {
 // DBG-NEXT:     sol.object @Foo_deployed {
@@ -21,3 +22,4 @@ object "Foo" {
 // DBG-NEXT:   } loc(#loc)
 // DBG-NEXT: } loc(#loc)
 // DBG-NEXT: #loc = loc(unknown)
+// DBG-EMPTY:
