@@ -1115,13 +1115,17 @@ void CommandLineInterface::assembleYul(yul::YulStack::Language _language, yul::Y
 
 	for (auto const& src: m_fileReader.sourceUnits())
 	{
-		if (m_options.compiler.outputs.mlir)
+		if (m_options.mlirGen.action != mlirgen::Action::Undefined)
 		{
 			solUnimplementedAssert(_language == yul::YulStack::Language::Yul, "Language::Yul is only supported");
 			auto const& yulStk = yulStacks[src.first];
 			yul::EVMDialectTyped const* dialect = &yul::EVMDialectTyped::instance(m_options.output.evmVersion);
-			auto stg = mlirgen::Action::PrintInitStg;
-			if (!mlirgen::runYulToMLIRPass(*yulStk.parserResult(), yulStk.charStream(src.first), *dialect, stg))
+			if (!mlirgen::runYulToMLIRPass(
+					*yulStk.parserResult(),
+					yulStk.charStream(src.first),
+					*dialect,
+					m_options.mlirGen.action,
+					m_options.mlirGen.tgt))
 			{
 				successful = false;
 			}

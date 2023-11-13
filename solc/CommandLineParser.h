@@ -238,6 +238,12 @@ struct CommandLineOptions
 		bool initialize = false;
 		ModelCheckerSettings settings;
 	} modelChecker;
+
+	struct
+	{
+		mlirgen::Target tgt;
+		mlirgen::Action action = mlirgen::Action::Undefined;
+	} mlirGen;
 };
 
 /// Parses the command-line arguments and produces a filled-out CommandLineOptions structure.

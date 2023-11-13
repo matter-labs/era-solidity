@@ -1,5 +1,5 @@
-// RUN: solc --yul --mlir %s | FileCheck %s
-// RUN: solc --yul --mlir --mmlir --mlir-print-debuginfo %s | FileCheck --check-prefix=DBG %s
+// RUN: solc --yul --mlir-action=print-init %s | FileCheck %s
+// RUN: solc --yul --mlir-action=print-init --mmlir --mlir-print-debuginfo %s | FileCheck --check-prefix=DBG %s
 
 {
   mstore(0, 42)

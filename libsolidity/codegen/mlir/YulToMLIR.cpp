@@ -237,7 +237,10 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
                                  /*DwoOut=*/nullptr,
                                  llvm::CodeGenFileType::CGFT_AssemblyFile);
     llvmPassMgr.run(*llvmMod);
+    break;
   }
+  case Action::Undefined:
+    llvm_unreachable("Undefined action");
   }
 
   return true;

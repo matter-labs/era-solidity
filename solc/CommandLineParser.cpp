@@ -95,6 +95,20 @@ static string const g_strRevertStrings = "revert-strings";
 static string const g_strStopAfter = "stop-after";
 static string const g_strParsing = "parsing";
 
+//
+// It would be nice to reuse the pre-existing cmdline options like --ir, --asm etc. to control the mlir based codegen,
+// but I feel it would complicate things. The mlir based codegen has different constraints like:
+// - Assembly output requires target specification
+// - IR output requires the specification of the compilation stage (i.e. initial mlir, mlir after lowering solc
+//   dialects, llvm-ir etc.)
+//
+// I feel it makes sense to have a different cmdline interface for mlir based codgen. AFAIK, --mlir-target (to specify
+// the target) and --mlir-action (to specify the action) should be sufficient for the mlir based codegen and preserve
+// the pre-existing options
+//
+static string const g_strMLIRTarget = "mlir-target";
+static string const g_strMLIRAction = "mlir-action";
+
 /// Possible arguments to for --revert-strings
 static set<string> const g_revertStringsArgs
 {
@@ -643,6 +657,16 @@ General Information)").c_str(),
 			"Stop execution after the given compiler stage. Valid options: \"parsing\"."
 		)
 		(
+			g_strMLIRTarget.c_str(),
+			po::value<string>()->value_name("target"),
+			"Target for the MLIR based codegen"
+		)
+		(
+			g_strMLIRAction.c_str(),
+			po::value<string>()->value_name("action"),
+			"MLIR based codegen's desired action"
+		)
+		(
 			g_strMMLIR.c_str(),
 			po::value<vector<string>>()->value_name("option"),
 			"Forwards the option to the MLIR framework"
@@ -1092,6 +1116,28 @@ void CommandLineParser::processArgs()
 	{
 		string val = m_args[g_strMLIRGenStage].as<string>();
 		solUnimplementedAssert("TODO: Fix -mlir-stg");
+	}
+
+	if (m_args.count(g_strMLIRTarget))
+	{
+		string val = m_args[g_strMLIRTarget].as<string>();
+		if (val == "eravm")
+			m_options.mlirGen.tgt = mlirgen::Target::EraVM;
+		else
+			solThrow(CommandLineValidationError, "Invalid target");
+	}
+
+	if (m_args.count(g_strMLIRAction))
+	{
+		string val = m_args[g_strMLIRAction].as<string>();
+		if (val == "print-init")
+			m_options.mlirGen.action = mlirgen::Action::PrintInitStg;
+		else if (val == "print-llvm-ir")
+			m_options.mlirGen.action = mlirgen::Action::PrintLLVMIR;
+		else if (val == "print-asm")
+			m_options.mlirGen.action = mlirgen::Action::PrintAsm;
+		else
+			solThrow(CommandLineValidationError, "Invalid action");
 	}
 
 	parseCombinedJsonOption();

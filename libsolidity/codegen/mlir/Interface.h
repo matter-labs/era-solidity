@@ -49,6 +49,8 @@ enum class Action {
 
   /// Print the assembly
   PrintAsm,
+
+  Undefined,
 };
 
 enum class Target {
