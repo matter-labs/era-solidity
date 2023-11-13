@@ -28,7 +28,7 @@ jobs:
           if [[ -z "${{ inputs.ZKVM_RELEASE_TAG }}" ]]; then
             git_tag="${GITHUB_REF#refs/*/}"
           else
-            git_tag="${{ inputs.BRANCH_TAGs }}-${{ inputs.ZKVM_RELEASE_TAGs }}"
+            git_tag="${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}"
           fi
           version=$(cut -d "-" -f2 <<< ${git_tag})
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
