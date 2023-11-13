@@ -752,6 +752,7 @@ void CommandLineInterface::compile()
 			m_options.compiler.outputs.irOptimizedAstJson
 		);
 		m_compiler->enableMLIRGeneration(m_options.compiler.outputs.mlir);
+		m_compiler->setMLIRGenJobSpec(m_options.mlirGenJob);
 		m_compiler->enableEvmBytecodeGeneration(
 			m_options.compiler.estimateGas ||
 			m_options.compiler.outputs.asm_ ||

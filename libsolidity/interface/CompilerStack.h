@@ -208,6 +208,9 @@ public:
 	/// Enable generation of MLIR
 	void enableMLIRGeneration(bool _enable = true) { m_generateMLIR = _enable; }
 
+	/// Sets the mlir codegen's job specification
+	void setMLIRGenJobSpec(mlirgen::JobSpec const& _jobSpec) { m_mlirGenJob = _jobSpec; }
+
 	/// @arg _metadataLiteralSources When true, store sources as literals in the contract metadata.
 	/// Must be set before parsing.
 	void useMetadataLiteralSources(bool _metadataLiteralSources);
@@ -509,6 +512,7 @@ private:
 	bool m_generateEvmBytecode = true;
 	bool m_generateIR = false;
 	bool m_generateMLIR = false;
+	mlirgen::JobSpec m_mlirGenJob;
 	std::map<std::string, util::h160> m_libraries;
 	ImportRemapper m_importRemapper;
 	std::map<std::string const, Source> m_sources;

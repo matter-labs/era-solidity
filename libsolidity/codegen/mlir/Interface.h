@@ -74,7 +74,7 @@ extern bool parseMLIROpts(std::vector<const char *> &_argv);
 
 extern bool runSolidityToMLIRPass(
     std::vector<frontend::ContractDefinition const *> const &contracts,
-    langutil::CharStream const &stream, Action);
+    langutil::CharStream const &stream, JobSpec const &);
 
 extern bool runYulToMLIRPass(yul::Object const &, langutil::CharStream const &,
                              yul::Dialect const &, JobSpec const &);

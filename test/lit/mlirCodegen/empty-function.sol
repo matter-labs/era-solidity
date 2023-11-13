@@ -1,5 +1,5 @@
-// RUN: solc --mlir %s | FileCheck %s
-// RUN: solc --mlir --mmlir --mlir-print-debuginfo %s | FileCheck --check-prefix=DBG %s
+// RUN: solc --mlir-action=print-init %s | FileCheck %s
+// RUN: solc --mlir-action=print-init --mmlir --mlir-print-debuginfo %s | FileCheck --check-prefix=DBG %s
 
 contract C {
   function f() public pure {}

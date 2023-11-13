@@ -689,7 +689,7 @@ bool CompilerStack::compile(State _stopAfter)
 	// Only compile contracts individually which have been requested.
 	map<ContractDefinition const*, shared_ptr<Compiler const>> otherCompilers;
 
-	if (m_generateMLIR)
+	if (m_mlirGenJob.action != mlirgen::Action::Undefined)
 	{
 		vector<ContractDefinition const*> contracts;
 		for (Source const* source: m_sourceOrder)
@@ -699,8 +699,7 @@ bool CompilerStack::compile(State _stopAfter)
 				if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
 					if (isRequestedContract(*contract))
 						contracts.push_back(contract);
-			auto stg = mlirgen::Action::PrintInitStg;
-			if (!runSolidityToMLIRPass(contracts, *source->charStream, stg))
+			if (!runSolidityToMLIRPass(contracts, *source->charStream, m_mlirGenJob))
 				return false;
 		}
 	}
