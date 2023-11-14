@@ -30,7 +30,7 @@ jobs:
           else
             git_tag="${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}"
           fi
-          version=$(cut -d "-" -f2 <<< ${git_tag})
+          version=$(cut -d "-" -f1 <<< ${git_tag})
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
 
   build_linux_amd64:
