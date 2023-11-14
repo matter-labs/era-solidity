@@ -265,8 +265,9 @@ jobs:
         with:
           script: |
             const semver = require('semver');
-            const currentVersion = '${{ needs.setup.outputs.release_tag }}';
-            const result = semver.lt(currentVersion, '0.6.0');
+            let fullVersion = '${{ needs.setup.outputs.release_tag }}';
+            let version = fullVersion.split('-')[0];
+            const result = semver.lt(version, '0.6.0');
             console.log(`Is the version < 0.6.0? ${result}`);
             return result;
           result-encoding: string
