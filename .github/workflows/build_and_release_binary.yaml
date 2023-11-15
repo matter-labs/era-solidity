@@ -2,14 +2,6 @@ name: Build and release binaries
 
 on:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      ZKVM_RELEASE_TAG:
-        description: 'zkVM Release tag'
-        required: true
-      BRANCH_TAG:
-        description: 'Which branch to build'
-        required: true
   push:
     tags:
       - "**"
@@ -26,15 +18,15 @@ jobs:
       - name: Generate output with git tag
         id: set
         run: |
-          git_tag=""
-          if [[ -z "${{ inputs.ZKVM_RELEASE_TAG }}" ]]; then
-            git_tag="${GITHUB_REF#refs/*/}"
+          if [[ !${{ github.event.issue.pull_request }} ]]; then
+            version=$(cut -d "-" -f1 <<< ${GITHUB_REF#refs/*/})
+            echo "release_version=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+            echo "git_tag=${version}" >> $GITHUB_OUTPUT
           else
-            git_tag="${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}"
+            echo "release_version=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+            echo "git_tag=${{ github.base_ref }}" >> $GITHUB_OUTPUT
           fi
-          version=$(cut -d "-" -f1 <<< ${git_tag})
-          echo "release_version=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-          echo "git_tag=${version}" >> $GITHUB_OUTPUT
+
 
   build_linux_amd64:
     runs-on: [matterlabs-ci-runner]
