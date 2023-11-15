@@ -361,7 +361,7 @@ jobs:
 
   prepare-release:
     runs-on: [ matterlabs-default-infra-runners ]
-    if: ${{ github.event_name != 'pull_request' }}
+    if: startsWith(github.ref, 'refs/tags/')
     needs:
       - setup
       - build_macos_arm64
