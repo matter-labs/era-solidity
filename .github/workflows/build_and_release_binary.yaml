@@ -1,14 +1,7 @@
 name: Build and release binaries
 
 on:
-  workflow_dispatch:
-    inputs:
-      ZKVM_RELEASE_TAG:
-        description: 'zkVM Release tag'
-        required: true
-      BRANCH_TAG:
-        description: 'Which branch to build'
-        required: true
+  pull_request:
   push:
     tags:
       - "**"
@@ -17,21 +10,23 @@ jobs:
     name: Setup
     runs-on: [ubuntu-latest]
     outputs:
-      release_tag: ${{ steps.set.outputs.release_tag }}
+      release_version: ${{ steps.set.outputs.release_version }}
+      git_tag: ${{ steps.set.outputs.git_tag }}
     steps:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3
 
       - name: Generate output with git tag
         id: set
         run: |
-          git_tag=""
-          if [[ -z "${{ inputs.ZKVM_RELEASE_TAG }}" ]]; then
-            git_tag="${GITHUB_REF#refs/*/}"
+          if [[ ${{ github.event_name }} != 'pull_request' ]]; then
+            version=$(cut -d "-" -f1 <<< ${GITHUB_REF#refs/*/})
+            echo "release_version=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+            echo "git_tag=${version}" >> $GITHUB_OUTPUT
           else
-            git_tag="${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}"
+            echo "release_version=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+            echo "git_tag=${{ github.base_ref }}" >> $GITHUB_OUTPUT
           fi
-          version=$(cut -d "-" -f2 <<< ${git_tag})
-          echo "release_tag=${version}" >> $GITHUB_OUTPUT
+
 
   build_linux_amd64:
     runs-on: [matterlabs-ci-runner]
@@ -47,7 +42,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: ${{ steps.set.outputs.release_version }}
 
       - name: Prepare environment
         run: |
@@ -59,7 +54,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF
           make -j$(nproc)
           pwd
           ls -la ./solc/
@@ -68,7 +63,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-amd64
-          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ needs.setup.outputs.release_tag }}
+          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -89,7 +84,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: ${{ steps.set.outputs.release_version }}
 
       - name: Prepare environment
         run: |
@@ -101,7 +96,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF -DUSE_CVC4=OFF
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF -DUSE_CVC4=OFF
           make -j$(nproc)
           pwd
           ls -la ./solc/
@@ -110,7 +105,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-arm64
-          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ needs.setup.outputs.release_tag }}
+          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -126,7 +121,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: ${{ steps.set.outputs.release_version }}
 
       - name: Prepare environment
         shell: zsh {0}
@@ -158,7 +153,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF
 
       - name: Building the Solidity compiler
         run: |
@@ -170,7 +165,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-amd64
-          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ needs.setup.outputs.release_tag }}
+          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -189,7 +184,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: ${{ steps.set.outputs.release_version }}
 
       - name: Prepare environment
         shell: zsh {0}
@@ -223,7 +218,7 @@ jobs:
         run: |
           mkdir -p ./build
           cd ./build
-          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -DUSE_Z3=OFF
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF
 
       - name: Building the Solidity compiler
         shell: zsh {0}
@@ -236,7 +231,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-arm64
-          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ needs.setup.outputs.release_tag }}
+          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         with:
@@ -265,7 +260,7 @@ jobs:
         with:
           script: |
             const semver = require('semver');
-            const currentVersion = '${{ inputs.BRANCH_TAG }}';
+            const currentVersion = '${{ needs.setup.outputs.git_tag }}';
             const result = semver.lt(currentVersion, '0.6.0');
             console.log(`Is the version < 0.6.0? ${result}`);
             return result;
@@ -277,7 +272,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: ${{ steps.set.outputs.release_version }}
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
@@ -348,7 +343,7 @@ jobs:
           mkdir build
           cd build
           $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
-          cmake .. -D SOLC_VERSION_ZKEVM="${{ inputs.ZKVM_RELEASE_TAG }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang15 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake .. -D SOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang15 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
           cmake --build . -j 10 --target install --config Release
 
       - name: Prepare binary file name
@@ -356,7 +351,7 @@ jobs:
         run: |
           mkdir -p releases\windows-amd64
           ls .\build\solc\Release\
-          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ needs.setup.outputs.release_tag }}.exe
+          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ needs.setup.outputs.release_version }}.exe
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         if: steps.compare_version.outputs.result != 'true'
@@ -366,7 +361,9 @@ jobs:
 
   prepare-release:
     runs-on: [ matterlabs-default-infra-runners ]
+    if: startsWith(github.ref, 'refs/tags/')
     needs:
+      - setup
       - build_macos_arm64
       - build_macos_amd64
       - build_linux_arm64
@@ -377,7 +374,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
-          ref: ${{ inputs.BRANCH_TAG }}
+          ref: ${{ steps.set.outputs.release_version }}
 
       - name: Download artifact macos_arm64
         uses: actions/download-artifact@v3
@@ -420,9 +417,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: false
-          name: zkVM solc ${{ needs.setup.outputs.release_tag }}
+          name: zkVM solc ${{ needs.setup.outputs.release_version }}
           body_path: ./tmp_changelog.txt
-          tag_name: ${{ needs.setup.outputs.release_tag }}
+          tag_name: ${{ needs.setup.outputs.release_version }}
           token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
