@@ -1,0 +1,433 @@
+name: Build and release binaries
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ZKVM_RELEASE_TAG:
+        description: 'zkVM Release tag'
+        required: true
+      BRANCH_TAG:
+        description: 'Which branch to build'
+        required: true
+  push:
+    tags:
+      - "**"
+jobs:
+  setup:
+    name: Setup
+    runs-on: [ubuntu-latest]
+    outputs:
+      release_version: ${{ steps.set.outputs.release_version }}
+      git_tag: ${{ steps.set.outputs.git_tag }}
+    steps:
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3
+
+      - name: Generate output with git tag
+        id: set
+        run: |
+          git_tag=""
+          if [[ -z "${{ inputs.ZKVM_RELEASE_TAG }}" ]]; then
+            git_tag="${GITHUB_REF#refs/*/}"
+          else
+            git_tag="${{ inputs.BRANCH_TAG }}-${{ inputs.ZKVM_RELEASE_TAG }}"
+          fi
+          version=$(cut -d "-" -f1 <<< ${git_tag})
+          echo "release_version=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+          echo "git_tag=${version}" >> $GITHUB_OUTPUT
+
+  build_linux_amd64:
+    runs-on: [matterlabs-ci-runner]
+    needs: [setup]
+    container:
+      image: matterlabs/llvm_runner:latest
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          ref: ${{ steps.set.outputs.release_version }}
+
+      - name: Prepare environment
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
+
+      - name: Building the Solidity compiler
+        run: |
+          mkdir -p ./build
+          cd ./build
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF
+          make -j$(nproc)
+          pwd
+          ls -la ./solc/
+          ls -la ./solc/solc
+
+      - name: Prepare binary file name
+        run: |
+          mkdir -p releases/linux-amd64
+          mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ needs.setup.outputs.release_version }}
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: release_linux_amd64
+          path: releases
+
+  build_linux_arm64:
+    runs-on: [matterlabs-ci-runner-arm]
+    needs: [setup]
+    container:
+      image: matterlabs/llvm_runner:latest
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          ref: ${{ steps.set.outputs.release_version }}
+
+      - name: Prepare environment
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
+
+      - name: Building the Solidity compiler
+        run: |
+          mkdir -p ./build
+          cd ./build
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF -DUSE_CVC4=OFF
+          make -j$(nproc)
+          pwd
+          ls -la ./solc/
+          ls -la ./solc/solc
+
+      - name: Prepare binary file name
+        run: |
+          mkdir -p releases/linux-arm64
+          mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ needs.setup.outputs.release_version }}
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: release_linux_arm64
+          path: releases
+
+  build_macos_amd64:
+    runs-on: macos-12-xl
+    needs: [setup]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          ref: ${{ steps.set.outputs.release_version }}
+
+      - name: Prepare environment
+        shell: zsh {0}
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+
+      # It is needed as we use some commands which a deprecated in newer versions of boost
+      - name: Install BOOST
+        shell: zsh {0}
+        run: |
+          curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
+          tar xzf ./boost_1_71_0.tar.gz
+          cd ./boost_1_71_0
+          ./bootstrap.sh --prefix=/usr/local --with-python-version=2.7
+          ./b2 -j$(sysctl -n hw.ncpu)
+          ./b2 install -j$(sysctl -n hw.ncpu)
+
+      - name: Warns not errs
+        run: |
+          sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
+          sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
+
+      - name: Cmake gen
+        shell: zsh {0}
+        env:
+          CXXFLAGS: "-Wno-narrowing"
+        run: |
+          mkdir -p ./build
+          cd ./build
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF
+
+      - name: Building the Solidity compiler
+        run: |
+          cd ./build
+          make -j12
+          ./solc/solc --version
+
+      - name: Prepare binary file name
+        shell: zsh {0}
+        run: |
+          mkdir -p ./releases/macosx-amd64
+          mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ needs.setup.outputs.release_version }}
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: release_macos_amd64
+          path: releases
+
+  build_macos_arm64:
+    runs-on: [self-hosted, macOS, ARM64]
+    needs: [setup]
+    steps:
+      - name: Clear repository
+        run: rm -rf ~/.gitconfig; rm -rf {*,.*} || true
+
+      - name: Checkout source
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          ref: ${{ steps.set.outputs.release_version }}
+
+      - name: Prepare environment
+        shell: zsh {0}
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+
+      # It is needed as we use some commands which a deprecated in newer versions of boost
+      - name: Install BOOST
+        shell: zsh {0}
+        run: |
+          curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
+          tar xzf ./boost_1_71_0.tar.gz
+          cd ./boost_1_71_0
+          export BOOST_DIR=$(pwd)/boost
+          mkdir $BOOST_DIR
+          ./bootstrap.sh --prefix=$BOOST_DIR
+          ./b2 -j12
+          ./b2 install -j12
+
+      - name: Warns not errs
+        run: |
+          sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
+          sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
+
+      - name: Cmake gen
+        shell: zsh {0}
+        env:
+          CXXFLAGS: "-Wno-narrowing"
+        run: |
+          mkdir -p ./build
+          cd ./build
+          cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -DUSE_Z3=OFF
+
+      - name: Building the Solidity compiler
+        shell: zsh {0}
+        run: |
+          cd ./build
+          make -j12
+          ./solc/solc --version
+
+      - name: Prepare binary file name
+        shell: zsh {0}
+        run: |
+          mkdir -p ./releases/macosx-arm64
+          mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ needs.setup.outputs.release_version }}
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        with:
+          name: release_macos_arm64
+          path: releases
+
+  build_windows_amd64:
+    runs-on: windows-2019-github-hosted-16core
+    needs: [setup]
+    outputs:
+      version_to_skip: ${{ steps.compare_version.outputs.result }}
+    steps:
+
+      # Had to install node to determine release version.
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install semver
+        run: npm install semver
+
+      - name: Check that version is >= 0.6.0
+        id: compare_version
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const semver = require('semver');
+            const currentVersion = '${{ needs.setup.outputs.git_tag }}';
+            const result = semver.lt(currentVersion, '0.6.0');
+            console.log(`Is the version < 0.6.0? ${result}`);
+            return result;
+          result-encoding: string
+
+      - name: Checkout source
+        uses: actions/checkout@v3
+        if: steps.compare_version.outputs.result != 'true'
+        with:
+          submodules: recursive
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          ref: ${{ steps.set.outputs.release_version }}
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        if: steps.compare_version.outputs.result != 'true'
+        with:
+          version: "15.0.7"
+
+      - name: Prepare environment
+        if: steps.compare_version.outputs.result != 'true'
+        run: |
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
+          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
+          git config --global user.email "runner@github.com"
+          git fetch --all
+          # try to apply win patch
+          git cherry-pick 860226e25dca397b5afd70680530963712aff050 || git cherry-pick --abort
+          # latest llvm for MSVC
+          git clone -q --depth=1 --branch=main https://github.com/zufuliu/llvm-utils.git c:\projects\llvm-utils
+          Invoke-Item "c:\projects\llvm-utils\VS2017\install.bat"
+          # Patch specific versions with include
+          $tag = git rev-parse --abbrev-ref HEAD
+          echo $tag
+          if ($tag -eq "0.8.5" -or $tag -eq "0.8.6" -or $tag -eq "0.8.7") {
+            sed -i  '/^#pragma once/a #include <optional>' ./libevmasm/AssemblyItem.h
+          }
+          if ($tag -eq "0.8.7") {
+            sed -i  '/^#pragma once/a #include <optional>' ./libyul/Object.h
+          }
+          if ($tag -eq "0.5.9" -or $tag -eq "0.5.10" -or $tag -eq "0.5.11") {
+            sed -i  '/^#pragma once/a #include <memory>' ./libyul/backends/wasm/EWasmAST.h
+          }
+          clang --version
+
+
+      - name: Install windows Deps
+        if: steps.compare_version.outputs.result != 'true'
+        run: |
+          if ( -not (Test-Path "deps\boost") ) {
+            New-Item -ItemType Directory -Force -Path "deps"
+
+            Invoke-WebRequest -URI "https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-windows-x86_64.zip" -OutFile cmake.zip
+
+            tar -xf cmake.zip
+            mv cmake-3.27.1-windows-x86_64 "deps\cmake"
+
+            # and serving it a page that requires JavaScript.
+            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.zip" -OutFile boost.zip
+
+            tar -xf boost.zip
+            cd boost_1_77_0
+            .\bootstrap.bat --with-toolset=clang
+            .\b2 -j4 -d0 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" link=static runtime-link=static variant=release threading=multi address-model=64 --prefix="..\deps\boost" --with-filesystem --with-system --with-program_options --with-test --with-regex --with-thread install
+            if ( -not $? ) { throw "Error building boost." }
+            cd ..
+          }
+
+      - name: Building the Solidity compiler
+        if: steps.compare_version.outputs.result != 'true'
+        run: |
+          $env:path += ";deps\cmake\bin\"
+          # remove warning-as-erro flag in cmake
+          sed -i '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
+          sed -i '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '/add_compile_options(\\/WX)/d' ./cmake/EthCompilerSettings.cmake
+          sed -i '/elseif (DEFINED MSVC)/d' ./cmake/EthCompilerSettings.cmake
+          $env:CXXFLAGS="-Wno-narrowing -Qunused-arguments -Wno-everything -DBOOST_REGEX_NO_LIB -D_REGEX_MAX_STACK_COUNT=200000L -DJSON_USE_INT64_DOUBLE_CONVERSION -std=c++17 -stdlib=libc++"
+          mkdir build
+          cd build
+          $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
+          cmake .. -D SOLC_VERSION_ZKEVM="${{ needs.setup.outputs.release_version }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang15 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake --build . -j 10 --target install --config Release
+
+      - name: Prepare binary file name
+        if: steps.compare_version.outputs.result != 'true'
+        run: |
+          mkdir -p releases\windows-amd64
+          ls .\build\solc\Release\
+          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ needs.setup.outputs.release_version }}.exe
+
+      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+        if: steps.compare_version.outputs.result != 'true'
+        with:
+          name: release_windows_amd64
+          path: releases
+
+  prepare-release:
+    runs-on: [ matterlabs-default-infra-runners ]
+    if: ${{ !github.event.issue.pull_request }}
+    needs:
+      - setup
+      - build_macos_arm64
+      - build_macos_amd64
+      - build_linux_arm64
+      - build_linux_amd64
+      - build_windows_amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          ref: ${{ steps.set.outputs.release_version }}
+
+      - name: Download artifact macos_arm64
+        uses: actions/download-artifact@v3
+        with:
+          name: release_macos_arm64
+          path: releases
+
+      - name: Download artifact macosx_amd64
+        uses: actions/download-artifact@v3
+        with:
+          name: release_macos_amd64
+          path: releases
+
+      - name: Download artifact linux_amd64
+        uses: actions/download-artifact@v3
+        with:
+          name: release_linux_amd64
+          path: releases
+
+      - name: Download artifact linux_arm64
+        uses: actions/download-artifact@v3
+        with:
+          name: release_linux_arm64
+          path: releases
+
+      - name: Download artifact release_windows_amd64
+        if: needs.build_windows_amd64.outputs.version_to_skip != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: release_windows_amd64
+          path: releases
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > tmp_changelog.txt
+
+      - name: Prepare release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: false
+          name: zkVM solc ${{ needs.setup.outputs.release_version }}
+          body_path: ./tmp_changelog.txt
+          tag_name: ${{ needs.setup.outputs.release_version }}
+          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
+          files: |
+            releases/**/**
