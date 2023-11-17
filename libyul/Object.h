@@ -27,6 +27,7 @@
 #include <libsolutil/Common.h>
 
 #include <memory>
+#include <optional>
 #include <set>
 
 namespace solidity::yul
