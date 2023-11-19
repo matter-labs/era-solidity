@@ -42,7 +42,7 @@ void eravm::BuilderHelper::initGlobs(ModuleOp mod, Location loc) {
     LLVM::GlobalOp globOp =
         h.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
     Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
-    b.create<LLVM::StoreOp>(loc, h.getConst(0, loc), globAddr,
+    b.create<LLVM::StoreOp>(loc, h.getConst(loc, 0), globAddr,
                             /*alignment=*/32);
   };
 
@@ -62,7 +62,7 @@ void eravm::BuilderHelper::initGlobs(ModuleOp mod, Location loc) {
   Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
   b.create<LLVM::StoreOp>(
       loc,
-      h.getConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)), loc),
+      h.getConstSplat(loc, std::vector<llvm::APInt>(10, llvm::APInt(256, 0))),
       extraABIDataAddr);
 }
 
@@ -71,8 +71,8 @@ Value eravm::BuilderHelper::getABILen(Value ptr, Location loc) {
 
   Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
   Value lShr = b.create<LLVM::LShrOp>(loc, ptrToInt,
-                                      h.getConst(eravm::BitLen_X32 * 3, loc));
-  return b.create<LLVM::AndOp>(loc, lShr, h.getConst(UINT_MAX, loc));
+                                      h.getConst(loc, eravm::BitLen_X32 * 3));
+  return b.create<LLVM::AndOp>(loc, lShr, h.getConst(loc, UINT_MAX));
 }
 
 LLVM::LoadOp eravm::BuilderHelper::genLoad(Location loc, Value addr) {

@@ -122,7 +122,7 @@ public:
       rewriter.create<func::CallOp>(
           loc, returnFunc, TypeRange{},
           ValueRange{retOp.getLhs(), retOp.getRhs(),
-                     b.getConst(eravm::RetForwardPageType::UseHeap, loc)});
+                     b.getConst(loc, eravm::RetForwardPageType::UseHeap)});
       rewriter.create<LLVM::UnreachableOp>(loc);
 
       rewriter.eraseOp(op);
@@ -138,8 +138,8 @@ public:
     // Store ByteLen_Field to the immutables offset
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        b.getConst(eravm::HeapAuxOffsetCtorRetData, loc));
-    rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen_Field, loc),
+        b.getConst(loc, eravm::HeapAuxOffsetCtorRetData));
+    rewriter.create<LLVM::StoreOp>(loc, b.getConst(loc, eravm::ByteLen_Field),
                                    immutablesOffsetPtr, /*alignment=*/32);
 
     // Store size of immutables in terms of ByteLen_Field to the immutables
@@ -147,27 +147,27 @@ public:
     auto immutablesSize = 0; // TODO: Implement this!
     auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        b.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field,
-                   loc));
+        b.getConst(loc,
+                   eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field));
     rewriter.create<LLVM::StoreOp>(
-        loc, b.getConst(immutablesSize / eravm::ByteLen_Field, loc),
+        loc, b.getConst(loc, immutablesSize / eravm::ByteLen_Field),
         immutablesNumPtr, /*alignment=*/32);
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
     // ByteLen_Field * 2
     auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
-        loc, b.getConst(immutablesSize, loc), b.getConst(2, loc));
+        loc, b.getConst(loc, immutablesSize), b.getConst(loc, 2));
     auto returnDataLen = rewriter.create<arith::AddIOp>(
         loc, immutablesCalcSize.getResult(),
-        b.getConst(eravm::ByteLen_Field * 2, loc));
+        b.getConst(loc, eravm::ByteLen_Field * 2));
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
     // RetForwardPageType::UseAuxHeap)) and the unreachable op
     rewriter.create<func::CallOp>(
         loc, returnFunc, TypeRange{},
-        ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData, loc),
+        ValueRange{b.getConst(loc, eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(),
-                   b.getConst(eravm::RetForwardPageType::UseAuxHeap, loc)});
+                   b.getConst(loc, eravm::RetForwardPageType::UseAuxHeap)});
     rewriter.create<LLVM::UnreachableOp>(loc);
 
     rewriter.eraseOp(op);
@@ -289,7 +289,7 @@ public:
           LLVM::LLVMPointerType::get(mod.getContext(),
                                      globExtraABIDataDef.getAddrSpace()),
           /*basePtrType=*/globExtraABIDataDef.getType(), globExtraABIData,
-          ValueRange{h.getConst(0, loc), h.getConst(i, loc)});
+          ValueRange{h.getConst(loc, 0), h.getConst(loc, i)});
       // FIXME: How does the opaque ptr geps with scalar element types lower
       // without explictly setting the elem_type attr?
       gep.setElemTypeAttr(TypeAttr::get(globExtraABIDataDef.getType()));
@@ -300,10 +300,10 @@ public:
     // Check Deploy call flag
     auto deployCallFlag = rewriter.create<arith::AndIOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
-        h.getConst(1, loc));
+        h.getConst(loc, 1));
     auto isDeployCallFlag = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::eq, deployCallFlag.getResult(),
-        h.getConst(1, loc));
+        h.getConst(loc, 1));
 
     // Create the __runtime function
     LLVM::LLVMFuncOp runtimeFunc =

@@ -22,7 +22,7 @@ class BuilderHelper {
 public:
   explicit BuilderHelper(mlir::OpBuilder &b) : b(b) {}
 
-  mlir::Value getConst(int64_t val, mlir::Location loc, unsigned width = 256) {
+  mlir::Value getConst(mlir::Location loc, int64_t val, unsigned width = 256) {
     mlir::IntegerType ty = b.getIntegerType(width);
     auto op = b.create<mlir::arith::ConstantOp>(
         loc, b.getIntegerAttr(ty, llvm::APInt(width, val, /*isSigned=*/true)));
@@ -32,8 +32,9 @@ public:
   // FIXME: How do we create a constant int array? What's wrong with using
   // LLVM::LLVMArrayType instead of VectorType here?  Is
   // https://github.com/llvm/llvm-project/pull/65508 the only way?
-  mlir::Value getConstSplat(llvm::ArrayRef<llvm::APInt> vals,
-                            mlir::Location loc, unsigned width = 256) {
+  mlir::Value getConstSplat(mlir::Location loc,
+                            llvm::ArrayRef<llvm::APInt> vals,
+                            unsigned width = 256) {
     auto ty = mlir::VectorType::get(vals.size(), b.getIntegerType(width));
     auto attr = mlir::DenseIntElementsAttr::get(ty, vals);
     auto op = b.create<mlir::LLVM::ConstantOp>(loc, ty, attr);
