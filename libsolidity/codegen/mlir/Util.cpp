@@ -54,3 +54,17 @@ ArrayAttr BuilderHelper::getZeroInitialzedAttr(IntegerType ty, unsigned sz) {
   std::vector<Attribute> attrs(sz, b.getIntegerAttr(ty, 0));
   return b.getArrayAttr(attrs);
 }
+
+LLVM::LLVMFuncOp BuilderHelper::getOrInsertLLVMFuncOp(
+    llvm::StringRef name, Type resTy, llvm::ArrayRef<Type> argTys, ModuleOp mod,
+    LLVM::Linkage linkage, llvm::ArrayRef<NamedAttribute> attrs) {
+  if (LLVM::LLVMFuncOp found = mod.lookupSymbol<LLVM::LLVMFuncOp>(name))
+    return found;
+
+  auto fnType = LLVM::LLVMFunctionType::get(resTy, argTys);
+
+  OpBuilder::InsertionGuard insertGuard(b);
+  b.setInsertionPointToStart(mod.getBody());
+  return b.create<LLVM::LLVMFuncOp>(mod.getLoc(), name, fnType, linkage,
+                                    /*dsoLocal=*/false, LLVM::CConv::C, attrs);
+}

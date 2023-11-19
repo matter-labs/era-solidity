@@ -84,3 +84,30 @@ LLVM::LoadOp eravm::BuilderHelper::genLoad(Location loc, Value addr) {
       addrSpace == AddrSpace_Stack ? ByteLen_Field : ByteLen_Byte;
   return b.create<LLVM::LoadOp>(loc, addrOp, alignment);
 }
+
+LLVM::LLVMFuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
+    llvm::StringRef name, Type resTy, llvm::ArrayRef<Type> argTys,
+    ModuleOp mod) {
+
+  return h.getOrInsertLLVMFuncOp(
+      name, resTy, argTys, mod, LLVM::Linkage::Private,
+      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(false)}});
+}
+
+LLVM::LLVMFuncOp
+eravm::BuilderHelper::getOrInsertRuntimeFuncOp(llvm::StringRef name, Type resTy,
+                                               llvm::ArrayRef<Type> argTys,
+                                               ModuleOp mod) {
+
+  return h.getOrInsertLLVMFuncOp(
+      name, resTy, argTys, mod, LLVM::Linkage::Private,
+      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(true)}});
+}
+
+SymbolRefAttr eravm::BuilderHelper::getOrInsertReturn(ModuleOp mod) {
+  auto *ctx = mod.getContext();
+  auto i256Ty = IntegerType::get(ctx, 256);
+  h.getOrInsertLLVMFuncOp("__return", LLVM::LLVMVoidType::get(ctx),
+                          {i256Ty, i256Ty, i256Ty}, mod);
+  return SymbolRefAttr::get(mod.getContext(), "__return");
+}

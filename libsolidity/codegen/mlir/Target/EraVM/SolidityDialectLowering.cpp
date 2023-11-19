@@ -73,57 +73,6 @@ namespace {
 // target that lower high level dialects to the llvm dialect.
 //
 
-static LLVM::LLVMFuncOp
-getOrInsertLLVMFuncOp(llvm::StringRef name, Type resTy,
-                      llvm::ArrayRef<Type> argTys, OpBuilder &b, ModuleOp mod,
-                      LLVM::Linkage linkage = LLVM::Linkage::External,
-                      llvm::ArrayRef<NamedAttribute> attrs = {}) {
-  if (LLVM::LLVMFuncOp found = mod.lookupSymbol<LLVM::LLVMFuncOp>(name))
-    return found;
-
-  auto fnType = LLVM::LLVMFunctionType::get(resTy, argTys);
-
-  OpBuilder::InsertionGuard insertGuard(b);
-  b.setInsertionPointToStart(mod.getBody());
-  return b.create<LLVM::LLVMFuncOp>(mod.getLoc(), name, fnType, linkage,
-                                    /*dsoLocal=*/false, LLVM::CConv::C, attrs);
-}
-
-static LLVM::LLVMFuncOp getOrInsertCreationFuncOp(llvm::StringRef name,
-                                                  Type resTy,
-                                                  llvm::ArrayRef<Type> argTys,
-                                                  OpBuilder &b, ModuleOp mod) {
-
-  return getOrInsertLLVMFuncOp(
-      name, resTy, argTys, b, mod, LLVM::Linkage::Private,
-      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(false)}});
-}
-
-static LLVM::LLVMFuncOp getOrInsertRuntimeFuncOp(llvm::StringRef name,
-                                                 Type resTy,
-                                                 llvm::ArrayRef<Type> argTys,
-                                                 OpBuilder &b, ModuleOp mod) {
-
-  return getOrInsertLLVMFuncOp(
-      name, resTy, argTys, b, mod, LLVM::Linkage::Private,
-      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(true)}});
-}
-
-static SymbolRefAttr getOrInsertLLVMFuncSym(llvm::StringRef name, Type resTy,
-                                            llvm::ArrayRef<Type> argTys,
-                                            OpBuilder &b, ModuleOp mod) {
-  getOrInsertLLVMFuncOp(name, resTy, argTys, b, mod);
-  return SymbolRefAttr::get(mod.getContext(), name);
-}
-
-static SymbolRefAttr getOrInsertReturn(PatternRewriter &rewriter,
-                                       ModuleOp mod) {
-  auto *ctx = mod.getContext();
-  auto i256Ty = IntegerType::get(ctx, 256);
-  return getOrInsertLLVMFuncSym("__return", LLVM::LLVMVoidType::get(ctx),
-                                {i256Ty, i256Ty, i256Ty}, rewriter, mod);
-}
-
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
   assert(!isa<LLVM::LLVMFuncOp>(op) && !isa<sol::ObjectOp>(op));
@@ -159,9 +108,10 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     solidity::mlirgen::BuilderHelper b(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter);
     auto retOp = cast<sol::ReturnOp>(op);
-    auto returnFunc =
-        getOrInsertReturn(rewriter, op->getParentOfType<ModuleOp>());
+    SymbolRefAttr returnFunc =
+        eravmHelper.getOrInsertReturn(op->getParentOfType<ModuleOp>());
 
     //
     // Lowering in the runtime context
@@ -239,13 +189,14 @@ public:
     auto mod = op->getParentOfType<ModuleOp>();
     auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
     auto i256Ty = rewriter.getIntegerType(256);
+    eravm::BuilderHelper eravmHelper(rewriter);
 
     // Is this a runtime object?
     // FIXME: Is there a better way to check this?
     if (objOp.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
-      auto runtimeFunc =
-          getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, rewriter, mod);
+      LLVM::LLVMFuncOp runtimeFunc =
+          eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
       rewriter.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
                                   runtimeFuncRegion.begin());
@@ -276,7 +227,6 @@ public:
 
     rewriter.setInsertionPointToStart(entryBlk);
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter);
 
     // Initialize globals
     eravmHelper.initGlobs(mod, loc);
@@ -356,8 +306,8 @@ public:
         h.getConst(1, loc));
 
     // Create the __runtime function
-    auto runtimeFunc =
-        getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, rewriter, mod);
+    LLVM::LLVMFuncOp runtimeFunc =
+        eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
     for (auto const &op : *objOp.getBody()) {
@@ -370,8 +320,8 @@ public:
     }
 
     // Create the __deploy function
-    auto deployFunc =
-        getOrInsertCreationFuncOp("__deploy", voidTy, {}, rewriter, mod);
+    LLVM::LLVMFuncOp deployFunc =
+        eravmHelper.getOrInsertCreationFuncOp("__deploy", voidTy, {}, mod);
     Region &deployFuncRegion = deployFunc.getRegion();
     rewriter.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
                                 deployFuncRegion.begin());

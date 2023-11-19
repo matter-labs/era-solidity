@@ -61,6 +61,13 @@ public:
       mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::Private);
 
   mlir::ArrayAttr getZeroInitialzedAttr(mlir::IntegerType ty, unsigned sz);
+
+  /// Returns an existing or a new (if not found) LLVM::FuncOp
+  mlir::LLVM::LLVMFuncOp getOrInsertLLVMFuncOp(
+      llvm::StringRef name, mlir::Type resTy, llvm::ArrayRef<mlir::Type> argTys,
+      mlir::ModuleOp mod,
+      mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::External,
+      llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 };
 
 } // namespace mlirgen

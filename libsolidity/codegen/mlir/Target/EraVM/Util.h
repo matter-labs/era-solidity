@@ -106,6 +106,21 @@ public:
 
   /// Generate and return LoadOp of address `addr` with EraVM specific semantics
   mlir::LLVM::LoadOp genLoad(mlir::Location loc, mlir::Value addr);
+
+  /// Returns an existing or a new (if not found) creation function
+  mlir::LLVM::LLVMFuncOp
+  getOrInsertCreationFuncOp(llvm::StringRef name, mlir::Type resTy,
+                            llvm::ArrayRef<mlir::Type> argTys,
+                            mlir::ModuleOp mod);
+
+  /// Returns an existing or a new (if not found) runtime function
+  mlir::LLVM::LLVMFuncOp
+  getOrInsertRuntimeFuncOp(llvm::StringRef name, mlir::Type resTy,
+                           llvm::ArrayRef<mlir::Type> argTys,
+                           mlir::ModuleOp mod);
+
+  /// Returns an existing or a new (if not found) return function symbol
+  mlir::SymbolRefAttr getOrInsertReturn(mlir::ModuleOp mod);
 };
 
 } // namespace eravm
