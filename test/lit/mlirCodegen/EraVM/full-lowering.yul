@@ -31,8 +31,8 @@ object "Simple" {
 // CHECK-NEXT: declare void @__return(i256, i256, i256)
 // CHECK-EMPTY:
 // CHECK-NEXT: define private void @__deploy() !dbg !3 {
-// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 4, !dbg !7
-// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 4, !dbg !7
+// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 32, !dbg !7
+// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 32, !dbg !7
 // CHECK-NEXT:   call void @__return(i256 256, i256 64, i256 2), !dbg !7
 // CHECK-NEXT:   unreachable, !dbg !7
 // CHECK-NEXT: }

@@ -140,7 +140,7 @@ public:
         loc, heapAuxAddrSpacePtrTy,
         b.getConst(eravm::HeapAuxOffsetCtorRetData, loc));
     rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen_Field, loc),
-                                   immutablesOffsetPtr);
+                                   immutablesOffsetPtr, /*alignment=*/32);
 
     // Store size of immutables in terms of ByteLen_Field to the immutables
     // number offset
@@ -151,7 +151,7 @@ public:
                    loc));
     rewriter.create<LLVM::StoreOp>(
         loc, b.getConst(immutablesSize / eravm::ByteLen_Field, loc),
-        immutablesNumPtr);
+        immutablesNumPtr, /*alignment=*/32);
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
     // ByteLen_Field * 2
