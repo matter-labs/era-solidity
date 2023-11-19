@@ -208,8 +208,8 @@ public:
         rewriter.getContext(), eravm::AddrSpace_Generic);
 
     std::vector<Type> inTys{genericAddrSpacePtrTy};
-    constexpr unsigned argCnt = 2 /* Entry::MANDATORY_ARGUMENTS_COUNT */ +
-                                10 /* eravm::EXTRA_ABI_DATA_SIZE */;
+    constexpr unsigned argCnt =
+        eravm::MandatoryArgCnt + eravm::ExtraABIDataSize;
     for (unsigned i = 0; i < argCnt - 1; ++i) {
       inTys.push_back(i256Ty);
     }

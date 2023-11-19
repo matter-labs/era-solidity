@@ -72,7 +72,10 @@ enum BitLen {
   BitLen_Field = BitLen_Byte * ByteLen_Field
 };
 
-enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen_Field * 8 };
+enum : unsigned {
+  HeapAuxOffsetCtorRetData = ByteLen_Field * 8,
+  ExtraABIDataSize = 10,
+};
 enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
 
 static const char *GlobHeapMemPtr = "memory_pointer";
