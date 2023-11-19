@@ -74,25 +74,38 @@ namespace {
 
 namespace eravm {
 
+//
+// FIXME: Is it possible to define enum classes whose members can implicitly
+// cast to unsigned? AddrSpace, {Byte, Bit}Len enums are mostly used as unsigned
+// in the lowering (for instance, address space arguments in llvm are unsigned).
+// For now, we're mimicking the scope with prefixes
+//
 enum AddrSpace : unsigned {
-  Stack = 0,
-  Heap = 1,
-  HeapAuxiliary = 2,
-  Generic = 3,
-  Code = 4,
-  Storage = 5,
+  AddrSpace_Stack = 0,
+  AddrSpace_Heap = 1,
+  AddrSpace_HeapAuxiliary = 2,
+  AddrSpace_Generic = 3,
+  AddrSpace_Code = 4,
+  AddrSpace_Storage = 5,
 };
 
-enum ByteLen { Byte = 1, X32 = 4, X64 = 8, EthAddr = 20, Field = 32 };
-// enum BitLen {
-//   Bool = 1,
-//   Byte = 8,
-//   X32 = Byte * ByteLen::X32,
-//   X64 = Byte * ByteLen::X64,
-//   EthAddr = 20,
-//   Field = 32
-// };
-enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
+enum ByteLen {
+  ByteLen_Byte = 1,
+  ByteLen_X32 = 4,
+  ByteLen_X64 = 8,
+  ByteLen_EthAddr = 20,
+  ByteLen_Field = 32
+};
+enum BitLen {
+  BitLen_Bool = 1,
+  BitLen_Byte = 8,
+  BitLen_X32 = BitLen_Byte * ByteLen_X32,
+  BitLen_X64 = BitLen_Byte * ByteLen_X64,
+  BitLen_EthAddr = BitLen_Byte * ByteLen_EthAddr,
+  BitLen_Field = BitLen_Byte * ByteLen_Field
+};
+
+enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen_Field * 8 };
 enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
 
 static const char *GlobHeapMemPtr = "memory_pointer";
@@ -120,7 +133,7 @@ public:
 
     auto initInt = [&](const char *name) {
       LLVM::GlobalOp globOp =
-          h.getOrInsertIntGlobalOp(name, mod, AddrSpace::Stack);
+          h.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
       Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
       b.create<LLVM::StoreOp>(loc, h.getConst(0, loc), globAddr,
                               /*alignment=*/32);
@@ -137,7 +150,7 @@ public:
     // Initialize the GlobExtraABIData int array
     auto extraABIData = h.getOrInsertGlobalOp(
         GlobExtraABIData, mod, LLVM::LLVMArrayType::get(i256Ty, 10),
-        /*alignment=*/32, AddrSpace::Stack, LLVM::Linkage::Private,
+        /*alignment=*/32, AddrSpace_Stack, LLVM::Linkage::Private,
         b.getZeroAttr(RankedTensorType::get({10}, i256Ty)));
     Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
     b.create<LLVM::StoreOp>(
@@ -150,9 +163,8 @@ public:
     auto i256Ty = b.getIntegerType(256);
 
     Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
-    // FIXME-next: Rewrite the * 8 to an enum like zksolc
-    Value lShr = b.create<LLVM::LShrOp>(
-        loc, ptrToInt, h.getConst(eravm::ByteLen::X32 * 8 * 3, loc));
+    Value lShr = b.create<LLVM::LShrOp>(loc, ptrToInt,
+                                        h.getConst(eravm::BitLen_X32 * 3, loc));
     return b.create<LLVM::AndOp>(loc, lShr, h.getConst(UINT_MAX, loc));
   }
 
@@ -162,7 +174,7 @@ public:
     assert(globOp);
     AddrSpace addrSpace = static_cast<AddrSpace>(globOp.getAddrSpace());
     unsigned alignment =
-        addrSpace == AddrSpace::Stack ? ByteLen::Field : ByteLen::Byte;
+        addrSpace == AddrSpace_Stack ? ByteLen_Field : ByteLen_Byte;
     return b.create<LLVM::LoadOp>(loc, addrOp, alignment);
   }
 };
@@ -279,33 +291,33 @@ public:
     // Lowering in the creation context
     //
     auto heapAuxAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), eravm::AddrSpace::HeapAuxiliary);
+        rewriter.getContext(), eravm::AddrSpace_HeapAuxiliary);
 
-    // Store ByteLen::Field to the immutables offset
+    // Store ByteLen_Field to the immutables offset
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
         b.getConst(eravm::HeapAuxOffsetCtorRetData, loc));
-    rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen::Field, loc),
+    rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen_Field, loc),
                                    immutablesOffsetPtr);
 
-    // Store size of immutables in terms of ByteLen::Field to the immutables
+    // Store size of immutables in terms of ByteLen_Field to the immutables
     // number offset
     auto immutablesSize = 0; // TODO: Implement this!
     auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        b.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen::Field,
+        b.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field,
                    loc));
     rewriter.create<LLVM::StoreOp>(
-        loc, b.getConst(immutablesSize / eravm::ByteLen::Field, loc),
+        loc, b.getConst(immutablesSize / eravm::ByteLen_Field, loc),
         immutablesNumPtr);
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
-    // ByteLen::Field * 2
+    // ByteLen_Field * 2
     auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
         loc, b.getConst(immutablesSize, loc), b.getConst(2, loc));
     auto returnDataLen = rewriter.create<arith::AddIOp>(
         loc, immutablesCalcSize.getResult(),
-        b.getConst(eravm::ByteLen::Field * 2, loc));
+        b.getConst(eravm::ByteLen_Field * 2, loc));
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
     // RetForwardPageType::UseAuxHeap)) and the unreachable op
@@ -350,7 +362,7 @@ public:
     }
 
     auto genericAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), eravm::AddrSpace::Generic);
+        rewriter.getContext(), eravm::AddrSpace_Generic);
 
     std::vector<Type> inTys{genericAddrSpacePtrTy};
     constexpr unsigned argCnt = 2 /* Entry::MANDATORY_ARGUMENTS_COUNT */ +
@@ -379,7 +391,7 @@ public:
 
     // Store the calldata ABI arg to the global calldata ptr
     LLVM::GlobalOp globCallDataPtrDef = h.getOrInsertPtrGlobalOp(
-        eravm::GlobCallDataPtr, mod, eravm::AddrSpace::Generic);
+        eravm::GlobCallDataPtr, mod, eravm::AddrSpace_Generic);
     Value globCallDataPtr =
         rewriter.create<LLVM::AddressOfOp>(loc, globCallDataPtrDef);
     rewriter.create<LLVM::StoreOp>(
@@ -398,18 +410,17 @@ public:
     // Store calldatasize[calldata abi arg] to the global ret data ptr and
     // active ptr
     LLVM::LoadOp callDataSz = eravmHelper.genLoad(loc, globCallDataSz);
-    // FIXME-next: Rewrite the * 8 to an enum like zksolc
     auto retDataABIInitializer = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
         LLVM::LLVMPointerType::get(mod.getContext(),
                                    globCallDataPtrDef.getAddrSpace()),
-        /*basePtrType=*/rewriter.getIntegerType(eravm::ByteLen::Byte * 8),
+        /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
         entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataSz.getResult());
     auto storeRetDataABIInitializer = [&](const char *name) {
       LLVM::GlobalOp globDef =
-          h.getOrInsertPtrGlobalOp(name, mod, eravm::AddrSpace::Generic);
+          h.getOrInsertPtrGlobalOp(name, mod, eravm::AddrSpace_Generic);
       Value globAddr = rewriter.create<LLVM::AddressOfOp>(loc, globDef);
       rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
                                      /*alignment=*/32);
