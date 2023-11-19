@@ -102,10 +102,10 @@ public:
   explicit BuilderHelper(mlir::OpBuilder &b) : b(b), h(b) {}
 
   /// Initialize global variables for EraVM
-  void initGlobs(mlir::ModuleOp mod, mlir::Location loc);
+  void initGlobs(mlir::Location loc, mlir::ModuleOp mod);
 
   /// Generates and return the ABI length for the pointer `ptr`
-  mlir::Value getABILen(mlir::Value ptr, mlir::Location loc);
+  mlir::Value getABILen(mlir::Location loc, mlir::Value ptr);
 
   /// Generate and return LoadOp of address `addr` with EraVM specific semantics
   mlir::LLVM::LoadOp genLoad(mlir::Location loc, mlir::Value addr);

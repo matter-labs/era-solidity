@@ -229,7 +229,7 @@ public:
     rewriter.setInsertionPointToStart(entryBlk);
 
     // Initialize globals
-    eravmHelper.initGlobs(mod, loc);
+    eravmHelper.initGlobs(loc, mod);
 
     // Store the calldata ABI arg to the global calldata ptr
     LLVM::GlobalOp globCallDataPtrDef = h.getOrInsertPtrGlobalOp(
@@ -241,7 +241,7 @@ public:
         globCallDataPtr, /*alignment=*/32);
 
     // Store the calldata ABI size to the global calldata size
-    Value abiLen = eravmHelper.getABILen(globCallDataPtr, loc);
+    Value abiLen = eravmHelper.getABILen(loc, globCallDataPtr);
     LLVM::GlobalOp globCallDataSzDef =
         h.getGlobalOp(eravm::GlobCallDataSize, mod);
     Value globCallDataSz =

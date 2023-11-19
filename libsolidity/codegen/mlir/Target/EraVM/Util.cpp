@@ -36,7 +36,7 @@
 using namespace eravm;
 using namespace mlir;
 
-void eravm::BuilderHelper::initGlobs(ModuleOp mod, Location loc) {
+void eravm::BuilderHelper::initGlobs(Location loc, ModuleOp mod) {
 
   auto initInt = [&](const char *name) {
     LLVM::GlobalOp globOp =
@@ -66,7 +66,7 @@ void eravm::BuilderHelper::initGlobs(ModuleOp mod, Location loc) {
       extraABIDataAddr);
 }
 
-Value eravm::BuilderHelper::getABILen(Value ptr, Location loc) {
+Value eravm::BuilderHelper::getABILen(Location loc, Value ptr) {
   auto i256Ty = b.getIntegerType(256);
 
   Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
