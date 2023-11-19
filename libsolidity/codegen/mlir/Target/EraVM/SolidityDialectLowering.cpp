@@ -289,7 +289,7 @@ public:
           LLVM::LLVMPointerType::get(mod.getContext(),
                                      globExtraABIDataDef.getAddrSpace()),
           /*basePtrType=*/globExtraABIDataDef.getType(), globExtraABIData,
-          ValueRange{h.getConst(loc, 0), h.getConst(loc, i)});
+          ValueRange{h.getConst(loc, 0), h.getConst(loc, i - 2)});
       // FIXME: How does the opaque ptr geps with scalar element types lower
       // without explictly setting the elem_type attr?
       gep.setElemTypeAttr(TypeAttr::get(globExtraABIDataDef.getType()));

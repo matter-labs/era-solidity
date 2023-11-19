@@ -55,16 +55,16 @@ object "Simple" {
 // CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_return_data, align 32
 // CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_active, align 32
 // CHECK-NEXT:   store i256 %1, ptr @call_flags, align 32
-// CHECK-NEXT:   store i256 %2, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 2), align 32
-// CHECK-NEXT:   store i256 %3, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 3), align 32
-// CHECK-NEXT:   store i256 %4, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 4), align 32
-// CHECK-NEXT:   store i256 %5, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 5), align 32
-// CHECK-NEXT:   store i256 %6, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 6), align 32
-// CHECK-NEXT:   store i256 %7, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 7), align 32
-// CHECK-NEXT:   store i256 %8, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 8), align 32
-// CHECK-NEXT:   store i256 %9, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 9), align 32
-// CHECK-NEXT:   store i256 %10, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 1, i256 0), align 32
-// CHECK-NEXT:   store i256 %11, ptr getelementptr ([10 x i256], ptr @extra_abi_data, i256 1, i256 1), align 32
+// CHECK-NEXT:   store i256 %2, ptr @extra_abi_data, align 32
+// CHECK-NEXT:   store i256 %3, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 1), align 32
+// CHECK-NEXT:   store i256 %4, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 2), align 32
+// CHECK-NEXT:   store i256 %5, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 3), align 32
+// CHECK-NEXT:   store i256 %6, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 4), align 32
+// CHECK-NEXT:   store i256 %7, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 5), align 32
+// CHECK-NEXT:   store i256 %8, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 6), align 32
+// CHECK-NEXT:   store i256 %9, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 7), align 32
+// CHECK-NEXT:   store i256 %10, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 8), align 32
+// CHECK-NEXT:   store i256 %11, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 9), align 32
 // CHECK-NEXT:   %15 = and i256 %1, 1
 // CHECK-NEXT:   %16 = icmp eq i256 %15, 1
 // CHECK-NEXT:   br i1 %16, label %17, label %18
@@ -137,21 +137,19 @@ object "Simple" {
 // ASM-NEXT: 	and	@CPI2_0[0], r13, r14
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_return_data]
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active]
-// ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data+2]
-// ASM-NEXT: 	add	r4, r0, stack[@extra_abi_data+3]
-// ASM-NEXT: 	add	r5, r0, stack[@extra_abi_data+4]
-// ASM-NEXT: 	add	r6, r0, stack[@extra_abi_data+5]
-// ASM-NEXT: 	add	r7, r0, stack[@extra_abi_data+6]
-// ASM-NEXT: 	add	r8, r0, stack[@extra_abi_data+7]
-// ASM-NEXT: 	add	r9, r0, stack[@extra_abi_data+8]
-// ASM-NEXT: 	add	r10, r0, stack[@extra_abi_data+9]
+// ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data]
+// ASM-NEXT: 	add	r4, r0, stack[@extra_abi_data+1]
+// ASM-NEXT: 	add	r5, r0, stack[@extra_abi_data+2]
+// ASM-NEXT: 	add	r6, r0, stack[@extra_abi_data+3]
+// ASM-NEXT: 	add	r7, r0, stack[@extra_abi_data+4]
+// ASM-NEXT: 	add	r8, r0, stack[@extra_abi_data+5]
+// ASM-NEXT: 	add	r9, r0, stack[@extra_abi_data+6]
+// ASM-NEXT: 	add	r10, r0, stack[@extra_abi_data+7]
+// ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data+8]
+// ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data+9]
 // ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
-// ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data+11]
-// ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data+10]
 // ASM-NEXT: 	and	@CPI2_0[0], r13, stack[@calldatasize]
 // ASM-NEXT: 	add	r2, r0, stack[@call_flags]
-// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data+1]
-// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data]
 // ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
 // ASM-NEXT: 	add	0, r0, stack[@returndatasize]
 // ASM-NEXT: 	and!	1, r2, r1
