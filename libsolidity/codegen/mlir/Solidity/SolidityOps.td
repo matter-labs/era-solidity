@@ -58,7 +58,8 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
 
 // TODO? Move this to a "yul" dialect? Do we need a lot of yul specific ops for
 // a new dialect?
-def Sol_ObjectOp : Sol_Op<"object", [Symbol, SingleBlock, NoTerminator]> {
+def Sol_ObjectOp : Sol_Op<"object", [Symbol, SymbolTable, SingleBlock,
+                          NoTerminator]> {
   let summary = "An operation that represents a yul object";
   let description = [{
     Example:
