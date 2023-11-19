@@ -189,6 +189,7 @@ public:
     auto mod = op->getParentOfType<ModuleOp>();
     auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
     auto i256Ty = rewriter.getIntegerType(256);
+    solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
 
     // Is this a runtime object?
@@ -204,9 +205,9 @@ public:
       return success();
     }
 
+    // Define the __entry function
     auto genericAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), eravm::AddrSpace_Generic);
-
     std::vector<Type> inTys{genericAddrSpacePtrTy};
     constexpr unsigned argCnt =
         eravm::MandatoryArgCnt + eravm::ExtraABIDataSize;
@@ -219,14 +220,13 @@ public:
         rewriter.create<func::FuncOp>(loc, "__entry", funcType);
     assert(op->getNumRegions() == 1);
 
+    // Setup the entry block and set insertion point to it
     auto &entryFuncRegion = entryFunc.getRegion();
     Block *entryBlk = rewriter.createBlock(&entryFuncRegion);
     for (auto inTy : inTys) {
       entryBlk->addArgument(inTy, loc);
     }
-
     rewriter.setInsertionPointToStart(entryBlk);
-    solidity::mlirgen::BuilderHelper h(rewriter);
 
     // Initialize globals
     eravmHelper.initGlobs(mod, loc);
