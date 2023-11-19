@@ -21,6 +21,7 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
+#include "libsolidity/codegen/mlir/Util.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -34,18 +35,23 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+#include <climits>
+#include <vector>
 
 using namespace mlir;
 
@@ -78,8 +84,25 @@ enum AddrSpace : unsigned {
 };
 
 enum ByteLen { Byte = 1, X32 = 4, X64 = 8, EthAddr = 20, Field = 32 };
+// enum BitLen {
+//   Bool = 1,
+//   Byte = 8,
+//   X32 = Byte * ByteLen::X32,
+//   X64 = Byte * ByteLen::X64,
+//   EthAddr = 20,
+//   Field = 32
+// };
 enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen::Field * 8 };
 enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
+
+static const char *GlobHeapMemPtr = "memory_pointer";
+static const char *GlobCallDataSize = "calldatasize";
+static const char *GlobRetDataSz = "returndatasize";
+static const char *GlobCallFlags = "call_flags";
+static const char *GlobExtraABIData = "extra_abi_data";
+static const char *GlobCallDataPtr = "ptr_calldata";
+static const char *GlobRetDataPtr = "ptr_return_data";
+static const char *GlobActivePtr = "ptr_active";
 
 enum EntryInfo {
   ArgIndexCallDataABI = 0,
@@ -87,22 +110,64 @@ enum EntryInfo {
   MandatoryArgCnt = 2,
 };
 
-} // namespace eravm
-
 class BuilderHelper {
   OpBuilder &b;
-  Location loc;
+  solidity::mlirgen::BuilderHelper h;
 
 public:
-  explicit BuilderHelper(OpBuilder &b, Location loc) : b(b), loc(loc) {}
+  explicit BuilderHelper(OpBuilder &b) : b(b), h(b) {}
+  void initGlobs(ModuleOp mod, Location loc) {
 
-  Value getConst(int64_t val, unsigned width = 256) {
-    IntegerType ty = b.getIntegerType(width);
-    auto op = b.create<arith::ConstantOp>(
-        loc, b.getIntegerAttr(ty, llvm::APInt(width, val, /*isSigned=*/true)));
-    return op.getResult();
+    auto initInt = [&](const char *name) {
+      LLVM::GlobalOp globOp =
+          h.getOrInsertIntGlobalOp(name, mod, AddrSpace::Stack);
+      Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
+      b.create<LLVM::StoreOp>(loc, h.getConst(0, loc), globAddr,
+                              /*alignment=*/32);
+    };
+
+    auto i256Ty = b.getIntegerType(256);
+
+    // Initialize the following global ints
+    initInt(GlobHeapMemPtr);
+    initInt(GlobCallDataSize);
+    initInt(GlobRetDataSz);
+    initInt(GlobCallFlags);
+
+    // Initialize the GlobExtraABIData int array
+    auto extraABIData = h.getOrInsertGlobalOp(
+        GlobExtraABIData, mod, LLVM::LLVMArrayType::get(i256Ty, 10),
+        /*alignment=*/32, AddrSpace::Stack, LLVM::Linkage::Private,
+        b.getZeroAttr(RankedTensorType::get({10}, i256Ty)));
+    Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
+    b.create<LLVM::StoreOp>(
+        loc,
+        h.getConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)), loc),
+        extraABIDataAddr);
+  }
+
+  Value getABILen(Value ptr, Location loc) {
+    auto i256Ty = b.getIntegerType(256);
+
+    Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
+    // FIXME-next: Rewrite the * 8 to an enum like zksolc
+    Value lShr = b.create<LLVM::LShrOp>(
+        loc, ptrToInt, h.getConst(eravm::ByteLen::X32 * 8 * 3, loc));
+    return b.create<LLVM::AndOp>(loc, lShr, h.getConst(UINT_MAX, loc));
+  }
+
+  LLVM::LoadOp genLoad(Location loc, Value addr) {
+    auto addrOp = llvm::cast<LLVM::AddressOfOp>(addr.getDefiningOp());
+    LLVM::GlobalOp globOp = addrOp.getGlobal();
+    assert(globOp);
+    AddrSpace addrSpace = static_cast<AddrSpace>(globOp.getAddrSpace());
+    unsigned alignment =
+        addrSpace == AddrSpace::Stack ? ByteLen::Field : ByteLen::Byte;
+    return b.create<LLVM::LoadOp>(loc, addrOp, alignment);
   }
 };
+
+} // namespace eravm
 
 static LLVM::LLVMFuncOp
 getOrInsertLLVMFuncOp(llvm::StringRef name, Type resTy,
@@ -189,7 +254,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    BuilderHelper b(rewriter, loc);
+    solidity::mlirgen::BuilderHelper b(rewriter);
     auto retOp = cast<sol::ReturnOp>(op);
     auto returnFunc =
         getOrInsertReturn(rewriter, op->getParentOfType<ModuleOp>());
@@ -203,7 +268,7 @@ public:
       rewriter.create<func::CallOp>(
           loc, returnFunc, TypeRange{},
           ValueRange{retOp.getLhs(), retOp.getRhs(),
-                     b.getConst(eravm::RetForwardPageType::UseHeap)});
+                     b.getConst(eravm::RetForwardPageType::UseHeap, loc)});
       rewriter.create<LLVM::UnreachableOp>(loc);
 
       rewriter.eraseOp(op);
@@ -219,8 +284,8 @@ public:
     // Store ByteLen::Field to the immutables offset
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        b.getConst(eravm::HeapAuxOffsetCtorRetData));
-    rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen::Field),
+        b.getConst(eravm::HeapAuxOffsetCtorRetData, loc));
+    rewriter.create<LLVM::StoreOp>(loc, b.getConst(eravm::ByteLen::Field, loc),
                                    immutablesOffsetPtr);
 
     // Store size of immutables in terms of ByteLen::Field to the immutables
@@ -228,26 +293,27 @@ public:
     auto immutablesSize = 0; // TODO: Implement this!
     auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        b.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen::Field));
+        b.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen::Field,
+                   loc));
     rewriter.create<LLVM::StoreOp>(
-        loc, b.getConst(immutablesSize / eravm::ByteLen::Field),
+        loc, b.getConst(immutablesSize / eravm::ByteLen::Field, loc),
         immutablesNumPtr);
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
     // ByteLen::Field * 2
     auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
-        loc, b.getConst(immutablesSize), b.getConst(2));
-    auto returnDataLen =
-        rewriter.create<arith::AddIOp>(loc, immutablesCalcSize.getResult(),
-                                       b.getConst(eravm::ByteLen::Field * 2));
+        loc, b.getConst(immutablesSize, loc), b.getConst(2, loc));
+    auto returnDataLen = rewriter.create<arith::AddIOp>(
+        loc, immutablesCalcSize.getResult(),
+        b.getConst(eravm::ByteLen::Field * 2, loc));
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
     // RetForwardPageType::UseAuxHeap)) and the unreachable op
     rewriter.create<func::CallOp>(
         loc, returnFunc, TypeRange{},
-        ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData),
+        ValueRange{b.getConst(eravm::HeapAuxOffsetCtorRetData, loc),
                    returnDataLen.getResult(),
-                   b.getConst(eravm::RetForwardPageType::UseAuxHeap)});
+                   b.getConst(eravm::RetForwardPageType::UseAuxHeap, loc)});
     rewriter.create<LLVM::UnreachableOp>(loc);
 
     rewriter.eraseOp(op);
@@ -304,15 +370,87 @@ public:
       entryBlk->addArgument(inTy, loc);
     }
 
-    // Check Deploy call flag
     rewriter.setInsertionPointToStart(entryBlk);
-    BuilderHelper b(rewriter, loc);
+    solidity::mlirgen::BuilderHelper h(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter);
+
+    // Initialize globals
+    eravmHelper.initGlobs(mod, loc);
+
+    // Store the calldata ABI arg to the global calldata ptr
+    LLVM::GlobalOp globCallDataPtrDef = h.getOrInsertPtrGlobalOp(
+        eravm::GlobCallDataPtr, mod, eravm::AddrSpace::Generic);
+    Value globCallDataPtr =
+        rewriter.create<LLVM::AddressOfOp>(loc, globCallDataPtrDef);
+    rewriter.create<LLVM::StoreOp>(
+        loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
+        globCallDataPtr, /*alignment=*/32);
+
+    // Store the calldata ABI size to the global calldata size
+    Value abiLen = eravmHelper.getABILen(globCallDataPtr, loc);
+    LLVM::GlobalOp globCallDataSzDef =
+        h.getGlobalOp(eravm::GlobCallDataSize, mod);
+    Value globCallDataSz =
+        rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
+    rewriter.create<LLVM::StoreOp>(loc, abiLen, globCallDataSz,
+                                   /*alignment=*/32);
+
+    // Store calldatasize[calldata abi arg] to the global ret data ptr and
+    // active ptr
+    LLVM::LoadOp callDataSz = eravmHelper.genLoad(loc, globCallDataSz);
+    // FIXME-next: Rewrite the * 8 to an enum like zksolc
+    auto retDataABIInitializer = rewriter.create<LLVM::GEPOp>(
+        loc,
+        /*resultType=*/
+        LLVM::LLVMPointerType::get(mod.getContext(),
+                                   globCallDataPtrDef.getAddrSpace()),
+        /*basePtrType=*/rewriter.getIntegerType(eravm::ByteLen::Byte * 8),
+        entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
+        callDataSz.getResult());
+    auto storeRetDataABIInitializer = [&](const char *name) {
+      LLVM::GlobalOp globDef =
+          h.getOrInsertPtrGlobalOp(name, mod, eravm::AddrSpace::Generic);
+      Value globAddr = rewriter.create<LLVM::AddressOfOp>(loc, globDef);
+      rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
+                                     /*alignment=*/32);
+    };
+    storeRetDataABIInitializer(eravm::GlobRetDataPtr);
+    storeRetDataABIInitializer(eravm::GlobActivePtr);
+
+    // Store call flags arg to the global call flags
+    auto globCallFlagsDef = h.getGlobalOp(eravm::GlobCallFlags, mod);
+    Value globCallFlags =
+        rewriter.create<LLVM::AddressOfOp>(loc, globCallFlagsDef);
+    rewriter.create<LLVM::StoreOp>(
+        loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
+        globCallFlags, /*alignment=*/32);
+
+    // Store the remaining args to the global extra ABI data
+    auto globExtraABIDataDef = h.getGlobalOp(eravm::GlobExtraABIData, mod);
+    Value globExtraABIData =
+        rewriter.create<LLVM::AddressOfOp>(loc, globExtraABIDataDef);
+    for (unsigned i = 2; i < entryBlk->getNumArguments(); ++i) {
+      auto gep = rewriter.create<LLVM::GEPOp>(
+          loc,
+          /*resultType=*/
+          LLVM::LLVMPointerType::get(mod.getContext(),
+                                     globExtraABIDataDef.getAddrSpace()),
+          /*basePtrType=*/globExtraABIDataDef.getType(), globExtraABIData,
+          ValueRange{h.getConst(0, loc), h.getConst(i, loc)});
+      // FIXME: How does the opaque ptr geps with scalar element types lower
+      // without explictly setting the elem_type attr?
+      gep.setElemTypeAttr(TypeAttr::get(globExtraABIDataDef.getType()));
+      rewriter.create<LLVM::StoreOp>(loc, entryBlk->getArgument(i), gep,
+                                     /*alignment=*/32);
+    }
+
+    // Check Deploy call flag
     auto deployCallFlag = rewriter.create<arith::AndIOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
-        b.getConst(1));
+        h.getConst(1, loc));
     auto isDeployCallFlag = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::eq, deployCallFlag.getResult(),
-        b.getConst(1));
+        h.getConst(1, loc));
 
     // Create the __runtime function
     auto runtimeFunc =

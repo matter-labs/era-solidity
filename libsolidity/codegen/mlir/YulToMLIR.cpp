@@ -211,6 +211,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     mlir::registerLLVMDialectTranslation(ctx);
     std::unique_ptr<llvm::Module> llvmMod =
         mlir::translateModuleToLLVMIR(mod, llvmCtx);
+    assert(llvmMod);
     llvm::outs() << *llvmMod;
     break;
   }
@@ -222,6 +223,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     mlir::registerLLVMDialectTranslation(ctx);
     std::unique_ptr<llvm::Module> llvmMod =
         mlir::translateModuleToLLVMIR(mod, llvmCtx);
+    assert(llvmMod);
 
     // Create TargetMachine from `tgt`
     std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(job.tgt);
