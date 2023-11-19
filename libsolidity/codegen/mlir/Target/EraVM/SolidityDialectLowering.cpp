@@ -21,6 +21,7 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
+#include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
@@ -71,115 +72,6 @@ namespace {
 // (c) I think a sensible design is to create different ModuleOp passes for each
 // target that lower high level dialects to the llvm dialect.
 //
-
-namespace eravm {
-
-//
-// FIXME: Is it possible to define enum classes whose members can implicitly
-// cast to unsigned? AddrSpace, {Byte, Bit}Len enums are mostly used as unsigned
-// in the lowering (for instance, address space arguments in llvm are unsigned).
-// For now, we're mimicking the scope with prefixes
-//
-enum AddrSpace : unsigned {
-  AddrSpace_Stack = 0,
-  AddrSpace_Heap = 1,
-  AddrSpace_HeapAuxiliary = 2,
-  AddrSpace_Generic = 3,
-  AddrSpace_Code = 4,
-  AddrSpace_Storage = 5,
-};
-
-enum ByteLen {
-  ByteLen_Byte = 1,
-  ByteLen_X32 = 4,
-  ByteLen_X64 = 8,
-  ByteLen_EthAddr = 20,
-  ByteLen_Field = 32
-};
-enum BitLen {
-  BitLen_Bool = 1,
-  BitLen_Byte = 8,
-  BitLen_X32 = BitLen_Byte * ByteLen_X32,
-  BitLen_X64 = BitLen_Byte * ByteLen_X64,
-  BitLen_EthAddr = BitLen_Byte * ByteLen_EthAddr,
-  BitLen_Field = BitLen_Byte * ByteLen_Field
-};
-
-enum : unsigned { HeapAuxOffsetCtorRetData = ByteLen_Field * 8 };
-enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
-
-static const char *GlobHeapMemPtr = "memory_pointer";
-static const char *GlobCallDataSize = "calldatasize";
-static const char *GlobRetDataSz = "returndatasize";
-static const char *GlobCallFlags = "call_flags";
-static const char *GlobExtraABIData = "extra_abi_data";
-static const char *GlobCallDataPtr = "ptr_calldata";
-static const char *GlobRetDataPtr = "ptr_return_data";
-static const char *GlobActivePtr = "ptr_active";
-
-enum EntryInfo {
-  ArgIndexCallDataABI = 0,
-  ArgIndexCallFlags = 1,
-  MandatoryArgCnt = 2,
-};
-
-class BuilderHelper {
-  OpBuilder &b;
-  solidity::mlirgen::BuilderHelper h;
-
-public:
-  explicit BuilderHelper(OpBuilder &b) : b(b), h(b) {}
-  void initGlobs(ModuleOp mod, Location loc) {
-
-    auto initInt = [&](const char *name) {
-      LLVM::GlobalOp globOp =
-          h.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
-      Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
-      b.create<LLVM::StoreOp>(loc, h.getConst(0, loc), globAddr,
-                              /*alignment=*/32);
-    };
-
-    auto i256Ty = b.getIntegerType(256);
-
-    // Initialize the following global ints
-    initInt(GlobHeapMemPtr);
-    initInt(GlobCallDataSize);
-    initInt(GlobRetDataSz);
-    initInt(GlobCallFlags);
-
-    // Initialize the GlobExtraABIData int array
-    auto extraABIData = h.getOrInsertGlobalOp(
-        GlobExtraABIData, mod, LLVM::LLVMArrayType::get(i256Ty, 10),
-        /*alignment=*/32, AddrSpace_Stack, LLVM::Linkage::Private,
-        b.getZeroAttr(RankedTensorType::get({10}, i256Ty)));
-    Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
-    b.create<LLVM::StoreOp>(
-        loc,
-        h.getConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)), loc),
-        extraABIDataAddr);
-  }
-
-  Value getABILen(Value ptr, Location loc) {
-    auto i256Ty = b.getIntegerType(256);
-
-    Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
-    Value lShr = b.create<LLVM::LShrOp>(loc, ptrToInt,
-                                        h.getConst(eravm::BitLen_X32 * 3, loc));
-    return b.create<LLVM::AndOp>(loc, lShr, h.getConst(UINT_MAX, loc));
-  }
-
-  LLVM::LoadOp genLoad(Location loc, Value addr) {
-    auto addrOp = llvm::cast<LLVM::AddressOfOp>(addr.getDefiningOp());
-    LLVM::GlobalOp globOp = addrOp.getGlobal();
-    assert(globOp);
-    AddrSpace addrSpace = static_cast<AddrSpace>(globOp.getAddrSpace());
-    unsigned alignment =
-        addrSpace == AddrSpace_Stack ? ByteLen_Field : ByteLen_Byte;
-    return b.create<LLVM::LoadOp>(loc, addrOp, alignment);
-  }
-};
-
-} // namespace eravm
 
 static LLVM::LLVMFuncOp
 getOrInsertLLVMFuncOp(llvm::StringRef name, Type resTy,
