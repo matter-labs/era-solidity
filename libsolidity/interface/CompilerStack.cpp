@@ -585,6 +585,7 @@ bool CompilerStack::analyzeLegacy(bool _noErrorsSoFar)
 	// Create & assign callgraphs and check for contract dependency cycles
 	if (noErrors)
 	{
+		populateFuncPtrRefs();
 		createAndAssignCallGraphs();
 		annotateInternalFunctionIDs();
 		findAndReportCyclicContractDependencies();
@@ -617,8 +618,6 @@ bool CompilerStack::analyzeLegacy(bool _noErrorsSoFar)
 		{
 			ControlFlowRevertPruner pruner(cfg);
 			pruner.run();
-			populateFuncPtrRefs();
-			createAndAssignCallGraphs();
 
 			ControlFlowAnalyzer controlFlowAnalyzer(cfg, m_errorReporter);
 			if (!controlFlowAnalyzer.run())
