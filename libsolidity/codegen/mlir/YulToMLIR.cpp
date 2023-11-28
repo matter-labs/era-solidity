@@ -24,13 +24,16 @@
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
+#include "libsolidity/codegen/mlir/Util.h"
 #include "libyul/AST.h"
 #include "libyul/Dialect.h"
 #include "libyul/Object.h"
 #include "libyul/optimiser/ASTWalker.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -94,6 +97,9 @@ private:
   /// Lowers an expression statement
   void operator()(ExpressionStatement const &expr) override;
 
+  /// Lowers a function
+  void operator()(FunctionDefinition const &fn) override;
+
   /// Lowers a block
   void operator()(Block const &blk) override;
 };
@@ -149,6 +155,35 @@ void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
   genExpr(expr.expression);
 }
 
+void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
+  BuilderHelper h(b);
+  mlir::IntegerType i256Ty = b.getIntegerType(256);
+  std::vector<mlir::Type> inTys(fn.parameters.size(), i256Ty),
+      outTys(fn.returnVariables.size(), i256Ty);
+  mlir::FunctionType funcTy = b.getFunctionType(inTys, outTys);
+  mlir::Location lc = loc(fn.debugData->nativeLocation);
+
+  // Create the FuncOp
+  auto funcOp = b.create<mlir::func::FuncOp>(lc, fn.name.str(), funcTy);
+
+  // Add entry block and forward input args
+  mlir::Block *entryBlk = b.createBlock(&funcOp.getRegion());
+  std::vector<mlir::Location> inLocs;
+  for (TypedName const &in : fn.parameters) {
+    inLocs.push_back(loc(in.debugData->nativeLocation));
+  }
+  assert(inTys.size() == inLocs.size());
+  entryBlk->addArguments(inTys, inLocs);
+
+  // Lower the body
+  mlir::OpBuilder::InsertionGuard insertGuard(b);
+  b.setInsertionPointToStart(entryBlk);
+  ASTWalker::operator()(fn.body);
+
+  // FIXME: Implement return
+  b.create<mlir::func::ReturnOp>(lc, h.getConst(lc, 0));
+}
+
 void YulToMLIRPass::operator()(Block const &blk) { ASTWalker::operator()(blk); }
 
 void YulToMLIRPass::lowerObj(Object const &obj) {
@@ -182,6 +217,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+  ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
   yulToMLIR.lowerTopLevelObj(obj);
 
