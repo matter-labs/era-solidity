@@ -78,7 +78,7 @@ public:
 
 private:
   /// Returns the mlir location for the solidity source location `loc`
-  mlir::Location loc(SourceLocation const &loc) {
+  mlir::Location getLoc(SourceLocation const &loc) {
     // FIXME: Track loc.end as well
     LineColumn lineCol = stream.translatePositionToLineColumn(loc.start);
     return mlir::FileLineColLoc::get(b.getStringAttr(stream.name()),
@@ -115,14 +115,14 @@ private:
 };
 
 mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
-  mlir::Location lc = this->loc(lit.debugData->nativeLocation);
+  mlir::Location loc = this->getLoc(lit.debugData->nativeLocation);
 
   // Do we need to represent constants as u256? Can we do that in
   // arith::ConstantOp?
   auto i256Ty = b.getIntegerType(256);
   return b.create<mlir::arith::ConstantOp>(
-      lc, b.getIntegerAttr(i256Ty, llvm::APInt(256, lit.value.str(),
-                                               /*radix=*/10)));
+      loc, b.getIntegerAttr(i256Ty, llvm::APInt(256, lit.value.str(),
+                                                /*radix=*/10)));
 }
 
 mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
@@ -131,19 +131,18 @@ mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
 
 mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
   BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
+  mlir::Location loc = getLoc(call.debugData->nativeLocation);
   if (builtin) {
 
     // TODO: The lowering of builtin function should be auto generated from
     // evmasm::InstructionInfo and the corresponding mlir ops
     if (builtin->name.str() == "return") {
-      b.create<mlir::sol::ReturnOp>(loc(call.debugData->nativeLocation),
-                                    genExpr(call.arguments[0]),
+      b.create<mlir::sol::ReturnOp>(loc, genExpr(call.arguments[0]),
                                     genExpr(call.arguments[1]));
       return {};
 
     } else if (builtin->name.str() == "mstore") {
-      b.create<mlir::sol::MstoreOp>(loc(call.debugData->nativeLocation),
-                                    genExpr(call.arguments[0]),
+      b.create<mlir::sol::MstoreOp>(loc, genExpr(call.arguments[0]),
                                     genExpr(call.arguments[1]));
       return {};
     } else {
@@ -157,8 +156,7 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     for (Expression const &arg : call.arguments) {
       args.push_back(genExpr(arg));
     }
-    auto callOp = b.create<mlir::func::CallOp>(
-        loc(call.debugData->nativeLocation), callee, args);
+    auto callOp = b.create<mlir::func::CallOp>(loc, callee, args);
     solUnimplementedAssert(callOp.getNumResults() == 1,
                            "TODO: Support multivalue return");
     return callOp.getResult(0);
@@ -178,7 +176,7 @@ void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
 
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   BuilderHelper h(b);
-  mlir::Location lc = loc(fn.debugData->nativeLocation);
+  mlir::Location loc = getLoc(fn.debugData->nativeLocation);
 
   // Lookup FuncOp (should be declared by the yul block lowering)
   auto funcOp = lookupSymbol<mlir::func::FuncOp>(fn.name.str());
@@ -188,7 +186,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   mlir::Block *entryBlk = b.createBlock(&funcOp.getRegion());
   std::vector<mlir::Location> inLocs;
   for (TypedName const &in : fn.parameters) {
-    inLocs.push_back(loc(in.debugData->nativeLocation));
+    inLocs.push_back(getLoc(in.debugData->nativeLocation));
   }
   assert(funcOp.getFunctionType().getNumInputs() == inLocs.size());
   entryBlk->addArguments(funcOp.getFunctionType().getInputs(), inLocs);
@@ -199,7 +197,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   ASTWalker::operator()(fn.body);
 
   // FIXME: Implement return
-  b.create<mlir::func::ReturnOp>(lc, h.getConst(lc, 0));
+  b.create<mlir::func::ReturnOp>(loc, h.getConst(loc, 0));
 }
 
 void YulToMLIRPass::operator()(Block const &blk) {
@@ -214,8 +212,8 @@ void YulToMLIRPass::operator()(Block const &blk) {
       std::vector<mlir::Type> inTys(fn->parameters.size(), i256Ty),
           outTys(fn->returnVariables.size(), i256Ty);
       mlir::FunctionType funcTy = b.getFunctionType(inTys, outTys);
-      mlir::Location lc = loc(fn->debugData->nativeLocation);
-      b.create<mlir::func::FuncOp>(lc, fn->name.str(), funcTy);
+      b.create<mlir::func::FuncOp>(getLoc(fn->debugData->nativeLocation),
+                                   fn->name.str(), funcTy);
     }
   }
 
