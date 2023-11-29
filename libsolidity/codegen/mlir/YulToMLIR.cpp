@@ -32,12 +32,14 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -54,6 +56,7 @@ namespace solidity::mlirgen {
 class YulToMLIRPass : public ASTWalker {
   mlir::OpBuilder b;
   mlir::ModuleOp mod;
+  mlir::sol::ObjectOp currObj;
   CharStream const &stream;
   Dialect const &yulDialect;
 
@@ -80,6 +83,13 @@ private:
     LineColumn lineCol = stream.translatePositionToLineColumn(loc.start);
     return mlir::FileLineColLoc::get(b.getStringAttr(stream.name()),
                                      lineCol.line, lineCol.column);
+  }
+
+  /// Returns the symbol of type `T` in the current scope
+  template <typename T>
+  T lookupSymbol(llvm::StringRef name) {
+    // FIXME: We should lookup in the current block and its ancestors
+    return currObj.lookupSymbol<T>(name);
   }
 
   /// Returns the mlir expression for the literal `lit`
@@ -140,7 +150,18 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       solUnimplementedAssert(false, "TODO: Lower other builtin function call");
     }
   } else {
-    solUnimplementedAssert(false, "TODO: Lower non builtin function call");
+    mlir::func::FuncOp callee =
+        lookupSymbol<mlir::func::FuncOp>(call.functionName.name.str());
+    assert(callee);
+    std::vector<mlir::Value> args;
+    for (Expression const &arg : call.arguments) {
+      args.push_back(genExpr(arg));
+    }
+    auto callOp = b.create<mlir::func::CallOp>(
+        loc(call.debugData->nativeLocation), callee, args);
+    solUnimplementedAssert(callOp.getNumResults() == 1,
+                           "TODO: Support multivalue return");
+    return callOp.getResult(0);
   }
 
   solAssert(false);
@@ -157,14 +178,11 @@ void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
 
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   BuilderHelper h(b);
-  mlir::IntegerType i256Ty = b.getIntegerType(256);
-  std::vector<mlir::Type> inTys(fn.parameters.size(), i256Ty),
-      outTys(fn.returnVariables.size(), i256Ty);
-  mlir::FunctionType funcTy = b.getFunctionType(inTys, outTys);
   mlir::Location lc = loc(fn.debugData->nativeLocation);
 
-  // Create the FuncOp
-  auto funcOp = b.create<mlir::func::FuncOp>(lc, fn.name.str(), funcTy);
+  // Lookup FuncOp (should be declared by the yul block lowering)
+  auto funcOp = lookupSymbol<mlir::func::FuncOp>(fn.name.str());
+  assert(funcOp);
 
   // Add entry block and forward input args
   mlir::Block *entryBlk = b.createBlock(&funcOp.getRegion());
@@ -172,8 +190,8 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   for (TypedName const &in : fn.parameters) {
     inLocs.push_back(loc(in.debugData->nativeLocation));
   }
-  assert(inTys.size() == inLocs.size());
-  entryBlk->addArguments(inTys, inLocs);
+  assert(funcOp.getFunctionType().getNumInputs() == inLocs.size());
+  entryBlk->addArguments(funcOp.getFunctionType().getInputs(), inLocs);
 
   // Lower the body
   mlir::OpBuilder::InsertionGuard insertGuard(b);
@@ -184,12 +202,30 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   b.create<mlir::func::ReturnOp>(lc, h.getConst(lc, 0));
 }
 
-void YulToMLIRPass::operator()(Block const &blk) { ASTWalker::operator()(blk); }
+void YulToMLIRPass::operator()(Block const &blk) {
+  BuilderHelper h(b);
+  mlir::IntegerType i256Ty = b.getIntegerType(256);
+
+  // "Declare" FuncOps (i.e. create them with an empty region) at this block so
+  // that we can lower calls before lowering the functions. The function
+  // lowering is expected to lookup the FuncOp without creating it.
+  for (Statement const &stmt : blk.statements) {
+    if (auto fn = std::get_if<FunctionDefinition>(&stmt)) {
+      std::vector<mlir::Type> inTys(fn->parameters.size(), i256Ty),
+          outTys(fn->returnVariables.size(), i256Ty);
+      mlir::FunctionType funcTy = b.getFunctionType(inTys, outTys);
+      mlir::Location lc = loc(fn->debugData->nativeLocation);
+      b.create<mlir::func::FuncOp>(lc, fn->name.str(), funcTy);
+    }
+  }
+
+  ASTWalker::operator()(blk);
+}
 
 void YulToMLIRPass::lowerObj(Object const &obj) {
   // TODO: Where is the source location info for Object? Do we need to track it?
-  auto objOp = b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), obj.name.str());
-  b.setInsertionPointToEnd(objOp.getBody());
+  currObj = b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), obj.name.str());
+  b.setInsertionPointToEnd(currObj.getBody());
   // TODO? Do we need a separate op for the `code` block?
   operator()(*obj.code);
 }
