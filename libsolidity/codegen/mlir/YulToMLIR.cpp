@@ -153,6 +153,7 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
         lookupSymbol<mlir::func::FuncOp>(call.functionName.name.str());
     assert(callee);
     std::vector<mlir::Value> args;
+    args.reserve(call.arguments.size());
     for (Expression const &arg : call.arguments) {
       args.push_back(genExpr(arg));
     }
