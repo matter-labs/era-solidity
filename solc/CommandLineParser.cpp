@@ -98,7 +98,7 @@ static std::string const g_strParsing = "parsing";
 //
 // MLIR based codegen options
 //
-static string const g_strMMLIR = "mmlir";
+static std::string const g_strMMLIR = "mmlir";
 //
 // It would be nice to reuse the pre-existing cmdline options like --ir, --asm etc. to control the mlir based codegen,
 // but I feel it would complicate things at the moment. The mlir based codegen has different constraints like:
@@ -110,8 +110,8 @@ static string const g_strMMLIR = "mmlir";
 //
 // TODO: Add mlir specific optimization and debug-info options
 // TODO: Support writing output to files
-static string const g_strMLIRTarget = "mlir-target";
-static string const g_strMLIRAction = "mlir-action";
+static std::string const g_strMLIRTarget = "mlir-target";
+static std::string const g_strMLIRAction = "mlir-action";
 
 /// Possible arguments to for --revert-strings
 static std::set<std::string> const g_revertStringsArgs
@@ -666,17 +666,17 @@ General Information)").c_str(),
 		)
 		(
 			g_strMLIRAction.c_str(),
-			po::value<string>()->value_name("action"),
+			po::value<std::string>()->value_name("action"),
 			"MLIR based codegen's desired action"
 		)
 		(
 			g_strMLIRTarget.c_str(),
-			po::value<string>()->value_name("target"),
+			po::value<std::string>()->value_name("target"),
 			"Target for the MLIR based codegen"
 		)
 		(
 			g_strMMLIR.c_str(),
-			po::value<vector<string>>()->value_name("option"),
+			po::value<std::vector<std::string>>()->value_name("option"),
 			"Forwards the option to the MLIR framework"
 		)
 	;
@@ -1161,7 +1161,7 @@ void CommandLineParser::processArgs()
 
 	if (m_args.count(g_strMLIRAction))
 	{
-		string val = m_args[g_strMLIRAction].as<string>();
+		std::string val = m_args[g_strMLIRAction].as<std::string>();
 		if (val == "print-init")
 			m_options.mlirGenJob.action = mlirgen::Action::PrintInitStg;
 		else if (val == "print-llvm-ir")
@@ -1172,7 +1172,7 @@ void CommandLineParser::processArgs()
 			solThrow(CommandLineValidationError, "Invalid action");
 		if (m_args.count(g_strMLIRTarget))
 		{
-			string val = m_args[g_strMLIRTarget].as<string>();
+			std::string val = m_args[g_strMLIRTarget].as<std::string>();
 			if (val == "eravm")
 				m_options.mlirGenJob.tgt = mlirgen::Target::EraVM;
 			else
@@ -1285,8 +1285,8 @@ void CommandLineParser::processArgs()
 
 	if (m_args.count(g_strMMLIR))
 	{
-		vector<const char*> argv;
-		for (string const& flag: m_args[g_strMMLIR].as<vector<string>>())
+		std::vector<const char*> argv;
+		for (std::string const& flag: m_args[g_strMMLIR].as<std::vector<std::string>>())
 		{
 			if (flag.empty())
 				solThrow(CommandLineValidationError, "Empty values are not allowed in --" + g_strMMLIR + ".");

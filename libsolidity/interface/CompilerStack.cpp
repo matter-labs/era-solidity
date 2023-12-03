@@ -717,7 +717,7 @@ bool CompilerStack::compile(State _stopAfter)
 
 	if (m_mlirGenJob.action != mlirgen::Action::Undefined)
 	{
-		vector<ContractDefinition const*> contracts;
+		std::vector<ContractDefinition const*> contracts;
 		for (Source const* source: m_sourceOrder)
 		{
 			contracts.clear();
