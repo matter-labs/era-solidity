@@ -21,7 +21,7 @@ source unit is assigned a unique *source unit name* which is an opaque and unstr
 When you use the :ref:`import statement <import>`, you specify an *import path* that references a
 source unit name.
 
-.. index:: ! import callback, ! Host Filesystem Loader
+.. index:: ! import callback, ! Host Filesystem Loader, ! --no-import-callback
 .. _import-callback:
 
 Import Callback
@@ -36,8 +36,9 @@ An import callback is free to interpret source unit names in an arbitrary way, n
 If there is no callback available when one is needed or if it fails to locate the source code,
 compilation fails.
 
-The command-line compiler provides the *Host Filesystem Loader* - a rudimentary callback
+By default, the command-line compiler provides the *Host Filesystem Loader* - a rudimentary callback
 that interprets a source unit name as a path in the local filesystem.
+This callback can be disabled using the ``--no-import-callback`` command-line option.
 The `JavaScript interface <https://github.com/ethereum/solc-js>`_ does not provide any by default,
 but one can be provided by the user.
 This mechanism can be used to obtain source code from locations other then the local filesystem
@@ -515,7 +516,7 @@ you can use the following in your source file:
 
 The compiler will look for the file in the VFS under ``dapp-bin/library/math.sol``.
 If the file is not available there, the source unit name will be passed to the Host Filesystem
-Loader, which will then look in ``/project/dapp-bin/library/iterable_mapping.sol``.
+Loader, which will then look in ``/project/dapp-bin/library/math.sol``.
 
 .. warning::
 

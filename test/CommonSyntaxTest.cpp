@@ -19,16 +19,24 @@
 #include <test/CommonSyntaxTest.h>
 #include <test/Common.h>
 #include <test/TestCase.h>
+
+#include <liblangutil/SourceReferenceFormatter.h>
+
+#include <libsolutil/CommonIO.h>
+#include <libsolutil/StringUtils.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/throw_exception.hpp>
+
 #include <fstream>
 #include <memory>
 #include <stdexcept>
 
 using namespace std;
 using namespace solidity;
+using namespace solidity::util;
 using namespace solidity::util::formatting;
 using namespace solidity::langutil;
 using namespace solidity::frontend;
@@ -66,6 +74,7 @@ CommonSyntaxTest::CommonSyntaxTest(string const& _filename, langutil::EVMVersion
 
 TestCase::TestResult CommonSyntaxTest::run(ostream& _stream, string const& _linePrefix, bool _formatted)
 {
+	parseCustomExpectations(m_reader.stream());
 	parseAndAnalyze();
 
 	return conclude(_stream, _linePrefix, _formatted);
@@ -73,7 +82,7 @@ TestCase::TestResult CommonSyntaxTest::run(ostream& _stream, string const& _line
 
 TestCase::TestResult CommonSyntaxTest::conclude(ostream& _stream, string const& _linePrefix, bool _formatted)
 {
-	if (m_expectations == m_errorList)
+	if (expectationsMatch())
 		return TestResult::Success;
 
 	printExpectationAndError(_stream, _linePrefix, _formatted);
@@ -84,9 +93,9 @@ void CommonSyntaxTest::printExpectationAndError(ostream& _stream, string const& 
 {
 	string nextIndentLevel = _linePrefix + "  ";
 	util::AnsiColorized(_stream, _formatted, {BOLD, CYAN}) << _linePrefix << "Expected result:" << endl;
-	printErrorList(_stream, m_expectations, nextIndentLevel, _formatted);
+	printExpectedResult(_stream, nextIndentLevel, _formatted);
 	util::AnsiColorized(_stream, _formatted, {BOLD, CYAN}) << _linePrefix << "Obtained result:" << endl;
-	printErrorList(_stream, m_errorList, nextIndentLevel, _formatted);
+	printObtainedResult(_stream, nextIndentLevel, _formatted);
 }
 
 void CommonSyntaxTest::printSource(ostream& _stream, string const& _linePrefix, bool _formatted) const
@@ -111,15 +120,18 @@ void CommonSyntaxTest::printSource(ostream& _stream, string const& _linePrefix, 
 				{
 					assert(static_cast<size_t>(error.locationStart) <= source.length());
 					assert(static_cast<size_t>(error.locationEnd) <= source.length());
-					bool isWarning = error.type == "Warning";
 					for (int i = error.locationStart; i < error.locationEnd; i++)
-						if (isWarning)
-						{
-							if (sourceFormatting[static_cast<size_t>(i)] == util::formatting::RESET)
-								sourceFormatting[static_cast<size_t>(i)] = util::formatting::ORANGE_BACKGROUND_256;
-						}
-						else
-							sourceFormatting[static_cast<size_t>(i)] = util::formatting::RED_BACKGROUND;
+					{
+						char const*& cellFormat = sourceFormatting[static_cast<size_t>(i)];
+						char const* infoBgColor = SourceReferenceFormatter::errorHighlightColor(Error::Severity::Info);
+
+						if (
+							(error.type != Error::Type::Warning && error.type != Error::Type::Info) ||
+							(error.type == Error::Type::Warning && (cellFormat == RESET || cellFormat == infoBgColor)) ||
+							(error.type == Error::Type::Info && cellFormat == RESET)
+						)
+							cellFormat = SourceReferenceFormatter::errorHighlightColor(Error::errorSeverity(error.type));
+					}
 				}
 
 			_stream << _linePrefix << sourceFormatting.front() << source.front();
@@ -141,12 +153,33 @@ void CommonSyntaxTest::printSource(ostream& _stream, string const& _linePrefix, 
 		else
 		{
 			if (outputSourceNames)
-				_stream << _linePrefix << "==== Source: " + name << " ====" << endl;
-			stringstream stream(source);
-			string line;
-			while (getline(stream, line))
-				_stream << _linePrefix << line << endl;
+				printPrefixed(_stream, "==== Source: " + name + " ====", _linePrefix);
+			printPrefixed(_stream, source, _linePrefix);
 		}
+}
+
+void CommonSyntaxTest::parseCustomExpectations(istream& _stream)
+{
+	string remainingExpectations = boost::trim_copy(readUntilEnd(_stream));
+	soltestAssert(
+		remainingExpectations.empty(),
+		"Found custom expectations not supported by the test case:\n" + remainingExpectations
+	);
+}
+
+bool CommonSyntaxTest::expectationsMatch()
+{
+	return m_expectations == m_errorList;
+}
+
+void CommonSyntaxTest::printExpectedResult(ostream& _stream, string const& _linePrefix, bool _formatted) const
+{
+	printErrorList(_stream, m_expectations, _linePrefix, _formatted);
+}
+
+void CommonSyntaxTest::printObtainedResult(ostream& _stream, string const& _linePrefix, bool _formatted) const
+{
+	printErrorList(_stream, m_errorList, _linePrefix, _formatted);
 }
 
 void CommonSyntaxTest::printErrorList(
@@ -157,13 +190,20 @@ void CommonSyntaxTest::printErrorList(
 )
 {
 	if (_errorList.empty())
-		util::AnsiColorized(_stream, _formatted, {BOLD, GREEN}) << _linePrefix << "Success" << endl;
+	{
+		if (_formatted)
+			util::AnsiColorized(_stream, _formatted, {BOLD, GREEN}) << _linePrefix << "Success" << endl;
+	}
 	else
 		for (auto const& error: _errorList)
 		{
 			{
-				util::AnsiColorized scope(_stream, _formatted, {BOLD, (error.type == "Warning") ? YELLOW : RED});
-				_stream << _linePrefix << error.type;
+				util::AnsiColorized scope(
+					_stream,
+					_formatted,
+					{BOLD, SourceReferenceFormatter::errorTextColor(Error::errorSeverity(error.type))}
+				);
+				_stream << _linePrefix << Error::formatErrorType(error.type);
 				if (error.errorId.has_value())
 					_stream << ' ' << error.errorId->error;
 				_stream << ": ";
@@ -194,11 +234,19 @@ string CommonSyntaxTest::errorMessage(util::Exception const& _e)
 
 vector<SyntaxTestError> CommonSyntaxTest::parseExpectations(istream& _stream)
 {
+	static string const customExpectationsDelimiter("// ----");
+
 	vector<SyntaxTestError> expectations;
 	string line;
 	while (getline(_stream, line))
 	{
 		auto it = line.begin();
+
+		// Anything below the delimiter is left up to the derived class to process in a custom way.
+		// The delimiter is optional and identical to the one that starts error expectations in
+		// TestCaseReader::parseSourcesAndSettingsWithLineNumber().
+		if (boost::algorithm::starts_with(line, customExpectationsDelimiter))
+			break;
 
 		skipSlashes(it, line.end());
 		skipWhitespace(it, line.end());
@@ -208,7 +256,11 @@ vector<SyntaxTestError> CommonSyntaxTest::parseExpectations(istream& _stream)
 		auto typeBegin = it;
 		while (it != line.end() && isalpha(*it, locale::classic()))
 			++it;
-		string errorType(typeBegin, it);
+
+		string errorTypeStr(typeBegin, it);
+		optional<Error::Type> errorType = Error::parseErrorType(errorTypeStr);
+		if (!errorType.has_value())
+			BOOST_THROW_EXCEPTION(runtime_error("Invalid error type: " + errorTypeStr));
 
 		skipWhitespace(it, line.end());
 
@@ -245,7 +297,7 @@ vector<SyntaxTestError> CommonSyntaxTest::parseExpectations(istream& _stream)
 
 		string errorMessage(it, line.end());
 		expectations.emplace_back(SyntaxTestError{
-			std::move(errorType),
+			errorType.value(),
 			std::move(errorId),
 			std::move(errorMessage),
 			std::move(sourceName),

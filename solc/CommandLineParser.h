@@ -59,6 +59,7 @@ enum class InputMode
 	Linker,
 	Assembler,
 	LanguageServer,
+	EVMAssemblerJSON
 };
 
 struct CompilerOutputs
@@ -176,7 +177,7 @@ struct CommandLineOptions
 		std::vector<boost::filesystem::path> includePaths;
 		FileReader::FileSystemPathSet allowedDirectories;
 		bool ignoreMissingFiles = false;
-		bool errorRecovery = false;
+		bool noImportCallback = false;
 	} input;
 
 	struct

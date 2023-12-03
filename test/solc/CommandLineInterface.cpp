@@ -24,6 +24,7 @@
 #include <test/solc/Common.h>
 
 #include <test/Common.h>
+#include <test/libsolidity/util/Common.h>
 #include <test/libsolidity/util/SoltestErrors.h>
 #include <liblangutil/SemVerHandler.h>
 #include <test/FilesystemUtils.h>
@@ -148,7 +149,7 @@ BOOST_AUTO_TEST_CASE(version)
 
 BOOST_AUTO_TEST_CASE(multiple_input_modes)
 {
-	array<string, 9> inputModeOptions = {
+	array<string, 10> inputModeOptions = {
 		"--help",
 		"--license",
 		"--version",
@@ -158,10 +159,11 @@ BOOST_AUTO_TEST_CASE(multiple_input_modes)
 		"--strict-assembly",
 		"--yul",
 		"--import-ast",
+		"--import-asm-json",
 	};
 	string expectedMessage =
 		"The following options are mutually exclusive: "
-		"--help, --license, --version, --standard-json, --link, --assemble, --strict-assembly, --yul, --import-ast, --lsp. "
+		"--help, --license, --version, --standard-json, --link, --assemble, --strict-assembly, --yul, --import-ast, --lsp, --import-asm-json. "
 		"Select at most one.";
 
 	for (string const& mode1: inputModeOptions)
@@ -172,6 +174,25 @@ BOOST_AUTO_TEST_CASE(multiple_input_modes)
 					CommandLineValidationError,
 					[&](auto const& _exception) { BOOST_TEST(_exception.what() == expectedMessage); return true; }
 				);
+}
+
+BOOST_AUTO_TEST_CASE(no_import_callback_allowed_paths)
+{
+	array<string, 2> options = {
+		"--no-import-callback",
+		"--allow-paths"
+	};
+
+	string expectedMessage =
+		"The following options are mutually exclusive: "
+		"--no-import-callback, --allow-paths. "
+		"Select at most one.";
+
+	BOOST_CHECK_EXCEPTION(
+		parseCommandLineAndReadInputFiles({"solc", options[0], options[1], "."}),
+		CommandLineValidationError,
+		[&](auto const& _exception) { BOOST_TEST(_exception.what() == expectedMessage); return true; }
+	);
 }
 
 BOOST_AUTO_TEST_CASE(cli_input)
@@ -240,9 +261,10 @@ BOOST_AUTO_TEST_CASE(cli_ignore_missing_some_files_exist)
 		(tempDir1.path() / "input1.sol").string(),
 		(tempDir2.path() / "input2.sol").string(),
 		"--ignore-missing",
+		"--no-color",
 	});
 	BOOST_TEST(result.success);
-	BOOST_TEST(result.stderrContent == "\"" + (tempDir2.path() / "input2.sol").string() + "\" is not found. Skipping.\n");
+	BOOST_TEST(result.stderrContent == "Info: \"" + (tempDir2.path() / "input2.sol").string() + "\" is not found. Skipping.\n");
 	BOOST_TEST(result.options.input.mode == InputMode::Compiler);
 	BOOST_TEST(!result.options.input.addStdin);
 	BOOST_CHECK_EQUAL(result.reader.sourceUnits(), expectedSources);
@@ -254,15 +276,16 @@ BOOST_AUTO_TEST_CASE(cli_ignore_missing_no_files_exist)
 	TemporaryDirectory tempDir(TEST_CASE_NAME);
 
 	string expectedMessage =
-		"\"" + (tempDir.path() / "input1.sol").string() + "\" is not found. Skipping.\n"
-		"\"" + (tempDir.path() / "input2.sol").string() + "\" is not found. Skipping.\n"
-		"All specified input files either do not exist or are not regular files.\n";
+		"Info: \"" + (tempDir.path() / "input1.sol").string() + "\" is not found. Skipping.\n"
+		"Info: \"" + (tempDir.path() / "input2.sol").string() + "\" is not found. Skipping.\n"
+		"Error: All specified input files either do not exist or are not regular files.\n";
 
 	OptionsReaderAndMessages result = runCLI({
 		"solc",
 		(tempDir.path() / "input1.sol").string(),
 		(tempDir.path() / "input2.sol").string(),
 		"--ignore-missing",
+		"--no-color",
 	});
 	BOOST_TEST(!result.success);
 	BOOST_TEST(result.stderrContent == expectedMessage);
@@ -921,10 +944,7 @@ BOOST_AUTO_TEST_CASE(cli_include_paths)
 	TemporaryDirectory tempDir({"base/", "include/", "lib/nested/"}, TEST_CASE_NAME);
 	TemporaryWorkingDirectory tempWorkDir(tempDir);
 
-	string const preamble =
-		"// SPDX-License-Identifier: GPL-3.0\n"
-		"pragma solidity >=0.0;\n";
-	string const mainContractSource = preamble +
+	string const mainContractSource = withPreamble(
 		"import \"contract.sol\";\n"
 		"import \"contract_via_callback.sol\";\n"
 		"import \"include.sol\";\n"
@@ -932,8 +952,10 @@ BOOST_AUTO_TEST_CASE(cli_include_paths)
 		"import \"nested.sol\";\n"
 		"import \"nested_via_callback.sol\";\n"
 		"import \"lib.sol\";\n"
-		"import \"lib_via_callback.sol\";\n";
+		"import \"lib_via_callback.sol\";\n"
+	);
 
+	string const onlyPreamble = withPreamble("");
 	createFilesWithParentDirs(
 		{
 			tempDir.path() / "base/contract.sol",
@@ -945,7 +967,7 @@ BOOST_AUTO_TEST_CASE(cli_include_paths)
 			tempDir.path() / "lib/lib.sol",
 			tempDir.path() / "lib/lib_via_callback.sol",
 		},
-		preamble
+		onlyPreamble
 	);
 	createFilesWithParentDirs({tempDir.path() / "base/main.sol"}, mainContractSource);
 
@@ -985,14 +1007,14 @@ BOOST_AUTO_TEST_CASE(cli_include_paths)
 
 	map<string, string> expectedSources = {
 		{"main.sol", mainContractSource},
-		{"contract.sol", preamble},
-		{"contract_via_callback.sol", preamble},
-		{"include.sol", preamble},
-		{"include_via_callback.sol", preamble},
-		{"nested.sol", preamble},
-		{"nested_via_callback.sol", preamble},
-		{"lib.sol", preamble},
-		{"lib_via_callback.sol", preamble},
+		{"contract.sol", onlyPreamble},
+		{"contract_via_callback.sol", onlyPreamble},
+		{"include.sol", onlyPreamble},
+		{"include_via_callback.sol", onlyPreamble},
+		{"nested.sol", onlyPreamble},
+		{"nested_via_callback.sol", onlyPreamble},
+		{"lib.sol", onlyPreamble},
+		{"lib_via_callback.sol", onlyPreamble},
 	};
 
 	vector<boost::filesystem::path> expectedIncludePaths = {
@@ -1066,14 +1088,12 @@ BOOST_AUTO_TEST_CASE(standard_json_include_paths)
 	TemporaryDirectory tempDir({"base/", "include/", "lib/nested/"}, TEST_CASE_NAME);
 	TemporaryWorkingDirectory tempWorkDir(tempDir);
 
-	string const preamble =
-		"// SPDX-License-Identifier: GPL-3.0\n"
-		"pragma solidity >=0.0;\n";
-	string const mainContractSource = preamble +
+	string const mainContractSource = withPreamble(
 		"import 'contract_via_callback.sol';\n"
 		"import 'include_via_callback.sol';\n"
 		"import 'nested_via_callback.sol';\n"
-		"import 'lib_via_callback.sol';\n";
+		"import 'lib_via_callback.sol';\n"
+	);
 
 	string const standardJsonInput = R"(
 		{
@@ -1084,6 +1104,7 @@ BOOST_AUTO_TEST_CASE(standard_json_include_paths)
 		}
 	)";
 
+	string const onlyPreamble = withPreamble("");
 	createFilesWithParentDirs(
 		{
 			tempDir.path() / "base/contract_via_callback.sol",
@@ -1091,7 +1112,7 @@ BOOST_AUTO_TEST_CASE(standard_json_include_paths)
 			tempDir.path() / "lib/nested/nested_via_callback.sol",
 			tempDir.path() / "lib/lib_via_callback.sol",
 		},
-		preamble
+		onlyPreamble
 	);
 
 	boost::filesystem::path expectedWorkDir = "/" / boost::filesystem::canonical(tempDir).relative_path();
@@ -1121,10 +1142,10 @@ BOOST_AUTO_TEST_CASE(standard_json_include_paths)
 	// because FileReader is only used once to initialize the compiler stack and after that
 	// its sources are irrelevant (even though the callback still stores everything it loads).
 	map<string, string> expectedSources = {
-		{"contract_via_callback.sol", preamble},
-		{"include_via_callback.sol", preamble},
-		{"nested_via_callback.sol", preamble},
-		{"lib_via_callback.sol", preamble},
+		{"contract_via_callback.sol", onlyPreamble},
+		{"include_via_callback.sol", onlyPreamble},
+		{"nested_via_callback.sol", onlyPreamble},
+		{"lib_via_callback.sol", onlyPreamble},
 	};
 
 	vector<boost::filesystem::path> expectedIncludePaths = {
@@ -1335,14 +1356,10 @@ BOOST_AUTO_TEST_CASE(cli_include_paths_ambiguous_import)
 	TemporaryDirectory tempDir({"base/", "include/"}, TEST_CASE_NAME);
 	TemporaryWorkingDirectory tempWorkDir(tempDir);
 
-	string const preamble =
-		"// SPDX-License-Identifier: GPL-3.0\n"
-		"pragma solidity >=0.0;\n";
-	string const mainContractSource = preamble +
-		// Ambiguous: both base/contract.sol and include/contract.sol match the import.
-		"import \"contract.sol\";";
+	// Ambiguous: both base/contract.sol and include/contract.sol match the import.
+	string const mainContractSource = withPreamble("import \"contract.sol\";");
 
-	createFilesWithParentDirs({"base/contract.sol", "include/contract.sol"}, preamble);
+	createFilesWithParentDirs({"base/contract.sol", "include/contract.sol"}, withPreamble(""));
 
 	boost::filesystem::path expectedWorkDir = "/" / boost::filesystem::canonical(tempDir).relative_path();
 

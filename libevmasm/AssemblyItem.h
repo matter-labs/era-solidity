@@ -140,7 +140,7 @@ public:
 		else if (type() == Operation)
 			return instruction() < _other.instruction();
 		else if (type() == VerbatimBytecode)
-			return *m_verbatimBytecode == *_other.m_verbatimBytecode;
+			return *m_verbatimBytecode < *_other.m_verbatimBytecode;
 		else
 			return data() < _other.data();
 	}
@@ -174,6 +174,7 @@ public:
 	langutil::SourceLocation const& location() const { return m_location; }
 
 	void setJumpType(JumpType _jumpType) { m_jumpType = _jumpType; }
+	static std::optional<JumpType> parseJumpType(std::string const& _jumpType);
 	JumpType getJumpType() const { return m_jumpType; }
 	std::string getJumpTypeAsString() const;
 
