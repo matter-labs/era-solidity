@@ -208,6 +208,12 @@ void YulToMLIRPass::operator()(Block const &blk) {
   // "Declare" FuncOps (i.e. create them with an empty region) at this block so
   // that we can lower calls before lowering the functions. The function
   // lowering is expected to lookup the FuncOp without creating it.
+  //
+  // TODO: Stop relying on libyul's Disambiguator
+  // We tried emitting a single block op for yul blocks with a symbol table
+  // trait. We're able to define symbols with the same name in different blocks,
+  // but ops like func::CallOp works with a FlatSymbolRefAttr which needs the
+  // symbol definition to be in the same symbol table
   for (Statement const &stmt : blk.statements) {
     if (auto fn = std::get_if<FunctionDefinition>(&stmt)) {
       std::vector<mlir::Type> inTys(fn->parameters.size(), i256Ty),
