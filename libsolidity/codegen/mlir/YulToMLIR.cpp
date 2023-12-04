@@ -31,9 +31,11 @@
 #include "libyul/optimiser/ASTWalker.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/PassManager.h"
@@ -77,6 +79,9 @@ public:
   void lowerTopLevelObj(Object const &obj);
 
 private:
+  /// Maps a yul variable name to its MemRef
+  std::map<YulString, mlir::Value> memRefMap;
+
   /// Returns the mlir location for the solidity source location `loc`
   mlir::Location getLoc(SourceLocation const &loc) {
     // FIXME: Track loc.end as well
@@ -84,6 +89,12 @@ private:
     return mlir::FileLineColLoc::get(b.getStringAttr(stream.name()),
                                      lineCol.line, lineCol.column);
   }
+
+  /// Sets the MemRef addr of yul variable
+  void setMemRef(YulString var, mlir::Value addr) { memRefMap[var] = addr; }
+
+  /// Returns the MemRef addr of yul variable
+  mlir::Value getMemRef(YulString var);
 
   /// Returns the symbol of type `T` in the current scope
   template <typename T>
@@ -107,12 +118,22 @@ private:
   /// Lowers an expression statement
   void operator()(ExpressionStatement const &expr) override;
 
+  /// Lowers an assignment statement
+  void operator()(Assignment const &asgn) override;
+
   /// Lowers a function
   void operator()(FunctionDefinition const &fn) override;
 
   /// Lowers a block
   void operator()(Block const &blk) override;
 };
+
+mlir::Value YulToMLIRPass::getMemRef(YulString var) {
+  auto it = memRefMap.find(var);
+  if (it == memRefMap.end())
+    return {};
+  return it->second;
+}
 
 mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
   mlir::Location loc = this->getLoc(lit.debugData->nativeLocation);
@@ -175,6 +196,15 @@ void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
   genExpr(expr.expression);
 }
 
+void YulToMLIRPass::operator()(Assignment const &asgn) {
+  solUnimplementedAssert(asgn.variableNames.size() == 1,
+                         "TODO: Implement multivalued assignment");
+  mlir::Value addr = getMemRef(asgn.variableNames[0].name);
+  assert(addr);
+  b.create<mlir::memref::StoreOp>(getLoc(asgn.debugData->nativeLocation),
+                                  genExpr(*asgn.value), addr);
+}
+
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   BuilderHelper h(b);
   mlir::Location loc = getLoc(fn.debugData->nativeLocation);
@@ -192,13 +222,24 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   assert(funcOp.getFunctionType().getNumInputs() == inLocs.size());
   entryBlk->addArguments(funcOp.getFunctionType().getInputs(), inLocs);
 
-  // Lower the body
   mlir::OpBuilder::InsertionGuard insertGuard(b);
   b.setInsertionPointToStart(entryBlk);
+
+  solUnimplementedAssert(fn.returnVariables.size() == 1,
+                         "TODO: Implement multivalued return");
+  mlir::IntegerType i256Ty = b.getIntegerType(256);
+  TypedName const &retVar = fn.returnVariables[0];
+  setMemRef(retVar.name, b.create<mlir::memref::AllocaOp>(
+                             getLoc(retVar.debugData->nativeLocation),
+                             mlir::MemRefType::get({}, i256Ty)));
+
+  // Lower the body
   ASTWalker::operator()(fn.body);
 
-  // FIXME: Implement return
-  b.create<mlir::func::ReturnOp>(loc, h.getConst(loc, 0));
+  b.create<mlir::func::ReturnOp>(
+      loc,
+      mlir::ValueRange{b.create<mlir::memref::LoadOp>(
+          getLoc(retVar.debugData->nativeLocation), getMemRef(retVar.name))});
 }
 
 void YulToMLIRPass::operator()(Block const &blk) {
@@ -259,6 +300,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   ctx.getOrLoadDialect<mlir::func::FuncDialect>();
+  ctx.getOrLoadDialect<mlir::memref::MemRefDialect>();
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
   yulToMLIR.lowerTopLevelObj(obj);
 

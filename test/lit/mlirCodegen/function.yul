@@ -21,8 +21,11 @@ object "Simple" {
 // CHECK-NEXT:     "sol.return"(%c10_i256, %c11_i256) : (i256, i256) -> ()
 // CHECK-NEXT:     sol.object @Simple_deployed {
 // CHECK-NEXT:       func.func @f0() -> i256 {
+// CHECK-NEXT:         %1 = memref.alloca() : memref<i256>
 // CHECK-NEXT:         %c0_i256 = arith.constant 0 : i256
-// CHECK-NEXT:         return %c0_i256 : i256
+// CHECK-NEXT:         memref.store %c0_i256, %1[] : memref<i256>
+// CHECK-NEXT:         %2 = memref.load %1[] : memref<i256>
+// CHECK-NEXT:         return %2 : i256
 // CHECK-NEXT:       }
 // CHECK-NEXT:       %c20_i256 = arith.constant 20 : i256
 // CHECK-NEXT:       %0 = func.call @f0() : () -> i256
