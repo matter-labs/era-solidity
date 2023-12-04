@@ -90,6 +90,8 @@ private:
                                      lineCol.line, lineCol.column);
   }
 
+  mlir::IntegerType getDefIntTy() { return b.getIntegerType(256); }
+
   /// Sets the MemRef addr of yul variable
   void setMemRef(YulString var, mlir::Value addr) { memRefMap[var] = addr; }
 
@@ -138,12 +140,13 @@ mlir::Value YulToMLIRPass::getMemRef(YulString var) {
 mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
   mlir::Location loc = this->getLoc(lit.debugData->nativeLocation);
 
-  // Do we need to represent constants as u256? Can we do that in
+  // TODO: Do we need to represent constants as u256? Can we do that in
   // arith::ConstantOp?
-  auto i256Ty = b.getIntegerType(256);
+  auto defTy = getDefIntTy();
   return b.create<mlir::arith::ConstantOp>(
-      loc, b.getIntegerAttr(i256Ty, llvm::APInt(256, lit.value.str(),
-                                                /*radix=*/10)));
+      loc,
+      b.getIntegerAttr(defTy, llvm::APInt(defTy.getWidth(), lit.value.str(),
+                                          /*radix=*/10)));
 }
 
 mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
@@ -227,11 +230,10 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
 
   solUnimplementedAssert(fn.returnVariables.size() == 1,
                          "TODO: Implement multivalued return");
-  mlir::IntegerType i256Ty = b.getIntegerType(256);
   TypedName const &retVar = fn.returnVariables[0];
   setMemRef(retVar.name, b.create<mlir::memref::AllocaOp>(
                              getLoc(retVar.debugData->nativeLocation),
-                             mlir::MemRefType::get({}, i256Ty)));
+                             mlir::MemRefType::get({}, getDefIntTy())));
 
   // Lower the body
   ASTWalker::operator()(fn.body);
@@ -244,7 +246,6 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
 
 void YulToMLIRPass::operator()(Block const &blk) {
   BuilderHelper h(b);
-  mlir::IntegerType i256Ty = b.getIntegerType(256);
 
   // "Declare" FuncOps (i.e. create them with an empty region) at this block so
   // that we can lower calls before lowering the functions. The function
@@ -257,8 +258,8 @@ void YulToMLIRPass::operator()(Block const &blk) {
   // symbol definition to be in the same symbol table
   for (Statement const &stmt : blk.statements) {
     if (auto fn = std::get_if<FunctionDefinition>(&stmt)) {
-      std::vector<mlir::Type> inTys(fn->parameters.size(), i256Ty),
-          outTys(fn->returnVariables.size(), i256Ty);
+      std::vector<mlir::Type> inTys(fn->parameters.size(), getDefIntTy()),
+          outTys(fn->returnVariables.size(), getDefIntTy());
       mlir::FunctionType funcTy = b.getFunctionType(inTys, outTys);
       b.create<mlir::func::FuncOp>(getLoc(fn->debugData->nativeLocation),
                                    fn->name.str(), funcTy);
