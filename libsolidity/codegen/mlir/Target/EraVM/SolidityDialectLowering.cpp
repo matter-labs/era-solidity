@@ -192,6 +192,12 @@ public:
     solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
 
+    // Move FuncOps under the ModuleOp
+    objOp.walk([&](func::FuncOp fn) {
+      Block *modBlk = mod.getBody();
+      fn->moveBefore(modBlk, modBlk->begin());
+    });
+
     // Is this a runtime object?
     // FIXME: Is there a better way to check this?
     if (objOp.getSymName().endswith("_deployed")) {
