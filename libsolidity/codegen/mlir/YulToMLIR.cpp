@@ -31,7 +31,8 @@
 #include "libyul/optimiser/ASTWalker.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -93,7 +94,15 @@ private:
     return getLoc(dbg->nativeLocation);
   }
 
+  /// Returns the default integral type
   mlir::IntegerType getDefIntTy() { return b.getIntegerType(256); }
+
+  /// Returns the default alignment
+  uint64_t getDefAlign() {
+    uint64_t width = getDefIntTy().getWidth();
+    assert(width % 8 == 0 && width >= 8);
+    return width / 8;
+  }
 
   /// Sets the MemRef addr of yul variable
   void setMemRef(YulString var, mlir::Value addr) { memRefMap[var] = addr; }
@@ -207,8 +216,8 @@ void YulToMLIRPass::operator()(Assignment const &asgn) {
                          "TODO: Implement multivalued assignment");
   mlir::Value addr = getMemRef(asgn.variableNames[0].name);
   assert(addr);
-  b.create<mlir::memref::StoreOp>(getLoc(asgn.debugData), genExpr(*asgn.value),
-                                  addr);
+  b.create<mlir::LLVM::StoreOp>(getLoc(asgn.debugData), genExpr(*asgn.value),
+                                addr, getDefAlign());
 }
 
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
@@ -234,16 +243,18 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   solUnimplementedAssert(fn.returnVariables.size() == 1,
                          "TODO: Implement multivalued return");
   TypedName const &retVar = fn.returnVariables[0];
-  setMemRef(retVar.name, b.create<mlir::memref::AllocaOp>(
+  setMemRef(retVar.name, b.create<mlir::LLVM::AllocaOp>(
                              getLoc(retVar.debugData),
-                             mlir::MemRefType::get({}, getDefIntTy())));
+                             mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
+                             h.getConst(loc, 0), getDefAlign()));
 
   // Lower the body
   ASTWalker::operator()(fn.body);
 
   b.create<mlir::func::ReturnOp>(
-      loc, mlir::ValueRange{b.create<mlir::memref::LoadOp>(
-               getLoc(retVar.debugData), getMemRef(retVar.name))});
+      loc,
+      mlir::ValueRange{b.create<mlir::LLVM::LoadOp>(
+          getLoc(retVar.debugData), getMemRef(retVar.name), getDefAlign())});
 }
 
 void YulToMLIRPass::operator()(Block const &blk) {
@@ -303,7 +314,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   ctx.getOrLoadDialect<mlir::func::FuncDialect>();
-  ctx.getOrLoadDialect<mlir::memref::MemRefDialect>();
+  ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
   yulToMLIR.lowerTopLevelObj(obj);
 

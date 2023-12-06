@@ -47,15 +47,10 @@ object "Simple" {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define i256 @f0() !dbg !14 {
-// CHECK-NEXT:   %1 = alloca i256, i64 ptrtoint (ptr getelementptr (i256, ptr null, i64 1) to i64), align 8, !dbg !15
-// CHECK-NEXT:   %2 = insertvalue { ptr, ptr, i64 } undef, ptr %1, 0, !dbg !15
-// CHECK-NEXT:   %3 = insertvalue { ptr, ptr, i64 } %2, ptr %1, 1, !dbg !15
-// CHECK-NEXT:   %4 = insertvalue { ptr, ptr, i64 } %3, i64 0, 2, !dbg !15
-// CHECK-NEXT:   %5 = extractvalue { ptr, ptr, i64 } %4, 1, !dbg !17
-// CHECK-NEXT:   store i256 21, ptr %5, align 4, !dbg !17
-// CHECK-NEXT:   %6 = extractvalue { ptr, ptr, i64 } %4, 1, !dbg !15
-// CHECK-NEXT:   %7 = load i256, ptr %6, align 4, !dbg !15
-// CHECK-NEXT:   ret i256 %7, !dbg !18
+// CHECK-NEXT:   %1 = alloca i256, i256 0, align 32, !dbg !15
+// CHECK-NEXT:   store i256 21, ptr %1, align 32, !dbg !17
+// CHECK-NEXT:   %2 = load i256, ptr %1, align 32, !dbg !15
+// CHECK-NEXT:   ret i256 %2, !dbg !18
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) {
@@ -156,13 +151,9 @@ object "Simple" {
 // ASM-NEXT: f0:
 // ASM-NEXT: .func_begin2:
 // ASM-NEXT: 	.loc	2 9 0 is_stmt 1
-// ASM-NEXT: 	.loc	2 9 23 prologue_end
-// ASM-NEXT: 	add	sp, r0, r1
-// ASM-NEXT: 	add	1024, r1, r2
-// ASM-NEXT: 	add	r2, r0, sp
-// ASM-NEXT: 	.loc	2 10 8
-// ASM-NEXT: 	shr.s	5, r1, r1
-// ASM-NEXT: 	add	21, r0, stack[32 + r1]
+// ASM-NEXT: 	.loc	2 10 8 prologue_end
+// ASM-NEXT: 	nop	stack+=[1]
+// ASM-NEXT: 	add	21, r0, stack-[1]
 // ASM-NEXT: 	add	21, r0, r1
 // ASM-NEXT: 	.loc	2 9 6
 // ASM-NEXT: 	ret
