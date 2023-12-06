@@ -172,7 +172,7 @@ public:
 
     rewriter.eraseOp(op);
     return success();
-  } // namespace
+  }
 };
 
 class ObjectOpLowering : public ConversionPattern {
