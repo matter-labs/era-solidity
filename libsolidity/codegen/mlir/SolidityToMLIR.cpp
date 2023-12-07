@@ -265,8 +265,13 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
   solUnimplementedAssert(currFuncResTys.size() == 1,
                          "TODO: Impl multivalued return");
 
-  mlir::Value expr = genExpr(ret.expression(), currFuncResTys[0]);
-  b.create<mlir::func::ReturnOp>(loc(ret.location()), expr);
+  Expression const *astExpr = ret.expression();
+  if (astExpr) {
+    mlir::Value expr = genExpr(ret.expression(), currFuncResTys[0]);
+    b.create<mlir::func::ReturnOp>(loc(ret.location()), expr);
+  } else {
+    solUnimplementedAssert(false, "NYI: Empty return");
+  }
 
   return true;
 }
