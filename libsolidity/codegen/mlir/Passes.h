@@ -22,6 +22,7 @@
 #pragma once
 
 #include "libsolidity/codegen/mlir/Interface.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/IR/Module.h"
@@ -48,5 +49,8 @@ std::unique_ptr<llvm::TargetMachine> createTargetMachine(Target tgt);
 /// Sets target specific info in `llvmMod` from `tgt`
 void setTgtSpecificInfoInModule(Target tgt, llvm::Module &llvmMod,
                                 llvm::TargetMachine const &tgtMach);
+
+/// Performs the JobSpec
+bool doJob(JobSpec const &, mlir::MLIRContext &, mlir::ModuleOp);
 
 } // namespace solidity::mlirgen

@@ -59,11 +59,13 @@ public:
 
   void run(ContractDefinition const &);
 
-  mlir::ModuleOp mod;
+  /// Returns the ModuleOp
+  mlir::ModuleOp getModule() { return mod; }
 
 private:
   mlir::OpBuilder b;
   CharStream const &stream;
+  mlir::ModuleOp mod;
 
   /// The function being lowered
   FunctionDefinition const *currFunc;
@@ -344,24 +346,14 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
   for (auto *contract : contracts) {
     gen.run(*contract);
   }
+  mlir::ModuleOp mod = gen.getModule();
 
-  if (failed(mlir::verify(gen.mod))) {
-    gen.mod.emitError("Module verification error");
+  if (failed(mlir::verify(mod))) {
+    mod.emitError("Module verification error");
     return false;
   }
 
-  mlir::PassManager passMgr(&ctx);
-  if (job.action == solidity::mlirgen::Action::PrintLLVMIR) {
-    passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
-    if (mlir::failed(passMgr.run(gen.mod)))
-      return false;
-  }
-
-  gen.mod.print(llvm::outs());
-  llvm::outs() << "\n";
-  llvm::outs().flush();
-
-  return true;
+  return doJob(job, ctx, mod);
 }
 
 void solidity::mlirgen::registerMLIRCLOpts() {

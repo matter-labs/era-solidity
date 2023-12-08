@@ -18,6 +18,9 @@
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetSelect.h"
@@ -83,4 +86,61 @@ void solidity::mlirgen::setTgtSpecificInfoInModule(
 
   llvmMod.setTargetTriple(llvm::Triple::normalize("eravm-unknown-unknown"));
   llvmMod.setDataLayout(tgtMach.createDataLayout());
+}
+
+bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
+                              mlir::ModuleOp mod) {
+  mlir::PassManager passMgr(&ctx);
+  llvm::LLVMContext llvmCtx;
+
+  switch (job.action) {
+  case Action::PrintInitStg:
+    mod.print(llvm::outs());
+    break;
+  case Action::PrintPostSolcDialLowering:
+    assert(job.tgt != Target::Undefined);
+    llvm_unreachable(
+        "TODO: Support dumping the IR after solc dialect lowering");
+  case Action::PrintLLVMIR: {
+    assert(job.tgt != Target::Undefined);
+    addMLIRPassesForTgt(passMgr, job.tgt);
+    if (mlir::failed(passMgr.run(mod)))
+      return false;
+    mlir::registerLLVMDialectTranslation(ctx);
+    std::unique_ptr<llvm::Module> llvmMod =
+        mlir::translateModuleToLLVMIR(mod, llvmCtx);
+    assert(llvmMod);
+    llvm::outs() << *llvmMod;
+    break;
+  }
+  case Action::PrintAsm: {
+    assert(job.tgt != Target::Undefined);
+    addMLIRPassesForTgt(passMgr, job.tgt);
+    if (mlir::failed(passMgr.run(mod)))
+      return false;
+    mlir::registerLLVMDialectTranslation(ctx);
+    std::unique_ptr<llvm::Module> llvmMod =
+        mlir::translateModuleToLLVMIR(mod, llvmCtx);
+    assert(llvmMod);
+
+    // Create TargetMachine from `tgt`
+    std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(job.tgt);
+    assert(tgtMach);
+
+    // Set target specfic info in `llvmMod`
+    setTgtSpecificInfoInModule(job.tgt, *llvmMod, *tgtMach);
+
+    // Set up and run the asm printer
+    llvm::legacy::PassManager llvmPassMgr;
+    tgtMach->addPassesToEmitFile(llvmPassMgr, llvm::outs(),
+                                 /*DwoOut=*/nullptr,
+                                 llvm::CodeGenFileType::CGFT_AssemblyFile);
+    llvmPassMgr.run(*llvmMod);
+    break;
+  }
+  case Action::Undefined:
+    llvm_unreachable("Undefined action");
+  }
+
+  return true;
 }

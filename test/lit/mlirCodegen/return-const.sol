@@ -30,7 +30,6 @@ contract C {
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-EMPTY:
 // DBG: #loc9 = loc({{.*}}:6:14)
 // DBG-NEXT: module {
 // DBG-NEXT:   sol.contract @C {
@@ -64,5 +63,4 @@ contract C {
 // DBG-NEXT: #loc8 = loc({{.*}}:6:2)
 // DBG-NEXT: #loc10 = loc({{.*}}:6:55)
 // DBG-NEXT: #loc11 = loc({{.*}}:6:48)
-// DBG-EMPTY:
 // DBG-EMPTY:

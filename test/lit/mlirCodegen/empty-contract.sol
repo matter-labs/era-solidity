@@ -14,7 +14,6 @@ contract D {
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-EMPTY:
 // DBG: module {
 // DBG-NEXT:   sol.contract @C {
 // DBG-NEXT:   } loc(#loc1)
@@ -24,5 +23,4 @@ contract D {
 // DBG-NEXT: #loc0 = loc(unknown)
 // DBG-NEXT: #loc1 = loc({{.*}}:3:0)
 // DBG-NEXT: #loc2 = loc({{.*}}:5:0)
-// DBG-EMPTY:
 // DBG-EMPTY:
