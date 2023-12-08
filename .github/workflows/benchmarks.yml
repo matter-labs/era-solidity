@@ -193,8 +193,6 @@ jobs:
       - name: Posting the benchmark results to a PR comment
         if: github.event_name == 'pull_request'
         uses: machine-learning-apps/pr-comment@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
         with:
           path: ./compiler-tester/result.txt
 
