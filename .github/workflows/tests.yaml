@@ -32,7 +32,6 @@ jobs:
         with:
           repository: matter-labs/era-compiler-tester
           path: compiler-tester
-          ref: az-cpr-532-implement-the-recursion-workaround
           submodules: recursive
 
       - name: Building the Solidity compiler
