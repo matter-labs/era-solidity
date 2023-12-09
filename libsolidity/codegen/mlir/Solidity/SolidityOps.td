@@ -22,8 +22,14 @@
 #ifndef MLIR_SOLIDITY_SOLIDITYOPS_TD
 #define MLIR_SOLIDITY_SOLIDITYOPS_TD
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
+
+def UI256 : UI<256>;
+def UI256Attr : UnsignedIntegerAttrBase<UI256,
+                                        "256-bit unsigned integer attribute">;
 
 def Solidity_Dialect : Dialect {
   let name = "sol";
@@ -95,6 +101,13 @@ def Sol_MstoreOp : Sol_Op<"mstore"> {
     sol.mstore %a %b
   }];
   let arguments = (ins I<256>:$lhs, I<256>:$rhs);
+}
+
+def Sol_MemGuardOp : Sol_Op<"memoryguard", [ConstantLike, NoSideEffect,
+                                            AllTypesMatch<["inp", "out"]>]> {
+  let summary = "Represents the `memoryguard` call in yul";
+  let arguments = (ins UI256Attr:$inp);
+  let results = (outs UI<256>:$out);
 }
 
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD

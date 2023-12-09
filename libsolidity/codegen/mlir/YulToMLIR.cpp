@@ -43,6 +43,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include <memory>
+#include <variant>
 
 using namespace solidity::langutil;
 using namespace solidity::yul;
@@ -76,6 +77,11 @@ private:
   /// Maps a yul variable name to its MemRef
   std::map<YulString, mlir::Value> memRefMap;
 
+  mlir::IntegerAttr getIntAttr(YulString num) {
+    auto defTy = getDefIntTy();
+    return b.getIntegerAttr(defTy, llvm::APInt(defTy.getWidth(), num.str(),
+                                               /*radix=*/10));
+  }
   /// Returns the mlir location for the solidity source location
   mlir::Location getLoc(SourceLocation const &loc) {
     // FIXME: Track loc.end as well
@@ -147,11 +153,7 @@ mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
 
   // TODO: Do we need to represent constants as u256? Can we do that in
   // arith::ConstantOp?
-  auto defTy = getDefIntTy();
-  return b.create<mlir::arith::ConstantOp>(
-      loc,
-      b.getIntegerAttr(defTy, llvm::APInt(defTy.getWidth(), lit.value.str(),
-                                          /*radix=*/10)));
+  return b.create<mlir::arith::ConstantOp>(loc, getIntAttr(lit.value));
 }
 
 mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
@@ -174,6 +176,12 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       b.create<mlir::sol::MstoreOp>(loc, genExpr(call.arguments[0]),
                                     genExpr(call.arguments[1]));
       return {};
+
+    } else if (builtin->name.str() == "memoryguard") {
+      auto *arg = std::get_if<Literal>(&call.arguments[0]);
+      assert(arg);
+      return b.create<mlir::sol::MemGuardOp>(loc, getIntAttr(arg->value));
+
     } else {
       solUnimplementedAssert(false, "TODO: Lower other builtin function call");
     }
