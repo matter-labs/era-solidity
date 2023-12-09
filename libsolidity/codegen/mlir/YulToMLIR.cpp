@@ -134,6 +134,9 @@ private:
   /// Lowers an assignment statement
   void operator()(Assignment const &asgn) override;
 
+  /// Lowers a variable decl
+  void operator()(VariableDeclaration const &decl) override;
+
   /// Lowers a function
   void operator()(FunctionDefinition const &fn) override;
 
@@ -214,11 +217,25 @@ void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
 
 void YulToMLIRPass::operator()(Assignment const &asgn) {
   solUnimplementedAssert(asgn.variableNames.size() == 1,
-                         "TODO: Implement multivalued assignment");
+                         "NYI: Multivalued assignment");
   mlir::Value addr = getMemRef(asgn.variableNames[0].name);
   assert(addr);
   b.create<mlir::LLVM::StoreOp>(getLoc(asgn.debugData), genExpr(*asgn.value),
                                 addr, getDefAlign());
+}
+
+void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
+  BuilderHelper h(b);
+  mlir::Location loc = getLoc(decl.debugData);
+
+  solUnimplementedAssert(decl.variables.size() == 1,
+                         "NYI: Multivalued assignment");
+  TypedName const &var = decl.variables[0];
+  auto addr = b.create<mlir::LLVM::AllocaOp>(
+      getLoc(var.debugData), mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
+      h.getConst(loc, 0), getDefAlign());
+  setMemRef(var.name, addr);
+  b.create<mlir::LLVM::StoreOp>(loc, genExpr(*decl.value), addr, getDefAlign());
 }
 
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {

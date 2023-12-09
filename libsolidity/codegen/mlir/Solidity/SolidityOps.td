@@ -27,9 +27,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
-def UI256 : UI<256>;
-def UI256Attr : UnsignedIntegerAttrBase<UI256,
-                                        "256-bit unsigned integer attribute">;
+def I256Attr : SignlessIntegerAttrBase<I<256>,
+                                        "256-bit signless integer attribute">;
 
 def Solidity_Dialect : Dialect {
   let name = "sol";
@@ -106,8 +105,8 @@ def Sol_MstoreOp : Sol_Op<"mstore"> {
 def Sol_MemGuardOp : Sol_Op<"memoryguard", [ConstantLike, NoSideEffect,
                                             AllTypesMatch<["inp", "out"]>]> {
   let summary = "Represents the `memoryguard` call in yul";
-  let arguments = (ins UI256Attr:$inp);
-  let results = (outs UI<256>:$out);
+  let arguments = (ins I256Attr:$inp);
+  let results = (outs I<256>:$out);
 }
 
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD
