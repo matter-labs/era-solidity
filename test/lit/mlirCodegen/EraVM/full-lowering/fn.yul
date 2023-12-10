@@ -47,7 +47,7 @@ object "Simple" {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define i256 @f0() !dbg !14 {
-// CHECK-NEXT:   %1 = alloca i256, i256 0, align 32, !dbg !15
+// CHECK-NEXT:   %1 = alloca i256, i256 1, align 32, !dbg !15
 // CHECK-NEXT:   store i256 21, ptr %1, align 32, !dbg !17
 // CHECK-NEXT:   %2 = load i256, ptr %1, align 32, !dbg !15
 // CHECK-NEXT:   ret i256 %2, !dbg !18

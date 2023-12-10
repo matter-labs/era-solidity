@@ -21,10 +21,10 @@ object "Simple" {
 // CHECK-NEXT:     "sol.return"(%c10_i256, %c11_i256) : (i256, i256) -> ()
 // CHECK-NEXT:     sol.object @Simple_deployed {
 // CHECK-NEXT:       func.func @f0() -> i256 {
+// CHECK-NEXT:         %c1_i256 = arith.constant 1 : i256
+// CHECK-NEXT:         %1 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256>
 // CHECK-NEXT:         %c0_i256 = arith.constant 0 : i256
-// CHECK-NEXT:         %1 = llvm.alloca %c0_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256>
-// CHECK-NEXT:         %c0_i256_0 = arith.constant 0 : i256
-// CHECK-NEXT:         llvm.store %c0_i256_0, %1 {alignment = 32 : i64} : !llvm.ptr<i256>
+// CHECK-NEXT:         llvm.store %c0_i256, %1 {alignment = 32 : i64} : !llvm.ptr<i256>
 // CHECK-NEXT:         %2 = llvm.load %1 {alignment = 32 : i64} : !llvm.ptr<i256>
 // CHECK-NEXT:         return %2 : i256
 // CHECK-NEXT:       }

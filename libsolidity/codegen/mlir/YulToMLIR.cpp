@@ -236,7 +236,7 @@ void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
   TypedName const &var = decl.variables[0];
   auto addr = b.create<mlir::LLVM::AllocaOp>(
       getLoc(var.debugData), mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
-      h.getConst(loc, 0), getDefAlign());
+      h.getConst(loc, 1), getDefAlign());
   setMemRef(var.name, addr);
   b.create<mlir::LLVM::StoreOp>(loc, genExpr(*decl.value), addr, getDefAlign());
 }
@@ -267,7 +267,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   setMemRef(retVar.name, b.create<mlir::LLVM::AllocaOp>(
                              getLoc(retVar.debugData),
                              mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
-                             h.getConst(loc, 0), getDefAlign()));
+                             h.getConst(loc, 1), getDefAlign()));
 
   // Lower the body
   ASTWalker::operator()(fn.body);
