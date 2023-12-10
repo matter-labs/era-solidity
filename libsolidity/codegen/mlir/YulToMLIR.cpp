@@ -40,6 +40,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include <memory>
@@ -99,7 +100,7 @@ private:
   /// Returns the default alignment
   uint64_t getDefAlign() {
     uint64_t width = getDefIntTy().getWidth();
-    assert(width % 8 == 0 && width >= 8);
+    assert(width >= 8 && llvm::isPowerOf2_64(width));
     return width / 8;
   }
 
