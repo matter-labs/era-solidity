@@ -78,11 +78,9 @@ private:
   /// Maps a yul variable name to its MemRef
   std::map<YulString, mlir::Value> memRefMap;
 
-  mlir::IntegerAttr getIntAttr(YulString num) {
-    auto defTy = getDefIntTy();
-    return b.getIntegerAttr(defTy, llvm::APInt(defTy.getWidth(), num.str(),
-                                               /*radix=*/10));
-  }
+  /// Returns the IntegerAttr for `num`
+  mlir::IntegerAttr getIntAttr(YulString num);
+
   /// Returns the mlir location for the solidity source location
   mlir::Location getLoc(SourceLocation const &loc) {
     // FIXME: Track loc.end as well
@@ -144,6 +142,17 @@ private:
   /// Lowers a block
   void operator()(Block const &blk) override;
 };
+
+mlir::IntegerAttr YulToMLIRPass::getIntAttr(YulString num) {
+  auto defTy = getDefIntTy();
+  llvm::StringRef numStr = num.str();
+  uint8_t radix = 10;
+  if (numStr.startswith("0x")) {
+    numStr = numStr.ltrim("0x");
+    radix = 16;
+  }
+  return b.getIntegerAttr(defTy, llvm::APInt(defTy.getWidth(), numStr, radix));
+}
 
 mlir::Value YulToMLIRPass::getMemRef(YulString var) {
   auto it = memRefMap.find(var);
