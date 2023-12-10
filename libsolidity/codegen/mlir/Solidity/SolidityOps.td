@@ -111,7 +111,9 @@ def Sol_MSize : Sol_Op<"msize", [NoSideEffect]> {
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
-def Sol_MemGuardOp : Sol_Op<"memoryguard", [ConstantLike, NoSideEffect,
+// TODO: Is this `ConstantLike`? Adding it causes "expected ConstantLike op to
+// be foldable" assert fail (probably due to the missing let hasFolder = 1)
+def Sol_MemGuardOp : Sol_Op<"memoryguard", [NoSideEffect,
                                             AllTypesMatch<["inp", "out"]>]> {
   let summary = "Represents the `memoryguard` call in yul";
   let arguments = (ins I256Attr:$inp);
