@@ -97,6 +97,23 @@ static bool inRuntimeContext(Operation *op) {
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
 
+class MemGuardOpLowering : public ConversionPattern {
+public:
+  explicit MemGuardOpLowering(MLIRContext *ctx)
+      : ConversionPattern(sol::MemGuardOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto memGuardOp = cast<sol::MemGuardOp>(op);
+    auto inp = memGuardOp->getAttrOfType<IntegerAttr>("inp");
+    assert(inp);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, inp);
+    return success();
+  }
+};
+
 class ReturnOpLowering : public ConversionPattern {
 public:
   explicit ReturnOpLowering(MLIRContext *ctx)
@@ -404,7 +421,8 @@ struct SolidityDialectLowering
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
-    pats.add<ObjectOpLowering, ReturnOpLowering>(&getContext());
+    pats.add<ObjectOpLowering, ReturnOpLowering, MemGuardOpLowering>(
+        &getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
