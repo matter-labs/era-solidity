@@ -100,8 +100,8 @@ def Sol_MStoreOp : Sol_Op<"mstore"> {
     Example:
     sol.mstore %a %b
   }];
-  let arguments = (ins I<256>:$lhs, I<256>:$rhs);
-  let assemblyFormat = "$lhs `,` $rhs attr-dict";
+  let arguments = (ins I<256>:$inp0, I<256>:$inp1);
+  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
 def Sol_MSize : Sol_Op<"msize", [NoSideEffect]> {

@@ -97,6 +97,31 @@ static bool inRuntimeContext(Operation *op) {
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
 
+class MStoreOpLowering : public ConversionPattern {
+public:
+  explicit MStoreOpLowering(MLIRContext *ctx)
+      : ConversionPattern(sol::MStoreOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto mStoreOp = cast<sol::MStoreOp>(op);
+    mlir::Location loc = op->getLoc();
+
+    mlir::Value offsetInt = mStoreOp.getInp0();
+    mlir::Value val = mStoreOp.getInp1();
+    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                                         eravm::AddrSpace_Heap);
+    mlir::Value offset =
+        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offsetInt);
+    rewriter.create<LLVM::StoreOp>(loc, val, offset, /*alignment=*/1);
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 class MemGuardOpLowering : public ConversionPattern {
 public:
   explicit MemGuardOpLowering(MLIRContext *ctx)
@@ -421,8 +446,8 @@ struct SolidityDialectLowering
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
-    pats.add<ObjectOpLowering, ReturnOpLowering, MemGuardOpLowering>(
-        &getContext());
+    pats.add<ObjectOpLowering, ReturnOpLowering, MemGuardOpLowering,
+             MStoreOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
