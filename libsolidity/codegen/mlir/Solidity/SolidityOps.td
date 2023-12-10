@@ -94,7 +94,7 @@ def Sol_ReturnOp : Sol_Op<"return"> {
   let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
-def Sol_MstoreOp : Sol_Op<"mstore"> {
+def Sol_MStoreOp : Sol_Op<"mstore"> {
   let summary = "Represents the `mstore` call in yul";
   let description = [{
     Example:

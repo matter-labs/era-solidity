@@ -186,7 +186,7 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       return {};
 
     } else if (builtin->name.str() == "mstore") {
-      b.create<mlir::sol::MstoreOp>(loc, genExpr(call.arguments[0]),
+      b.create<mlir::sol::MStoreOp>(loc, genExpr(call.arguments[0]),
                                     genExpr(call.arguments[1]));
       return {};
 
