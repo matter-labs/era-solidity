@@ -91,6 +91,7 @@ def Sol_ReturnOp : Sol_Op<"return"> {
     sol.return %a %b
   }];
   let arguments = (ins I<256>:$lhs, I<256>:$rhs);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Sol_MstoreOp : Sol_Op<"mstore"> {
@@ -100,12 +101,14 @@ def Sol_MstoreOp : Sol_Op<"mstore"> {
     sol.mstore %a %b
   }];
   let arguments = (ins I<256>:$lhs, I<256>:$rhs);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Sol_MSize : Sol_Op<"msize", [NoSideEffect]> {
   let summary = "Represents the `msize` call in yul";
   let arguments = (ins);
   let results = (outs I<256>:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
 }
 
 def Sol_MemGuardOp : Sol_Op<"memoryguard", [ConstantLike, NoSideEffect,
@@ -113,6 +116,7 @@ def Sol_MemGuardOp : Sol_Op<"memoryguard", [ConstantLike, NoSideEffect,
   let summary = "Represents the `memoryguard` call in yul";
   let arguments = (ins I256Attr:$inp);
   let results = (outs I<256>:$out);
+  let assemblyFormat = "$inp attr-dict `:` type($out)";
 }
 
 #endif // MLIR_SOLIDITY_SOLIDITYOPS_TD
