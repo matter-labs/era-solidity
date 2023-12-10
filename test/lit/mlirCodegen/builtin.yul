@@ -2,6 +2,8 @@
 // RUN: solc --yul --mlir-action=print-init --mmlir --mlir-print-debuginfo %s | FileCheck --check-prefix=DBG %s
 
 {
+  let msz := msize()
+  let x := memoryguard(100)
   mstore(0, 42)
   return(0, 0)
 }
@@ -9,29 +11,51 @@
 // CHECK: module {
 // CHECK-NEXT:   sol.object @object {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256
-// CHECK-NEXT:     %c42_i256 = arith.constant 42 : i256
-// CHECK-NEXT:     "sol.mstore"(%c0_i256, %c42_i256) : (i256, i256) -> ()
+// CHECK-NEXT:     %0 = llvm.alloca %c0_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256>
+// CHECK-NEXT:     %1 = "sol.msize"() : () -> i256
+// CHECK-NEXT:     llvm.store %1, %0 {alignment = 32 : i64} : !llvm.ptr<i256>
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256
+// CHECK-NEXT:     %2 = llvm.alloca %c0_i256_0 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256>
+// CHECK-NEXT:     %3 = "sol.memoryguard"() {inp = 100 : i256} : () -> i256
+// CHECK-NEXT:     llvm.store %3, %2 {alignment = 32 : i64} : !llvm.ptr<i256>
 // CHECK-NEXT:     %c0_i256_1 = arith.constant 0 : i256
-// CHECK-NEXT:     "sol.return"(%c0_i256_0, %c0_i256_1) : (i256, i256) -> ()
+// CHECK-NEXT:     %c42_i256 = arith.constant 42 : i256
+// CHECK-NEXT:     "sol.mstore"(%c0_i256_1, %c42_i256) : (i256, i256) -> ()
+// CHECK-NEXT:     %c0_i256_2 = arith.constant 0 : i256
+// CHECK-NEXT:     %c0_i256_3 = arith.constant 0 : i256
+// CHECK-NEXT:     "sol.return"(%c0_i256_2, %c0_i256_3) : (i256, i256) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // DBG: module {
 // DBG-NEXT:   sol.object @object {
 // DBG-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc1)
-// DBG-NEXT:     %c42_i256 = arith.constant 42 : i256 loc(#loc2)
-// DBG-NEXT:     "sol.mstore"(%c0_i256, %c42_i256) : (i256, i256) -> () loc(#loc3)
+// DBG-NEXT:     %0 = llvm.alloca %c0_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc2)
+// DBG-NEXT:     %1 = "sol.msize"() : () -> i256 loc(#loc3)
+// DBG-NEXT:     llvm.store %1, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc1)
 // DBG-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc4)
-// DBG-NEXT:     %c0_i256_1 = arith.constant 0 : i256 loc(#loc5)
-// DBG-NEXT:     "sol.return"(%c0_i256_0, %c0_i256_1) : (i256, i256) -> () loc(#loc6)
+// DBG-NEXT:     %2 = llvm.alloca %c0_i256_0 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc5)
+// DBG-NEXT:     %3 = "sol.memoryguard"() {inp = 100 : i256} : () -> i256 loc(#loc6)
+// DBG-NEXT:     llvm.store %3, %2 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc4)
+// DBG-NEXT:     %c0_i256_1 = arith.constant 0 : i256 loc(#loc7)
+// DBG-NEXT:     %c42_i256 = arith.constant 42 : i256 loc(#loc8)
+// DBG-NEXT:     "sol.mstore"(%c0_i256_1, %c42_i256) : (i256, i256) -> () loc(#loc9)
+// DBG-NEXT:     %c0_i256_2 = arith.constant 0 : i256 loc(#loc10)
+// DBG-NEXT:     %c0_i256_3 = arith.constant 0 : i256 loc(#loc11)
+// DBG-NEXT:     "sol.return"(%c0_i256_2, %c0_i256_3) : (i256, i256) -> () loc(#loc12)
 // DBG-NEXT:   } loc(#loc0)
 // DBG-NEXT: } loc(#loc0)
 // DBG-NEXT: #loc0 = loc(unknown)
-// DBG-NEXT: #loc1 = loc({{.*}}:4:9)
-// DBG-NEXT: #loc2 = loc({{.*}}:4:12)
-// DBG-NEXT: #loc3 = loc({{.*}}:4:2)
-// DBG-NEXT: #loc4 = loc({{.*}}:5:9)
-// DBG-NEXT: #loc5 = loc({{.*}}:5:12)
-// DBG-NEXT: #loc6 = loc({{.*}}:5:2)
+// DBG-NEXT: #loc1 = loc({{.*}}:4:2)
+// DBG-NEXT: #loc2 = loc({{.*}}:4:6)
+// DBG-NEXT: #loc3 = loc({{.*}}:4:13)
+// DBG-NEXT: #loc4 = loc({{.*}}:5:2)
+// DBG-NEXT: #loc5 = loc({{.*}}:5:6)
+// DBG-NEXT: #loc6 = loc({{.*}}:5:11)
+// DBG-NEXT: #loc7 = loc({{.*}}:6:9)
+// DBG-NEXT: #loc8 = loc({{.*}}:6:12)
+// DBG-NEXT: #loc9 = loc({{.*}}:6:2)
+// DBG-NEXT: #loc10 = loc({{.*}}:7:9)
+// DBG-NEXT: #loc11 = loc({{.*}}:7:12)
+// DBG-NEXT: #loc12 = loc({{.*}}:7:2)
 // DBG-EMPTY:

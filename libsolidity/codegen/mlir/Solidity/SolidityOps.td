@@ -102,6 +102,12 @@ def Sol_MstoreOp : Sol_Op<"mstore"> {
   let arguments = (ins I<256>:$lhs, I<256>:$rhs);
 }
 
+def Sol_MSize : Sol_Op<"msize", [NoSideEffect]> {
+  let summary = "Represents the `msize` call in yul";
+  let arguments = (ins);
+  let results = (outs I<256>:$out);
+}
+
 def Sol_MemGuardOp : Sol_Op<"memoryguard", [ConstantLike, NoSideEffect,
                                             AllTypesMatch<["inp", "out"]>]> {
   let summary = "Represents the `memoryguard` call in yul";
