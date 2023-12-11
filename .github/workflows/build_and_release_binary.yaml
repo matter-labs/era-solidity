@@ -38,17 +38,10 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           submodules: recursive
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           ref: ${{ steps.set.outputs.release_version }}
-
-      - name: Prepare environment
-        run: |
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
 
       - name: Building the Solidity compiler
         run: |
@@ -80,17 +73,10 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           submodules: recursive
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           ref: ${{ steps.set.outputs.release_version }}
-
-      - name: Prepare environment
-        run: |
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf git@github.com:
 
       - name: Building the Solidity compiler
         run: |
@@ -117,17 +103,10 @@ jobs:
     needs: [setup]
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           submodules: recursive
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           ref: ${{ steps.set.outputs.release_version }}
-
-      - name: Prepare environment
-        shell: zsh {0}
-        run: |
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
 
       # It is needed as we use some commands which a deprecated in newer versions of boost
       - name: Install BOOST
@@ -180,17 +159,10 @@ jobs:
         run: rm -rf ~/.gitconfig; rm -rf {*,.*} || true
 
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           submodules: recursive
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           ref: ${{ steps.set.outputs.release_version }}
-
-      - name: Prepare environment
-        shell: zsh {0}
-        run: |
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
 
       # It is needed as we use some commands which a deprecated in newer versions of boost
       - name: Install BOOST
@@ -267,11 +239,10 @@ jobs:
           result-encoding: string
 
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         if: steps.compare_version.outputs.result != 'true'
         with:
           submodules: recursive
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           ref: ${{ steps.set.outputs.release_version }}
 
       - name: Install LLVM and Clang
@@ -283,8 +254,6 @@ jobs:
       - name: Prepare environment
         if: steps.compare_version.outputs.result != 'true'
         run: |
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf ssh://git@github.com/
-          git config --global --add url."https://${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}:x-oauth-basic@github.com/".insteadOf https://github.com/
           git config --global user.email "runner@github.com"
           git fetch --all
           # try to apply win patch
@@ -371,9 +340,8 @@ jobs:
       - build_windows_amd64
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           ref: ${{ steps.set.outputs.release_version }}
 
       - name: Download artifact macos_arm64
@@ -420,6 +388,5 @@ jobs:
           name: zkVM solc ${{ needs.setup.outputs.release_version }}
           body_path: ./tmp_changelog.txt
           tag_name: ${{ needs.setup.outputs.release_version }}
-          token: ${{ secrets.ZKSYNC_ADMIN_BOT_ORG_REPO_WRITE }}
           files: |
             releases/**/**
