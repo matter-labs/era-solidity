@@ -11,12 +11,9 @@ This repository contains the Solidity compiler and language tuned for EraVM.
 
 ## License
 
-This library is distributed under the terms of either
+Solidity is licensed under [GNU General Public License v3.0](LICENSE.txt).
 
-- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
-
-at your option.
+Some third-party code has its [own licensing terms](cmake/templates/license.h.in).
 
 ## Official Links
 
