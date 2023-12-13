@@ -193,6 +193,9 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     } else if (builtin->name.str() == "msize") {
       return b.create<mlir::sol::MSize>(loc);
 
+    } else if (builtin->name.str() == "callvalue") {
+      return b.create<mlir::sol::CallValOp>(loc);
+
     } else if (builtin->name.str() == "memoryguard") {
       auto *arg = std::get_if<Literal>(&call.arguments[0]);
       assert(arg);

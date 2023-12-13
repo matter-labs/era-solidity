@@ -48,6 +48,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/IntrinsicsEraVM.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -96,6 +97,23 @@ static bool inRuntimeContext(Operation *op) {
 
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
+
+class CallValOpLowering : public ConversionPattern {
+public:
+  explicit CallValOpLowering(MLIRContext *ctx)
+      : ConversionPattern(sol::CallValOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, /*resTy=*/rewriter.getIntegerType(256),
+        rewriter.getI32IntegerAttr(llvm::Intrinsic::eravm_getu128),
+        rewriter.getStringAttr("eravm.getu128"));
+    return success();
+  }
+};
 
 class MStoreOpLowering : public ConversionPattern {
 public:
@@ -446,8 +464,8 @@ struct SolidityDialectLowering
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
-    pats.add<ObjectOpLowering, ReturnOpLowering, MemGuardOpLowering,
-             MStoreOpLowering>(&getContext());
+    pats.add<ObjectOpLowering, ReturnOpLowering, MStoreOpLowering,
+             MemGuardOpLowering, CallValOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
