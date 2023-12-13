@@ -157,6 +157,38 @@ public:
   }
 };
 
+class RevertOpLowering : public ConversionPattern {
+public:
+  explicit RevertOpLowering(MLIRContext *ctx)
+      : ConversionPattern(sol::RevertOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    eravm::BuilderHelper eravmHelper(rewriter);
+    solidity::mlirgen::BuilderHelper b(rewriter);
+    auto revertOp = cast<sol::RevertOp>(op);
+    mlir::Location loc = op->getLoc();
+
+    // Create the revert call (__revert(offset, length, RetForwardPageType)) and
+    // the unreachable op
+    SymbolRefAttr revertFunc =
+        eravmHelper.getOrInsertRevert(op->getParentOfType<ModuleOp>());
+    rewriter.create<func::CallOp>(
+        loc, revertFunc, TypeRange{},
+        ValueRange{
+            revertOp.getInp0(), revertOp.getInp1(),
+            b.getConst(loc, inRuntimeContext(op)
+                                ? eravm::RetForwardPageType::UseHeap
+                                : eravm::RetForwardPageType::UseAuxHeap)});
+    rewriter.create<LLVM::UnreachableOp>(loc);
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 class ReturnOpLowering : public ConversionPattern {
 public:
   explicit ReturnOpLowering(MLIRContext *ctx)
@@ -464,8 +496,9 @@ struct SolidityDialectLowering
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
-    pats.add<ObjectOpLowering, ReturnOpLowering, MStoreOpLowering,
-             MemGuardOpLowering, CallValOpLowering>(&getContext());
+    pats.add<ObjectOpLowering, ReturnOpLowering, RevertOpLowering,
+             MStoreOpLowering, MemGuardOpLowering, CallValOpLowering>(
+        &getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))

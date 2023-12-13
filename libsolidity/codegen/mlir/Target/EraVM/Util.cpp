@@ -111,3 +111,11 @@ SymbolRefAttr eravm::BuilderHelper::getOrInsertReturn(ModuleOp mod) {
                           {i256Ty, i256Ty, i256Ty}, mod);
   return SymbolRefAttr::get(mod.getContext(), "__return");
 }
+
+SymbolRefAttr eravm::BuilderHelper::getOrInsertRevert(ModuleOp mod) {
+  auto *ctx = mod.getContext();
+  auto i256Ty = IntegerType::get(ctx, 256);
+  h.getOrInsertLLVMFuncOp("__revert", LLVM::LLVMVoidType::get(ctx),
+                          {i256Ty, i256Ty, i256Ty}, mod);
+  return SymbolRefAttr::get(mod.getContext(), "__revert");
+}

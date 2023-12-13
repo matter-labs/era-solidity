@@ -185,6 +185,11 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
                                     genExpr(call.arguments[1]));
       return {};
 
+    } else if (builtin->name.str() == "revert") {
+      b.create<mlir::sol::RevertOp>(loc, genExpr(call.arguments[0]),
+                                    genExpr(call.arguments[1]));
+      return {};
+
     } else if (builtin->name.str() == "mstore") {
       b.create<mlir::sol::MStoreOp>(loc, genExpr(call.arguments[0]),
                                     genExpr(call.arguments[1]));

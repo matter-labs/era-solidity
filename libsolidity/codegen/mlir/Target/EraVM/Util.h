@@ -124,6 +124,9 @@ public:
 
   /// Returns an existing or a new (if not found) return function symbol
   mlir::SymbolRefAttr getOrInsertReturn(mlir::ModuleOp mod);
+
+  /// Returns an existing or a new (if not found) revert function symbol
+  mlir::SymbolRefAttr getOrInsertRevert(mlir::ModuleOp mod);
 };
 
 } // namespace eravm

@@ -94,6 +94,12 @@ def Sol_ReturnOp : Sol_Op<"return"> {
   let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
+def Sol_RevertOp : Sol_Op<"revert"> {
+  let summary = "Represents the `revert` call in yul";
+  let arguments = (ins I<256>:$inp0, I<256>:$inp1);
+  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
+}
+
 def Sol_MStoreOp : Sol_Op<"mstore"> {
   let summary = "Represents the `mstore` call in yul";
   let description = [{
