@@ -104,7 +104,7 @@ def Sol_MStoreOp : Sol_Op<"mstore"> {
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
-def Sol_MSize : Sol_Op<"msize", [NoSideEffect]> {
+def Sol_MSizeOp : Sol_Op<"msize", [NoSideEffect]> {
   let summary = "Represents the `msize` call in yul";
   let arguments = (ins);
   let results = (outs I<256>:$out);

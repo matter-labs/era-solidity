@@ -191,7 +191,7 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       return {};
 
     } else if (builtin->name.str() == "msize") {
-      return b.create<mlir::sol::MSize>(loc);
+      return b.create<mlir::sol::MSizeOp>(loc);
 
     } else if (builtin->name.str() == "callvalue") {
       return b.create<mlir::sol::CallValOp>(loc);
