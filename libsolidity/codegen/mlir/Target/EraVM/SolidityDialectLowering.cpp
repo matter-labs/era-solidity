@@ -115,6 +115,31 @@ public:
   }
 };
 
+class MLoadOpLowering : public ConversionPattern {
+public:
+  explicit MLoadOpLowering(MLIRContext *ctx)
+      : ConversionPattern(sol::MLoadOp::getOperationName(),
+                          /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto mLoadOp = cast<sol::MLoadOp>(op);
+    mlir::Location loc = op->getLoc();
+
+    mlir::Value offsetInt = mLoadOp.getInp0();
+    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                                         eravm::AddrSpace_Heap);
+    mlir::Value offset =
+        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offsetInt);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, rewriter.getIntegerType(256),
+                                              offset,
+                                              /*alignment=*/1);
+
+    return success();
+  }
+};
+
 class MStoreOpLowering : public ConversionPattern {
 public:
   explicit MStoreOpLowering(MLIRContext *ctx)
@@ -497,8 +522,8 @@ struct SolidityDialectLowering
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
     pats.add<ObjectOpLowering, ReturnOpLowering, RevertOpLowering,
-             MStoreOpLowering, MemGuardOpLowering, CallValOpLowering>(
-        &getContext());
+             MLoadOpLowering, MStoreOpLowering, MemGuardOpLowering,
+             CallValOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))

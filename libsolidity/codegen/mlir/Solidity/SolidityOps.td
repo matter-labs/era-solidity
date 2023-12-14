@@ -100,6 +100,13 @@ def Sol_RevertOp : Sol_Op<"revert"> {
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
+def Sol_MLoadOp : Sol_Op<"mload"> {
+  let summary = "Represents the `mload` call in yul";
+  let arguments = (ins I<256>:$inp0);
+  let results = (outs I<256>:$out);
+  let assemblyFormat = "$inp0 attr-dict";
+}
+
 def Sol_MStoreOp : Sol_Op<"mstore"> {
   let summary = "Represents the `mstore` call in yul";
   let description = [{
