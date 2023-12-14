@@ -8,6 +8,7 @@ object "Test" {
   }
   object "Test_deployed" {
     code {
+      mstore(64, 42)
       return(0, 0)
     }
   }
@@ -40,8 +41,9 @@ object "Test" {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define private void @__runtime() !dbg !11 {
-// CHECK-NEXT:   call void @__return(i256 0, i256 0, i256 0), !dbg !12
-// CHECK-NEXT:   unreachable, !dbg !12
+// CHECK-NEXT:   store i256 42, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1, !dbg !12
+// CHECK-NEXT:   call void @__return(i256 0, i256 0, i256 0), !dbg !14
+// CHECK-NEXT:   unreachable, !dbg !14
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) {
@@ -100,6 +102,7 @@ object "Test" {
 // CHECK-NEXT: !11 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !12 = !DILocation(line: 10, column: 6, scope: !13)
 // CHECK-NEXT: !13 = !DILexicalBlockFile(scope: !11, file: !9, discriminator: 0)
+// CHECK-NEXT: !14 = !DILocation(line: 11, column: 6, scope: !13)
 // CHECK-EMPTY:
 // ASM: 	.text
 // ASM-NEXT: 	.file	{{.*}}
@@ -126,12 +129,16 @@ object "Test" {
 // ASM-NEXT: __runtime:
 // ASM-NEXT: .func_begin1:
 // ASM-NEXT: 	.loc	1 0 0
+// ASM-NEXT: 	add	42, r0, r1
+// ASM-NEXT: .tmp2:
 // ASM-NEXT: 	.loc	2 10 6 prologue_end
+// ASM-NEXT: 	st.1	64, r1
+// ASM-NEXT: 	.loc	2 11 6
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
-// ASM-NEXT: .tmp2:
+// ASM-NEXT: .tmp3:
 // ASM-NEXT: .func_end1:
 // ASM-EMPTY:
 // ASM-NEXT: 	.globl	__entry

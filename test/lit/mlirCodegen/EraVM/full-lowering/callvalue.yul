@@ -3,12 +3,11 @@
 
 object "Test" {
   code {
-    mstore(0, callvalue())
-    return(0, 0)
+    return(0, callvalue())
   }
   object "Test_deployed" {
     code {
-      return(0, 0)
+      return(0, callvalue())
     }
   }
 }
@@ -33,16 +32,16 @@ object "Test" {
 // CHECK-EMPTY:
 // CHECK-NEXT: define private void @__deploy() !dbg !3 {
 // CHECK-NEXT:   %1 = call i256 @llvm.eravm.getu128(), !dbg !7
-// CHECK-NEXT:   store i256 %1, ptr addrspace(1) null, align 1, !dbg !10
-// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 32, !dbg !11
-// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 32, !dbg !11
-// CHECK-NEXT:   call void @__return(i256 256, i256 64, i256 2), !dbg !11
-// CHECK-NEXT:   unreachable, !dbg !11
+// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 32, !dbg !10
+// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 32, !dbg !10
+// CHECK-NEXT:   call void @__return(i256 256, i256 64, i256 2), !dbg !10
+// CHECK-NEXT:   unreachable, !dbg !10
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @__runtime() !dbg !12 {
-// CHECK-NEXT:   call void @__return(i256 0, i256 0, i256 0), !dbg !13
-// CHECK-NEXT:   unreachable, !dbg !13
+// CHECK-NEXT: define private void @__runtime() !dbg !11 {
+// CHECK-NEXT:   %1 = call i256 @llvm.eravm.getu128(), !dbg !12
+// CHECK-NEXT:   call void @__return(i256 0, i256 %1, i256 0), !dbg !14
+// CHECK-NEXT:   unreachable, !dbg !14
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) {
@@ -103,10 +102,10 @@ object "Test" {
 // CHECK-NEXT: !8 = !DILexicalBlockFile(scope: !3, file: !9, discriminator: 0)
 // CHECK-NEXT: !9 = !DIFile(filename: {{.*}}, directory: {{.*}})
 // CHECK-NEXT: !10 = !DILocation(line: 5, column: 4, scope: !8)
-// CHECK-NEXT: !11 = !DILocation(line: 6, column: 4, scope: !8)
-// CHECK-NEXT: !12 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
-// CHECK-NEXT: !13 = !DILocation(line: 10, column: 6, scope: !14)
-// CHECK-NEXT: !14 = !DILexicalBlockFile(scope: !12, file: !9, discriminator: 0)
+// CHECK-NEXT: !11 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !12 = !DILocation(line: 9, column: 16, scope: !13)
+// CHECK-NEXT: !13 = !DILexicalBlockFile(scope: !11, file: !9, discriminator: 0)
+// CHECK-NEXT: !14 = !DILocation(line: 9, column: 6, scope: !13)
 // CHECK-EMPTY:
 // ASM: 	.text
 // ASM-NEXT: 	.file	{{.*}}
@@ -117,10 +116,8 @@ object "Test" {
 // ASM-NEXT: 	.file	{{.*}}
 // ASM-NEXT: 	.loc	2 5 14 prologue_end
 // ASM-NEXT: 	context.get_context_u128	r1
-// ASM-NEXT: 	.loc	2 5 4 is_stmt 0
-// ASM-NEXT: 	st.1	0, r1
 // ASM-NEXT: 	add	32, r0, r1
-// ASM-NEXT: 	.loc	2 6 4 is_stmt 1
+// ASM-NEXT: 	.loc	2 5 4 is_stmt 0
 // ASM-NEXT: 	st.2	256, r1
 // ASM-NEXT: 	st.2	288, r0
 // ASM-NEXT: 	add	256, r0, r1
@@ -132,10 +129,11 @@ object "Test" {
 // ASM-EMPTY:
 // ASM-NEXT: __runtime:
 // ASM-NEXT: .func_begin1:
-// ASM-NEXT: 	.loc	1 0 0
-// ASM-NEXT: 	.loc	2 10 6 prologue_end
+// ASM-NEXT: 	.loc	1 0 0 is_stmt 1
+// ASM-NEXT: 	.loc	2 9 16 prologue_end
+// ASM-NEXT: 	context.get_context_u128	r2
+// ASM-NEXT: 	.loc	2 9 6 is_stmt 0
 // ASM-NEXT: 	add	r0, r0, r1
-// ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
 // ASM-NEXT: .tmp1:

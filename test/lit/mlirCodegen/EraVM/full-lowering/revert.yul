@@ -7,7 +7,7 @@ object "Test" {
   }
   object "Test_deployed" {
     code {
-      return(0, 0)
+      revert(0, 0)
     }
   }
 }
@@ -28,8 +28,6 @@ object "Test" {
 // CHECK-EMPTY:
 // CHECK-NEXT: declare void @free(ptr)
 // CHECK-EMPTY:
-// CHECK-NEXT: declare void @__return(i256, i256, i256)
-// CHECK-EMPTY:
 // CHECK-NEXT: declare void @__revert(i256, i256, i256)
 // CHECK-EMPTY:
 // CHECK-NEXT: define private void @__deploy() !dbg !3 {
@@ -38,7 +36,7 @@ object "Test" {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define private void @__runtime() !dbg !10 {
-// CHECK-NEXT:   call void @__return(i256 0, i256 0, i256 0), !dbg !11
+// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0), !dbg !11
 // CHECK-NEXT:   unreachable, !dbg !11
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -121,7 +119,7 @@ object "Test" {
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	add	r0, r0, r3
-// ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: .tmp2:
 // ASM-NEXT: .func_end1:
 // ASM-EMPTY:
