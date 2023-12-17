@@ -41,6 +41,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
@@ -98,15 +99,13 @@ static bool inRuntimeContext(Operation *op) {
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
 
-class CallValOpLowering : public ConversionPattern {
-public:
-  explicit CallValOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::CallValOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+// TODO? Move simple builtin lowering to tblgen (`Pat` records)?
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
+struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
+  using OpRewritePattern<sol::CallValOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallValOp op,
+                                PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::IntrCallOp>(
         op, /*resTy=*/rewriter.getIntegerType(256),
         rewriter.getI32IntegerAttr(llvm::Intrinsic::eravm_getu128),
@@ -115,19 +114,14 @@ public:
   }
 };
 
-class MLoadOpLowering : public ConversionPattern {
-public:
-  explicit MLoadOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::MLoadOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
+  using OpRewritePattern<sol::MLoadOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto mLoadOp = cast<sol::MLoadOp>(op);
+  LogicalResult matchAndRewrite(sol::MLoadOp op,
+                                PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
 
-    mlir::Value offsetInt = mLoadOp.getInp0();
+    mlir::Value offsetInt = op.getInp0();
     auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
                                                          eravm::AddrSpace_Heap);
     mlir::Value offset =
@@ -140,20 +134,15 @@ public:
   }
 };
 
-class MStoreOpLowering : public ConversionPattern {
-public:
-  explicit MStoreOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::MStoreOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
+  using OpRewritePattern<sol::MStoreOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto mStoreOp = cast<sol::MStoreOp>(op);
+  LogicalResult matchAndRewrite(sol::MStoreOp op,
+                                PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
 
-    mlir::Value offsetInt = mStoreOp.getInp0();
-    mlir::Value val = mStoreOp.getInp1();
+    mlir::Value offsetInt = op.getInp0();
+    mlir::Value val = op.getInp1();
     auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
                                                          eravm::AddrSpace_Heap);
     mlir::Value offset =
@@ -165,36 +154,27 @@ public:
   }
 };
 
-class MemGuardOpLowering : public ConversionPattern {
-public:
-  explicit MemGuardOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::MemGuardOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+struct MemGuardOpLowering : public OpRewritePattern<sol::MemGuardOp> {
+  using OpRewritePattern<sol::MemGuardOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto memGuardOp = cast<sol::MemGuardOp>(op);
-    auto inp = memGuardOp->getAttrOfType<IntegerAttr>("inp");
+  LogicalResult matchAndRewrite(sol::MemGuardOp op,
+                                PatternRewriter &rewriter) const override {
+    auto inp = op->getAttrOfType<IntegerAttr>("inp");
     assert(inp);
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, inp);
     return success();
   }
 };
 
-class RevertOpLowering : public ConversionPattern {
-public:
-  explicit RevertOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::RevertOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
+  using OpRewritePattern<sol::RevertOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(sol::RevertOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+
     eravm::BuilderHelper eravmHelper(rewriter);
     solidity::mlirgen::BuilderHelper b(rewriter);
-    auto revertOp = cast<sol::RevertOp>(op);
-    mlir::Location loc = op->getLoc();
 
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
     // the unreachable op
@@ -203,7 +183,7 @@ public:
     rewriter.create<func::CallOp>(
         loc, revertFunc, TypeRange{},
         ValueRange{
-            revertOp.getInp0(), revertOp.getInp1(),
+            op.getInp0(), op.getInp1(),
             b.getConst(loc, inRuntimeContext(op)
                                 ? eravm::RetForwardPageType::UseHeap
                                 : eravm::RetForwardPageType::UseAuxHeap)});
@@ -214,19 +194,15 @@ public:
   }
 };
 
-class ReturnOpLowering : public ConversionPattern {
-public:
-  explicit ReturnOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::ReturnOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
+  using OpRewritePattern<sol::ReturnOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto loc = op->getLoc();
+  LogicalResult matchAndRewrite(sol::ReturnOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+
     solidity::mlirgen::BuilderHelper b(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
-    auto retOp = cast<sol::ReturnOp>(op);
     SymbolRefAttr returnFunc =
         eravmHelper.getOrInsertReturn(op->getParentOfType<ModuleOp>());
 
@@ -238,7 +214,7 @@ public:
       // RetForwardPageType::UseHeap)) and the unreachable op
       rewriter.create<func::CallOp>(
           loc, returnFunc, TypeRange{},
-          ValueRange{retOp.getLhs(), retOp.getRhs(),
+          ValueRange{op.getLhs(), op.getRhs(),
                      b.getConst(loc, eravm::RetForwardPageType::UseHeap)});
       rewriter.create<LLVM::UnreachableOp>(loc);
 
@@ -292,17 +268,13 @@ public:
   }
 };
 
-class ObjectOpLowering : public ConversionPattern {
-public:
-  explicit ObjectOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::ObjectOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
+  using OpRewritePattern<sol::ObjectOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto objOp = cast<sol::ObjectOp>(op);
-    auto loc = op->getLoc();
+  LogicalResult matchAndRewrite(sol::ObjectOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+
     auto mod = op->getParentOfType<ModuleOp>();
     auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
     auto i256Ty = rewriter.getIntegerType(256);
@@ -310,19 +282,19 @@ public:
     eravm::BuilderHelper eravmHelper(rewriter);
 
     // Move FuncOps under the ModuleOp
-    objOp.walk([&](func::FuncOp fn) {
+    op.walk([&](func::FuncOp fn) {
       Block *modBlk = mod.getBody();
       fn->moveBefore(modBlk, modBlk->begin());
     });
 
     // Is this a runtime object?
     // FIXME: Is there a better way to check this?
-    if (objOp.getSymName().endswith("_deployed")) {
+    if (op.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
       LLVM::LLVMFuncOp runtimeFunc =
           eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
-      rewriter.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
+      rewriter.inlineRegionBefore(op.getRegion(), runtimeFuncRegion,
                                   runtimeFuncRegion.begin());
       rewriter.eraseOp(op);
       return success();
@@ -433,7 +405,7 @@ public:
         eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
-    for (auto const &op : *objOp.getBody()) {
+    for (auto const &op : *op.getBody()) {
       if (auto runtimeObj = llvm::dyn_cast<sol::ObjectOp>(&op)) {
         assert(runtimeObj.getSymName().endswith("_deployed"));
         rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
@@ -446,7 +418,7 @@ public:
     LLVM::LLVMFuncOp deployFunc =
         eravmHelper.getOrInsertCreationFuncOp("__deploy", voidTy, {}, mod);
     Region &deployFuncRegion = deployFunc.getRegion();
-    rewriter.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
+    rewriter.inlineRegionBefore(op.getRegion(), deployFuncRegion,
                                 deployFuncRegion.begin());
 
     // If the deploy call flag is set, call __deploy()
