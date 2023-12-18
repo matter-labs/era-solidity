@@ -111,6 +111,10 @@ private:
   /// Returns the symbol of type `T` in the current scope
   template <typename T>
   T lookupSymbol(llvm::StringRef name) {
+    if (!currObj) {
+      assert(mod);
+      return mod.lookupSymbol<T>(name);
+    }
     // FIXME: We should lookup in the current block and its ancestors
     return currObj.lookupSymbol<T>(name);
   }
@@ -302,9 +306,9 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
 void YulToMLIRPass::operator()(Block const &blk) {
   BuilderHelper h(b);
 
-  // "Declare" FuncOps (i.e. create them with an empty region) at this block so
-  // that we can lower calls before lowering the functions. The function
-  // lowering is expected to lookup the FuncOp without creating it.
+  // "Forward declare" FuncOps (i.e. create them with an empty region) at this
+  // block so that we can lower calls before lowering the functions. The
+  // function lowering is expected to lookup the FuncOp without creating it.
   //
   // TODO: Stop relying on libyul's Disambiguator
   // We tried emitting a single block op for yul blocks with a symbol table
@@ -325,16 +329,32 @@ void YulToMLIRPass::operator()(Block const &blk) {
 }
 
 void YulToMLIRPass::lowerObj(Object const &obj) {
-  // TODO: Where is the source location info for Object? Do we need to track it?
-  currObj = b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), obj.name.str());
-  b.setInsertionPointToEnd(currObj.getBody());
+  // Lookup ObjectOp (should be declared by the top level object lowering)
+  currObj = lookupSymbol<mlir::sol::ObjectOp>(obj.name.str());
+  assert(currObj);
+
+  b.setInsertionPointToStart(currObj.getBody());
   // TODO? Do we need a separate op for the `code` block?
   operator()(*obj.code);
 }
 
 void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
-  lowerObj(obj);
+  // "Forward declare" ObjectOp for the top level object and its sub-objects so
+  // that we can create symbol references to them (for builtins like dataoffset)
+  //
+  // TODO: Where is the source location info for Object? Do we need to track it?
+  auto topLevelObj =
+      b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), obj.name.str());
+  {
+    mlir::OpBuilder::InsertionGuard insertGuard(b);
+    b.setInsertionPointToEnd(topLevelObj.getBody());
+    for (auto const &subNode : obj.subObjects) {
+      if (auto *subObj = dynamic_cast<Object const *>(subNode.get()))
+        b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), subObj->name.str());
+    }
+  }
 
+  lowerObj(obj);
   // TODO: Does it make sense to nest subobjects in the top level ObjectOp's
   // body?
   for (auto const &subNode : obj.subObjects) {
