@@ -114,6 +114,34 @@ struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   }
 };
 
+struct DataOffsetOpLowering : public OpRewritePattern<sol::DataOffsetOp> {
+  using OpRewritePattern<sol::DataOffsetOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::DataOffsetOp op,
+                                PatternRewriter &rewriter) const override {
+    // FIXME:
+    // - Handle references to objects outside the current module
+    // - Check if the reference object is valid
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, rewriter.getIntegerAttr(rewriter.getIntegerType(256), 0));
+    return success();
+  }
+};
+
+struct DataSizeOpLowering : public OpRewritePattern<sol::DataSizeOp> {
+  using OpRewritePattern<sol::DataSizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::DataSizeOp op,
+                                PatternRewriter &rewriter) const override {
+    // FIXME:
+    // - Handle references to objects outside the current module
+    // - Check if the reference object is valid
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, rewriter.getIntegerAttr(rewriter.getIntegerType(256), 0));
+    return success();
+  }
+};
+
 struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
   using OpRewritePattern<sol::MLoadOp>::OpRewritePattern;
 
@@ -494,8 +522,9 @@ struct SolidityDialectLowering
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
     pats.add<ObjectOpLowering, ReturnOpLowering, RevertOpLowering,
-             MLoadOpLowering, MStoreOpLowering, MemGuardOpLowering,
-             CallValOpLowering>(&getContext());
+             MLoadOpLowering, MStoreOpLowering, DataOffsetOpLowering,
+             DataSizeOpLowering, MemGuardOpLowering, CallValOpLowering>(
+        &getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))

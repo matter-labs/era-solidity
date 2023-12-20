@@ -131,6 +131,24 @@ def Sol_CallValOp : Sol_Op<"callvalue", [NoSideEffect]> {
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
+// TODO: Support symbolic references to objects outside the current symbol table
+// (including ones outside the translation unit) using SymbolRefAttr instead of
+// FlatSymbolRefAttr
+
+def Sol_DataOffsetOp : Sol_Op<"dataoffset", [NoSideEffect]> {
+  let summary = "Represents the `dataoffset` call in yul";
+  let arguments = (ins FlatSymbolRefAttr:$sym);
+  let results = (outs I<256>:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
+}
+
+def Sol_DataSizeOp : Sol_Op<"datasize", [NoSideEffect]> {
+  let summary = "Represents the `datasize` call in yul";
+  let arguments = (ins FlatSymbolRefAttr:$sym);
+  let results = (outs I<256>:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
+}
+
 // TODO: Is this `ConstantLike`? Adding it causes "expected ConstantLike op to
 // be foldable" assert fail (probably due to the missing let hasFolder = 1)
 def Sol_MemGuardOp : Sol_Op<"memoryguard", [NoSideEffect,
