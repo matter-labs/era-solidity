@@ -174,7 +174,10 @@ mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
 }
 
 mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
-  solUnimplementedAssert(false, "TODO: Lower identifier");
+  mlir::Value addr = getMemRef(id.name);
+  assert(addr);
+  return b.create<mlir::LLVM::LoadOp>(getLoc(id.debugData), addr,
+                                      getDefAlign());
 }
 
 mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
