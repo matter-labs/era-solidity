@@ -1235,9 +1235,20 @@ void CommandLineInterface::assembleYul(yul::YulStack::Language _language, yul::Y
 	{
 		if (m_options.mlirGenJob.action != mlirgen::Action::Undefined)
 		{
-			solUnimplementedAssert(_language == yul::YulStack::Language::Yul, "Language::Yul is only supported");
 			auto const& yulStk = yulStacks[src.first];
-			yul::EVMDialectTyped const* dialect = &yul::EVMDialectTyped::instance(m_options.output.evmVersion);
+			yul::Dialect const* dialect = nullptr;
+			switch (_language)
+			{
+			case yul::YulStack::Language::Assembly:
+			case yul::YulStack::Language::StrictAssembly:
+				dialect = &yul::EVMDialect::strictAssemblyForEVMObjects(m_options.output.evmVersion);
+				break;
+			case yul::YulStack::Language::Yul:
+				dialect = &yul::EVMDialectTyped::instance(m_options.output.evmVersion);
+				break;
+			default:
+				solUnimplementedAssert(false, "Invalid yul dialect");
+			}
 			if (!mlirgen::runYulToMLIRPass(
 					*yulStk.parserResult(), yulStk.charStream(src.first), *dialect, m_options.mlirGenJob))
 			{
