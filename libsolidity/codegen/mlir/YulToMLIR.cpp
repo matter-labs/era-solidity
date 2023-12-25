@@ -33,6 +33,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -139,6 +140,9 @@ private:
 
   /// Lowers a variable decl
   void operator()(VariableDeclaration const &decl) override;
+
+  /// Lowers an if statement
+  void operator()(If const &ifStmt) override;
 
   /// Lowers a function
   void operator()(FunctionDefinition const &fn) override;
@@ -296,6 +300,24 @@ void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
   b.create<mlir::LLVM::StoreOp>(loc, genExpr(*decl.value), addr, getDefAlign());
 }
 
+void YulToMLIRPass::operator()(If const &ifStmt) {
+  mlir::Location loc = getLoc(ifStmt.debugData);
+  BuilderHelper h(b);
+
+  mlir::Value origCond = genExpr(*ifStmt.condition);
+  assert(origCond.getType().cast<mlir::IntegerType>() == getDefIntTy());
+  // TODO: Should we expand here? Or is it beneficial to represent `if` with a
+  // non-boolean condition in the IR?
+  auto condAsBool = b.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::ne, origCond, h.getConst(loc, 0));
+
+  auto ifOp =
+      b.create<mlir::scf::IfOp>(loc, condAsBool, /*withElseRegion=*/false);
+  mlir::OpBuilder::InsertionGuard insertGuard(b);
+  b.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  ASTWalker::operator()(ifStmt.body);
+}
+
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   BuilderHelper h(b);
   mlir::Location loc = getLoc(fn.debugData);
@@ -405,6 +427,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+  ctx.getOrLoadDialect<mlir::scf::SCFDialect>();
   ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
