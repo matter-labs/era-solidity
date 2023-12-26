@@ -371,6 +371,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
       LLVM::LLVMFuncOp runtimeFunc =
           eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
+      assert(runtimeFuncRegion.empty());
       rewriter.inlineRegionBefore(op.getRegion(), runtimeFuncRegion,
                                   runtimeFuncRegion.begin());
       rewriter.eraseOp(op);
@@ -485,6 +486,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     for (auto const &op : *op.getBody()) {
       if (auto runtimeObj = llvm::dyn_cast<sol::ObjectOp>(&op)) {
         assert(runtimeObj.getSymName().endswith("_deployed"));
+        assert(runtimeFuncRegion.empty());
         rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
                                     runtimeFuncRegion.begin());
         OpBuilder::InsertionGuard insertGuard(rewriter);
@@ -498,6 +500,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     LLVM::LLVMFuncOp deployFunc =
         eravmHelper.getOrInsertCreationFuncOp("__deploy", voidTy, {}, mod);
     Region &deployFuncRegion = deployFunc.getRegion();
+    assert(deployFuncRegion.empty());
     rewriter.inlineRegionBefore(op.getRegion(), deployFuncRegion,
                                 deployFuncRegion.begin());
     {
