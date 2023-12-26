@@ -28,16 +28,22 @@ object "Test" {
 // CHECK-EMPTY:
 // CHECK-NEXT: declare void @free(ptr)
 // CHECK-EMPTY:
-// CHECK-NEXT: declare void @__revert(i256, i256, i256)
-// CHECK-EMPTY:
-// CHECK-NEXT: define private void @__deploy() !dbg !3 {
-// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 2), !dbg !7
+// CHECK-NEXT: define private void @.unreachable() !dbg !3 {
 // CHECK-NEXT:   unreachable, !dbg !7
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @__runtime() !dbg !10 {
-// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0), !dbg !11
-// CHECK-NEXT:   unreachable, !dbg !11
+// CHECK-NEXT: declare void @__revert(i256, i256, i256)
+// CHECK-EMPTY:
+// CHECK-NEXT: define private void @__deploy() !dbg !10 {
+// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 2), !dbg !11
+// CHECK-NEXT:   call void @.unreachable(), !dbg !11
+// CHECK-NEXT:   unreachable
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: define private void @__runtime() !dbg !13 {
+// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0), !dbg !14
+// CHECK-NEXT:   call void @.unreachable(), !dbg !14
+// CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) {
@@ -85,21 +91,28 @@ object "Test" {
 // CHECK-NEXT: !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "mlir", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 // CHECK-NEXT: !1 = !DIFile(filename: {{.*}}, directory: {{.*}})
 // CHECK-NEXT: !2 = !{i32 2, !"Debug Info Version", i32 3}
-// CHECK-NEXT: !3 = distinct !DISubprogram(name: "__deploy", linkageName: "__deploy", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !3 = distinct !DISubprogram(name: ".unreachable", linkageName: ".unreachable", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !4 = !DIFile(filename: {{.*}}, directory: {{.*}})
 // CHECK-NEXT: !5 = !DISubroutineType(types: !6)
 // CHECK-NEXT: !6 = !{}
 // CHECK-NEXT: !7 = !DILocation(line: 5, column: 4, scope: !8)
 // CHECK-NEXT: !8 = !DILexicalBlockFile(scope: !3, file: !9, discriminator: 0)
 // CHECK-NEXT: !9 = !DIFile(filename: {{.*}}, directory: {{.*}})
-// CHECK-NEXT: !10 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
-// CHECK-NEXT: !11 = !DILocation(line: 9, column: 6, scope: !12)
+// CHECK-NEXT: !10 = distinct !DISubprogram(name: "__deploy", linkageName: "__deploy", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !11 = !DILocation(line: 5, column: 4, scope: !12)
 // CHECK-NEXT: !12 = !DILexicalBlockFile(scope: !10, file: !9, discriminator: 0)
+// CHECK-NEXT: !13 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !14 = !DILocation(line: 9, column: 6, scope: !15)
+// CHECK-NEXT: !15 = !DILexicalBlockFile(scope: !13, file: !9, discriminator: 0)
 // CHECK-EMPTY:
 // ASM: 	.text
 // ASM-NEXT: 	.file	{{.*}}
-// ASM-NEXT: __deploy:
+// ASM-NEXT: .unreachable:
 // ASM-NEXT: .func_begin0:
+// ASM-NEXT: .func_end0:
+// ASM-EMPTY:
+// ASM-NEXT: __deploy:
+// ASM-NEXT: .func_begin1:
 // ASM-NEXT: 	.file	{{.*}}
 // ASM-NEXT: 	.loc	1 0 0
 // ASM-NEXT: 	add	2, r0, r3
@@ -109,26 +122,28 @@ object "Test" {
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
 // ASM-NEXT: .tmp1:
-// ASM-NEXT: .func_end0:
+// ASM-NEXT: .func_end1:
 // ASM-EMPTY:
 // ASM-NEXT: __runtime:
-// ASM-NEXT: .func_begin1:
+// ASM-NEXT: .func_begin2:
 // ASM-NEXT: 	.loc	1 0 0
 // ASM-NEXT: 	.loc	2 9 6 prologue_end
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
 // ASM-NEXT: .tmp2:
-// ASM-NEXT: .func_end1:
+// ASM-NEXT: .func_end2:
 // ASM-EMPTY:
 // ASM-NEXT: 	.globl	__entry
 // ASM-NEXT: __entry:
-// ASM-NEXT: .func_begin2:
+// ASM-NEXT: .func_begin3:
 // ASM-NEXT: 	add	stack[0], r0, r13
 // ASM-NEXT: 	shr.s	96, r13, r13
-// ASM-NEXT: 	and	@CPI2_0[0], r13, r14
+// ASM-NEXT: 	and	@CPI3_0[0], r13, r14
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_return_data]
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active]
 // ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data]
@@ -142,16 +157,16 @@ object "Test" {
 // ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data+8]
 // ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data+9]
 // ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
-// ASM-NEXT: 	and	@CPI2_0[0], r13, stack[@calldatasize]
+// ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
 // ASM-NEXT: 	add	r2, r0, stack[@call_flags]
 // ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
 // ASM-NEXT: 	add	0, r0, stack[@returndatasize]
 // ASM-NEXT: 	and!	1, r2, r1
-// ASM-NEXT: 	jump.eq	@.BB2_2
+// ASM-NEXT: 	jump.eq	@.BB3_2
 // ASM-NEXT: 	near_call	r0, @__deploy, @DEFAULT_UNWIND
-// ASM-NEXT: .BB2_2:
+// ASM-NEXT: .BB3_2:
 // ASM-NEXT: 	near_call	r0, @__runtime, @DEFAULT_UNWIND
-// ASM-NEXT: .func_end2:
+// ASM-NEXT: .func_end3:
 // ASM-EMPTY:
 // ASM-NEXT: 	.data
 // ASM-NEXT: 	.p2align	5
@@ -239,7 +254,7 @@ object "Test" {
 // ASM-NEXT: 	.long	@.info_string2
 // ASM-EMPTY:
 // ASM-NEXT: .cell	@.func_begin0
-// ASM-NEXT: 	.long	@.func_end1-@.func_begin0
+// ASM-NEXT: 	.long	@.func_end2-@.func_begin0
 // ASM-NEXT: 	.byte	2
 // ASM-NEXT: .cell	@.func_begin0
 // ASM-NEXT: 	.long	@.func_end0-@.func_begin0
@@ -252,6 +267,12 @@ object "Test" {
 // ASM-NEXT: 	.long	@.info_string4
 // ASM-NEXT: 	.long	@.info_string4
 // ASM-EMPTY:
+// ASM-NEXT: 	.byte	2
+// ASM-NEXT: .cell	@.func_begin2
+// ASM-NEXT: 	.long	@.func_end2-@.func_begin2
+// ASM-NEXT: 	.long	@.info_string5
+// ASM-NEXT: 	.long	@.info_string5
+// ASM-EMPTY:
 // ASM-NEXT: 	.byte	0
 // ASM-NEXT: .debug_info_end0:
 // ASM-NEXT: 	.debug_str
@@ -262,18 +283,22 @@ object "Test" {
 // ASM-NEXT: .info_string2:
 // ASM-NEXT: 	.asciz	"/"
 // ASM-NEXT: .info_string3:
-// ASM-NEXT: 	.asciz	"__deploy"
+// ASM-NEXT: 	.asciz	".unreachable"
 // ASM-NEXT: .info_string4:
+// ASM-NEXT: 	.asciz	"__deploy"
+// ASM-NEXT: .info_string5:
 // ASM-NEXT: 	.asciz	"__runtime"
 // ASM-NEXT: 	.debug_pubnames
 // ASM-NEXT: 	.long	@.pubNames_end0-@.pubNames_start0
 // ASM-NEXT: .pubNames_start0:
 // ASM-NEXT: 	.short	2
 // ASM-NEXT: 	.long	@.cu_begin0
-// ASM-NEXT: 	.long	157
-// ASM-NEXT: 	.long	111
+// ASM-NEXT: 	.long	202
+// ASM-NEXT: 	.long	156
 // ASM-NEXT: 	.asciz	"__runtime"
 // ASM-NEXT: 	.long	66
+// ASM-NEXT: 	.asciz	".unreachable"
+// ASM-NEXT: 	.long	111
 // ASM-NEXT: 	.asciz	"__deploy"
 // ASM-NEXT: 	.long	0
 // ASM-NEXT: .pubNames_end0:
@@ -282,12 +307,12 @@ object "Test" {
 // ASM-NEXT: .pubTypes_start0:
 // ASM-NEXT: 	.short	2
 // ASM-NEXT: 	.long	@.cu_begin0
-// ASM-NEXT: 	.long	157
+// ASM-NEXT: 	.long	202
 // ASM-NEXT: 	.long	0
 // ASM-NEXT: .pubTypes_end0:
 // ASM-NEXT: 	.note.GNU-stack
 // ASM-NEXT: 	.rodata
-// ASM-NEXT: CPI2_0:
+// ASM-NEXT: CPI3_0:
 // ASM-NEXT: 	.cell 4294967295
 // ASM-NEXT: 	.debug_line
 // ASM-NEXT: .line_table_start0:

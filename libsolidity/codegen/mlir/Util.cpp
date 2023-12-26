@@ -16,6 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include "libsolidity/codegen/mlir/Util.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -84,4 +85,21 @@ LLVM::LLVMFuncOp BuilderHelper::getOrInsertLLVMFuncOp(
   b.setInsertionPointToStart(mod.getBody());
   return b.create<LLVM::LLVMFuncOp>(mod.getLoc(), name, fnType, linkage,
                                     /*dsoLocal=*/false, LLVM::CConv::C, attrs);
+}
+
+void BuilderHelper::createCallToUnreachableWrapper(Location loc, ModuleOp mod) {
+  LLVM::LLVMFuncOp func = getOrInsertLLVMFuncOp(
+      ".unreachable", LLVM::LLVMVoidType::get(mod.getContext()), {}, mod,
+      LLVM::Linkage::Private);
+  b.create<func::CallOp>(loc,
+                         SymbolRefAttr::get(mod.getContext(), ".unreachable"),
+                         TypeRange{}, ValueRange{});
+
+  // Define the wrapper if haven't already
+  if (func.getBody().empty()) {
+    Block *blk = b.createBlock(&func.getBody());
+    OpBuilder::InsertionGuard insertGuard(b);
+    b.setInsertionPointToStart(blk);
+    b.create<LLVM::UnreachableOp>(loc);
+  }
 }

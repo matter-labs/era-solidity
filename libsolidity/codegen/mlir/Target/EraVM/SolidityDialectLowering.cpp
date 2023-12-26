@@ -248,22 +248,22 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
   LogicalResult matchAndRewrite(sol::RevertOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
+    auto mod = op->getParentOfType<ModuleOp>();
 
+    solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
-    solidity::mlirgen::BuilderHelper b(rewriter);
 
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
     // the unreachable op
-    SymbolRefAttr revertFunc =
-        eravmHelper.getOrInsertRevert(op->getParentOfType<ModuleOp>());
+    SymbolRefAttr revertFunc = eravmHelper.getOrInsertRevert(mod);
     rewriter.create<func::CallOp>(
         loc, revertFunc, TypeRange{},
         ValueRange{
             op.getInp0(), op.getInp1(),
-            b.getConst(loc, inRuntimeContext(op)
+            h.getConst(loc, inRuntimeContext(op)
                                 ? eravm::RetForwardPageType::UseHeap
                                 : eravm::RetForwardPageType::UseAuxHeap)});
-    rewriter.create<LLVM::UnreachableOp>(loc);
+    h.createCallToUnreachableWrapper(loc, mod);
 
     rewriter.eraseOp(op);
     return success();
@@ -276,8 +276,9 @@ struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
   LogicalResult matchAndRewrite(sol::ReturnOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
+    auto mod = op->getParentOfType<ModuleOp>();
 
-    solidity::mlirgen::BuilderHelper b(rewriter);
+    solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
     SymbolRefAttr returnFunc =
         eravmHelper.getOrInsertReturn(op->getParentOfType<ModuleOp>());
@@ -291,8 +292,8 @@ struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
       rewriter.create<func::CallOp>(
           loc, returnFunc, TypeRange{},
           ValueRange{op.getLhs(), op.getRhs(),
-                     b.getConst(loc, eravm::RetForwardPageType::UseHeap)});
-      rewriter.create<LLVM::UnreachableOp>(loc);
+                     h.getConst(loc, eravm::RetForwardPageType::UseHeap)});
+      h.createCallToUnreachableWrapper(loc, mod);
 
       rewriter.eraseOp(op);
       return success();
@@ -307,8 +308,8 @@ struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
     // Store ByteLen_Field to the immutables offset
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        b.getConst(loc, eravm::HeapAuxOffsetCtorRetData));
-    rewriter.create<LLVM::StoreOp>(loc, b.getConst(loc, eravm::ByteLen_Field),
+        h.getConst(loc, eravm::HeapAuxOffsetCtorRetData));
+    rewriter.create<LLVM::StoreOp>(loc, h.getConst(loc, eravm::ByteLen_Field),
                                    immutablesOffsetPtr, /*alignment=*/32);
 
     // Store size of immutables in terms of ByteLen_Field to the immutables
@@ -316,28 +317,28 @@ struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
     auto immutablesSize = 0; // TODO: Implement this!
     auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        b.getConst(loc,
+        h.getConst(loc,
                    eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field));
     rewriter.create<LLVM::StoreOp>(
-        loc, b.getConst(loc, immutablesSize / eravm::ByteLen_Field),
+        loc, h.getConst(loc, immutablesSize / eravm::ByteLen_Field),
         immutablesNumPtr, /*alignment=*/32);
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
     // ByteLen_Field * 2
     auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
-        loc, b.getConst(loc, immutablesSize), b.getConst(loc, 2));
+        loc, h.getConst(loc, immutablesSize), h.getConst(loc, 2));
     auto returnDataLen = rewriter.create<arith::AddIOp>(
         loc, immutablesCalcSize.getResult(),
-        b.getConst(loc, eravm::ByteLen_Field * 2));
+        h.getConst(loc, eravm::ByteLen_Field * 2));
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
     // RetForwardPageType::UseAuxHeap)) and the unreachable op
     rewriter.create<func::CallOp>(
         loc, returnFunc, TypeRange{},
-        ValueRange{b.getConst(loc, eravm::HeapAuxOffsetCtorRetData),
+        ValueRange{h.getConst(loc, eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(),
-                   b.getConst(loc, eravm::RetForwardPageType::UseAuxHeap)});
-    rewriter.create<LLVM::UnreachableOp>(loc);
+                   h.getConst(loc, eravm::RetForwardPageType::UseAuxHeap)});
+    h.createCallToUnreachableWrapper(loc, mod);
 
     rewriter.eraseOp(op);
     return success();
@@ -486,6 +487,9 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         assert(runtimeObj.getSymName().endswith("_deployed"));
         rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
                                     runtimeFuncRegion.begin());
+        OpBuilder::InsertionGuard insertGuard(rewriter);
+        rewriter.setInsertionPointToEnd(&runtimeFuncRegion.front());
+        rewriter.create<LLVM::UnreachableOp>(runtimeObj.getLoc());
         rewriter.eraseOp(runtimeObj);
       }
     }
@@ -496,6 +500,11 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     Region &deployFuncRegion = deployFunc.getRegion();
     rewriter.inlineRegionBefore(op.getRegion(), deployFuncRegion,
                                 deployFuncRegion.begin());
+    {
+      OpBuilder::InsertionGuard insertGuard(rewriter);
+      rewriter.setInsertionPointToEnd(&deployFuncRegion.front());
+      rewriter.create<LLVM::UnreachableOp>(loc);
+    }
 
     // If the deploy call flag is set, call __deploy()
     auto ifOp = rewriter.create<scf::IfOp>(loc, isDeployCallFlag.getResult(),

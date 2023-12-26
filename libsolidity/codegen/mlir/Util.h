@@ -90,6 +90,10 @@ public:
       mlir::ModuleOp mod,
       mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::External,
       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+
+  /// Creates a call to a wrapper function of the LLVM::UnreachableOp. This is a
+  /// hack to create a non-terminator unreachable op
+  void createCallToUnreachableWrapper(mlir::Location loc, mlir::ModuleOp mod);
 };
 
 } // namespace mlirgen
