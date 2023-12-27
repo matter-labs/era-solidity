@@ -131,6 +131,13 @@ def Sol_CallValOp : Sol_Op<"callvalue", [NoSideEffect]> {
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
+def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [NoSideEffect]> {
+  let summary = "Represents the `calldatasize` call in yul";
+  let arguments = (ins);
+  let results = (outs I<256>:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
+}
+
 // TODO: Support symbolic references to objects outside the current symbol table
 // (including ones outside the translation unit) using SymbolRefAttr instead of
 // FlatSymbolRefAttr

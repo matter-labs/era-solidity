@@ -215,6 +215,9 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     } else if (builtin->name.str() == "callvalue") {
       return b.create<mlir::sol::CallValOp>(loc);
 
+    } else if (builtin->name.str() == "calldatasize") {
+      return b.create<mlir::sol::CallDataSizeOp>(loc);
+
     } else if (builtin->name.str() == "dataoffset") {
       auto *objectName = std::get_if<Literal>(&call.arguments[0]);
       assert(objectName);

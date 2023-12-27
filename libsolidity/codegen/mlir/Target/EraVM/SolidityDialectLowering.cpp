@@ -114,6 +114,31 @@ struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   }
 };
 
+struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
+  using OpRewritePattern<sol::CallDataSizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallDataSizeOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+
+    if (inRuntimeContext(op)) {
+      // Generate GlobCallDataSize load
+      solidity::mlirgen::BuilderHelper h(rewriter);
+      LLVM::GlobalOp globCallDataSzDef = h.getGlobalOp(
+          eravm::GlobCallDataSize, op->getParentOfType<ModuleOp>());
+      auto globCallDataSz =
+          rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
+      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, globCallDataSz,
+                                                /*alignment=*/32);
+    } else {
+      rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
+                                                        /*width=*/256);
+    }
+
+    return success();
+  }
+};
+
 struct DataOffsetOpLowering : public OpRewritePattern<sol::DataOffsetOp> {
   using OpRewritePattern<sol::DataOffsetOp>::OpRewritePattern;
 
@@ -584,7 +609,7 @@ struct SolidityDialectLowering
     pats.add<ObjectOpLowering, ReturnOpLowering, RevertOpLowering,
              MLoadOpLowering, MStoreOpLowering, DataOffsetOpLowering,
              DataSizeOpLowering, CodeCopyOpLowering, MemGuardOpLowering,
-             CallValOpLowering>(&getContext());
+             CallValOpLowering, CallDataSizeOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
