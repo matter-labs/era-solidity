@@ -104,6 +104,10 @@ private:
     return width / 8;
   }
 
+  /// "Converts" `val` to boolean. Integral values are converted to the result
+  /// of non-zero check
+  mlir::Value convToBool(mlir::Value val);
+
   /// Sets the MemRef addr of yul variable
   void setMemRef(YulString var, mlir::Value addr) { memRefMap[var] = addr; }
 
@@ -170,6 +174,19 @@ mlir::Value YulToMLIRPass::getMemRef(YulString var) {
   return it->second;
 }
 
+mlir::Value YulToMLIRPass::convToBool(mlir::Value val) {
+  mlir::Location loc = val.getLoc();
+  BuilderHelper h(b);
+
+  auto ty = val.getType().cast<mlir::IntegerType>();
+  if (ty.getWidth() == 1)
+    return val;
+  else if (ty == getDefIntTy())
+    return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne,
+                                         val, h.getConst(loc, 0));
+  llvm_unreachable("Invalid type");
+}
+
 mlir::Value YulToMLIRPass::genExpr(Literal const &lit) {
   mlir::Location loc = this->getLoc(lit.debugData);
 
@@ -189,10 +206,14 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
   BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
   mlir::Location loc = getLoc(call.debugData);
   if (builtin) {
+    if (builtin->name.str() == "lt") {
+      return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ult,
+                                           genExpr(call.arguments[0]),
+                                           genExpr(call.arguments[1]));
 
-    // TODO: The lowering of builtin function should be auto generated from
-    // evmasm::InstructionInfo and the corresponding mlir ops
-    if (builtin->name.str() == "return") {
+      // TODO: The lowering of builtin function should be auto generated from
+      // evmasm::InstructionInfo and the corresponding mlir ops
+    } else if (builtin->name.str() == "return") {
       b.create<mlir::sol::ReturnOp>(loc, genExpr(call.arguments[0]),
                                     genExpr(call.arguments[1]));
       return {};
@@ -302,17 +323,11 @@ void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
 
 void YulToMLIRPass::operator()(If const &ifStmt) {
   mlir::Location loc = getLoc(ifStmt.debugData);
-  BuilderHelper h(b);
 
-  mlir::Value origCond = genExpr(*ifStmt.condition);
-  assert(origCond.getType().cast<mlir::IntegerType>() == getDefIntTy());
   // TODO: Should we expand here? Or is it beneficial to represent `if` with a
   // non-boolean condition in the IR?
-  auto condAsBool = b.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::ne, origCond, h.getConst(loc, 0));
-
-  auto ifOp =
-      b.create<mlir::scf::IfOp>(loc, condAsBool, /*withElseRegion=*/false);
+  auto ifOp = b.create<mlir::scf::IfOp>(
+      loc, convToBool(genExpr(*ifStmt.condition)), /*withElseRegion=*/false);
   mlir::OpBuilder::InsertionGuard insertGuard(b);
   b.setInsertionPointToStart(&ifOp.getThenRegion().front());
   ASTWalker::operator()(ifStmt.body);

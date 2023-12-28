@@ -47,7 +47,7 @@ object "Test" {
 // CHECK-NEXT: define private void @__deploy() !dbg !10 {
 // CHECK-NEXT:   store i256 128, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1, !dbg !11
 // CHECK-NEXT:   %1 = call i256 @llvm.eravm.getu128(), !dbg !13
-// CHECK-NEXT:   %2 = icmp ne i256 %1, 0, !dbg !14
+// CHECK-NEXT:   %2 = icmp ne i256 %1, 0, !dbg !13
 // CHECK-NEXT:   br i1 %2, label %3, label %4, !dbg !14
 // CHECK-EMPTY:
 // CHECK-NEXT: 3:                                                ; preds = %0

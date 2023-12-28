@@ -20,8 +20,8 @@ object "Test" {
 // CHECK: module {
 // CHECK-NEXT:   sol.object @Test {
 // CHECK-NEXT:     %0 = sol.callvalue : i256 loc(#loc1)
-// CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:     %1 = arith.cmpi ne, %0, %c0_i256 : i256 loc(#loc2)
+// CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:     %1 = arith.cmpi ne, %0, %c0_i256 : i256 loc(#loc1)
 // CHECK-NEXT:     scf.if %1 {
 // CHECK-NEXT:       %c0_i256_2 = arith.constant 0 : i256 loc(#loc3)
 // CHECK-NEXT:       %c42_i256 = arith.constant 42 : i256 loc(#loc4)
@@ -32,8 +32,8 @@ object "Test" {
 // CHECK-NEXT:     sol.return %c0_i256_0, %c0_i256_1 loc(#loc8)
 // CHECK-NEXT:     sol.object @Test_deployed {
 // CHECK-NEXT:       %2 = sol.callvalue : i256 loc(#loc9)
-// CHECK-NEXT:       %c0_i256_2 = arith.constant 0 : i256 loc(#loc10)
-// CHECK-NEXT:       %3 = arith.cmpi ne, %2, %c0_i256_2 : i256 loc(#loc10)
+// CHECK-NEXT:       %c0_i256_2 = arith.constant 0 : i256 loc(#loc9)
+// CHECK-NEXT:       %3 = arith.cmpi ne, %2, %c0_i256_2 : i256 loc(#loc9)
 // CHECK-NEXT:       scf.if %3 {
 // CHECK-NEXT:         %c1_i256 = arith.constant 1 : i256 loc(#loc11)
 // CHECK-NEXT:         %c42_i256 = arith.constant 42 : i256 loc(#loc12)
