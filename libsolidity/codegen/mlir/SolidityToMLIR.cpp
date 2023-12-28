@@ -120,16 +120,15 @@ mlir::Type SolidityToMLIRPass::type(Type const *ty) {
   }
   // Rational number type
   else if (auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
-    // TODO:
     if (ratNumTy->isFractional())
-      solUnimplemented("Unhandled type\n");
+      llvm_unreachable("NYI: Fractional type");
 
     // Integral rational number type
     const IntegerType *intTy = ratNumTy->integerType();
     return b.getIntegerType(intTy->numBits());
   }
-  // TODO:
-  solUnimplemented("Unhandled type\n");
+
+  llvm_unreachable("NYI: Unknown type");
 }
 
 mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
@@ -180,13 +179,11 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
                                                   val)
                        ->getResult(0);
     } else {
-      // TODO:
-      solUnimplemented("Unhandled cast\n");
+      llvm_unreachable("NYI: Unknown cast");
     }
   }
 
-  // TODO:
-  solUnimplemented("Unhandled cast\n");
+  llvm_unreachable("NYI: Unknown cast");
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
@@ -204,7 +201,7 @@ mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
   default:
     break;
   }
-  solUnimplemented("Unhandled binary operation");
+  llvm_unreachable("NYI: Binary operator");
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(Expression const *expr,
@@ -239,9 +236,8 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
 
   // Rational number literal
   if (auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
-    // TODO:
     if (ratNumTy->isFractional())
-      solUnimplemented("Unhandled literal\n");
+      llvm_unreachable("NYI: Fractional literal");
 
     auto *intTy = ratNumTy->integerType();
     u256 val = ty->literalValue(lit);
@@ -251,8 +247,7 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
         lc, b.getIntegerAttr(type(ty), llvm::APInt(intTy->numBits(), val.str(),
                                                    /*radix=*/10)));
   } else {
-    // TODO:
-    solUnimplemented("Unhandled literal\n");
+    llvm_unreachable("NYI: Literal");
   }
 }
 
@@ -264,15 +259,14 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
   if (currFuncResTys.empty())
     return true;
 
-  solUnimplementedAssert(currFuncResTys.size() == 1,
-                         "TODO: Impl multivalued return");
+  assert(currFuncResTys.size() == 1 && "NYI: Multivalued return");
 
   Expression const *astExpr = ret.expression();
   if (astExpr) {
     mlir::Value expr = genExpr(ret.expression(), currFuncResTys[0]);
     b.create<mlir::func::ReturnOp>(loc(ret.location()), expr);
   } else {
-    solUnimplementedAssert(false, "NYI: Empty return");
+    llvm_unreachable("NYI: Empty return");
   }
 
   return true;
@@ -292,8 +286,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
     outTys.push_back(type(param->annotation().type));
   }
 
-  // TODO:
-  solUnimplementedAssert(outTys.size() <= 1, "TODO: Impl multivalued return");
+  assert(outTys.size() <= 1 && "NYI: Multivalued return");
 
   // TODO: Specify visibility
   auto funcType = b.getFunctionType(inpTys, outTys);

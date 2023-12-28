@@ -41,6 +41,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
@@ -251,24 +252,21 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       return b.create<mlir::sol::MemGuardOp>(loc, getIntAttr(arg->value));
 
     } else {
-      solUnimplementedAssert(false, "TODO: Lower other builtin function call");
+      solUnimplementedAssert(false, "NYI: builtin " + builtin->name.str());
     }
-  } else {
-    mlir::func::FuncOp callee =
-        lookupSymbol<mlir::func::FuncOp>(call.functionName.name.str());
-    assert(callee);
-    std::vector<mlir::Value> args;
-    args.reserve(call.arguments.size());
-    for (Expression const &arg : call.arguments) {
-      args.push_back(genExpr(arg));
-    }
-    auto callOp = b.create<mlir::func::CallOp>(loc, callee, args);
-    solUnimplementedAssert(callOp.getNumResults() == 1,
-                           "TODO: Support multivalue return");
-    return callOp.getResult(0);
   }
 
-  solAssert(false);
+  mlir::func::FuncOp callee =
+      lookupSymbol<mlir::func::FuncOp>(call.functionName.name.str());
+  assert(callee);
+  std::vector<mlir::Value> args;
+  args.reserve(call.arguments.size());
+  for (Expression const &arg : call.arguments) {
+    args.push_back(genExpr(arg));
+  }
+  auto callOp = b.create<mlir::func::CallOp>(loc, callee, args);
+  assert(callOp.getNumResults() == 1 && "NYI: multivalue return");
+  return callOp.getResult(0);
 }
 
 mlir::Value YulToMLIRPass::genExpr(Expression const &expr) {
@@ -281,8 +279,8 @@ void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
 }
 
 void YulToMLIRPass::operator()(Assignment const &asgn) {
-  solUnimplementedAssert(asgn.variableNames.size() == 1,
-                         "NYI: Multivalued assignment");
+  assert(asgn.variableNames.size() == 1 && "NYI: Multivalued assignment");
+
   mlir::Value addr = getMemRef(asgn.variableNames[0].name);
   assert(addr);
   b.create<mlir::LLVM::StoreOp>(getLoc(asgn.debugData), genExpr(*asgn.value),
@@ -293,8 +291,7 @@ void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
   BuilderHelper h(b);
   mlir::Location loc = getLoc(decl.debugData);
 
-  solUnimplementedAssert(decl.variables.size() == 1,
-                         "NYI: Multivalued assignment");
+  assert(decl.variables.size() == 1 && "NYI: Multivalued assignment");
   TypedName const &var = decl.variables[0];
   auto addr = b.create<mlir::LLVM::AllocaOp>(
       getLoc(var.debugData), mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
@@ -341,8 +338,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   mlir::OpBuilder::InsertionGuard insertGuard(b);
   b.setInsertionPointToStart(entryBlk);
 
-  solUnimplementedAssert(fn.returnVariables.size() == 1,
-                         "TODO: Implement multivalued return");
+  assert(fn.returnVariables.size() == 1 && "NYI: multivalued return");
   TypedName const &retVar = fn.returnVariables[0];
   setMemRef(retVar.name, b.create<mlir::LLVM::AllocaOp>(
                              getLoc(retVar.debugData),
@@ -416,7 +412,7 @@ void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
     if (auto *subObj = dynamic_cast<Object const *>(subNode.get())) {
       lowerObj(*subObj);
     } else {
-      solUnimplementedAssert(false, "TODO: Metadata translation");
+      llvm_unreachable("NYI: Metadata");
     }
   }
 }
