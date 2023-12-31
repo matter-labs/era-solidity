@@ -250,6 +250,10 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     } else if (builtin->name.str() == "callvalue") {
       return b.create<mlir::sol::CallValOp>(loc);
 
+    } else if (builtin->name.str() == "calldataload") {
+      return b.create<mlir::sol::CallDataLoadOp>(
+          loc, genDefTyExpr(call.arguments[0]));
+
     } else if (builtin->name.str() == "calldatasize") {
       return b.create<mlir::sol::CallDataSizeOp>(loc);
 

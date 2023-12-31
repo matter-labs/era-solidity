@@ -131,6 +131,13 @@ def Sol_CallValOp : Sol_Op<"callvalue", [NoSideEffect]> {
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
+def Sol_CallDataLoadOp : Sol_Op<"calldataload"> {
+  let summary = "Represents the `calldataload` call in yul";
+  let arguments = (ins I<256>:$inp0);
+  let results = (outs I<256>:$out);
+  let assemblyFormat = "$inp0 attr-dict";
+}
+
 def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [NoSideEffect]> {
   let summary = "Represents the `calldatasize` call in yul";
   let arguments = (ins);

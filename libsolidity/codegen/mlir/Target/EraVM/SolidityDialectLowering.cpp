@@ -114,6 +114,47 @@ struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   }
 };
 
+struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
+  using OpRewritePattern<sol::CallDataLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallDataLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter);
+
+    Value offset = op.getInp0();
+
+    if (inRuntimeContext(op)) {
+      // Generate the `GlobCallDataPtr` + `offset` load
+      LLVM::GlobalOp callDataPtrDef = h.getGlobalOp(
+          eravm::GlobCallDataPtr, op->getParentOfType<ModuleOp>());
+      auto callDataPtrAddr =
+          rewriter.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
+      unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
+                                          .cast<LLVM::LLVMPointerType>()
+                                          .getAddressSpace();
+      LLVM::LoadOp callDataPtr = eravmHelper.genLoad(loc, callDataPtrAddr);
+      auto callDataOffset = rewriter.create<LLVM::GEPOp>(
+          loc,
+          /*resultType=*/
+          LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                     callDataPtrAddrSpace),
+          /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
+          callDataPtr, ValueRange{offset});
+      // FIXME: Alignment should be decided by an eravm API
+      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+          op, op.getType(), callDataOffset, /*alignment=*/1);
+
+    } else {
+      rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
+                                                        /*width=*/256);
+    }
+
+    return success();
+  }
+};
+
 struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
   using OpRewritePattern<sol::CallDataSizeOp>::OpRewritePattern;
 
@@ -609,7 +650,8 @@ struct SolidityDialectLowering
     pats.add<ObjectOpLowering, ReturnOpLowering, RevertOpLowering,
              MLoadOpLowering, MStoreOpLowering, DataOffsetOpLowering,
              DataSizeOpLowering, CodeCopyOpLowering, MemGuardOpLowering,
-             CallValOpLowering, CallDataSizeOpLowering>(&getContext());
+             CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering>(
+        &getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
