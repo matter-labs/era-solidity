@@ -46,6 +46,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <variant>
 
 using namespace solidity::langutil;
@@ -134,8 +135,14 @@ private:
   /// Returns the mlir expression for the function call `call`
   mlir::Value genExpr(FunctionCall const &call);
 
-  /// Returns the mlir expression for the expression `expr`
-  mlir::Value genExpr(Expression const &expr);
+  /// Returns the mlir expression (optionally casts it `resTy`) for the
+  /// expression `expr`
+  mlir::Value genExpr(Expression const &expr,
+                      std::optional<mlir::IntegerType> resTy = std::nullopt);
+
+  /// Returns the mlir expression cast'ed to the default type for the expression
+  /// `expr`
+  mlir::Value genDefTyExpr(Expression const &expr);
 
   /// Lowers an expression statement
   void operator()(ExpressionStatement const &expr) override;
@@ -203,32 +210,38 @@ mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
 }
 
 mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
+  BuilderHelper h(b);
   BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
   mlir::Location loc = getLoc(call.debugData);
   if (builtin) {
     if (builtin->name.str() == "lt") {
       return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ult,
-                                           genExpr(call.arguments[0]),
-                                           genExpr(call.arguments[1]));
+                                           genDefTyExpr(call.arguments[0]),
+                                           genDefTyExpr(call.arguments[1]));
+
+    } else if (builtin->name.str() == "iszero") {
+      return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
+                                           genDefTyExpr(call.arguments[0]),
+                                           h.getConst(loc, 0));
 
       // TODO: The lowering of builtin function should be auto generated from
       // evmasm::InstructionInfo and the corresponding mlir ops
     } else if (builtin->name.str() == "return") {
-      b.create<mlir::sol::ReturnOp>(loc, genExpr(call.arguments[0]),
-                                    genExpr(call.arguments[1]));
+      b.create<mlir::sol::ReturnOp>(loc, genDefTyExpr(call.arguments[0]),
+                                    genDefTyExpr(call.arguments[1]));
       return {};
 
     } else if (builtin->name.str() == "revert") {
-      b.create<mlir::sol::RevertOp>(loc, genExpr(call.arguments[0]),
-                                    genExpr(call.arguments[1]));
+      b.create<mlir::sol::RevertOp>(loc, genDefTyExpr(call.arguments[0]),
+                                    genDefTyExpr(call.arguments[1]));
       return {};
 
     } else if (builtin->name.str() == "mload") {
-      return b.create<mlir::sol::MLoadOp>(loc, genExpr(call.arguments[0]));
+      return b.create<mlir::sol::MLoadOp>(loc, genDefTyExpr(call.arguments[0]));
 
     } else if (builtin->name.str() == "mstore") {
-      b.create<mlir::sol::MStoreOp>(loc, genExpr(call.arguments[0]),
-                                    genExpr(call.arguments[1]));
+      b.create<mlir::sol::MStoreOp>(loc, genDefTyExpr(call.arguments[0]),
+                                    genDefTyExpr(call.arguments[1]));
       return {};
 
     } else if (builtin->name.str() == "msize") {
@@ -261,9 +274,9 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
           loc, mlir::FlatSymbolRefAttr::get(objectOp));
 
     } else if (builtin->name.str() == "codecopy") {
-      mlir::Value dst = genExpr(call.arguments[0]);
-      mlir::Value offset = genExpr(call.arguments[1]);
-      mlir::Value size = genExpr(call.arguments[2]);
+      mlir::Value dst = genDefTyExpr(call.arguments[0]);
+      mlir::Value offset = genDefTyExpr(call.arguments[1]);
+      mlir::Value size = genDefTyExpr(call.arguments[2]);
       b.create<mlir::sol::CodeCopyOp>(loc, dst, offset, size);
       return {};
 
@@ -283,16 +296,33 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
   std::vector<mlir::Value> args;
   args.reserve(call.arguments.size());
   for (Expression const &arg : call.arguments) {
-    args.push_back(genExpr(arg));
+    args.push_back(genDefTyExpr(arg));
   }
   auto callOp = b.create<mlir::func::CallOp>(loc, callee, args);
   assert(callOp.getNumResults() == 1 && "NYI: multivalue return");
   return callOp.getResult(0);
 }
 
-mlir::Value YulToMLIRPass::genExpr(Expression const &expr) {
-  return std::visit(
+mlir::Value YulToMLIRPass::genExpr(Expression const &expr,
+                                   std::optional<mlir::IntegerType> resTy) {
+  mlir::Value gen = std::visit(
       [&](auto &&resolvedExpr) { return this->genExpr(resolvedExpr); }, expr);
+
+  if (resTy) {
+    assert(gen);
+    auto genTy = gen.getType().cast<mlir::IntegerType>();
+    if (*resTy != genTy) {
+      assert(resTy->getWidth() > genTy.getWidth());
+      // Zero-extend the result to `resTy`
+      return b.create<mlir::arith::ExtUIOp>(gen.getLoc(), *resTy, gen);
+    }
+  }
+
+  return gen;
+}
+
+mlir::Value YulToMLIRPass::genDefTyExpr(Expression const &expr) {
+  return genExpr(expr, getDefIntTy());
 }
 
 void YulToMLIRPass::operator()(ExpressionStatement const &expr) {
@@ -304,8 +334,8 @@ void YulToMLIRPass::operator()(Assignment const &asgn) {
 
   mlir::Value addr = getMemRef(asgn.variableNames[0].name);
   assert(addr);
-  b.create<mlir::LLVM::StoreOp>(getLoc(asgn.debugData), genExpr(*asgn.value),
-                                addr, getDefAlign());
+  b.create<mlir::LLVM::StoreOp>(getLoc(asgn.debugData),
+                                genDefTyExpr(*asgn.value), addr, getDefAlign());
 }
 
 void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
@@ -318,7 +348,8 @@ void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
       getLoc(var.debugData), mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
       h.getConst(loc, 1), getDefAlign());
   setMemRef(var.name, addr);
-  b.create<mlir::LLVM::StoreOp>(loc, genExpr(*decl.value), addr, getDefAlign());
+  b.create<mlir::LLVM::StoreOp>(loc, genDefTyExpr(*decl.value), addr,
+                                getDefAlign());
 }
 
 void YulToMLIRPass::operator()(If const &ifStmt) {
