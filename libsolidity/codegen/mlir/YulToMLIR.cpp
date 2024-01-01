@@ -224,6 +224,11 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
                                            genDefTyExpr(call.arguments[0]),
                                            h.getConst(loc, 0));
 
+    } else if (builtin->name.str() == "shr") {
+      return b.create<mlir::arith::ShRUIOp>(loc,
+                                            genDefTyExpr(call.arguments[1]),
+                                            genDefTyExpr(call.arguments[0]));
+
       // TODO: The lowering of builtin function should be auto generated from
       // evmasm::InstructionInfo and the corresponding mlir ops
     } else if (builtin->name.str() == "return") {
