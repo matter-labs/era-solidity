@@ -214,7 +214,15 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
   BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
   mlir::Location loc = getLoc(call.debugData);
   if (builtin) {
-    if (builtin->name.str() == "lt") {
+    if (builtin->name.str() == "add") {
+      return b.create<mlir::arith::AddIOp>(loc, genDefTyExpr(call.arguments[0]),
+                                           genDefTyExpr(call.arguments[1]));
+
+    } else if (builtin->name.str() == "sub") {
+      return b.create<mlir::arith::SubIOp>(loc, genDefTyExpr(call.arguments[0]),
+                                           genDefTyExpr(call.arguments[1]));
+
+    } else if (builtin->name.str() == "lt") {
       return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ult,
                                            genDefTyExpr(call.arguments[0]),
                                            genDefTyExpr(call.arguments[1]));
