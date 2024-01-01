@@ -93,6 +93,11 @@ enum EntryInfo {
   MandatoryArgCnt = 2,
 };
 
+/// Returns the alignment of `addrSpace`
+unsigned getAlignment(AddrSpace addrSpace);
+/// Returns the alignment of the LLVMPointerType value `ptr`
+unsigned getAlignment(mlir::Value ptr);
+
 /// Builder extension for EraVM
 class BuilderHelper {
   mlir::OpBuilder &b;
@@ -106,9 +111,6 @@ public:
 
   /// Generates and return the ABI length for the pointer `ptr`
   mlir::Value getABILen(mlir::Location loc, mlir::Value ptr);
-
-  /// Generate and return LoadOp of address `addr` with EraVM specific semantics
-  mlir::LLVM::LoadOp genLoad(mlir::Location loc, mlir::Value addr);
 
   /// Returns an existing or a new (if not found) creation function
   mlir::LLVM::LLVMFuncOp

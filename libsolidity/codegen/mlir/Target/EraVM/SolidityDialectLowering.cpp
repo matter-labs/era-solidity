@@ -134,7 +134,8 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
       unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
                                           .cast<LLVM::LLVMPointerType>()
                                           .getAddressSpace();
-      LLVM::LoadOp callDataPtr = eravmHelper.genLoad(loc, callDataPtrAddr);
+      auto callDataPtr = rewriter.create<LLVM::LoadOp>(
+          loc, callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
       auto callDataOffset = rewriter.create<LLVM::GEPOp>(
           loc,
           /*resultType=*/
@@ -142,9 +143,9 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
                                      callDataPtrAddrSpace),
           /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
           callDataPtr, ValueRange{offset});
-      // FIXME: Alignment should be decided by an eravm API
       rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-          op, op.getType(), callDataOffset, /*alignment=*/1);
+          op, op.getType(), callDataOffset,
+          eravm::getAlignment(callDataOffset));
 
     } else {
       rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
@@ -169,8 +170,8 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
           eravm::GlobCallDataSize, op->getParentOfType<ModuleOp>());
       auto globCallDataSz =
           rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
-      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, globCallDataSz,
-                                                /*alignment=*/32);
+      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+          op, globCallDataSz, eravm::getAlignment(globCallDataSz));
     } else {
       rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
                                                         /*width=*/256);
@@ -238,7 +239,8 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
     unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
                                         .cast<LLVM::LLVMPointerType>()
                                         .getAddressSpace();
-    LLVM::LoadOp callDataPtr = eravmHelper.genLoad(loc, callDataPtrAddr);
+    auto callDataPtr = rewriter.create<LLVM::LoadOp>(
+        loc, callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
     auto src = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
@@ -268,9 +270,8 @@ struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
                                                          eravm::AddrSpace_Heap);
     mlir::Value offset =
         rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offsetInt);
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, rewriter.getIntegerType(256),
-                                              offset,
-                                              /*alignment=*/1);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+        op, rewriter.getIntegerType(256), offset, eravm::getAlignment(offset));
 
     return success();
   }
@@ -289,7 +290,8 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
                                                          eravm::AddrSpace_Heap);
     mlir::Value offset =
         rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offsetInt);
-    rewriter.create<LLVM::StoreOp>(loc, val, offset, /*alignment=*/1);
+    rewriter.create<LLVM::StoreOp>(loc, val, offset,
+                                   eravm::getAlignment(offset));
 
     rewriter.eraseOp(op);
     return success();
@@ -376,7 +378,8 @@ struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
         loc, heapAuxAddrSpacePtrTy,
         h.getConst(loc, eravm::HeapAuxOffsetCtorRetData));
     rewriter.create<LLVM::StoreOp>(loc, h.getConst(loc, eravm::ByteLen_Field),
-                                   immutablesOffsetPtr, /*alignment=*/32);
+                                   immutablesOffsetPtr,
+                                   eravm::getAlignment(immutablesOffsetPtr));
 
     // Store size of immutables in terms of ByteLen_Field to the immutables
     // number offset
@@ -387,7 +390,7 @@ struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
                    eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field));
     rewriter.create<LLVM::StoreOp>(
         loc, h.getConst(loc, immutablesSize / eravm::ByteLen_Field),
-        immutablesNumPtr, /*alignment=*/32);
+        immutablesNumPtr, eravm::getAlignment(immutablesNumPtr));
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
     // ByteLen_Field * 2
@@ -477,7 +480,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         rewriter.create<LLVM::AddressOfOp>(loc, globCallDataPtrDef);
     rewriter.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
-        globCallDataPtr, /*alignment=*/32);
+        globCallDataPtr, eravm::getAlignment(globCallDataPtr));
 
     // Store the calldata ABI size to the global calldata size
     Value abiLen = eravmHelper.getABILen(loc, globCallDataPtr);
@@ -486,11 +489,12 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     Value globCallDataSz =
         rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
     rewriter.create<LLVM::StoreOp>(loc, abiLen, globCallDataSz,
-                                   /*alignment=*/32);
+                                   eravm::getAlignment(globCallDataSz));
 
     // Store calldatasize[calldata abi arg] to the global ret data ptr and
     // active ptr
-    LLVM::LoadOp callDataSz = eravmHelper.genLoad(loc, globCallDataSz);
+    auto callDataSz = rewriter.create<LLVM::LoadOp>(
+        loc, globCallDataSz, eravm::getAlignment(globCallDataSz));
     auto retDataABIInitializer = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
@@ -504,7 +508,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
           h.getOrInsertPtrGlobalOp(name, mod, eravm::AddrSpace_Generic);
       Value globAddr = rewriter.create<LLVM::AddressOfOp>(loc, globDef);
       rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
-                                     /*alignment=*/32);
+                                     eravm::getAlignment(globAddr));
     };
     storeRetDataABIInitializer(eravm::GlobRetDataPtr);
     storeRetDataABIInitializer(eravm::GlobActivePtr);
@@ -515,7 +519,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         rewriter.create<LLVM::AddressOfOp>(loc, globCallFlagsDef);
     rewriter.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
-        globCallFlags, /*alignment=*/32);
+        globCallFlags, eravm::getAlignment(globCallFlags));
 
     // Store the remaining args to the global extra ABI data
     auto globExtraABIDataDef = h.getGlobalOp(eravm::GlobExtraABIData, mod);
@@ -533,7 +537,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
       // without explictly setting the elem_type attr?
       gep.setElemTypeAttr(TypeAttr::get(globExtraABIDataDef.getType()));
       rewriter.create<LLVM::StoreOp>(loc, entryBlk->getArgument(i), gep,
-                                     /*alignment=*/32);
+                                     eravm::getAlignment(gep));
     }
 
     // Check Deploy call flag

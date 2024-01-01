@@ -36,8 +36,8 @@ object "Test" {
 // CHECK-EMPTY:
 // CHECK-NEXT: define private void @__deploy() !dbg !10 {
 // CHECK-NEXT:   %1 = call i256 @llvm.eravm.getu128(), !dbg !11
-// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 32, !dbg !13
-// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 32, !dbg !13
+// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 1, !dbg !13
+// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 1, !dbg !13
 // CHECK-NEXT:   call void @__return(i256 256, i256 64, i256 2), !dbg !13
 // CHECK-NEXT:   call void @.unreachable(), !dbg !13
 // CHECK-NEXT:   unreachable

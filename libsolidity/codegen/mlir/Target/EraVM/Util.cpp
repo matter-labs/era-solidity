@@ -36,6 +36,15 @@
 using namespace eravm;
 using namespace mlir;
 
+unsigned eravm::getAlignment(AddrSpace addrSpace) {
+  return addrSpace == AddrSpace_Stack ? ByteLen_Field : ByteLen_Byte;
+}
+
+unsigned eravm::getAlignment(Value ptr) {
+  auto ty = ptr.getType().cast<LLVM::LLVMPointerType>();
+  return getAlignment(static_cast<AddrSpace>(ty.getAddressSpace()));
+}
+
 void eravm::BuilderHelper::initGlobs(Location loc, ModuleOp mod) {
 
   auto initInt = [&](const char *name) {
@@ -43,7 +52,7 @@ void eravm::BuilderHelper::initGlobs(Location loc, ModuleOp mod) {
         h.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
     Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
     b.create<LLVM::StoreOp>(loc, h.getConst(loc, 0), globAddr,
-                            /*alignment=*/32);
+                            getAlignment(globAddr));
   };
 
   auto i256Ty = b.getIntegerType(256);
@@ -57,7 +66,7 @@ void eravm::BuilderHelper::initGlobs(Location loc, ModuleOp mod) {
   // Initialize the GlobExtraABIData int array
   auto extraABIData = h.getOrInsertGlobalOp(
       GlobExtraABIData, mod, LLVM::LLVMArrayType::get(i256Ty, 10),
-      /*alignment=*/32, AddrSpace_Stack, LLVM::Linkage::Private,
+      getAlignment(AddrSpace_Stack), AddrSpace_Stack, LLVM::Linkage::Private,
       b.getZeroAttr(RankedTensorType::get({10}, i256Ty)));
   Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
   b.create<LLVM::StoreOp>(
@@ -73,16 +82,6 @@ Value eravm::BuilderHelper::getABILen(Location loc, Value ptr) {
   Value lShr = b.create<LLVM::LShrOp>(loc, ptrToInt,
                                       h.getConst(loc, eravm::BitLen_X32 * 3));
   return b.create<LLVM::AndOp>(loc, lShr, h.getConst(loc, UINT_MAX));
-}
-
-LLVM::LoadOp eravm::BuilderHelper::genLoad(Location loc, Value addr) {
-  auto addrOp = llvm::cast<LLVM::AddressOfOp>(addr.getDefiningOp());
-  LLVM::GlobalOp globOp = addrOp.getGlobal();
-  assert(globOp);
-  AddrSpace addrSpace = static_cast<AddrSpace>(globOp.getAddrSpace());
-  unsigned alignment =
-      addrSpace == AddrSpace_Stack ? ByteLen_Field : ByteLen_Byte;
-  return b.create<LLVM::LoadOp>(loc, addrOp, alignment);
 }
 
 LLVM::LLVMFuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(

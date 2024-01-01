@@ -45,8 +45,8 @@ object "Test" {
 // CHECK-NEXT:   %5 = load ptr addrspace(3), ptr @ptr_calldata, align 32, !dbg !16
 // CHECK-NEXT:   %6 = getelementptr i8, ptr addrspace(3) %5, i256 0, !dbg !16
 // CHECK-NEXT:   call void @llvm.memcpy.p1.p3.i256(ptr addrspace(1) %4, ptr addrspace(3) %6, i256 0, i1 false), !dbg !16
-// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 32, !dbg !17
-// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 32, !dbg !17
+// CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 1, !dbg !17
+// CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 1, !dbg !17
 // CHECK-NEXT:   call void @__return(i256 256, i256 64, i256 2), !dbg !17
 // CHECK-NEXT:   call void @.unreachable(), !dbg !17
 // CHECK-NEXT:   unreachable
