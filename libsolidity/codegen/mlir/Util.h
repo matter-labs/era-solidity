@@ -79,7 +79,7 @@ public:
       mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::Private);
 
   mlir::LLVM::GlobalOp getOrInsertPtrGlobalOp(
-      llvm::StringRef name, mlir::ModuleOp mod, unsigned addrSpace = 0,
+      llvm::StringRef name, mlir::ModuleOp mod, unsigned ptrTyAddrSpace = 0,
       mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::Private);
 
   mlir::ArrayAttr getZeroInitialzedAttr(mlir::IntegerType ty, unsigned sz);

@@ -61,11 +61,12 @@ LLVM::GlobalOp BuilderHelper::getOrInsertIntGlobalOp(llvm::StringRef name,
 
 LLVM::GlobalOp BuilderHelper::getOrInsertPtrGlobalOp(llvm::StringRef name,
                                                      ModuleOp mod,
-                                                     unsigned addrSpace,
+                                                     unsigned ptrTyAddrSpace,
                                                      LLVM::Linkage linkage) {
-  auto ty = LLVM::LLVMPointerType::get(mod.getContext(), addrSpace);
+  auto ty = LLVM::LLVMPointerType::get(mod.getContext(), ptrTyAddrSpace);
   // FIXME: What attribute corresponds to llvm's null?
-  return getOrInsertGlobalOp(name, mod, ty, 0, 0, linkage, {});
+  return getOrInsertGlobalOp(name, mod, ty, /*alignment=*/0, /*addrSpace=*/0,
+                             linkage, {});
 }
 
 ArrayAttr BuilderHelper::getZeroInitialzedAttr(IntegerType ty, unsigned sz) {
