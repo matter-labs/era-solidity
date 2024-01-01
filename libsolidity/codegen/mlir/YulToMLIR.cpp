@@ -219,6 +219,11 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
                                            genDefTyExpr(call.arguments[0]),
                                            genDefTyExpr(call.arguments[1]));
 
+    } else if (builtin->name.str() == "slt") {
+      return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt,
+                                           genDefTyExpr(call.arguments[0]),
+                                           genDefTyExpr(call.arguments[1]));
+
     } else if (builtin->name.str() == "iszero") {
       return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
                                            genDefTyExpr(call.arguments[0]),
