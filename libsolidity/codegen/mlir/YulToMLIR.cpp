@@ -40,6 +40,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Verifier.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -156,6 +158,9 @@ private:
   /// Lowers an if statement
   void operator()(If const &ifStmt) override;
 
+  /// Lowers a switch statement
+  void operator()(Switch const &switchStmt) override;
+
   /// Lowers a function
   void operator()(FunctionDefinition const &fn) override;
 
@@ -163,15 +168,19 @@ private:
   void operator()(Block const &blk) override;
 };
 
-mlir::IntegerAttr YulToMLIRPass::getIntAttr(YulString num) {
-  auto defTy = getDefIntTy();
+/// Returns the llvm::APInt of `num`
+static llvm::APInt getAPInt(YulString num, unsigned width) {
   llvm::StringRef numStr = num.str();
   uint8_t radix = 10;
-  if (numStr.startswith("0x")) {
-    numStr = numStr.ltrim("0x");
+  if (numStr.consume_front("0x")) {
     radix = 16;
   }
-  return b.getIntegerAttr(defTy, llvm::APInt(defTy.getWidth(), numStr, radix));
+  return llvm::APInt(width, numStr, radix);
+}
+
+mlir::IntegerAttr YulToMLIRPass::getIntAttr(YulString num) {
+  auto defTy = getDefIntTy();
+  return b.getIntegerAttr(defTy, getAPInt(num, defTy.getWidth()));
 }
 
 mlir::Value YulToMLIRPass::getMemRef(YulString var) {
@@ -384,6 +393,56 @@ void YulToMLIRPass::operator()(If const &ifStmt) {
   mlir::OpBuilder::InsertionGuard insertGuard(b);
   b.setInsertionPointToStart(&ifOp.getThenRegion().front());
   ASTWalker::operator()(ifStmt.body);
+}
+
+void YulToMLIRPass::operator()(Switch const &switchStmt) {
+  mlir::Location loc = getLoc(switchStmt.debugData);
+
+  // Create the mlir attribute for all the case values (excluding the default
+  // case); Track the default case AST
+  Case const *defCaseAST = nullptr;
+  std::vector<llvm::APInt> caseVals;
+  caseVals.reserve(switchStmt.cases.size());
+  std::vector<Case const *> caseASTs;
+  for (Case const &caseAST : switchStmt.cases) {
+    // If non default block
+    if (caseAST.value) {
+      caseASTs.push_back(&caseAST);
+      caseVals.push_back(
+          getAPInt(caseAST.value->value, getDefIntTy().getWidth()));
+
+    } else {
+      // There should only be one default case
+      assert(!defCaseAST);
+      defCaseAST = &caseAST;
+    }
+  }
+  assert(defCaseAST && "NYI: Switch block without a default case");
+  auto caseValsAttr = mlir::DenseIntElementsAttr::get(
+      mlir::RankedTensorType::get(static_cast<int64_t>(caseVals.size()),
+                                  getDefIntTy()),
+      caseVals);
+
+  // Lower the switch argument and generate the switch op
+  mlir::Value arg = genExpr(*switchStmt.expression);
+  auto switchOp = b.create<mlir::scf::IntSwitchOp>(
+      loc, /*resultTypes=*/llvm::None, arg, caseValsAttr, caseVals.size());
+
+  mlir::OpBuilder::InsertionGuard insertGuard(b);
+
+  // Create blocks for all the case values and the default case; Then lower
+  // their body
+  auto lowerBody = [&](mlir::Region &region, Case const &caseAST) {
+    mlir::Block *blk = b.createBlock(&region);
+    b.setInsertionPointToStart(blk);
+    b.create<mlir::scf::YieldOp>(loc);
+    b.setInsertionPointToStart(blk);
+    ASTWalker::operator()(caseAST.body);
+  };
+  lowerBody(switchOp.getDefaultRegion(), *defCaseAST);
+  assert(switchOp.getCaseRegions().size() == caseASTs.size());
+  for (auto [region, caseAST] : llvm::zip(switchOp.getCaseRegions(), caseASTs))
+    lowerBody(region, *caseAST);
 }
 
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
