@@ -14,8 +14,30 @@ object "Test" {
   object "Test_deployed" {
     code {
       mstore(64, memoryguard(0x80))
-      // TODO: Selector
+      if iszero(lt(calldatasize(), 4)) {
+        let selector := shr(224, calldataload(0))
+        switch selector
+        case 0x26121ff0 {
+          if callvalue() {
+            revert(0, 0)
+          }
+          if slt(sub(calldatasize(), 4), 0)
+          {
+            revert(0, 0)
+          }
+          let ret := f()
+          let memPos := mload(64)
+          let memEnd := add(memPos, 32)
+          mstore(memPos, ret)
+          return(memPos, sub(memEnd, memPos))
+        }
+        default {}
+      }
       revert(0, 0)
+
+      function f() -> r {
+        r := 42
+      }
     }
   }
 }
@@ -74,9 +96,85 @@ object "Test" {
 // CHECK-EMPTY:
 // CHECK-NEXT: define private void @__runtime() !dbg !23 {
 // CHECK-NEXT:   store i256 128, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1, !dbg !24
-// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0), !dbg !26
-// CHECK-NEXT:   call void @.unreachable(), !dbg !26
+// CHECK-NEXT:   %1 = load i256, ptr @calldatasize, align 32, !dbg !26
+// CHECK-NEXT:   %2 = icmp ult i256 %1, 4, !dbg !27
+// CHECK-NEXT:   %3 = zext i1 %2 to i256, !dbg !27
+// CHECK-NEXT:   %4 = icmp eq i256 %3, 0, !dbg !28
+// CHECK-NEXT:   br i1 %4, label %5, label %38, !dbg !29
+// CHECK-EMPTY:
+// CHECK-NEXT: 5:                                                ; preds = %0
+// CHECK-NEXT:   %6 = alloca i256, i256 1, align 32, !dbg !30
+// CHECK-NEXT:   %7 = load ptr addrspace(3), ptr @ptr_calldata, align 32, !dbg !31
+// CHECK-NEXT:   %8 = getelementptr i8, ptr addrspace(3) %7, i256 0, !dbg !31
+// CHECK-NEXT:   %9 = load i256, ptr addrspace(3) %8, align 1, !dbg !31
+// CHECK-NEXT:   %10 = lshr i256 %9, 224, !dbg !32
+// CHECK-NEXT:   store i256 %10, ptr %6, align 32, !dbg !33
+// CHECK-NEXT:   %11 = load i256, ptr %6, align 32, !dbg !34
+// CHECK-NEXT:   switch i256 %11, label %36 [
+// CHECK-NEXT:     i256 638722032, label %12
+// CHECK-NEXT:   ], !dbg !35
+// CHECK-EMPTY:
+// CHECK-NEXT: 12:                                               ; preds = %5
+// CHECK-NEXT:   %13 = call i256 @llvm.eravm.getu128(), !dbg !36
+// CHECK-NEXT:   %14 = icmp ne i256 %13, 0, !dbg !36
+// CHECK-NEXT:   br i1 %14, label %15, label %16, !dbg !37
+// CHECK-EMPTY:
+// CHECK-NEXT: 15:                                               ; preds = %12
+// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0), !dbg !38
+// CHECK-NEXT:   call void @.unreachable(), !dbg !38
+// CHECK-NEXT:   br label %16, !dbg !37
+// CHECK-EMPTY:
+// CHECK-NEXT: 16:                                               ; preds = %15, %12
+// CHECK-NEXT:   %17 = load i256, ptr @calldatasize, align 32, !dbg !39
+// CHECK-NEXT:   %18 = sub i256 %17, 4, !dbg !40
+// CHECK-NEXT:   %19 = icmp slt i256 %18, 0, !dbg !41
+// CHECK-NEXT:   br i1 %19, label %20, label %21, !dbg !42
+// CHECK-EMPTY:
+// CHECK-NEXT: 20:                                               ; preds = %16
+// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0), !dbg !43
+// CHECK-NEXT:   call void @.unreachable(), !dbg !43
+// CHECK-NEXT:   br label %21, !dbg !42
+// CHECK-EMPTY:
+// CHECK-NEXT: 21:                                               ; preds = %20, %16
+// CHECK-NEXT:   %22 = alloca i256, i256 1, align 32, !dbg !44
+// CHECK-NEXT:   %23 = call i256 @f(), !dbg !45
+// CHECK-NEXT:   store i256 %23, ptr %22, align 32, !dbg !46
+// CHECK-NEXT:   %24 = alloca i256, i256 1, align 32, !dbg !47
+// CHECK-NEXT:   %25 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1, !dbg !48
+// CHECK-NEXT:   store i256 %25, ptr %24, align 32, !dbg !49
+// CHECK-NEXT:   %26 = alloca i256, i256 1, align 32, !dbg !50
+// CHECK-NEXT:   %27 = load i256, ptr %24, align 32, !dbg !51
+// CHECK-NEXT:   %28 = add i256 %27, 32, !dbg !52
+// CHECK-NEXT:   store i256 %28, ptr %26, align 32, !dbg !53
+// CHECK-NEXT:   %29 = load i256, ptr %24, align 32, !dbg !54
+// CHECK-NEXT:   %30 = load i256, ptr %22, align 32, !dbg !55
+// CHECK-NEXT:   %31 = inttoptr i256 %29 to ptr addrspace(1), !dbg !56
+// CHECK-NEXT:   store i256 %30, ptr addrspace(1) %31, align 1, !dbg !56
+// CHECK-NEXT:   %32 = load i256, ptr %24, align 32, !dbg !57
+// CHECK-NEXT:   %33 = load i256, ptr %26, align 32, !dbg !58
+// CHECK-NEXT:   %34 = load i256, ptr %24, align 32, !dbg !59
+// CHECK-NEXT:   %35 = sub i256 %33, %34, !dbg !60
+// CHECK-NEXT:   call void @__return(i256 %32, i256 %35, i256 0), !dbg !61
+// CHECK-NEXT:   call void @.unreachable(), !dbg !61
+// CHECK-NEXT:   br label %37, !dbg !35
+// CHECK-EMPTY:
+// CHECK-NEXT: 36:                                               ; preds = %5
+// CHECK-NEXT:   br label %37, !dbg !35
+// CHECK-EMPTY:
+// CHECK-NEXT: 37:                                               ; preds = %36, %21
+// CHECK-NEXT:   br label %38, !dbg !29
+// CHECK-EMPTY:
+// CHECK-NEXT: 38:                                               ; preds = %37, %0
+// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0), !dbg !62
+// CHECK-NEXT:   call void @.unreachable(), !dbg !62
 // CHECK-NEXT:   unreachable
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: define i256 @f() !dbg !63 {
+// CHECK-NEXT:   %1 = alloca i256, i256 1, align 32, !dbg !64
+// CHECK-NEXT:   store i256 42, ptr %1, align 32, !dbg !66
+// CHECK-NEXT:   %2 = load i256, ptr %1, align 32, !dbg !64
+// CHECK-NEXT:   ret i256 %2, !dbg !67
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) {
@@ -156,7 +254,48 @@ object "Test" {
 // CHECK-NEXT: !23 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !24 = !DILocation(line: 15, column: 6, scope: !25)
 // CHECK-NEXT: !25 = !DILexicalBlockFile(scope: !23, file: !9, discriminator: 0)
-// CHECK-NEXT: !26 = !DILocation(line: 17, column: 6, scope: !25)
+// CHECK-NEXT: !26 = !DILocation(line: 16, column: 19, scope: !25)
+// CHECK-NEXT: !27 = !DILocation(line: 16, column: 16, scope: !25)
+// CHECK-NEXT: !28 = !DILocation(line: 16, column: 9, scope: !25)
+// CHECK-NEXT: !29 = !DILocation(line: 16, column: 6, scope: !25)
+// CHECK-NEXT: !30 = !DILocation(line: 17, column: 12, scope: !25)
+// CHECK-NEXT: !31 = !DILocation(line: 17, column: 33, scope: !25)
+// CHECK-NEXT: !32 = !DILocation(line: 17, column: 24, scope: !25)
+// CHECK-NEXT: !33 = !DILocation(line: 17, column: 8, scope: !25)
+// CHECK-NEXT: !34 = !DILocation(line: 18, column: 15, scope: !25)
+// CHECK-NEXT: !35 = !DILocation(line: 18, column: 8, scope: !25)
+// CHECK-NEXT: !36 = !DILocation(line: 20, column: 13, scope: !25)
+// CHECK-NEXT: !37 = !DILocation(line: 20, column: 10, scope: !25)
+// CHECK-NEXT: !38 = !DILocation(line: 21, column: 12, scope: !25)
+// CHECK-NEXT: !39 = !DILocation(line: 23, column: 21, scope: !25)
+// CHECK-NEXT: !40 = !DILocation(line: 23, column: 17, scope: !25)
+// CHECK-NEXT: !41 = !DILocation(line: 23, column: 13, scope: !25)
+// CHECK-NEXT: !42 = !DILocation(line: 23, column: 10, scope: !25)
+// CHECK-NEXT: !43 = !DILocation(line: 25, column: 12, scope: !25)
+// CHECK-NEXT: !44 = !DILocation(line: 27, column: 14, scope: !25)
+// CHECK-NEXT: !45 = !DILocation(line: 27, column: 21, scope: !25)
+// CHECK-NEXT: !46 = !DILocation(line: 27, column: 10, scope: !25)
+// CHECK-NEXT: !47 = !DILocation(line: 28, column: 14, scope: !25)
+// CHECK-NEXT: !48 = !DILocation(line: 28, column: 24, scope: !25)
+// CHECK-NEXT: !49 = !DILocation(line: 28, column: 10, scope: !25)
+// CHECK-NEXT: !50 = !DILocation(line: 29, column: 14, scope: !25)
+// CHECK-NEXT: !51 = !DILocation(line: 29, column: 28, scope: !25)
+// CHECK-NEXT: !52 = !DILocation(line: 29, column: 24, scope: !25)
+// CHECK-NEXT: !53 = !DILocation(line: 29, column: 10, scope: !25)
+// CHECK-NEXT: !54 = !DILocation(line: 30, column: 17, scope: !25)
+// CHECK-NEXT: !55 = !DILocation(line: 30, column: 25, scope: !25)
+// CHECK-NEXT: !56 = !DILocation(line: 30, column: 10, scope: !25)
+// CHECK-NEXT: !57 = !DILocation(line: 31, column: 17, scope: !25)
+// CHECK-NEXT: !58 = !DILocation(line: 31, column: 29, scope: !25)
+// CHECK-NEXT: !59 = !DILocation(line: 31, column: 37, scope: !25)
+// CHECK-NEXT: !60 = !DILocation(line: 31, column: 25, scope: !25)
+// CHECK-NEXT: !61 = !DILocation(line: 31, column: 10, scope: !25)
+// CHECK-NEXT: !62 = !DILocation(line: 35, column: 6, scope: !25)
+// CHECK-NEXT: !63 = distinct !DISubprogram(name: "f", linkageName: "f", scope: null, file: !9, line: 37, type: !5, scopeLine: 37, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !64 = !DILocation(line: 37, column: 22, scope: !65)
+// CHECK-NEXT: !65 = !DILexicalBlockFile(scope: !63, file: !9, discriminator: 0)
+// CHECK-NEXT: !66 = !DILocation(line: 38, column: 8, scope: !65)
+// CHECK-NEXT: !67 = !DILocation(line: 37, column: 6, scope: !65)
 // CHECK-EMPTY:
 // ASM: 	.text
 // ASM-NEXT: 	.file	{{.*}}
@@ -206,11 +345,87 @@ object "Test" {
 // ASM-NEXT: __runtime:
 // ASM-NEXT: .func_begin2:
 // ASM-NEXT: 	.loc	1 0 0
+// ASM-NEXT: 	nop	stack+=[4]
 // ASM-NEXT: 	add	128, r0, r1
 // ASM-NEXT: .tmp2:
 // ASM-NEXT: 	.loc	2 15 6 prologue_end
 // ASM-NEXT: 	st.1	64, r1
-// ASM-NEXT: 	.loc	2 17 6
+// ASM-NEXT: 	.loc	2 16 19
+// ASM-NEXT: 	add	stack[@calldatasize], r0, r1
+// ASM-NEXT: 	.loc	2 16 16 is_stmt 0
+// ASM-NEXT: 	sub.s!	4, r1, r1
+// ASM-NEXT: 	add	0, r0, r1
+// ASM-NEXT: 	add.lt	1, r0, r1
+// ASM-NEXT: 	and!	1, r1, r1
+// ASM-NEXT: 	.loc	2 16 6
+// ASM-NEXT: 	jump.ne	@.BB2_7
+// ASM-NEXT: 	.loc	2 17 33 is_stmt 1
+// ASM-NEXT: 	ptr.add	stack[@ptr_calldata], r0, r1
+// ASM-NEXT: 	ld	r1, r1
+// ASM-NEXT: 	.loc	2 17 8 is_stmt 0
+// ASM-NEXT: 	shr.s	224, r1, stack-[4]
+// ASM-NEXT: 	.loc	2 17 24
+// ASM-NEXT: 	shr.s	224, r1, r1
+// ASM-NEXT: 	.loc	2 18 8 is_stmt 1
+// ASM-NEXT: 	sub.s!	@CPI2_0[0], r1, r1
+// ASM-NEXT: 	jump.ne	@.BB2_7
+// ASM-NEXT: 	.loc	2 20 13
+// ASM-NEXT: 	context.get_context_u128	r1
+// ASM-NEXT: 	.loc	2 20 10 is_stmt 0
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.eq	@.BB2_4
+// ASM-NEXT: 	.loc	2 21 12 is_stmt 1
+// ASM-NEXT: 	add	r0, r0, r1
+// ASM-NEXT: 	add	r0, r0, r2
+// ASM-NEXT: 	add	r0, r0, r3
+// ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: .BB2_4:
+// ASM-NEXT: 	.loc	2 0 12 is_stmt 0
+// ASM-NEXT: 	sub.s	4, r0, r1
+// ASM-NEXT: 	.loc	2 23 17 is_stmt 1
+// ASM-NEXT: 	add	stack[@calldatasize], r1, r1
+// ASM-NEXT: 	sub.s	1, r0, r2
+// ASM-NEXT: 	add	@CPI2_1[0], r0, r3
+// ASM-NEXT: 	.loc	2 23 10 is_stmt 0
+// ASM-NEXT: 	sub!	r1, r2, r2
+// ASM-NEXT: 	add	r0, r0, r2
+// ASM-NEXT: 	add.gt	r3, r0, r2
+// ASM-NEXT: 	and	@CPI2_1[0], r1, r1
+// ASM-NEXT: 	sub.s!	@CPI2_1[0], r1, r4
+// ASM-NEXT: 	add.ge	r0, r0, r3
+// ASM-NEXT: 	xor	@CPI2_1[0], r1, r1
+// ASM-NEXT: 	sub.s!	@CPI2_1[0], r1, r1
+// ASM-NEXT: 	add.ne	r2, r0, r3
+// ASM-NEXT: 	sub!	r3, r0, r1
+// ASM-NEXT: 	jump.ne	@.BB2_6
+// ASM-NEXT: 	.loc	2 25 12 is_stmt 1
+// ASM-NEXT: 	add	r0, r0, r1
+// ASM-NEXT: 	add	r0, r0, r2
+// ASM-NEXT: 	add	r0, r0, r3
+// ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: .BB2_6:
+// ASM-NEXT: 	.loc	2 27 21
+// ASM-NEXT: 	near_call	r0, @f, @DEFAULT_UNWIND
+// ASM-NEXT: 	.loc	2 27 10 is_stmt 0
+// ASM-NEXT: 	add	r1, r0, stack-[3]
+// ASM-NEXT: 	.loc	2 28 24 is_stmt 1
+// ASM-NEXT: 	ld.1	64, r3
+// ASM-NEXT: 	.loc	2 28 10 is_stmt 0
+// ASM-NEXT: 	add	r3, r0, stack-[2]
+// ASM-NEXT: 	.loc	2 29 10 is_stmt 1
+// ASM-NEXT: 	add	32, r3, stack-[1]
+// ASM-NEXT: 	.loc	2 30 10
+// ASM-NEXT: 	st.1	r3, r1
+// ASM-NEXT: 	add	32, r0, r2
+// ASM-NEXT: 	.loc	2 31 10
+// ASM-NEXT: 	add	r3, r0, r1
+// ASM-NEXT: 	add	r0, r0, r3
+// ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: .BB2_7:
+// ASM-NEXT: 	.loc	2 35 6
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	add	r0, r0, r3
@@ -219,12 +434,25 @@ object "Test" {
 // ASM-NEXT: .tmp3:
 // ASM-NEXT: .func_end2:
 // ASM-EMPTY:
+// ASM-NEXT: 	.globl	f
+// ASM-NEXT: f:
+// ASM-NEXT: .func_begin3:
+// ASM-NEXT: 	.loc	2 37 0
+// ASM-NEXT: 	.loc	2 38 8 prologue_end
+// ASM-NEXT: 	nop	stack+=[1]
+// ASM-NEXT: 	add	42, r0, stack-[1]
+// ASM-NEXT: 	add	42, r0, r1
+// ASM-NEXT: 	.loc	2 37 6
+// ASM-NEXT: 	ret
+// ASM-NEXT: .tmp4:
+// ASM-NEXT: .func_end3:
+// ASM-EMPTY:
 // ASM-NEXT: 	.globl	__entry
 // ASM-NEXT: __entry:
-// ASM-NEXT: .func_begin3:
+// ASM-NEXT: .func_begin4:
 // ASM-NEXT: 	add	stack[0], r0, r13
 // ASM-NEXT: 	shr.s	96, r13, r13
-// ASM-NEXT: 	and	@CPI3_0[0], r13, r14
+// ASM-NEXT: 	and	@CPI4_0[0], r13, r14
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_return_data]
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active]
 // ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data]
@@ -238,16 +466,16 @@ object "Test" {
 // ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data+8]
 // ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data+9]
 // ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
-// ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
+// ASM-NEXT: 	and	@CPI4_0[0], r13, stack[@calldatasize]
 // ASM-NEXT: 	add	r2, r0, stack[@call_flags]
 // ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
 // ASM-NEXT: 	add	0, r0, stack[@returndatasize]
 // ASM-NEXT: 	and!	1, r2, r1
-// ASM-NEXT: 	jump.eq	@.BB3_2
+// ASM-NEXT: 	jump.eq	@.BB4_2
 // ASM-NEXT: 	near_call	r0, @__deploy, @DEFAULT_UNWIND
-// ASM-NEXT: .BB3_2:
+// ASM-NEXT: .BB4_2:
 // ASM-NEXT: 	near_call	r0, @__runtime, @DEFAULT_UNWIND
-// ASM-NEXT: .func_end3:
+// ASM-NEXT: .func_end4:
 // ASM-EMPTY:
 // ASM-NEXT: 	.data
 // ASM-NEXT: 	.p2align	5
@@ -319,6 +547,25 @@ object "Test" {
 // ASM-NEXT: 	.byte	25
 // ASM-NEXT: 	.byte	0
 // ASM-NEXT: 	.byte	0
+// ASM-NEXT: 	.byte	3
+// ASM-NEXT: 	.byte	46
+// ASM-NEXT: 	.byte	0
+// ASM-NEXT: 	.byte	17
+// ASM-NEXT: 	.byte	1
+// ASM-NEXT: 	.byte	18
+// ASM-NEXT: 	.byte	6
+// ASM-NEXT: 	.byte	110
+// ASM-NEXT: 	.byte	14
+// ASM-NEXT: 	.byte	3
+// ASM-NEXT: 	.byte	14
+// ASM-NEXT: 	.byte	58
+// ASM-NEXT: 	.byte	11
+// ASM-NEXT: 	.byte	59
+// ASM-NEXT: 	.byte	11
+// ASM-NEXT: 	.byte	63
+// ASM-NEXT: 	.byte	25
+// ASM-NEXT: 	.byte	0
+// ASM-NEXT: 	.byte	0
 // ASM-NEXT: 	.byte	0
 // ASM-NEXT: 	.debug_info
 // ASM-NEXT: .cu_begin0:
@@ -335,7 +582,7 @@ object "Test" {
 // ASM-NEXT: 	.long	@.info_string2
 // ASM-EMPTY:
 // ASM-NEXT: .cell	@.func_begin0
-// ASM-NEXT: 	.long	@.func_end2-@.func_begin0
+// ASM-NEXT: 	.long	@.func_end3-@.func_begin0
 // ASM-NEXT: 	.byte	2
 // ASM-NEXT: .cell	@.func_begin0
 // ASM-NEXT: 	.long	@.func_end0-@.func_begin0
@@ -354,6 +601,14 @@ object "Test" {
 // ASM-NEXT: 	.long	@.info_string5
 // ASM-NEXT: 	.long	@.info_string5
 // ASM-EMPTY:
+// ASM-NEXT: 	.byte	3
+// ASM-NEXT: .cell	@.func_begin3
+// ASM-NEXT: 	.long	@.func_end3-@.func_begin3
+// ASM-NEXT: 	.long	@.info_string6
+// ASM-NEXT: 	.long	@.info_string6
+// ASM-NEXT: 	.byte	2
+// ASM-NEXT: 	.byte	37
+// ASM-EMPTY:
 // ASM-NEXT: 	.byte	0
 // ASM-NEXT: .debug_info_end0:
 // ASM-NEXT: 	.debug_str
@@ -369,14 +624,18 @@ object "Test" {
 // ASM-NEXT: 	.asciz	"__deploy"
 // ASM-NEXT: .info_string5:
 // ASM-NEXT: 	.asciz	"__runtime"
+// ASM-NEXT: .info_string6:
+// ASM-NEXT: 	.asciz	"f"
 // ASM-NEXT: 	.debug_pubnames
 // ASM-NEXT: 	.long	@.pubNames_end0-@.pubNames_start0
 // ASM-NEXT: .pubNames_start0:
 // ASM-NEXT: 	.short	2
 // ASM-NEXT: 	.long	@.cu_begin0
-// ASM-NEXT: 	.long	202
+// ASM-NEXT: 	.long	249
 // ASM-NEXT: 	.long	156
 // ASM-NEXT: 	.asciz	"__runtime"
+// ASM-NEXT: 	.long	201
+// ASM-NEXT: 	.asciz	"f"
 // ASM-NEXT: 	.long	66
 // ASM-NEXT: 	.asciz	".unreachable"
 // ASM-NEXT: 	.long	111
@@ -388,12 +647,16 @@ object "Test" {
 // ASM-NEXT: .pubTypes_start0:
 // ASM-NEXT: 	.short	2
 // ASM-NEXT: 	.long	@.cu_begin0
-// ASM-NEXT: 	.long	202
+// ASM-NEXT: 	.long	249
 // ASM-NEXT: 	.long	0
 // ASM-NEXT: .pubTypes_end0:
 // ASM-NEXT: 	.note.GNU-stack
 // ASM-NEXT: 	.rodata
-// ASM-NEXT: CPI3_0:
+// ASM-NEXT: CPI2_0:
+// ASM-NEXT: 	.cell 638722032
+// ASM-NEXT: CPI2_1:
+// ASM-NEXT: 	.cell -57896044618658097711785492504343953926634992332820282019728792003956564819968
+// ASM-NEXT: CPI4_0:
 // ASM-NEXT: 	.cell 4294967295
 // ASM-NEXT: 	.debug_line
 // ASM-NEXT: .line_table_start0:
