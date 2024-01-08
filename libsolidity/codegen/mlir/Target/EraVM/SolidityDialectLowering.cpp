@@ -601,23 +601,18 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   }
 };
 
-class ContractOpLowering : public ConversionPattern {
-public:
-  explicit ContractOpLowering(MLIRContext *ctx)
-      : ConversionPattern(sol::ContractOp::getOperationName(),
-                          /*benefit=*/1, ctx) {}
+struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
+  using OpRewritePattern<sol::ContractOp>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto contOp = cast<sol::ContractOp>(op);
-    assert(isa<ModuleOp>(contOp->getParentOp()));
-    auto modOp = cast<ModuleOp>(contOp->getParentOp());
+  LogicalResult matchAndRewrite(sol::ContractOp op,
+                                PatternRewriter &rewriter) const override {
+    assert(isa<ModuleOp>(op->getParentOp()));
+    auto modOp = cast<ModuleOp>(op->getParentOp());
     Block *modBody = modOp.getBody();
 
     // Move functions to the parent ModuleOp
     std::vector<Operation *> funcs;
-    for (Operation &func : contOp.getBody()->getOperations()) {
+    for (Operation &func : op.getBody()->getOperations()) {
       assert(isa<func::FuncOp>(&func));
       funcs.push_back(&func);
     }
