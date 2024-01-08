@@ -606,9 +606,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 
   LogicalResult matchAndRewrite(sol::ContractOp op,
                                 PatternRewriter &rewriter) const override {
-    assert(isa<ModuleOp>(op->getParentOp()));
-    auto modOp = cast<ModuleOp>(op->getParentOp());
-    Block *modBody = modOp.getBody();
+    auto mod = op->getParentOfType<ModuleOp>();
 
     // Move functions to the parent ModuleOp
     std::vector<Operation *> funcs;
@@ -617,7 +615,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       funcs.push_back(&func);
     }
     for (Operation *func : funcs) {
-      func->moveAfter(modBody, modBody->begin());
+      func->moveAfter(mod.getBody(), mod.getBody()->begin());
     }
 
     rewriter.eraseOp(op);
