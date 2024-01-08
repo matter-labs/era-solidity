@@ -27,6 +27,7 @@
 #include "libsolidity/ast/ASTVisitor.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
+#include "libsolutil/CommonIO.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -317,7 +318,8 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 }
 
 void SolidityToMLIRPass::run(ContractDefinition const &cont) {
-  auto op = b.create<mlir::sol::ContractOp>(loc(cont.location()), cont.name());
+  auto op = b.create<mlir::sol::ContractOp>(
+      loc(cont.location()), cont.name() + "_" + util::toString(cont.id()));
   b.setInsertionPointToStart(op.getBody());
 
   for (auto *f : cont.definedFunctions()) {
