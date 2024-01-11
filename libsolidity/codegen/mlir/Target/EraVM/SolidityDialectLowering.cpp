@@ -19,6 +19,7 @@
 // Solidity dialect lowering pass
 //
 
+#include "libsolidity/codegen/CompilerUtils.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
@@ -601,24 +602,204 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   }
 };
 
+// TODO: Move the lambda function to separate helper class.
+// TODO: This lowering is copied from libyul's IRGenerator. Move it to the
+// generic solidity dialect lowering.
 struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   using OpRewritePattern<sol::ContractOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::ContractOp op,
-                                PatternRewriter &rewriter) const override {
-    auto mod = op->getParentOfType<ModuleOp>();
+                                PatternRewriter &r) const override {
+    mlir::Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r);
 
-    // Move functions to the parent ModuleOp
-    std::vector<Operation *> funcs;
-    for (Operation &func : op.getBody()->getOperations()) {
-      assert(isa<func::FuncOp>(&func));
-      funcs.push_back(&func);
+    // Generate the creation and runtime ObjectOp.
+    auto creationObj = r.replaceOpWithNewOp<sol::ObjectOp>(op, op.getSymName());
+    r.setInsertionPointToStart(creationObj.getBody());
+    auto runtimeObj = r.create<sol::ObjectOp>(
+        loc, std::string(op.getSymName()) + "_deployed");
+
+    // Copy contained function to creation and runtime ObjectOp.
+    std::vector<func::FuncOp> funcs;
+    for (Operation &i : op.getBody()->getOperations()) {
+      if (auto func = dyn_cast<func::FuncOp>(i))
+        funcs.push_back(func);
+      else
+        llvm_unreachable("NYI: Non function entities in contract");
     }
-    for (Operation *func : funcs) {
-      func->moveAfter(mod.getBody(), mod.getBody()->begin());
+    for (func::FuncOp func : funcs) {
+      // Duplicate the func in both the creation and runtime objects.
+      // FIXME: ObjectOp lowering doesn't disambiguate function symbols.
+      // r.clone(*func);
+      func->moveBefore(runtimeObj.getBody(), runtimeObj.getBody()->begin());
     }
 
-    rewriter.eraseOp(op);
+    //
+    // Creation context
+    //
+
+    r.setInsertionPointToStart(creationObj.getBody());
+
+    // Generate the memory init.
+    auto genMemInit = [&]() {
+      mlir::Value freeMemStart{};
+      if (/* TODO: op.memoryUnsafeInlineAssemblySeen */ false) {
+        freeMemStart = h.getConst(
+            loc, solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
+                     /* TODO: op.getReservedMem() */ 0);
+      } else {
+        freeMemStart = r.create<sol::MemGuardOp>(
+            loc,
+            r.getIntegerAttr(
+                r.getIntegerType(256),
+                solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
+                    /* TODO: op.getReservedMem() */ 0));
+      }
+      r.create<sol::MStoreOp>(loc, h.getConst(loc, 64), freeMemStart);
+    };
+    genMemInit();
+
+    // Generate the call value check.
+    auto genCallValChk = [&]() {
+      auto callVal = r.create<sol::CallValOp>(loc);
+      auto callValChk = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
+                                                callVal, h.getConst(loc, 0));
+      auto ifOp =
+          r.create<scf::IfOp>(loc, callValChk, /*withElseRegion=*/false);
+      OpBuilder::InsertionGuard insertGuard(r);
+      r.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      r.create<sol::RevertOp>(loc, h.getConst(loc, 0), h.getConst(loc, 0));
+    };
+
+    if (/* TODO: !op.ctor || !op.ctor.isPayable() */ true) {
+      genCallValChk();
+    }
+
+    // Generate the constructor.
+    if (/* TODO: op.kind == Library */ false) {
+      // TODO: Ctor
+    }
+
+    // Generate the codecopy of the runtime object to the free ptr.
+    auto freePtr = r.create<sol::MLoadOp>(loc, h.getConst(loc, 64));
+    auto runtimeObjSym = FlatSymbolRefAttr::get(runtimeObj);
+    auto runtimeObjOffset = r.create<sol::DataOffsetOp>(loc, runtimeObjSym);
+    auto runtimeObjSize = r.create<sol::DataSizeOp>(loc, runtimeObjSym);
+    r.create<sol::CodeCopyOp>(loc, freePtr, runtimeObjOffset, runtimeObjSize);
+
+    // TODO: Generate the setimmutable's.
+
+    // Generate the return for the creation context.
+    r.create<sol::ReturnOp>(loc, freePtr, runtimeObjOffset);
+
+    // TODO: Ctor
+
+    //
+    // Runtime context
+    //
+
+    r.setInsertionPointToStart(runtimeObj.getBody());
+
+    // Generate the memory init.
+    // TODO: Confirm if this should be the same as in the creation context.
+    genMemInit();
+
+    if (/* TODO: op.kind == Library */ false) {
+      // TODO: called_via_delegatecall
+    }
+
+    //
+    // Dispatch generation in the runtime context
+    //
+
+    // FIXME: We should track ContractDefinition::interfaceFunctionList().
+    if (!funcs.empty()) {
+      auto callDataSz = r.create<sol::CallDataSizeOp>(loc);
+      // Generate `iszero(lt(calldatasize(), 4))`.
+      auto callDataSzCmp = r.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::uge, callDataSz, h.getConst(loc, 4));
+      auto ifOp =
+          r.create<scf::IfOp>(loc, callDataSzCmp, /*withElseRegion=*/false);
+
+      OpBuilder::InsertionGuard insertGuard(r);
+      r.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      auto callDataLd = r.create<sol::CallDataLoadOp>(loc, h.getConst(loc, 0));
+
+      // Collect the ABI selectors and create the switch case attribute.
+      std::vector<llvm::APInt> selectors;
+      selectors.reserve(funcs.size());
+      for (func::FuncOp func : funcs) {
+        (void)func;
+        selectors.push_back(
+            /* TODO: op.getSelector(func) */ APInt::getZero(256));
+      }
+      auto selectorsAttr = mlir::DenseIntElementsAttr::get(
+          mlir::RankedTensorType::get(static_cast<int64_t>(selectors.size()),
+                                      r.getIntegerType(256)),
+          selectors);
+
+      // Generate the switch op.
+      auto switchOp = r.create<mlir::scf::IntSwitchOp>(
+          loc, /*resultTypes=*/llvm::None, callDataLd, selectorsAttr,
+          selectors.size());
+
+      // Generate the default block.
+      {
+        OpBuilder::InsertionGuard insertGuard(r);
+        r.setInsertionPointToStart(r.createBlock(&switchOp.getDefaultRegion()));
+        r.create<scf::YieldOp>(loc);
+      }
+
+      // Generate the case blocks.
+      for (auto [caseRegion, func] :
+           llvm::zip(switchOp.getCaseRegions(), funcs)) {
+        if (/* TODO: op.kind == Library */ false) {
+          // TODO: assert(!func.isPayable());
+          if (/* func.stateMutability() > StateMutability::View */ false) {
+            // TODO: Generate delegate call check.
+          }
+        }
+
+        OpBuilder::InsertionGuard insertGuard(r);
+        mlir::Block *caseBlk = r.createBlock(&caseRegion);
+        r.setInsertionPointToStart(caseBlk);
+
+        // Generate the call value check.
+        if (/* !(func.isPayable() || op.kind == Library) */ true) {
+          genCallValChk();
+        }
+
+        // Generate the actual call.
+        assert(func.getNumArguments() == 0 &&
+               "NYI: Interface function arguments");
+        // TODO: libyul's ABIFunctions::tupleDecoder().
+        assert(func.getNumResults() == 1 &&
+               "NYI: Multi-valued and empty return");
+        // TODO: libyul's ABIFunctions::tupleEncoder().
+        auto out = r.create<func::CallOp>(loc, func, ValueRange{});
+        assert(out.getType(0) == r.getIntegerType(256) &&
+               "NYI: Non-ui256 return type");
+        auto memPos = r.create<sol::MLoadOp>(loc, h.getConst(loc, 64));
+        auto memEnd = r.create<arith::AddIOp>(loc, memPos, h.getConst(loc, 32));
+        auto retMemPos = r.create<arith::SubIOp>(loc, memEnd, memPos);
+        r.create<sol::MStoreOp>(loc, retMemPos, out.getResult(0));
+        r.create<mlir::scf::YieldOp>(loc);
+      }
+    }
+
+    if (/* TODO: op.etherFunc */ false) {
+      // TODO: Handle ether recieve function.
+    }
+
+    if (/* TODO: op.fallbackFunc */ false) {
+      // TODO: Handle fallback function.
+
+    } else {
+      // TODO: Generate error message.
+      r.create<sol::RevertOp>(loc, h.getConst(loc, 0), h.getConst(loc, 0));
+    }
+
+    // TODO: Subobjects
     return success();
   }
 };
@@ -644,11 +825,11 @@ struct SolidityDialectLowering
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
-    pats.add<ObjectOpLowering, ReturnOpLowering, RevertOpLowering,
-             MLoadOpLowering, MStoreOpLowering, DataOffsetOpLowering,
-             DataSizeOpLowering, CodeCopyOpLowering, MemGuardOpLowering,
-             CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering>(
-        &getContext());
+    pats.add<ContractOpLowering, ObjectOpLowering, ReturnOpLowering,
+             RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
+             DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
+             MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
+             CallDataSizeOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))

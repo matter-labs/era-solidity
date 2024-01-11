@@ -53,6 +53,13 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
     }
   }];
 
+  // TODO: Represent the following for the lowering:
+  // - IRGenerationContext::memoryUnsafeInlineAssemblySeen
+  // - IRGenerationContext::reservedMemory
+  // - ContractDefinition::contractKind
+  // - ContractDefinition::interfaceFunctionList
+  // - ContractDefinition::receiveFunction
+  // - ContractDefinition::fallbackFunction
   let arguments = (ins SymbolNameAttr:$sym_name);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = "$sym_name $bodyRegion attr-dict";
@@ -96,6 +103,7 @@ def Sol_ReturnOp : Sol_Op<"return"> {
 
 def Sol_RevertOp : Sol_Op<"revert"> {
   let summary = "Represents the `revert` call in yul";
+  // TODO: Support revert strings
   let arguments = (ins I<256>:$inp0, I<256>:$inp1);
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
