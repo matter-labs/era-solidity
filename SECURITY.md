@@ -1,52 +1,74 @@
 # Security Policy
 
-The Solidity team and community take all security bugs in Solidity seriously.
-We appreciate your efforts and responsible disclosure and will make every effort to acknowledge your contributions.
+We truly appreciate efforts to discover and disclose security issues responsibly!
 
-## Scope
+## Vulnerabilities
 
-Bugs in the Solidity repository are in scope.
-Bugs in third-party dependencies e.g., jsoncpp, boost etc. are not in scope unless they result in a Solidity specific bug.
+If you'd like to report a security issue in the repositories of matter-labs organization, please proceed to our
+[Bug Bounty Program on Immunefi](https://era.zksync.io/docs/reference/troubleshooting/audit-bug-bounty.html#bug-bounty-program).
 
-Only bugs that have a demonstrable security impact on smart contracts are in scope.
-For example, a Solidity program whose optimization is incorrect (e.g., leads to an incorrect output) qualifies as a security bug.
-Please note that the [rules][2] of the [Ethereum bounty program][1] have precedence over this security policy.
+## Other Security Issues
 
-## Supported Versions
+We take an impact-first approach instead of a rules-first approach. Therefore, if you believe you found the impactful
+issue but can't report it via the Bug Bounty, please email us at
+[security@matterlabs.dev](mailto:security@matterlabs.dev).
 
-As a general rule, only the latest release gets security updates.
-Exceptions may be made when the current breaking release is relatively new, e.g. less than three months old.
-If you are reporting a bug, please state clearly the Solidity version(s) it affects.
+### PGP Key
 
-Example 1: Assuming the current release is `0.6.3` and a security bug has been found in it that affects both `0.5.x` and `0.6.x` trees, we may not only patch `0.6.3` (the bug-fix release numbered `0.6.4`) but `0.5.x` as well (the bug-fix release numbered `0.5.(x+1)`).
+The following PGP key may be used to communicate sensitive information to developers:
 
-Example 2: Assuming the current release is `0.6.25` and a security bug has been found in it, we may only patch `0.6.25` (in the bug-fix release numbered `0.6.26`) even if the bug affects a previous tree such as `0.5.x`.
+Fingerprint: `5FED B2D0 EA2C 4906 DD66 71D7 A2C5 0B40 CE3C F297`
 
-## Reporting a Vulnerability
+```
+-----BEGIN PGP PUBLIC KEY BLOCK-----
 
-To report a vulnerability, please follow the instructions stated in the [Ethereum bounty program][1].
-
-In the bug report, please include all details necessary to reproduce the vulnerability such as:
-
-- Input program that triggers the bug
-- Compiler version affected
-- Target EVM version
-- Framework/IDE if applicable
-- EVM execution environment/client if applicable
-- Operating system
-
-Please include steps to reproduce the bug you have found in as much detail as possible.
-
-Once we have received your bug report, we will try to reproduce it and provide a more detailed response.
-Once the reported bug has been successfully reproduced, the Solidity team will work on a fix.
-
-The Solidity team maintains the following JSON-formatted lists of patched security vulnerabilities:
-
-- [Summary of known security vulnerabilities][3]
-- [List of security vulnerabilities affecting a specific version of the compiler][4].
-
-
-[1]: https://bounty.ethereum.org/
-[2]: https://bounty.ethereum.org/#rules
-[3]: https://solidity.readthedocs.io/en/develop/bugs.html
-[4]: https://github.com/ethereum/solidity/blob/develop/docs/bugs_by_version.json
+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
+=xkM3
+-----END PGP PUBLIC KEY BLOCK-----
+```
