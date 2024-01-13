@@ -1,6 +1,7 @@
 name: Build and release binaries
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     tags:
@@ -56,6 +57,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-amd64
+          ./build/solc/solc --version
           mv ./build/solc/solc releases/linux-amd64/solc-linux-amd64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
@@ -91,6 +93,7 @@ jobs:
       - name: Prepare binary file name
         run: |
           mkdir -p releases/linux-arm64
+          ./build/solc/solc --version
           mv ./build/solc/solc releases/linux-arm64/solc-linux-arm64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
@@ -119,12 +122,6 @@ jobs:
           ./b2 -j$(sysctl -n hw.ncpu)
           ./b2 install -j$(sysctl -n hw.ncpu)
 
-      - name: Warns not errs
-        run: |
-          sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
-          sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
-          sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
-
       - name: Cmake gen
         shell: zsh {0}
         env:
@@ -144,6 +141,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-amd64
+          ./build/solc/solc --version
           mv  ./build/solc/solc ./releases/macosx-amd64/solc-macosx-amd64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
@@ -177,12 +175,6 @@ jobs:
           ./b2 -j12
           ./b2 install -j12
 
-      - name: Warns not errs
-        run: |
-          sed -i '' -e '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
-          sed -i '' -e '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
-          sed -i '' -e '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
-
       - name: Cmake gen
         shell: zsh {0}
         env:
@@ -203,6 +195,7 @@ jobs:
         shell: zsh {0}
         run: |
           mkdir -p ./releases/macosx-arm64
+          ./build/solc/solc --version
           mv  ./build/solc/solc ./releases/macosx-arm64/solc-macosx-arm64-${{ needs.setup.outputs.release_version }}
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
@@ -261,18 +254,6 @@ jobs:
           # latest llvm for MSVC
           git clone -q --depth=1 --branch=main https://github.com/zufuliu/llvm-utils.git c:\projects\llvm-utils
           Invoke-Item "c:\projects\llvm-utils\VS2017\install.bat"
-          # Patch specific versions with include
-          $tag = git rev-parse --abbrev-ref HEAD
-          echo $tag
-          if ($tag -eq "0.8.5" -or $tag -eq "0.8.6" -or $tag -eq "0.8.7") {
-            sed -i  '/^#pragma once/a #include <optional>' ./libevmasm/AssemblyItem.h
-          }
-          if ($tag -eq "0.8.7") {
-            sed -i  '/^#pragma once/a #include <optional>' ./libyul/Object.h
-          }
-          if ($tag -eq "0.5.9" -or $tag -eq "0.5.10" -or $tag -eq "0.5.11") {
-            sed -i  '/^#pragma once/a #include <memory>' ./libyul/backends/wasm/EWasmAST.h
-          }
           clang --version
 
 
@@ -302,12 +283,6 @@ jobs:
         if: steps.compare_version.outputs.result != 'true'
         run: |
           $env:path += ";deps\cmake\bin\"
-          # remove warning-as-erro flag in cmake
-          sed -i '/option(PEDANTIC \"Enable extra warnings and pedantic build flags. Treat all warnings as errors.\" ON)/d' CMakeLists.txt
-          sed -i '/add_compile_options(-Werror)/d' ./cmake/EthCompilerSettings.cmake
-          sed -i '/add_compile_options(-pedantic)/d' ./cmake/EthCompilerSettings.cmake
-          sed -i '/add_compile_options(\\/WX)/d' ./cmake/EthCompilerSettings.cmake
-          sed -i '/elseif (DEFINED MSVC)/d' ./cmake/EthCompilerSettings.cmake
           $env:CXXFLAGS="-Wno-narrowing -Qunused-arguments -Wno-everything -DBOOST_REGEX_NO_LIB -D_REGEX_MAX_STACK_COUNT=200000L -DJSON_USE_INT64_DOUBLE_CONVERSION -std=c++17 -stdlib=libc++"
           mkdir build
           cd build
@@ -320,6 +295,7 @@ jobs:
         run: |
           mkdir -p releases\windows-amd64
           ls .\build\solc\Release\
+          .\build\solc\Release\solc.exe --version
           mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ needs.setup.outputs.release_version }}.exe
 
       - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
