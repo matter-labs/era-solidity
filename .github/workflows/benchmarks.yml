@@ -29,13 +29,13 @@ jobs:
         run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
 
       - name: Checking out the Solidity repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           path: solidity
 
       - name: Checking out the compiler-tester candidate
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           repository: matter-labs/era-compiler-tester
           submodules: recursive
@@ -74,7 +74,7 @@ jobs:
             --benchmark='candidate.json' \
             --solc-bin-config-path="configs/solc-bin-zkevm-candidate-${BRANCH_NAME}.json"
 
-      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+      - uses: actions/upload-artifact@v4
         with:
           name: candidate-benchmark
           path: compiler-tester/candidate.json
@@ -100,13 +100,13 @@ jobs:
         run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
 
       - name: Checking out the Solidity repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           path: solidity
 
       - name: Checking out the compiler-tester reference
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           repository: matter-labs/era-compiler-tester
           ref: main
@@ -134,7 +134,7 @@ jobs:
             --benchmark='reference.json' \
             --solc-bin-config-path="configs/solc-bin-zkevm-reference-${BRANCH_NAME}.json"
 
-      - uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
+      - uses: actions/upload-artifact@v4
         with:
           name: reference-benchmark
           path: compiler-tester/reference.json
@@ -155,18 +155,18 @@ jobs:
         run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
 
       - name: Checking out the compiler-tester repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           repository: matter-labs/era-compiler-tester
           submodules: recursive
           path: compiler-tester
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v4
         with:
           name: candidate-benchmark
           path: compiler-tester
 
-      - uses: actions/download-artifact@master
+      - uses: actions/download-artifact@v4
         with:
           name: reference-benchmark
           path: compiler-tester
@@ -192,11 +192,11 @@ jobs:
 
       - name: Posting the benchmark results to a PR comment
         if: github.event_name == 'pull_request'
-        uses: machine-learning-apps/pr-comment@master
+        uses: mshick/add-pr-comment@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          path: ./compiler-tester/result.txt
+          message-path: ./compiler-tester/result.txt
 
       - uses: 8398a7/action-slack@v3
         with:
