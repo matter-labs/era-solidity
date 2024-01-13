@@ -14,6 +14,6 @@
 <!-- Check your PR fulfills the following items. -->
 <!-- For draft PRs check the boxes as you complete them. -->
 
-- [ ] PR title corresponds to the body of PR (we generate changelog entries from PRs).
+- [ ] PR title corresponds to the body of PR.
 - [ ] Tests for the changes have been added / updated.
 - [ ] Documentation comments have been added / updated.
