@@ -22,13 +22,13 @@ jobs:
         run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
 
       - name: Checking out the Solidity repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           path: solidity
 
       - name: Checking out the compiler-tester repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           repository: matter-labs/era-compiler-tester
           path: compiler-tester
