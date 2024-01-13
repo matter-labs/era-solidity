@@ -1,19 +1,32 @@
-# The Solidity Contract-Oriented Programming Language
-[![Join the chat at https://gitter.im/ethereum/solidity](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethereum/solidity?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# zkSync Era: Solidity Compiler
 
-## Useful links
-To get started you can find an introduction to the language in the [Solidity documentation](https://solidity.readthedocs.org). In the documentation, you can find [code examples](https://solidity.readthedocs.io/en/latest/solidity-by-example.html) as well as [a reference](https://solidity.readthedocs.io/en/latest/solidity-in-depth.html) of the syntax and details on how to write smart contracts.
+[![Logo](eraLogo.svg)](https://zksync.io/)
 
-You can start using [Solidity in your browser](https://ethereum.github.io/browser-solidity/) with no need to download or compile anything.
+zkSync Era is a layer 2 rollup that uses zero-knowledge proofs to scale Ethereum without compromising on security
+or decentralization. As it's EVM-compatible (with Solidity/Vyper), 99% of Ethereum projects can redeploy without
+needing to refactor or re-audit any code. zkSync Era also uses an LLVM-based compiler that will eventually enable
+developers to write smart contracts in popular languages such as C++ and Rust.
 
-The changelog for this project can be found [here](https://github.com/ethereum/solidity/blob/develop/Changelog.md).
+This repository contains the Solidity compiler and language tuned for EraVM.
 
-Solidity is still under development. So please do not hesitate and open an [issue in GitHub](https://github.com/ethereum/solidity/issues) if you encounter anything strange.
+## License
 
-## Building
-See the [Solidity documentation](https://solidity.readthedocs.io/en/latest/installing-solidity.html#building-from-source) for build instructions.
+Solidity is licensed under [GNU General Public License v3.0](LICENSE.txt).
 
-## How to Contribute
-Please see our contribution guidelines in [the Solidity documentation](https://solidity.readthedocs.io/en/latest/contributing.html).
+Some third-party code has its [own licensing terms](cmake/templates/license.h.in).
 
-Any contributions are welcome!
+## Official Links
+
+- [Website](https://zksync.io/)
+- [GitHub](https://github.com/matter-labs)
+- [Twitter](https://twitter.com/zksync)
+- [Twitter for Devs](https://twitter.com/zkSyncDevs)
+- [Discord](https://join.zksync.dev/)
+
+## Disclaimer
+
+zkSync Era has been through extensive testing and audits, and although it is live, it is still in alpha state and
+will undergo further audits and bug bounty programs. We would love to hear our community's thoughts and suggestions
+about it!
+It's important to note that forking it now could potentially lead to missing important
+security updates, critical features, and performance improvements.
