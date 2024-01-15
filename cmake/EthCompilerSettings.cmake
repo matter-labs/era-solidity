@@ -159,7 +159,7 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 	endif()
 
 # The major alternative compiler to GCC/Clang is Microsoft's Visual C++ compiler, only available on Windows.
-elseif (DEFINED MSVC)
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "Windows") # FIXME: This breaks the MSVC build
 	# Remove NDEBUG from RELWITHDEBINFO (to enable asserts)
 	# CMAKE_CXX_FLAGS_RELWITHDEBINFO for GCC/Clang does not include NDEBUG
 	string(REPLACE "/DNDEBUG" " " CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
@@ -190,6 +190,7 @@ elseif (DEFINED MSVC)
 	# warning LNK4099: pdb was not found with lib
 	# stack size 16MB
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4099,4075 /STACK:16777216")
+endif()
 
 # If you don't have GCC, Clang or VC++ then you are on your own.  Good luck!
 else ()
