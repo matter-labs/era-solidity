@@ -55,6 +55,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <climits>
+#include <utility>
 #include <vector>
 
 using namespace mlir;
@@ -712,8 +713,15 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     // Dispatch generation in the runtime context
     //
 
-    // FIXME: We should track ContractDefinition::interfaceFunctionList().
-    if (!funcs.empty()) {
+    // Collect interface function infos.
+    std::vector<std::pair<func::FuncOp, DictionaryAttr>> interfaceFnInfos;
+    for (func::FuncOp fn : funcs) {
+      DictionaryAttr interfaceFnAttr = op.getInterfaceFnAttr(fn);
+      if (interfaceFnAttr)
+        interfaceFnInfos.emplace_back(fn, interfaceFnAttr);
+    }
+
+    if (!interfaceFnInfos.empty()) {
       auto callDataSz = r.create<sol::CallDataSizeOp>(loc);
       // Generate `iszero(lt(calldatasize(), 4))`.
       auto callDataSzCmp = r.create<arith::CmpIOp>(
@@ -727,11 +735,12 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 
       // Collect the ABI selectors and create the switch case attribute.
       std::vector<llvm::APInt> selectors;
-      selectors.reserve(funcs.size());
-      for (func::FuncOp func : funcs) {
-        (void)func;
-        selectors.push_back(
-            /* TODO: op.getSelector(func) */ APInt::getZero(256));
+      selectors.reserve(interfaceFnInfos.size());
+      for (auto const &interfaceFn : interfaceFnInfos) {
+        DictionaryAttr attr = interfaceFn.second;
+        llvm::StringRef selectorStr =
+            attr.get("selector").cast<StringAttr>().getValue();
+        selectors.emplace_back(256, selectorStr, 16);
       }
       auto selectorsAttr = mlir::DenseIntElementsAttr::get(
           mlir::RankedTensorType::get(static_cast<int64_t>(selectors.size()),

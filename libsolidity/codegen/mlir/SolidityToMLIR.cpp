@@ -83,7 +83,7 @@ private:
                                      lineCol.line, lineCol.column);
   }
 
-  /// Returns the corresponding mlir type for the solidity type `ty`
+  /// Returns the corresponding mlir type for the solidity type `ty`.
   mlir::Type type(Type const *ty);
 
   /// Returns the MemRef of the variable
@@ -118,15 +118,29 @@ mlir::Type SolidityToMLIRPass::type(Type const *ty) {
   // Integer type
   if (auto *i = dynamic_cast<IntegerType const *>(ty)) {
     return b.getIntegerType(i->numBits());
-  }
-  // Rational number type
-  else if (auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
+
+    // Rational number type
+  } else if (auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
     if (ratNumTy->isFractional())
       llvm_unreachable("NYI: Fractional type");
 
     // Integral rational number type
     const IntegerType *intTy = ratNumTy->integerType();
     return b.getIntegerType(intTy->numBits());
+
+    // Function type
+  } else if (auto *fnTy = dynamic_cast<FunctionType const *>(ty)) {
+    std::vector<mlir::Type> inTys, outTys;
+
+    inTys.reserve(fnTy->parameterTypes().size());
+    for (Type const *inTy : fnTy->parameterTypes())
+      inTys.push_back(type(inTy));
+
+    outTys.reserve(fnTy->returnParameterTypes().size());
+    for (Type const *outTy : fnTy->returnParameterTypes())
+      outTys.push_back(type(outTy));
+
+    return b.getFunctionType(inTys, outTys);
   }
 
   llvm_unreachable("NYI: Unknown type");
@@ -318,10 +332,33 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 }
 
 void SolidityToMLIRPass::run(ContractDefinition const &cont) {
+  // Create the attribute for interface functions.
+  auto const &interfaceFnInfos = cont.interfaceFunctions();
+  std::vector<mlir::Attribute> interfaceFnAttrs;
+  interfaceFnAttrs.reserve(interfaceFnInfos.size());
+  for (auto const &i : interfaceFnInfos) {
+    auto fnSymAttr = mlir::SymbolRefAttr::get(b.getContext(),
+                                              i.second->declaration().name());
+
+    mlir::FunctionType fnTy = type(i.second).cast<mlir::FunctionType>();
+    auto fnTyAttr = mlir::TypeAttr::get(fnTy);
+
+    std::string selector = i.first.hex();
+    auto selectorAttr = b.getStringAttr(selector);
+
+    interfaceFnAttrs.push_back(b.getDictionaryAttr(
+        {b.getNamedAttr("sym", fnSymAttr), b.getNamedAttr("type", fnTyAttr),
+         b.getNamedAttr("selector", selectorAttr)}));
+  }
+  mlir::ArrayAttr interfaceFnsAttr = b.getArrayAttr(interfaceFnAttrs);
+
+  // Create the contract op.
   auto op = b.create<mlir::sol::ContractOp>(
-      loc(cont.location()), cont.name() + "_" + util::toString(cont.id()));
+      loc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
+      interfaceFnsAttr);
   b.setInsertionPointToStart(op.getBody());
 
+  // Lower functions.
   for (auto *f : cont.definedFunctions()) {
     run(*f);
   }

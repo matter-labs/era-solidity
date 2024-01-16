@@ -57,15 +57,18 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
   // - IRGenerationContext::memoryUnsafeInlineAssemblySeen
   // - IRGenerationContext::reservedMemory
   // - ContractDefinition::contractKind
-  // - ContractDefinition::interfaceFunctionList
   // - ContractDefinition::receiveFunction
   // - ContractDefinition::fallbackFunction
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name, ArrayAttr:$interface_fns);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = "$sym_name $bodyRegion attr-dict";
 
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<(ins CArg<"StringRef", "{}">:$name)>];
+  let builders = [OpBuilder<(ins CArg<"StringRef">:$name,
+                             CArg<"ArrayAttr">:$interfaceFns)>];
+  let extraClassDeclaration = [{
+    DictionaryAttr getInterfaceFnAttr(func::FuncOp fn);
+  }];
 }
 
 // TODO? Move this to a "yul" dialect? Do we need a lot of yul specific ops for

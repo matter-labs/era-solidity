@@ -17,7 +17,7 @@ contract C {
 // CHECK-NEXT:       %3 = arith.muli %1, %2 : i256
 // CHECK-NEXT:       return %3 : i256
 // CHECK-NEXT:     }
-// CHECK-NEXT:   }
+// CHECK-NEXT:   } {interface_fns = [{selector = "b3de648b", sym = @f, type = (i256) -> i256}]}
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // DBG: #loc3 = loc({{.*}}:4:12)
@@ -32,7 +32,7 @@ contract C {
 // DBG-NEXT:       %3 = arith.muli %1, %2 : i256 loc(#loc4)
 // DBG-NEXT:       return %3 : i256 loc(#loc6)
 // DBG-NEXT:     } loc(#loc2)
-// DBG-NEXT:   } loc(#loc1)
+// DBG-NEXT:   } {interface_fns = [{selector = "b3de648b", sym = @f, type = (i256) -> i256}]} loc(#loc1)
 // DBG-NEXT: } loc(#loc0)
 // DBG-NEXT: #loc0 = loc(unknown)
 // DBG-NEXT: #loc1 = loc({{.*}}:3:0)

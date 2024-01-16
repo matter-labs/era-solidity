@@ -17,6 +17,8 @@
 
 #include "SolidityOps.h"
 #include "Solidity/SolidityOpsDialect.cpp.inc"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 
 using namespace mlir;
@@ -30,10 +32,28 @@ void SolidityDialect::initialize() {
 }
 
 void ContractOp::build(OpBuilder &builder, OperationState &state,
-                       StringRef name) {
+                       StringRef name, ArrayAttr interfaceFns) {
   state.addRegion()->emplaceBlock();
   state.attributes.push_back(builder.getNamedAttr(
       mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+  state.attributes.push_back(
+      builder.getNamedAttr("interface_fns", interfaceFns));
+}
+
+DictionaryAttr ContractOp::getInterfaceFnAttr(func::FuncOp fn) {
+  ArrayAttr interfaceFnsAttr = getInterfaceFnsAttr();
+  auto fnSym = SymbolRefAttr::get(fn.getSymNameAttr());
+  TypeAttr fnTy = fn.getFunctionTypeAttr();
+
+  for (Attribute interfaceFnAttr : interfaceFnsAttr) {
+    auto attr = interfaceFnAttr.cast<DictionaryAttr>();
+    assert(attr.contains("sym"));
+    if (fnSym == attr.get("sym").cast<SymbolRefAttr>() &&
+        fnTy == attr.get("type").cast<TypeAttr>())
+      return attr;
+  }
+
+  return {};
 }
 
 void ObjectOp::build(OpBuilder &builder, OperationState &state,

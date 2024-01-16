@@ -67,7 +67,7 @@ contract C {
 // CHECK-NEXT:   %5 = getelementptr i8, ptr addrspace(3) %4, i256 0, !dbg !14
 // CHECK-NEXT:   %6 = load i256, ptr addrspace(3) %5, align 1, !dbg !14
 // CHECK-NEXT:   switch i256 %6, label %17 [
-// CHECK-NEXT:     i256 0, label %7
+// CHECK-NEXT:     i256 638722032, label %7
 // CHECK-NEXT:   ], !dbg !14
 // CHECK-EMPTY:
 // CHECK-NEXT: 7:                                                ; preds = %3
@@ -230,7 +230,7 @@ contract C {
 // ASM-NEXT: 	jump.lt	@.BB2_5
 // ASM-NEXT: 	ptr.add	stack[@ptr_calldata], r0, r1
 // ASM-NEXT: 	ld	r1, r1
-// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	sub.s!	@CPI2_0[0], r1, r1
 // ASM-NEXT: 	jump.ne	@.BB2_5
 // ASM-NEXT: 	context.get_context_u128	r1
 // ASM-NEXT: 	sub!	r1, r0, r1
@@ -483,6 +483,8 @@ contract C {
 // ASM-NEXT: .pubTypes_end0:
 // ASM-NEXT: 	.note.GNU-stack
 // ASM-NEXT: 	.rodata
+// ASM-NEXT: CPI2_0:
+// ASM-NEXT: 	.cell 638722032
 // ASM-NEXT: CPI4_0:
 // ASM-NEXT: 	.cell 4294967295
 // ASM-NEXT: 	.debug_line
