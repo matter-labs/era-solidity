@@ -27,7 +27,7 @@ contract C {
 // CHECK-NEXT:       %1 = arith.extui %c7_i8 : i8 to i256
 // CHECK-NEXT:       return %1 : i256
 // CHECK-NEXT:     }
-// CHECK-NEXT:   } {interface_fns = [{selector = "a5850475", sym = @f0, type = () -> i256}, {selector = "bf3724af", sym = @f2, type = (i256) -> i256}, {selector = "c27fc305", sym = @f1, type = () -> i256}]}
+// CHECK-NEXT:   } {interface_fns = [{selector = "a5850475", sym = @f0, type = () -> i256}, {selector = "bf3724af", sym = @f2, type = (i256) -> i256}, {selector = "c27fc305", sym = @f1, type = () -> i256}], kind = #sol<ContractKind Contract>}
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // DBG: #loc9 = loc({{.*}}:6:14)
@@ -50,7 +50,7 @@ contract C {
 // DBG-NEXT:       %1 = arith.extui %c7_i8 : i8 to i256 loc(#loc10)
 // DBG-NEXT:       return %1 : i256 loc(#loc11)
 // DBG-NEXT:     } loc(#loc8)
-// DBG-NEXT:   } {interface_fns = [{selector = "a5850475", sym = @f0, type = () -> i256}, {selector = "bf3724af", sym = @f2, type = (i256) -> i256}, {selector = "c27fc305", sym = @f1, type = () -> i256}]} loc(#loc1)
+// DBG-NEXT:   } {interface_fns = [{selector = "a5850475", sym = @f0, type = () -> i256}, {selector = "bf3724af", sym = @f2, type = (i256) -> i256}, {selector = "c27fc305", sym = @f1, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // DBG-NEXT: } loc(#loc0)
 // DBG-NEXT: #loc0 = loc(unknown)
 // DBG-NEXT: #loc1 = loc({{.*}}:3:0)

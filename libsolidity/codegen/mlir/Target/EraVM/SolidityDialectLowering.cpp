@@ -677,7 +677,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     }
 
     // Generate the constructor.
-    if (/* TODO: op.kind == Library */ false) {
+    if (op.getKind() == sol::ContractKind::Library) {
       // TODO: Ctor
     }
 
@@ -705,7 +705,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     // TODO: Confirm if this should be the same as in the creation context.
     genMemInit();
 
-    if (/* TODO: op.kind == Library */ false) {
+    if (op.getKind() == sol::ContractKind::Library) {
       // TODO: called_via_delegatecall
     }
 
@@ -762,7 +762,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       // Generate the case blocks.
       for (auto [caseRegion, func] :
            llvm::zip(switchOp.getCaseRegions(), funcs)) {
-        if (/* TODO: op.kind == Library */ false) {
+        if (op.getKind() == sol::ContractKind::Library) {
           // TODO: assert(!func.isPayable());
           if (/* func.stateMutability() > StateMutability::View */ false) {
             // TODO: Generate delegate call check.
@@ -774,7 +774,8 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
         r.setInsertionPointToStart(caseBlk);
 
         // Generate the call value check.
-        if (/* !(func.isPayable() || op.kind == Library) */ true) {
+        if (!(op.getKind() ==
+              sol::ContractKind::Library /* || func.isPayable() */)) {
           genCallValChk();
         }
 

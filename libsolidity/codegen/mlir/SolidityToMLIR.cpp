@@ -24,6 +24,7 @@
 #include "liblangutil/Exceptions.h"
 #include "liblangutil/SourceLocation.h"
 #include "libsolidity/ast/AST.h"
+#include "libsolidity/ast/ASTEnums.h"
 #include "libsolidity/ast/ASTVisitor.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
@@ -331,6 +332,18 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
   b.setInsertionPointAfter(op);
 }
 
+/// Returns the mlir::sol::ContractKind of the contract
+static mlir::sol::ContractKind getContractKind(ContractDefinition const &cont) {
+  switch (cont.contractKind()) {
+  case ContractKind::Interface:
+    return mlir::sol::ContractKind::Interface;
+  case ContractKind::Contract:
+    return mlir::sol::ContractKind::Contract;
+  case ContractKind::Library:
+    return mlir::sol::ContractKind::Library;
+  }
+}
+
 void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   // Create the attribute for interface functions.
   auto const &interfaceFnInfos = cont.interfaceFunctions();
@@ -355,7 +368,7 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   // Create the contract op.
   auto op = b.create<mlir::sol::ContractOp>(
       loc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
-      interfaceFnsAttr);
+      getContractKind(cont), interfaceFnsAttr);
   b.setInsertionPointToStart(op.getBody());
 
   // Lower functions.

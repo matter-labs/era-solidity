@@ -24,6 +24,7 @@
 
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
@@ -37,12 +38,24 @@ def Solidity_Dialect : Dialect {
     This dialect has high level ops for representing solidity.
   }];
   let cppNamespace = "::mlir::sol";
+  let useDefaultAttributePrinterParser = 1;
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Solidity_Dialect,
                                                             mnemonic, traits>;
+
+def Sol_ContractKind : I32EnumAttr<"ContractKind",
+                                   "Represents the solidity contract kind",
+                                   [I32EnumAttrCase<"Interface", 0>,
+                                    I32EnumAttrCase<"Contract", 1>,
+                                    I32EnumAttrCase<"Library", 2>]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::sol";
+}
+def Sol_ContractKindAttr : EnumAttr<Solidity_Dialect, Sol_ContractKind,
+                                    "ContractKind">;
 
 def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
   let summary = "An operation that represents a contract";
@@ -56,15 +69,16 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
   // TODO: Represent the following for the lowering:
   // - IRGenerationContext::memoryUnsafeInlineAssemblySeen
   // - IRGenerationContext::reservedMemory
-  // - ContractDefinition::contractKind
   // - ContractDefinition::receiveFunction
   // - ContractDefinition::fallbackFunction
-  let arguments = (ins SymbolNameAttr:$sym_name, ArrayAttr:$interface_fns);
+  let arguments = (ins SymbolNameAttr:$sym_name, Sol_ContractKindAttr:$kind,
+                   ArrayAttr:$interface_fns);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = "$sym_name $bodyRegion attr-dict";
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins CArg<"StringRef">:$name,
+                             CArg<"ContractKind">:$kind,
                              CArg<"ArrayAttr">:$interfaceFns)>];
   let extraClassDeclaration = [{
     DictionaryAttr getInterfaceFnAttr(func::FuncOp fn);

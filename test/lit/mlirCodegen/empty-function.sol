@@ -11,7 +11,7 @@ contract C {
 // CHECK-NEXT:     func.func @f() {
 // CHECK-NEXT:       return
 // CHECK-NEXT:     }
-// CHECK-NEXT:   } {interface_fns = [{selector = "26121ff0", sym = @f, type = () -> ()}]}
+// CHECK-NEXT:   } {interface_fns = [{selector = "26121ff0", sym = @f, type = () -> ()}], kind = #sol<ContractKind Contract>}
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // DBG: module {
@@ -19,7 +19,7 @@ contract C {
 // DBG-NEXT:     func.func @f() {
 // DBG-NEXT:       return loc(#loc2)
 // DBG-NEXT:     } loc(#loc2)
-// DBG-NEXT:   } {interface_fns = [{selector = "26121ff0", sym = @f, type = () -> ()}]} loc(#loc1)
+// DBG-NEXT:   } {interface_fns = [{selector = "26121ff0", sym = @f, type = () -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // DBG-NEXT: } loc(#loc0)
 // DBG-NEXT: #loc0 = loc(unknown)
 // DBG-NEXT: #loc1 = loc({{.*}}:3:0)

@@ -208,6 +208,7 @@ add_mlir_dialect_library(MLIRSolidity
 
 	DEPENDS
 	MLIRSolidityOpsIncGen
+	MLIRSolidityExtraIncGen
 
 	LINK_LIBS PUBLIC
 )

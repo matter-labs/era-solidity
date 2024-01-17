@@ -30,6 +30,10 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "Solidity/SolidityOpsDialect.h.inc"
+#include "Solidity/SolidityOpsEnums.h.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "Solidity/SolidityOpsAttributes.h.inc"
 
 #define GET_OP_CLASSES
 #include "Solidity/SolidityOps.h.inc"

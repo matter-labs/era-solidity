@@ -17,9 +17,12 @@
 
 #include "SolidityOps.h"
 #include "Solidity/SolidityOpsDialect.cpp.inc"
+#include "Solidity/SolidityOpsEnums.cpp.inc"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::sol;
@@ -29,15 +32,23 @@ void SolidityDialect::initialize() {
 #define GET_OP_LIST
 #include "Solidity/SolidityOps.cpp.inc"
       >();
+
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "Solidity/SolidityOpsAttributes.cpp.inc"
+      >();
 }
 
 void ContractOp::build(OpBuilder &builder, OperationState &state,
-                       StringRef name, ArrayAttr interfaceFns) {
+                       StringRef name, ContractKind kind,
+                       ArrayAttr interfaceFns) {
   state.addRegion()->emplaceBlock();
   state.attributes.push_back(builder.getNamedAttr(
       mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
   state.attributes.push_back(
       builder.getNamedAttr("interface_fns", interfaceFns));
+  state.attributes.push_back(builder.getNamedAttr(
+      "kind", ContractKindAttr::get(state.getContext(), kind)));
 }
 
 DictionaryAttr ContractOp::getInterfaceFnAttr(func::FuncOp fn) {
@@ -65,3 +76,6 @@ void ObjectOp::build(OpBuilder &builder, OperationState &state,
 
 #define GET_OP_CLASSES
 #include "Solidity/SolidityOps.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "Solidity/SolidityOpsAttributes.cpp.inc"
