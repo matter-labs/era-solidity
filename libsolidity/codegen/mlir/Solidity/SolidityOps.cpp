@@ -39,18 +39,6 @@ void SolidityDialect::initialize() {
       >();
 }
 
-void ContractOp::build(OpBuilder &builder, OperationState &state,
-                       StringRef name, ContractKind kind,
-                       ArrayAttr interfaceFns) {
-  state.addRegion()->emplaceBlock();
-  state.attributes.push_back(builder.getNamedAttr(
-      mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
-  state.attributes.push_back(
-      builder.getNamedAttr("interface_fns", interfaceFns));
-  state.attributes.push_back(builder.getNamedAttr(
-      "kind", ContractKindAttr::get(state.getContext(), kind)));
-}
-
 DictionaryAttr ContractOp::getInterfaceFnAttr(func::FuncOp fn) {
   ArrayAttr interfaceFnsAttr = getInterfaceFnsAttr();
   auto fnSym = SymbolRefAttr::get(fn.getSymNameAttr());

@@ -76,10 +76,6 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = "$sym_name $bodyRegion attr-dict";
 
-  let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<(ins CArg<"StringRef">:$name,
-                             CArg<"ContractKind">:$kind,
-                             CArg<"ArrayAttr">:$interfaceFns)>];
   let extraClassDeclaration = [{
     DictionaryAttr getInterfaceFnAttr(func::FuncOp fn);
   }];

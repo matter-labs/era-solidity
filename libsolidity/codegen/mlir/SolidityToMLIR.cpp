@@ -369,7 +369,7 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   auto op = b.create<mlir::sol::ContractOp>(
       loc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
       getContractKind(cont), interfaceFnsAttr);
-  b.setInsertionPointToStart(op.getBody());
+  b.setInsertionPointToStart(&op.getBodyRegion().emplaceBlock());
 
   // Lower functions.
   for (auto *f : cont.definedFunctions()) {
