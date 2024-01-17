@@ -69,10 +69,11 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
   // TODO: Represent the following for the lowering:
   // - IRGenerationContext::memoryUnsafeInlineAssemblySeen
   // - IRGenerationContext::reservedMemory
-  // - ContractDefinition::receiveFunction
-  // - ContractDefinition::fallbackFunction
   let arguments = (ins SymbolNameAttr:$sym_name, Sol_ContractKindAttr:$kind,
-                   ArrayAttr:$interface_fns);
+                   ArrayAttr:$interface_fns,
+                   OptionalAttr<FlatSymbolRefAttr>:$ctor,
+                   OptionalAttr<FlatSymbolRefAttr>:$fallbackFn,
+                   OptionalAttr<FlatSymbolRefAttr>:$receiveFn);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = "$sym_name $bodyRegion attr-dict";
 

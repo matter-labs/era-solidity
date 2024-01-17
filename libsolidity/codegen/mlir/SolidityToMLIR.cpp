@@ -365,10 +365,14 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   }
   mlir::ArrayAttr interfaceFnsAttr = b.getArrayAttr(interfaceFnAttrs);
 
+  // TODO: Set using ContractDefinition::receiveFunction and
+  // ContractDefinition::fallbackFunction.
+  mlir::FlatSymbolRefAttr ctor, fallbackFn, receiveFn;
+
   // Create the contract op.
   auto op = b.create<mlir::sol::ContractOp>(
       loc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
-      getContractKind(cont), interfaceFnsAttr);
+      getContractKind(cont), interfaceFnsAttr, ctor, fallbackFn, receiveFn);
   b.setInsertionPointToStart(&op.getBodyRegion().emplaceBlock());
 
   // Lower functions.

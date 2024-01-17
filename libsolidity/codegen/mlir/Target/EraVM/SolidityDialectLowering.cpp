@@ -672,7 +672,9 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       r.create<sol::RevertOp>(loc, h.getConst(loc, 0), h.getConst(loc, 0));
     };
 
-    if (/* TODO: !op.ctor || !op.ctor.isPayable() */ true) {
+    assert(!op.getCtorAttr() && "NYI: Ctors");
+
+    if (!op.getCtorAttr() /* TODO: || !op.ctor.isPayable() */) {
       genCallValChk();
     }
 
@@ -797,11 +799,13 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       }
     }
 
-    if (/* TODO: op.etherFunc */ false) {
+    if (op.getReceiveFnAttr()) {
+      assert(false && "NYI: Receive functions");
       // TODO: Handle ether recieve function.
     }
 
-    if (/* TODO: op.fallbackFunc */ false) {
+    if (op.getFallbackFnAttr()) {
+      assert(false && "NYI: Fallback functions");
       // TODO: Handle fallback function.
 
     } else {
