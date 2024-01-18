@@ -100,6 +100,10 @@ private:
     memRefMap[decl] = addr;
   }
 
+  /// Returns the array attribute for tracking interface functions (symbol, type
+  /// and selector) in the contract.
+  mlir::ArrayAttr getInterfaceFnsAttr(ContractDefinition const &cont);
+
   /// Returns the cast from `val` having the corresponding mlir type of
   /// `srcTy` to a value having the corresponding mlir type of `dstTy`
   mlir::Value genCast(mlir::Value val, Type const *srcTy, Type const *dstTy);
@@ -162,6 +166,28 @@ mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
 
 mlir::Value SolidityToMLIRPass::getMemRef(Identifier const *ident) {
   return getMemRef(ident->annotation().referencedDeclaration);
+}
+
+mlir::ArrayAttr
+SolidityToMLIRPass::getInterfaceFnsAttr(ContractDefinition const &cont) {
+  auto const &interfaceFnInfos = cont.interfaceFunctions();
+  std::vector<mlir::Attribute> interfaceFnAttrs;
+  interfaceFnAttrs.reserve(interfaceFnInfos.size());
+  for (auto const &i : interfaceFnInfos) {
+    auto fnSymAttr = mlir::SymbolRefAttr::get(b.getContext(),
+                                              i.second->declaration().name());
+
+    mlir::FunctionType fnTy = getType(i.second).cast<mlir::FunctionType>();
+    auto fnTyAttr = mlir::TypeAttr::get(fnTy);
+
+    std::string selector = i.first.hex();
+    auto selectorAttr = b.getStringAttr(selector);
+
+    interfaceFnAttrs.push_back(b.getDictionaryAttr(
+        {b.getNamedAttr("sym", fnSymAttr), b.getNamedAttr("type", fnTyAttr),
+         b.getNamedAttr("selector", selectorAttr)}));
+  }
+  return b.getArrayAttr(interfaceFnAttrs);
 }
 
 mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
@@ -355,26 +381,6 @@ static mlir::sol::ContractKind getContractKind(ContractDefinition const &cont) {
 }
 
 void SolidityToMLIRPass::run(ContractDefinition const &cont) {
-  // Create the attribute for interface functions.
-  auto const &interfaceFnInfos = cont.interfaceFunctions();
-  std::vector<mlir::Attribute> interfaceFnAttrs;
-  interfaceFnAttrs.reserve(interfaceFnInfos.size());
-  for (auto const &i : interfaceFnInfos) {
-    auto fnSymAttr = mlir::SymbolRefAttr::get(b.getContext(),
-                                              i.second->declaration().name());
-
-    mlir::FunctionType fnTy = getType(i.second).cast<mlir::FunctionType>();
-    auto fnTyAttr = mlir::TypeAttr::get(fnTy);
-
-    std::string selector = i.first.hex();
-    auto selectorAttr = b.getStringAttr(selector);
-
-    interfaceFnAttrs.push_back(b.getDictionaryAttr(
-        {b.getNamedAttr("sym", fnSymAttr), b.getNamedAttr("type", fnTyAttr),
-         b.getNamedAttr("selector", selectorAttr)}));
-  }
-  mlir::ArrayAttr interfaceFnsAttr = b.getArrayAttr(interfaceFnAttrs);
-
   // TODO: Set using ContractDefinition::receiveFunction and
   // ContractDefinition::fallbackFunction.
   mlir::FlatSymbolRefAttr ctor, fallbackFn, receiveFn;
@@ -382,7 +388,8 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   // Create the contract op.
   auto op = b.create<mlir::sol::ContractOp>(
       getLoc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
-      getContractKind(cont), interfaceFnsAttr, ctor, fallbackFn, receiveFn);
+      getContractKind(cont), getInterfaceFnsAttr(cont), ctor, fallbackFn,
+      receiveFn);
   b.setInsertionPointToStart(&op.getBodyRegion().emplaceBlock());
 
   // Lower functions.
