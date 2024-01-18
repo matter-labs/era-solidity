@@ -77,7 +77,7 @@ private:
   std::map<Declaration const *, mlir::Value> varMemRef;
 
   /// Returns the mlir location for the solidity source location `loc`
-  mlir::Location loc(SourceLocation const &loc) {
+  mlir::Location getLoc(SourceLocation const &loc) {
     // FIXME: Track loc.end as well
     LineColumn lineCol = stream.translatePositionToLineColumn(loc.start);
     return mlir::FileLineColLoc::get(b.getStringAttr(stream.name()),
@@ -85,7 +85,7 @@ private:
   }
 
   /// Returns the corresponding mlir type for the solidity type `ty`.
-  mlir::Type type(Type const *ty);
+  mlir::Type getType(Type const *ty);
 
   /// Returns the MemRef of the variable
   mlir::Value getMemRef(Declaration const *decl);
@@ -115,7 +115,7 @@ private:
 
 } // namespace solidity::frontend
 
-mlir::Type SolidityToMLIRPass::type(Type const *ty) {
+mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
   // Integer type
   if (auto *i = dynamic_cast<IntegerType const *>(ty)) {
     return b.getIntegerType(i->numBits());
@@ -135,11 +135,11 @@ mlir::Type SolidityToMLIRPass::type(Type const *ty) {
 
     inTys.reserve(fnTy->parameterTypes().size());
     for (Type const *inTy : fnTy->parameterTypes())
-      inTys.push_back(type(inTy));
+      inTys.push_back(getType(inTy));
 
     outTys.reserve(fnTy->returnParameterTypes().size());
     for (Type const *outTy : fnTy->returnParameterTypes())
-      outTys.push_back(type(outTy));
+      outTys.push_back(getType(outTy));
 
     return b.getFunctionType(inTys, outTys);
   }
@@ -188,11 +188,11 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
     // Generate extends
     if (dstIntTy->numBits() > srcIntTy->numBits()) {
       return dstIntTy->isSigned()
-                 ? b.create<mlir::arith::ExtSIOp>(val.getLoc(), type(dstIntTy),
-                                                  val)
+                 ? b.create<mlir::arith::ExtSIOp>(val.getLoc(),
+                                                  getType(dstIntTy), val)
                        ->getResult(0)
-                 : b.create<mlir::arith::ExtUIOp>(val.getLoc(), type(dstIntTy),
-                                                  val)
+                 : b.create<mlir::arith::ExtUIOp>(val.getLoc(),
+                                                  getType(dstIntTy), val)
                        ->getResult(0);
     } else {
       llvm_unreachable("NYI: Unknown cast");
@@ -204,7 +204,7 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
 
 mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
   auto resTy = binOp->annotation().type;
-  auto lc = loc(binOp->location());
+  auto lc = getLoc(binOp->location());
 
   mlir::Value lhs = genExpr(&binOp->leftExpression(), resTy);
   mlir::Value rhs = genExpr(&binOp->rightExpression(), resTy);
@@ -230,7 +230,7 @@ mlir::Value SolidityToMLIRPass::genExpr(Expression const *expr,
   }
   // Generate variable access
   else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
-    return b.create<mlir::memref::LoadOp>(loc(expr->location()),
+    return b.create<mlir::memref::LoadOp>(getLoc(expr->location()),
                                           getMemRef(ident));
   }
   // Generate binary operation
@@ -247,7 +247,7 @@ mlir::Value SolidityToMLIRPass::genExpr(Expression const *expr,
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
-  mlir::Location lc = loc(lit->location());
+  mlir::Location lc = getLoc(lit->location());
   Type const *ty = lit->annotation().type;
 
   // Rational number literal
@@ -260,8 +260,9 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
     // TODO: Is there a faster way to convert boost::multiprecision::number to
     // llvm::APInt?
     return b.create<mlir::arith::ConstantOp>(
-        lc, b.getIntegerAttr(type(ty), llvm::APInt(intTy->numBits(), val.str(),
-                                                   /*radix=*/10)));
+        lc,
+        b.getIntegerAttr(getType(ty), llvm::APInt(intTy->numBits(), val.str(),
+                                                  /*radix=*/10)));
   } else {
     llvm_unreachable("NYI: Literal");
   }
@@ -280,7 +281,7 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
   Expression const *astExpr = ret.expression();
   if (astExpr) {
     mlir::Value expr = genExpr(ret.expression(), currFuncResTys[0]);
-    b.create<mlir::func::ReturnOp>(loc(ret.location()), expr);
+    b.create<mlir::func::ReturnOp>(getLoc(ret.location()), expr);
   } else {
     llvm_unreachable("NYI: Empty return");
   }
@@ -294,20 +295,20 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
   std::vector<mlir::Location> inpLocs;
 
   for (auto const &param : func.parameters()) {
-    inpTys.push_back(type(param->annotation().type));
-    inpLocs.push_back(loc(param->location()));
+    inpTys.push_back(getType(param->annotation().type));
+    inpLocs.push_back(getLoc(param->location()));
   }
 
   for (auto const &param : func.returnParameters()) {
-    outTys.push_back(type(param->annotation().type));
+    outTys.push_back(getType(param->annotation().type));
   }
 
   assert(outTys.size() <= 1 && "NYI: Multivalued return");
 
   // TODO: Specify visibility
   auto funcType = b.getFunctionType(inpTys, outTys);
-  auto op =
-      b.create<mlir::func::FuncOp>(loc(func.location()), func.name(), funcType);
+  auto op = b.create<mlir::func::FuncOp>(getLoc(func.location()), func.name(),
+                                         funcType);
 
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);
@@ -327,7 +328,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 
   // Generate empty return
   if (outTys.empty())
-    b.create<mlir::func::ReturnOp>(loc(func.location()));
+    b.create<mlir::func::ReturnOp>(getLoc(func.location()));
 
   b.setInsertionPointAfter(op);
 }
@@ -353,7 +354,7 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
     auto fnSymAttr = mlir::SymbolRefAttr::get(b.getContext(),
                                               i.second->declaration().name());
 
-    mlir::FunctionType fnTy = type(i.second).cast<mlir::FunctionType>();
+    mlir::FunctionType fnTy = getType(i.second).cast<mlir::FunctionType>();
     auto fnTyAttr = mlir::TypeAttr::get(fnTy);
 
     std::string selector = i.first.hex();
@@ -371,7 +372,7 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
 
   // Create the contract op.
   auto op = b.create<mlir::sol::ContractOp>(
-      loc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
+      getLoc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
       getContractKind(cont), interfaceFnsAttr, ctor, fallbackFn, receiveFn);
   b.setInsertionPointToStart(&op.getBodyRegion().emplaceBlock());
 
