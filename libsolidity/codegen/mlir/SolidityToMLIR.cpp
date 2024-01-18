@@ -74,7 +74,7 @@ private:
 
   // TODO: Use VariableDeclaration instead?
   /// Maps variables to its MemRef
-  std::map<Declaration const *, mlir::Value> varMemRef;
+  std::map<Declaration const *, mlir::Value> memRefMap;
 
   /// Returns the mlir location for the solidity source location `loc`
   mlir::Location getLoc(SourceLocation const &loc) {
@@ -87,12 +87,14 @@ private:
   /// Returns the corresponding mlir type for the solidity type `ty`.
   mlir::Type getType(Type const *ty);
 
-  /// Returns the MemRef of the variable
+  /// Returns the memory reference of the variable.
   mlir::Value getMemRef(Declaration const *decl);
   mlir::Value getMemRef(Identifier const *ident);
 
-  /// Sets the MemRef of the variable
-  void setMemRef(Declaration const *decl, mlir::Value addr);
+  /// Sets the memory reference of the variable.
+  void setMemRef(Declaration const *decl, mlir::Value addr) {
+    memRefMap[decl] = addr;
+  }
 
   /// Returns the cast from `val` having the corresponding mlir type of
   /// `srcTy` to a value having the corresponding mlir type of `dstTy`
@@ -148,11 +150,10 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
 }
 
 mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
-  return varMemRef[decl];
-}
-
-void SolidityToMLIRPass::setMemRef(Declaration const *decl, mlir::Value addr) {
-  varMemRef[decl] = addr;
+  auto it = memRefMap.find(decl);
+  if (it == memRefMap.end())
+    return {};
+  return it->second;
 }
 
 mlir::Value SolidityToMLIRPass::getMemRef(Identifier const *ident) {
