@@ -28,10 +28,12 @@
 #include "libsolidity/ast/ASTVisitor.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
+#include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/CommonIO.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -73,6 +75,8 @@ private:
   FunctionDefinition const *currFunc;
 
   // TODO: Use VariableDeclaration instead?
+  // FIXME: Alignments are hardcoded.
+  // FIXME: Should we specify alignment for the memory operations at this stage?
   /// Maps variables to its MemRef
   std::map<Declaration const *, mlir::Value> memRefMap;
 
@@ -231,8 +235,10 @@ mlir::Value SolidityToMLIRPass::genExpr(Expression const *expr,
   }
   // Generate variable access
   else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
-    return b.create<mlir::memref::LoadOp>(getLoc(expr->location()),
-                                          getMemRef(ident));
+    auto addr = getMemRef(ident);
+    assert(addr);
+    val = b.create<mlir::LLVM::LoadOp>(getLoc(expr->location()), addr,
+                                       /*alignment=*/32);
   }
   // Generate binary operation
   else if (auto *binOp = dynamic_cast<BinaryOperation const *>(expr)) {
@@ -314,15 +320,17 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);
 
+  mlirgen::BuilderHelper h(b);
   for (auto &&[inpTy, inpLoc, param] :
        ranges::views::zip(inpTys, inpLocs, func.parameters())) {
     mlir::Value arg = entryBlk->addArgument(inpTy, inpLoc);
-    // TODO: Support non-scalars
-    mlir::MemRefType memRefTy = mlir::MemRefType::get({}, inpTy);
-    mlir::Value addr =
-        b.create<mlir::memref::AllocaOp>(inpLoc, memRefTy).getResult();
+    // TODO: Support non-scalars.
+    mlir::Value addr = b.create<mlir::LLVM::AllocaOp>(
+                            inpLoc, mlir::LLVM::LLVMPointerType::get(inpTy),
+                            h.getConst(inpLoc, 1), /*alignment=*/32)
+                           .getResult();
     setMemRef(param.get(), addr);
-    b.create<mlir::memref::StoreOp>(inpLoc, arg, addr);
+    b.create<mlir::LLVM::StoreOp>(inpLoc, arg, addr, /*alignment=*/32);
   }
 
   func.accept(*this);
@@ -391,7 +399,7 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
-  ctx.getOrLoadDialect<mlir::memref::MemRefDialect>();
+  ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
 
   SolidityToMLIRPass gen(ctx, stream);
   for (auto *contract : contracts) {

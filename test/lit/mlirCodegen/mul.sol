@@ -9,9 +9,10 @@ contract C {
 // CHECK: module {
 // CHECK-NEXT:   sol.contract @C_13 {
 // CHECK-NEXT:     func.func @f(%arg0: i256) -> i256 {
-// CHECK-NEXT:       %0 = memref.alloca() : memref<i256>
-// CHECK-NEXT:       memref.store %arg0, %0[] : memref<i256>
-// CHECK-NEXT:       %1 = memref.load %0[] : memref<i256>
+// CHECK-NEXT:       %c1_i256 = arith.constant 1 : i256
+// CHECK-NEXT:       %0 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256>
+// CHECK-NEXT:       llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256>
+// CHECK-NEXT:       %1 = llvm.load %0 {alignment = 32 : i64} : !llvm.ptr<i256>
 // CHECK-NEXT:       %c7_i8 = arith.constant 7 : i8
 // CHECK-NEXT:       %2 = arith.extui %c7_i8 : i8 to i256
 // CHECK-NEXT:       %3 = arith.muli %1, %2 : i256
@@ -24,9 +25,10 @@ contract C {
 // DBG-NEXT: module {
 // DBG-NEXT:   sol.contract @C_13 {
 // DBG-NEXT:     func.func @f(%arg0: i256 loc({{.*}}:4:12)) -> i256 {
-// DBG-NEXT:       %0 = memref.alloca() : memref<i256> loc(#loc3)
-// DBG-NEXT:       memref.store %arg0, %0[] : memref<i256> loc(#loc3)
-// DBG-NEXT:       %1 = memref.load %0[] : memref<i256> loc(#loc4)
+// DBG-NEXT:       %c1_i256 = arith.constant 1 : i256 loc(#loc3)
+// DBG-NEXT:       %0 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc3)
+// DBG-NEXT:       llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc3)
+// DBG-NEXT:       %1 = llvm.load %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc4)
 // DBG-NEXT:       %c7_i8 = arith.constant 7 : i8 loc(#loc5)
 // DBG-NEXT:       %2 = arith.extui %c7_i8 : i8 to i256 loc(#loc5)
 // DBG-NEXT:       %3 = arith.muli %1, %2 : i256 loc(#loc4)
