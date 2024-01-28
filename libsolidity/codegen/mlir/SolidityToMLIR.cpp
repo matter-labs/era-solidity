@@ -47,6 +47,7 @@
 #include "range/v3/view/zip.hpp"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 
 using namespace solidity::langutil;
 using namespace solidity::frontend;
@@ -98,6 +99,12 @@ private:
   /// Sets the memory reference of the variable.
   void setMemRef(Declaration const *decl, mlir::Value addr) {
     memRefMap[decl] = addr;
+  }
+
+  /// Returns the mangled name of the declaration composed of its name and its
+  /// AST ID.
+  std::string getMangledName(Declaration const &decl) {
+    return decl.name() + "_" + std::to_string(decl.id());
   }
 
   /// Returns the array attribute for tracking interface functions (symbol, type
@@ -174,8 +181,8 @@ SolidityToMLIRPass::getInterfaceFnsAttr(ContractDefinition const &cont) {
   std::vector<mlir::Attribute> interfaceFnAttrs;
   interfaceFnAttrs.reserve(interfaceFnInfos.size());
   for (auto const &i : interfaceFnInfos) {
-    auto fnSymAttr = mlir::SymbolRefAttr::get(b.getContext(),
-                                              i.second->declaration().name());
+    auto fnSymAttr = mlir::SymbolRefAttr::get(
+        b.getContext(), getMangledName(i.second->declaration()));
 
     mlir::FunctionType fnTy = getType(i.second).cast<mlir::FunctionType>();
     auto fnTyAttr = mlir::TypeAttr::get(fnTy);
@@ -340,8 +347,8 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 
   // TODO: Specify visibility
   auto funcType = b.getFunctionType(inpTys, outTys);
-  auto op = b.create<mlir::func::FuncOp>(getLoc(func.location()), func.name(),
-                                         funcType);
+  auto op = b.create<mlir::func::FuncOp>(getLoc(func.location()),
+                                         getMangledName(func), funcType);
 
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);

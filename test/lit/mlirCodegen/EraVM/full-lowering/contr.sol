@@ -81,7 +81,7 @@ contract C {
 // CHECK-NEXT:   br label %11, !dbg !14
 // CHECK-EMPTY:
 // CHECK-NEXT: 11:                                               ; preds = %10, %7
-// CHECK-NEXT:   %12 = call i256 @f(), !dbg !14
+// CHECK-NEXT:   %12 = call i256 @f_9(), !dbg !14
 // CHECK-NEXT:   %13 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1, !dbg !14
 // CHECK-NEXT:   %14 = add i256 %13, 32, !dbg !14
 // CHECK-NEXT:   %15 = sub i256 %14, %13, !dbg !14
@@ -101,7 +101,7 @@ contract C {
 // CHECK-NEXT:   unreachable, !dbg !14
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define i256 @f() !dbg !16 {
+// CHECK-NEXT: define i256 @f_9() !dbg !16 {
 // CHECK-NEXT:   ret i256 42, !dbg !17
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -172,7 +172,7 @@ contract C {
 // CHECK-NEXT: !13 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !14 = !DILocation(line: 6, scope: !15)
 // CHECK-NEXT: !15 = !DILexicalBlockFile(scope: !13, file: !9, discriminator: 0)
-// CHECK-NEXT: !16 = distinct !DISubprogram(name: "f", linkageName: "f", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !16 = distinct !DISubprogram(name: "f_9", linkageName: "f_9", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !17 = !DILocation(line: 7, column: 43, scope: !18)
 // CHECK-NEXT: !18 = !DILexicalBlockFile(scope: !16, file: !9, discriminator: 0)
 // CHECK-NEXT: !19 = distinct !DISubprogram(name: "__entry", linkageName: "__entry", scope: null, file: !9, line: 6, type: !5, scopeLine: 6, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
@@ -241,7 +241,7 @@ contract C {
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
 // ASM-NEXT: .BB2_4:
-// ASM-NEXT: 	near_call	r0, @f, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @f_9, @DEFAULT_UNWIND
 // ASM-NEXT: 	st.1	32, r1
 // ASM-NEXT: .BB2_5:
 // ASM-NEXT: 	add	r0, r0, r1
@@ -252,8 +252,8 @@ contract C {
 // ASM-NEXT: .tmp3:
 // ASM-NEXT: .func_end2:
 // ASM-EMPTY:
-// ASM-NEXT: 	.globl	f
-// ASM-NEXT: f:
+// ASM-NEXT: 	.globl	f_9
+// ASM-NEXT: f_9:
 // ASM-NEXT: .func_begin3:
 // ASM-NEXT: 	.loc	2 7 0
 // ASM-NEXT: 	add	42, r0, r1
@@ -452,7 +452,7 @@ contract C {
 // ASM-NEXT: .info_string5:
 // ASM-NEXT: 	.asciz	"__runtime"
 // ASM-NEXT: .info_string6:
-// ASM-NEXT: 	.asciz	"f"
+// ASM-NEXT: 	.asciz	"f_9"
 // ASM-NEXT: .info_string7:
 // ASM-NEXT: 	.asciz	"__entry"
 // ASM-NEXT: 	.debug_pubnames
@@ -465,12 +465,12 @@ contract C {
 // ASM-NEXT: 	.asciz	"__entry"
 // ASM-NEXT: 	.long	156
 // ASM-NEXT: 	.asciz	"__runtime"
-// ASM-NEXT: 	.long	201
-// ASM-NEXT: 	.asciz	"f"
 // ASM-NEXT: 	.long	66
 // ASM-NEXT: 	.asciz	".unreachable"
 // ASM-NEXT: 	.long	111
 // ASM-NEXT: 	.asciz	"__deploy"
+// ASM-NEXT: 	.long	201
+// ASM-NEXT: 	.asciz	"f_9"
 // ASM-NEXT: 	.long	0
 // ASM-NEXT: .pubNames_end0:
 // ASM-NEXT: 	.debug_pubtypes
