@@ -347,8 +347,11 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 
   // TODO: Specify visibility
   auto funcType = b.getFunctionType(inpTys, outTys);
-  auto op = b.create<mlir::func::FuncOp>(getLoc(func.location()),
-                                         getMangledName(func), funcType);
+  auto op = b.create<mlir::func::FuncOp>(
+      getLoc(func.location()), getMangledName(func), funcType,
+      b.getNamedAttr("llvm.linkage",
+                     mlir::LLVM::LinkageAttr::get(
+                         b.getContext(), mlir::LLVM::Linkage::Private)));
 
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);

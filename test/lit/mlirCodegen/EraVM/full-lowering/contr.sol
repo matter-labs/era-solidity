@@ -101,7 +101,7 @@ contract C {
 // CHECK-NEXT:   unreachable, !dbg !14
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define i256 @f_9() !dbg !16 {
+// CHECK-NEXT: define private i256 @f_9() !dbg !16 {
 // CHECK-NEXT:   ret i256 42, !dbg !17
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -252,7 +252,6 @@ contract C {
 // ASM-NEXT: .tmp3:
 // ASM-NEXT: .func_end2:
 // ASM-EMPTY:
-// ASM-NEXT: 	.globl	f_9
 // ASM-NEXT: f_9:
 // ASM-NEXT: .func_begin3:
 // ASM-NEXT: 	.loc	2 7 0
