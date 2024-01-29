@@ -429,8 +429,48 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
 
-    // Move FuncOps under the ModuleOp
+    // Track the names of the existing function in the module.
+    std::set<std::string> fnNamesInMod;
+    for (mlir::Operation &o : *mod.getBody()) {
+      if (auto fn = dyn_cast<func::FuncOp>(&o)) {
+        std::string name(fn.getName());
+        assert(fnNamesInMod.count(name) == 0 &&
+               "Duplicate functions in module");
+        fnNamesInMod.insert(name);
+      }
+    }
+
+    // Move FuncOps under the ModuleOp by disambiguating functions with same
+    // names.
+    // TODO:
+    // - Is there a better way to do the symbol disambiguation?
+    // - replaceAllSymbolUses doesn't affect symbolic reference by attributes.
+    //   Is that a problem here?
     op.walk([&](func::FuncOp fn) {
+      std::string name(fn.getName());
+
+      // Does the module have a function with the same name?
+      if (fnNamesInMod.count(name)) {
+        // Disambiguate the symbol.
+        unsigned counter = 0;
+        auto newName = name + "." + std::to_string(counter);
+        while (fnNamesInMod.count(newName))
+          newName = name + "." + std::to_string(++counter);
+
+        // The visitor might be at a inner object, so we need to explicitly
+        // fetch the parent ObjectOp.
+        auto parentObjectOp = fn->getParentOfType<sol::ObjectOp>();
+        assert(parentObjectOp);
+        if (failed(fn.replaceAllSymbolUses(rewriter.getStringAttr(newName),
+                                           parentObjectOp)))
+          llvm_unreachable("replaceAllSymbolUses failed");
+        fn.setName(newName);
+        fnNamesInMod.insert(newName);
+
+      } else {
+        fnNamesInMod.insert(name);
+      }
+
       Block *modBlk = mod.getBody();
       fn->moveBefore(modBlk, modBlk->begin());
     });
@@ -630,8 +670,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     }
     for (func::FuncOp func : funcs) {
       // Duplicate the func in both the creation and runtime objects.
-      // FIXME: ObjectOp lowering doesn't disambiguate function symbols.
-      // r.clone(*func);
+      r.clone(*func);
       func->moveBefore(runtimeObj.getBody(), runtimeObj.getBody()->begin());
     }
 

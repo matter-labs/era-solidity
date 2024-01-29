@@ -100,6 +100,9 @@ def Sol_ObjectOp : Sol_Op<"object", [Symbol, SymbolTable, SingleBlock,
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins CArg<"StringRef", "{}">:$name)>];
+  // TODO: Implement a verifier that checks for things like:
+  // - Maximum of 2 nesting of sol.object
+  // - All func.funcs to be only under sol.object
 }
 
 // TODO: The op definitions of yul builtins should be auto-generated from

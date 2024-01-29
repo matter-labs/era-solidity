@@ -101,47 +101,51 @@ contract C {
 // CHECK-NEXT:   unreachable, !dbg !14
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f_9() !dbg !16 {
+// CHECK-NEXT: define private i256 @f_9.0() !dbg !16 {
 // CHECK-NEXT:   ret i256 42, !dbg !17
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) !dbg !19 {
-// CHECK-NEXT:   store i256 0, ptr @memory_pointer, align 32, !dbg !20
-// CHECK-NEXT:   store i256 0, ptr @calldatasize, align 32, !dbg !20
-// CHECK-NEXT:   store i256 0, ptr @returndatasize, align 32, !dbg !20
-// CHECK-NEXT:   store i256 0, ptr @call_flags, align 32, !dbg !20
-// CHECK-NEXT:   store <10 x i256> zeroinitializer, ptr @extra_abi_data, align 512, !dbg !20
-// CHECK-NEXT:   store ptr addrspace(3) %0, ptr @ptr_calldata, align 32, !dbg !20
-// CHECK-NEXT:   store i256 and (i256 lshr (i256 ptrtoint (ptr @ptr_calldata to i256), i256 96), i256 4294967295), ptr @calldatasize, align 32, !dbg !20
-// CHECK-NEXT:   %13 = load i256, ptr @calldatasize, align 32, !dbg !20
-// CHECK-NEXT:   %14 = getelementptr i8, ptr addrspace(3) %0, i256 %13, !dbg !20
-// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_return_data, align 32, !dbg !20
-// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_active, align 32, !dbg !20
-// CHECK-NEXT:   store i256 %1, ptr @call_flags, align 32, !dbg !20
-// CHECK-NEXT:   store i256 %2, ptr @extra_abi_data, align 32, !dbg !20
-// CHECK-NEXT:   store i256 %3, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 1), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %4, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 2), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %5, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 3), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %6, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 4), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %7, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 5), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %8, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 6), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %9, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 7), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %10, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 8), align 32, !dbg !20
-// CHECK-NEXT:   store i256 %11, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 9), align 32, !dbg !20
-// CHECK-NEXT:   %15 = and i256 %1, 1, !dbg !20
-// CHECK-NEXT:   %16 = icmp eq i256 %15, 1, !dbg !20
-// CHECK-NEXT:   br i1 %16, label %17, label %18, !dbg !20
+// CHECK-NEXT: define private i256 @f_9() !dbg !19 {
+// CHECK-NEXT:   ret i256 42, !dbg !20
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) !dbg !22 {
+// CHECK-NEXT:   store i256 0, ptr @memory_pointer, align 32, !dbg !23
+// CHECK-NEXT:   store i256 0, ptr @calldatasize, align 32, !dbg !23
+// CHECK-NEXT:   store i256 0, ptr @returndatasize, align 32, !dbg !23
+// CHECK-NEXT:   store i256 0, ptr @call_flags, align 32, !dbg !23
+// CHECK-NEXT:   store <10 x i256> zeroinitializer, ptr @extra_abi_data, align 512, !dbg !23
+// CHECK-NEXT:   store ptr addrspace(3) %0, ptr @ptr_calldata, align 32, !dbg !23
+// CHECK-NEXT:   store i256 and (i256 lshr (i256 ptrtoint (ptr @ptr_calldata to i256), i256 96), i256 4294967295), ptr @calldatasize, align 32, !dbg !23
+// CHECK-NEXT:   %13 = load i256, ptr @calldatasize, align 32, !dbg !23
+// CHECK-NEXT:   %14 = getelementptr i8, ptr addrspace(3) %0, i256 %13, !dbg !23
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_return_data, align 32, !dbg !23
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_active, align 32, !dbg !23
+// CHECK-NEXT:   store i256 %1, ptr @call_flags, align 32, !dbg !23
+// CHECK-NEXT:   store i256 %2, ptr @extra_abi_data, align 32, !dbg !23
+// CHECK-NEXT:   store i256 %3, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 1), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %4, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 2), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %5, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 3), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %6, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 4), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %7, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 5), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %8, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 6), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %9, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 7), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %10, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 8), align 32, !dbg !23
+// CHECK-NEXT:   store i256 %11, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 9), align 32, !dbg !23
+// CHECK-NEXT:   %15 = and i256 %1, 1, !dbg !23
+// CHECK-NEXT:   %16 = icmp eq i256 %15, 1, !dbg !23
+// CHECK-NEXT:   br i1 %16, label %17, label %18, !dbg !23
 // CHECK-EMPTY:
 // CHECK-NEXT: 17:                                               ; preds = %12
-// CHECK-NEXT:   call void @__deploy(), !dbg !20
-// CHECK-NEXT:   br label %19, !dbg !20
+// CHECK-NEXT:   call void @__deploy(), !dbg !23
+// CHECK-NEXT:   br label %19, !dbg !23
 // CHECK-EMPTY:
 // CHECK-NEXT: 18:                                               ; preds = %12
-// CHECK-NEXT:   call void @__runtime(), !dbg !20
-// CHECK-NEXT:   br label %19, !dbg !20
+// CHECK-NEXT:   call void @__runtime(), !dbg !23
+// CHECK-NEXT:   br label %19, !dbg !23
 // CHECK-EMPTY:
 // CHECK-NEXT: 19:                                               ; preds = %17, %18
-// CHECK-NEXT:   unreachable, !dbg !20
+// CHECK-NEXT:   unreachable, !dbg !23
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: inaccessiblememonly nounwind
@@ -172,12 +176,15 @@ contract C {
 // CHECK-NEXT: !13 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !14 = !DILocation(line: 6, scope: !15)
 // CHECK-NEXT: !15 = !DILexicalBlockFile(scope: !13, file: !9, discriminator: 0)
-// CHECK-NEXT: !16 = distinct !DISubprogram(name: "f_9", linkageName: "f_9", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !16 = distinct !DISubprogram(name: "f_9.0", linkageName: "f_9.0", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !17 = !DILocation(line: 7, column: 43, scope: !18)
 // CHECK-NEXT: !18 = !DILexicalBlockFile(scope: !16, file: !9, discriminator: 0)
-// CHECK-NEXT: !19 = distinct !DISubprogram(name: "__entry", linkageName: "__entry", scope: null, file: !9, line: 6, type: !5, scopeLine: 6, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
-// CHECK-NEXT: !20 = !DILocation(line: 6, scope: !21)
+// CHECK-NEXT: !19 = distinct !DISubprogram(name: "f_9", linkageName: "f_9", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !20 = !DILocation(line: 7, column: 43, scope: !21)
 // CHECK-NEXT: !21 = !DILexicalBlockFile(scope: !19, file: !9, discriminator: 0)
+// CHECK-NEXT: !22 = distinct !DISubprogram(name: "__entry", linkageName: "__entry", scope: null, file: !9, line: 6, type: !5, scopeLine: 6, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !23 = !DILocation(line: 6, scope: !24)
+// CHECK-NEXT: !24 = !DILexicalBlockFile(scope: !22, file: !9, discriminator: 0)
 // CHECK-EMPTY:
 // ASM: 	.text
 // ASM-NEXT: 	.file	{{.*}}
