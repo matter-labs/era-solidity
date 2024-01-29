@@ -419,20 +419,20 @@ struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
 struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   using OpRewritePattern<sol::ObjectOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(sol::ObjectOp op,
+  LogicalResult matchAndRewrite(sol::ObjectOp objOp,
                                 PatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
+    mlir::Location loc = objOp.getLoc();
 
-    auto mod = op->getParentOfType<ModuleOp>();
-    auto voidTy = LLVM::LLVMVoidType::get(op->getContext());
+    auto mod = objOp->getParentOfType<ModuleOp>();
+    auto voidTy = LLVM::LLVMVoidType::get(objOp->getContext());
     auto i256Ty = rewriter.getIntegerType(256);
     solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
 
     // Track the names of the existing function in the module.
     std::set<std::string> fnNamesInMod;
-    for (mlir::Operation &o : *mod.getBody()) {
-      if (auto fn = dyn_cast<func::FuncOp>(&o)) {
+    for (mlir::Operation &op : *mod.getBody()) {
+      if (auto fn = dyn_cast<func::FuncOp>(&op)) {
         std::string name(fn.getName());
         assert(fnNamesInMod.count(name) == 0 &&
                "Duplicate functions in module");
@@ -446,7 +446,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // - Is there a better way to do the symbol disambiguation?
     // - replaceAllSymbolUses doesn't affect symbolic reference by attributes.
     //   Is that a problem here?
-    op.walk([&](func::FuncOp fn) {
+    objOp.walk([&](func::FuncOp fn) {
       std::string name(fn.getName());
 
       // Does the module have a function with the same name?
@@ -477,15 +477,15 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
     // Is this a runtime object?
     // FIXME: Is there a better way to check this?
-    if (op.getSymName().endswith("_deployed")) {
+    if (objOp.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
       LLVM::LLVMFuncOp runtimeFunc =
           eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
       assert(runtimeFuncRegion.empty());
-      rewriter.inlineRegionBefore(op.getRegion(), runtimeFuncRegion,
+      rewriter.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
                                   runtimeFuncRegion.begin());
-      rewriter.eraseOp(op);
+      rewriter.eraseOp(objOp);
       return success();
     }
 
@@ -502,7 +502,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     rewriter.setInsertionPointToEnd(mod.getBody());
     func::FuncOp entryFunc =
         rewriter.create<func::FuncOp>(loc, "__entry", funcType);
-    assert(op->getNumRegions() == 1);
+    assert(objOp->getNumRegions() == 1);
 
     // Setup the entry block and set insertion point to it
     auto &entryFuncRegion = entryFunc.getRegion();
@@ -595,7 +595,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
-    for (auto const &op : *op.getBody()) {
+    for (auto const &op : *objOp.getBody()) {
       if (auto runtimeObj = llvm::dyn_cast<sol::ObjectOp>(&op)) {
         assert(runtimeObj.getSymName().endswith("_deployed"));
         assert(runtimeFuncRegion.empty());
@@ -613,7 +613,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         eravmHelper.getOrInsertCreationFuncOp("__deploy", voidTy, {}, mod);
     Region &deployFuncRegion = deployFunc.getRegion();
     assert(deployFuncRegion.empty());
-    rewriter.inlineRegionBefore(op.getRegion(), deployFuncRegion,
+    rewriter.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
                                 deployFuncRegion.begin());
     {
       OpBuilder::InsertionGuard insertGuard(rewriter);
@@ -638,7 +638,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     rewriter.setInsertionPointAfter(ifOp);
     rewriter.create<LLVM::UnreachableOp>(loc);
 
-    rewriter.eraseOp(op);
+    rewriter.eraseOp(objOp);
     return success();
   }
 };
