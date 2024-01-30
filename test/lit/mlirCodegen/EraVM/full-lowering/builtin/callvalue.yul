@@ -89,10 +89,10 @@ object "Test" {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: ; Function Attrs: inaccessiblememonly nounwind
+// CHECK-NEXT: ; Function Attrs: nounwind readnone
 // CHECK-NEXT: declare i256 @llvm.eravm.getu128() #0
 // CHECK-EMPTY:
-// CHECK-NEXT: attributes #0 = { inaccessiblememonly nounwind }
+// CHECK-NEXT: attributes #0 = { nounwind readnone }
 // CHECK-EMPTY:
 // CHECK-NEXT: !llvm.dbg.cu = !{!0}
 // CHECK-NEXT: !llvm.module.flags = !{!2}
@@ -126,11 +126,10 @@ object "Test" {
 // ASM-NEXT: .func_begin1:
 // ASM-NEXT: 	.file	{{.*}}
 // ASM-NEXT: 	.loc	1 0 0
-// ASM-NEXT: 	.file	{{.*}}
-// ASM-NEXT: 	.loc	2 5 14 prologue_end
-// ASM-NEXT: 	context.get_context_u128	r1
 // ASM-NEXT: 	add	32, r0, r1
-// ASM-NEXT: 	.loc	2 5 4 is_stmt 0
+// ASM-NEXT: .tmp0:
+// ASM-NEXT: 	.file	{{.*}}
+// ASM-NEXT: 	.loc	2 5 4 prologue_end
 // ASM-NEXT: 	st.2	256, r1
 // ASM-NEXT: 	st.2	288, r0
 // ASM-NEXT: 	add	256, r0, r1
@@ -138,12 +137,12 @@ object "Test" {
 // ASM-NEXT: 	add	2, r0, r3
 // ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
-// ASM-NEXT: .tmp0:
+// ASM-NEXT: .tmp1:
 // ASM-NEXT: .func_end1:
 // ASM-EMPTY:
 // ASM-NEXT: __runtime:
 // ASM-NEXT: .func_begin2:
-// ASM-NEXT: 	.loc	1 0 0 is_stmt 1
+// ASM-NEXT: 	.loc	1 0 0
 // ASM-NEXT: 	.loc	2 9 16 prologue_end
 // ASM-NEXT: 	context.get_context_u128	r2
 // ASM-NEXT: 	.loc	2 9 6 is_stmt 0
@@ -151,7 +150,7 @@ object "Test" {
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
-// ASM-NEXT: .tmp1:
+// ASM-NEXT: .tmp2:
 // ASM-NEXT: .func_end2:
 // ASM-EMPTY:
 // ASM-NEXT: 	.globl	__entry

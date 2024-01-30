@@ -216,13 +216,13 @@ object "Test" {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: ; Function Attrs: inaccessiblememonly nounwind
+// CHECK-NEXT: ; Function Attrs: nounwind readnone
 // CHECK-NEXT: declare i256 @llvm.eravm.getu128() #0
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: argmemonly nocallback nofree nounwind willreturn
 // CHECK-NEXT: declare void @llvm.memcpy.p1.p3.i256(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i256, i1 immarg) #1
 // CHECK-EMPTY:
-// CHECK-NEXT: attributes #0 = { inaccessiblememonly nounwind }
+// CHECK-NEXT: attributes #0 = { nounwind readnone }
 // CHECK-NEXT: attributes #1 = { argmemonly nocallback nofree nounwind willreturn }
 // CHECK-EMPTY:
 // CHECK-NEXT: !llvm.dbg.cu = !{!0}
