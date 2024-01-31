@@ -704,7 +704,7 @@ AssemblyItem Assembly::newImmutableAssignment(std::string const& _identifier)
 
 Assembly& Assembly::optimise(OptimiserSettings const& _settings)
 {
-	optimiseInternal(_settings, {});
+	(void) _settings;
 	return *this;
 }
 
