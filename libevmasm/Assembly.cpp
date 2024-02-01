@@ -579,12 +579,14 @@ LinkerObject const& Assembly::assemble() const
 			dataRef.insert(make_pair(h256(i.data()), ret.bytecode.size()));
 			ret.bytecode.resize(ret.bytecode.size() + bytesPerDataRef);
 			break;
+		case ZKEVMPushSub:
 		case PushSub:
 			assertThrow(i.data() <= numeric_limits<size_t>::max(), AssemblyException, "");
 			ret.bytecode.push_back(dataRefPush);
 			subRef.insert(make_pair(static_cast<size_t>(i.data()), ret.bytecode.size()));
 			ret.bytecode.resize(ret.bytecode.size() + bytesPerDataRef);
 			break;
+		case ZKEVMPushSubSize:
 		case PushSubSize:
 		{
 			assertThrow(i.data() <= numeric_limits<size_t>::max(), AssemblyException, "");

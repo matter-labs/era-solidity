@@ -266,6 +266,49 @@ map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _evmVe
 			})
 		);
 
+		builtins.emplace(createFunction("$zk_datasize", 1, 1, SideEffects{}, {LiteralKind::String}, [](
+			FunctionCall const& _call,
+			AbstractAssembly& _assembly,
+			BuiltinContext& _context
+		) {
+			yulAssert(_context.currentObject, "No object available.");
+			yulAssert(_call.arguments.size() == 1, "");
+			Expression const& arg = _call.arguments.front();
+			YulString dataName = std::get<Literal>(arg).value;
+			if (_context.currentObject->name == dataName)
+				_assembly.appendAssemblySize();
+			else
+			{
+				vector<size_t> subIdPath =
+					_context.subIDs.count(dataName) == 0 ?
+						_context.currentObject->pathToSubObject(dataName) :
+						vector<size_t>{_context.subIDs.at(dataName)};
+				yulAssert(!subIdPath.empty(), "Could not find assembly object <" + dataName.str() + ">.");
+				_assembly.appendZKEVMDataSize(subIdPath);
+			}
+		}));
+		builtins.emplace(createFunction("$zk_dataoffset", 1, 1, SideEffects{}, {LiteralKind::String}, [](
+			FunctionCall const& _call,
+			AbstractAssembly& _assembly,
+			BuiltinContext& _context
+		) {
+			yulAssert(_context.currentObject, "No object available.");
+			yulAssert(_call.arguments.size() == 1, "");
+			Expression const& arg = _call.arguments.front();
+			YulString dataName = std::get<Literal>(arg).value;
+			if (_context.currentObject->name == dataName)
+				_assembly.appendConstant(0);
+			else
+			{
+				vector<size_t> subIdPath =
+					_context.subIDs.count(dataName) == 0 ?
+						_context.currentObject->pathToSubObject(dataName) :
+						vector<size_t>{_context.subIDs.at(dataName)};
+				yulAssert(!subIdPath.empty(), "Could not find assembly object <" + dataName.str() + ">.");
+				_assembly.appendZKEVMDataOffset(subIdPath);
+			}
+		}));
+
 		builtins.emplace(createFunction("datasize", 1, 1, SideEffects{}, {LiteralKind::String}, [](
 			FunctionCall const& _call,
 			AbstractAssembly& _assembly,

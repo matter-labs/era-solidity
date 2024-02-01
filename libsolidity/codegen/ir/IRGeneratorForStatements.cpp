@@ -1532,14 +1532,14 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 		m_context.subObjectsCreated().insert(contract);
 
 		Whiskers t(R"(let <memPos> := <allocateUnbounded>()
-			let <memEnd> := add(<memPos>, datasize("<object>"))
+			let <memEnd> := add(<memPos>, $zk_datasize("<object>"))
 			if or(gt(<memEnd>, 0xffffffffffffffff), lt(<memEnd>, <memPos>)) { <panic>() }
-			datacopy(<memPos>, dataoffset("<object>"), datasize("<object>"))
+			$zk_datacopy(<memPos>, $zk_dataoffset("<object>"), $zk_datasize("<object>"))
 			<memEnd> := <abiEncode>(<memEnd><constructorParams>)
 			<?saltSet>
-				let <address> := create2(<value>, <memPos>, sub(<memEnd>, <memPos>), <salt>)
+				let <address> := $zk_create2(<value>, <memPos>, sub(<memEnd>, <memPos>), <salt>)
 			<!saltSet>
-				let <address> := create(<value>, <memPos>, sub(<memEnd>, <memPos>))
+				let <address> := $zk_create(<value>, <memPos>, sub(<memEnd>, <memPos>))
 			</saltSet>
 			<?isTryCall>
 				let <success> := iszero(iszero(<address>))

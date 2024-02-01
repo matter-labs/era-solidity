@@ -86,6 +86,10 @@ pair<string, string> AssemblyItem::nameAndData(langutil::EVMVersion _evmVersion)
 		return {"PUSH [$]", toString(util::h256(data()))};
 	case PushSubSize:
 		return {"PUSH #[$]", toString(util::h256(data()))};
+	case ZKEVMPushSub:
+		return {"$ZK_PUSH [$]", toString(util::h256(data()))};
+	case ZKEVMPushSubSize:
+		return {"$ZK_PUSH #[$]", toString(util::h256(data()))};
 	case PushProgramSize:
 		return {"PUSHSIZE", ""};
 	case PushLibraryAddress:
@@ -126,11 +130,13 @@ size_t AssemblyItem::bytesRequired(size_t _addressLength, Precision _precision) 
 	case Push:
 		return 1 + max<size_t>(1, numberEncodingSize(data()));
 	case PushSubSize:
+	case ZKEVMPushSubSize:
 	case PushProgramSize:
 		return 1 + 4;		// worst case: a 16MB program
 	case PushTag:
 	case PushData:
 	case PushSub:
+	case ZKEVMPushSub:
 		return 1 + _addressLength;
 	case PushLibraryAddress:
 	case PushDeployTimeAddress:
@@ -192,6 +198,8 @@ size_t AssemblyItem::returnValues() const
 	case PushData:
 	case PushSub:
 	case PushSubSize:
+	case ZKEVMPushSub:
+	case ZKEVMPushSubSize:
 	case PushProgramSize:
 	case PushLibraryAddress:
 	case PushImmutable:
@@ -220,6 +228,8 @@ bool AssemblyItem::canBeFunctional() const
 	case PushData:
 	case PushSub:
 	case PushSubSize:
+	case ZKEVMPushSub:
+	case ZKEVMPushSubSize:
 	case PushProgramSize:
 	case PushLibraryAddress:
 	case PushDeployTimeAddress:
@@ -281,6 +291,8 @@ string AssemblyItem::toAssemblyText(Assembly const& _assembly) const
 		break;
 	case PushSub:
 	case PushSubSize:
+	case ZKEVMPushSub:
+	case ZKEVMPushSubSize:
 	{
 		vector<string> subPathComponents;
 		for (size_t subPathComponentId: _assembly.decodeSubPath(static_cast<size_t>(data())))
@@ -358,8 +370,14 @@ ostream& solidity::evmasm::operator<<(ostream& _out, AssemblyItem const& _item)
 	case PushSub:
 		_out << " PushSub " << hex << static_cast<size_t>(_item.data()) << dec;
 		break;
+	case ZKEVMPushSub:
+		_out << " ZKEVMPushSub " << hex << static_cast<size_t>(_item.data()) << dec;
+		break;
 	case PushSubSize:
 		_out << " PushSubSize " << hex << static_cast<size_t>(_item.data()) << dec;
+		break;
+	case ZKEVMPushSubSize:
+		_out << " ZKEVMPushSubSize " << hex << static_cast<size_t>(_item.data()) << dec;
 		break;
 	case PushProgramSize:
 		_out << " PushProgramSize";

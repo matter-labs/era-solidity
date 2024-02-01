@@ -49,6 +49,8 @@ GasMeter::GasConsumption GasMeter::estimateMax(AssemblyItem const& _item, bool _
 	case PushData:
 	case PushSub:
 	case PushSubSize:
+	case ZKEVMPushSub:
+	case ZKEVMPushSubSize:
 	case PushProgramSize:
 	case PushLibraryAddress:
 	case PushDeployTimeAddress:

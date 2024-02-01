@@ -58,6 +58,8 @@ public:
 	std::pair<std::shared_ptr<AbstractAssembly>, SubID> createSubAssembly(bool _creation, std::string _name = {}) override;
 	void appendDataOffset(std::vector<SubID> const& _subPath) override;
 	void appendDataSize(std::vector<SubID> const& _subPath) override;
+	void appendZKEVMDataOffset(std::vector<SubID> const& _subPath) override;
+	void appendZKEVMDataSize(std::vector<SubID> const& _subPath) override;
 	SubID appendData(bytes const& _data) override;
 
 	void appendToAuxiliaryData(bytes const& _data) override;
