@@ -866,6 +866,8 @@ struct SolidityDialectLowering
                scf::SCFDialect>();
   }
 
+  StringRef getArgument() const override { return "sol-to-llvm"; }
+
   void runOnOperation() override {
     LLVMConversionTarget llConv(getContext());
     llConv.addLegalOp<ModuleOp>();
