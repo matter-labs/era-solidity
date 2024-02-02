@@ -857,17 +857,17 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   }
 };
 
-/// Pass for converting the sol dialect to other high level dialects that can be
+/// Pass for lowering the sol dialect to other high level dialects that can be
 /// lowered to the llvm dialect.
-struct SolConvert : public PassWrapper<SolConvert, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SolConvert)
+struct LowerSol : public PassWrapper<LowerSol, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LowerSol)
 
   void getDependentDialects(DialectRegistry &reg) const override {
     reg.insert<func::FuncDialect, scf::SCFDialect, arith::ArithmeticDialect,
                LLVM::LLVMDialect>();
   }
 
-  StringRef getArgument() const override { return "sol-convert"; }
+  StringRef getArgument() const override { return "lower-sol-for-eravm"; }
 
   void runOnOperation() override {
     ConversionTarget convTgt(getContext());
@@ -894,7 +894,7 @@ struct SolidityDialectLowering
                scf::SCFDialect>();
   }
 
-  StringRef getArgument() const override { return "sol-to-llvm"; }
+  StringRef getArgument() const override { return "sol-to-llvm-for-eravm"; }
 
   void runOnOperation() override {
     LLVMConversionTarget llConv(getContext());
@@ -926,8 +926,8 @@ void sol::populateSolLoweringPatterns(RewritePatternSet &pats) {
            CallDataSizeOpLowering>(pats.getContext());
 }
 
-std::unique_ptr<Pass> sol::createSolConvertPassForEraVM() {
-  return std::make_unique<SolConvert>();
+std::unique_ptr<Pass> sol::createLowerSolPassForEraVM() {
+  return std::make_unique<LowerSol>();
 }
 
 std::unique_ptr<Pass> sol::createSolidityDialectLoweringPassForEraVM() {
