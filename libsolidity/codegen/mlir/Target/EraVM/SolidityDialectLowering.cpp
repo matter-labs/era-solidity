@@ -877,11 +877,7 @@ struct SolConvert : public PassWrapper<SolConvert, OperationPass<ModuleOp>> {
     convTgt.addIllegalDialect<sol::SolidityDialect>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<ContractOpLowering, ObjectOpLowering, ReturnOpLowering,
-             RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
-             DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
-             MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
-             CallDataSizeOpLowering>(&getContext());
+    sol::populateSolLoweringPatterns(pats);
 
     ModuleOp mod = getOperation();
     if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
@@ -907,16 +903,12 @@ struct SolidityDialectLowering
     LLVMTypeConverter llTyConv(&getContext());
 
     RewritePatternSet pats(&getContext());
+    sol::populateSolLoweringPatterns(pats);
     arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
     populateMemRefToLLVMConversionPatterns(llTyConv, pats);
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);
-    pats.add<ContractOpLowering, ObjectOpLowering, ReturnOpLowering,
-             RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
-             DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
-             MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
-             CallDataSizeOpLowering>(&getContext());
 
     ModuleOp mod = getOperation();
     if (failed(applyFullConversion(mod, llConv, std::move(pats))))
@@ -925,6 +917,14 @@ struct SolidityDialectLowering
 };
 
 } // namespace
+
+void sol::populateSolLoweringPatterns(RewritePatternSet &pats) {
+  pats.add<ContractOpLowering, ObjectOpLowering, ReturnOpLowering,
+           RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
+           DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
+           MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
+           CallDataSizeOpLowering>(pats.getContext());
+}
 
 std::unique_ptr<Pass> sol::createSolConvertPassForEraVM() {
   return std::make_unique<SolConvert>();

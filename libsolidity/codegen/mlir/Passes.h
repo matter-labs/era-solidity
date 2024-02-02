@@ -34,7 +34,11 @@ class Pass;
 
 namespace sol {
 
+/// Populates lowering patterns for all the ops in the sol dialect.
+void populateSolLoweringPatterns(RewritePatternSet &pats);
+
 std::unique_ptr<Pass> createSolConvertPassForEraVM();
+
 std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 
 } // namespace sol
