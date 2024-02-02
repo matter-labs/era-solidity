@@ -33,8 +33,11 @@ namespace mlir {
 class Pass;
 
 namespace sol {
+
+std::unique_ptr<Pass> createSolConvertPassForEraVM();
 std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
-}
+
+} // namespace sol
 
 } // namespace mlir
 

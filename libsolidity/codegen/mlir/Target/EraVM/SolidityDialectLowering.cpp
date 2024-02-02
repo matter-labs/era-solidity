@@ -857,6 +857,38 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   }
 };
 
+/// Pass for converting the sol dialect to other high level dialects that can be
+/// lowered to the llvm dialect.
+struct SolConvert : public PassWrapper<SolConvert, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SolConvert)
+
+  void getDependentDialects(DialectRegistry &reg) const override {
+    reg.insert<func::FuncDialect, scf::SCFDialect, arith::ArithmeticDialect,
+               LLVM::LLVMDialect>();
+  }
+
+  StringRef getArgument() const override { return "sol-convert"; }
+
+  void runOnOperation() override {
+    ConversionTarget convTgt(getContext());
+    convTgt.addLegalOp<mlir::ModuleOp>();
+    convTgt.addLegalDialect<func::FuncDialect, scf::SCFDialect,
+                            arith::ArithmeticDialect, LLVM::LLVMDialect>();
+    convTgt.addIllegalDialect<sol::SolidityDialect>();
+
+    RewritePatternSet pats(&getContext());
+    pats.add<ContractOpLowering, ObjectOpLowering, ReturnOpLowering,
+             RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
+             DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
+             MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
+             CallDataSizeOpLowering>(&getContext());
+
+    ModuleOp mod = getOperation();
+    if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
+      signalPassFailure();
+  }
+};
+
 struct SolidityDialectLowering
     : public PassWrapper<SolidityDialectLowering, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SolidityDialectLowering)
@@ -893,6 +925,10 @@ struct SolidityDialectLowering
 };
 
 } // namespace
+
+std::unique_ptr<Pass> sol::createSolConvertPassForEraVM() {
+  return std::make_unique<SolConvert>();
+}
 
 std::unique_ptr<Pass> sol::createSolidityDialectLoweringPassForEraVM() {
   return std::make_unique<SolidityDialectLowering>();

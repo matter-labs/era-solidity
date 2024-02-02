@@ -38,6 +38,9 @@ int main(int argc, char **argv) {
                   arith::ArithmeticDialect, LLVM::LLVMDialect>();
 
   registerPass([](void) -> std::unique_ptr<Pass> {
+    return sol::createSolConvertPassForEraVM();
+  });
+  registerPass([](void) -> std::unique_ptr<Pass> {
     return sol::createSolidityDialectLoweringPassForEraVM();
   });
 
