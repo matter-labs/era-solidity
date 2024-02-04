@@ -856,17 +856,21 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   }
 };
 
-/// Pass for lowering the sol dialect to other high level dialects that can be
-/// lowered to the llvm dialect.
-struct LowerSol : public PassWrapper<LowerSol, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LowerSol)
+/// Pass for lowering the sol dialect to the standard dialects.
+/// TODO:
+/// - Generate this using mlir-tblgen.
+/// - Move this out of EraVM.
+struct ConvertSolToStandard
+    : public PassWrapper<ConvertSolToStandard, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConvertSolToStandard)
+  ConvertSolToStandard() = default;
+  ConvertSolToStandard(ConvertSolToStandard const &other)
+      : PassWrapper<ConvertSolToStandard, OperationPass<ModuleOp>>(other) {}
 
   void getDependentDialects(DialectRegistry &reg) const override {
     reg.insert<func::FuncDialect, scf::SCFDialect, arith::ArithmeticDialect,
                LLVM::LLVMDialect>();
   }
-
-  StringRef getArgument() const override { return "lower-sol-for-eravm"; }
 
   void runOnOperation() override {
     ConversionTarget convTgt(getContext());
@@ -876,12 +880,21 @@ struct LowerSol : public PassWrapper<LowerSol, OperationPass<ModuleOp>> {
     convTgt.addIllegalDialect<sol::SolidityDialect>();
 
     RewritePatternSet pats(&getContext());
+    // TODO: Add the framework for adding patterns specific to the target.
+    assert(tgtOpt == "eravm");
     sol::populateSolLoweringPatterns(pats);
 
     ModuleOp mod = getOperation();
     if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
       signalPassFailure();
   }
+
+  StringRef getArgument() const override { return "convert-sol-to-std"; }
+
+protected:
+  Pass::Option<std::string> tgtOpt{
+      *this, "target", llvm::cl::desc("Target for the sol lowering"),
+      llvm::cl::init("eravm")};
 };
 
 struct SolidityDialectLowering
@@ -925,8 +938,8 @@ void sol::populateSolLoweringPatterns(RewritePatternSet &pats) {
            CallDataSizeOpLowering>(pats.getContext());
 }
 
-std::unique_ptr<Pass> sol::createLowerSolPassForEraVM() {
-  return std::make_unique<LowerSol>();
+std::unique_ptr<Pass> sol::createConvertSolToStandardPass() {
+  return std::make_unique<ConvertSolToStandard>();
 }
 
 std::unique_ptr<Pass> sol::createSolidityDialectLoweringPassForEraVM() {

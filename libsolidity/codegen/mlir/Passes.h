@@ -37,9 +37,8 @@ namespace sol {
 /// Populates lowering patterns for all the ops in the sol dialect.
 void populateSolLoweringPatterns(RewritePatternSet &pats);
 
-/// Create a pass to lower sol dialect to other high level dialects that can be
-/// lowered to the llvm dialect.
-std::unique_ptr<Pass> createLowerSolPassForEraVM();
+/// Create a pass to lower sol dialect to standard dialects.
+std::unique_ptr<Pass> createConvertSolToStandardPass();
 
 std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 
