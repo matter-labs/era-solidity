@@ -30,6 +30,7 @@ void solidity::mlirgen::addMLIRPassesForTgt(mlir::PassManager &passMgr,
                                             Target tgt) {
   switch (tgt) {
   case Target::EraVM:
+    passMgr.addPass(mlir::sol::createLowerSolPassForEraVM());
     passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
     break;
   case Target::Undefined:

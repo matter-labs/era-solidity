@@ -22,6 +22,7 @@
 #pragma once
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
@@ -84,12 +85,11 @@ public:
 
   mlir::ArrayAttr getZeroInitialzedAttr(mlir::IntegerType ty, unsigned sz);
 
-  /// Returns an existing or a new (if not found) LLVM::FuncOp
-  mlir::LLVM::LLVMFuncOp getOrInsertLLVMFuncOp(
-      llvm::StringRef name, mlir::Type resTy, llvm::ArrayRef<mlir::Type> argTys,
-      mlir::ModuleOp mod,
-      mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::External,
-      llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+  /// Returns an existing or a new (if not found) FuncOp in the ModuleOp `mod`.
+  mlir::func::FuncOp
+  getOrInsertFuncOp(mlir::StringRef name, mlir::FunctionType fnTy,
+                    mlir::LLVM::Linkage linkage, mlir::ModuleOp mod,
+                    std::vector<mlir::NamedAttribute> attrs = {});
 
   /// Creates a call to a wrapper function of the LLVM::UnreachableOp. This is a
   /// hack to create a non-terminator unreachable op

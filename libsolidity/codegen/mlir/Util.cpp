@@ -74,31 +74,38 @@ ArrayAttr BuilderHelper::getZeroInitialzedAttr(IntegerType ty, unsigned sz) {
   return b.getArrayAttr(attrs);
 }
 
-LLVM::LLVMFuncOp BuilderHelper::getOrInsertLLVMFuncOp(
-    llvm::StringRef name, Type resTy, llvm::ArrayRef<Type> argTys, ModuleOp mod,
-    LLVM::Linkage linkage, llvm::ArrayRef<NamedAttribute> attrs) {
-  if (LLVM::LLVMFuncOp found = mod.lookupSymbol<LLVM::LLVMFuncOp>(name))
+func::FuncOp
+BuilderHelper::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
+                                 LLVM::Linkage linkage, ModuleOp mod,
+                                 std::vector<NamedAttribute> attrs) {
+  if (auto found = mod.lookupSymbol<func::FuncOp>(name))
     return found;
 
-  auto fnType = LLVM::LLVMFunctionType::get(resTy, argTys);
-
+  // Set insertion point to the ModuleOp's body.
+  auto ctx = mod.getContext();
   OpBuilder::InsertionGuard insertGuard(b);
   b.setInsertionPointToStart(mod.getBody());
-  return b.create<LLVM::LLVMFuncOp>(mod.getLoc(), name, fnType, linkage,
-                                    /*dsoLocal=*/false, LLVM::CConv::C, attrs);
+
+  // Add the linkage attribute.
+  attrs.emplace_back(StringAttr::get(ctx, "llvm.linkage"),
+                     LLVM::LinkageAttr::get(ctx, linkage));
+
+  auto fn = b.create<func::FuncOp>(mod.getLoc(), name, fnTy, attrs);
+  fn.setPrivate();
+  return fn;
 }
 
 void BuilderHelper::createCallToUnreachableWrapper(Location loc, ModuleOp mod) {
-  LLVM::LLVMFuncOp func = getOrInsertLLVMFuncOp(
-      ".unreachable", LLVM::LLVMVoidType::get(mod.getContext()), {}, mod,
-      LLVM::Linkage::Private);
-  b.create<func::CallOp>(loc,
-                         SymbolRefAttr::get(mod.getContext(), ".unreachable"),
-                         TypeRange{}, ValueRange{});
+  auto fnTy = FunctionType::get(mod.getContext(), {}, {});
+  func::FuncOp fn =
+      getOrInsertFuncOp(".unreachable", fnTy, LLVM::Linkage::Private, mod);
+  b.create<func::CallOp>(
+      loc, FlatSymbolRefAttr::get(mod.getContext(), ".unreachable"),
+      TypeRange{}, ValueRange{});
 
-  // Define the wrapper if haven't already
-  if (func.getBody().empty()) {
-    Block *blk = b.createBlock(&func.getBody());
+  // Define the wrapper if we haven't already.
+  if (fn.getBody().empty()) {
+    Block *blk = b.createBlock(&fn.getBody());
     OpBuilder::InsertionGuard insertGuard(b);
     b.setInsertionPointToStart(blk);
     b.create<LLVM::UnreachableOp>(loc);

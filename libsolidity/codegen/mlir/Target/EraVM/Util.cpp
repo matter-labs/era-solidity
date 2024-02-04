@@ -84,37 +84,36 @@ Value eravm::BuilderHelper::getABILen(Location loc, Value ptr) {
   return b.create<LLVM::AndOp>(loc, lShr, h.getConst(loc, UINT_MAX));
 }
 
-LLVM::LLVMFuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
-    llvm::StringRef name, Type resTy, llvm::ArrayRef<Type> argTys,
-    ModuleOp mod) {
-
-  return h.getOrInsertLLVMFuncOp(
-      name, resTy, argTys, mod, LLVM::Linkage::Private,
+func::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
+    llvm::StringRef name, FunctionType fnTy, ModuleOp mod) {
+  return h.getOrInsertFuncOp(
+      name, fnTy, LLVM::Linkage::Private, mod,
       {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(false)}});
 }
 
-LLVM::LLVMFuncOp
-eravm::BuilderHelper::getOrInsertRuntimeFuncOp(llvm::StringRef name, Type resTy,
-                                               llvm::ArrayRef<Type> argTys,
-                                               ModuleOp mod) {
-
-  return h.getOrInsertLLVMFuncOp(
-      name, resTy, argTys, mod, LLVM::Linkage::Private,
+func::FuncOp eravm::BuilderHelper::getOrInsertRuntimeFuncOp(
+    llvm::StringRef name, FunctionType fnTy, ModuleOp mod) {
+  return h.getOrInsertFuncOp(
+      name, fnTy, LLVM::Linkage::Private, mod,
       {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(true)}});
 }
 
-SymbolRefAttr eravm::BuilderHelper::getOrInsertReturn(ModuleOp mod) {
+FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertReturn(ModuleOp mod) {
   auto *ctx = mod.getContext();
+
   auto i256Ty = IntegerType::get(ctx, 256);
-  h.getOrInsertLLVMFuncOp("__return", LLVM::LLVMVoidType::get(ctx),
-                          {i256Ty, i256Ty, i256Ty}, mod);
-  return SymbolRefAttr::get(mod.getContext(), "__return");
+  auto fnTy = FunctionType::get(ctx, {i256Ty, i256Ty, i256Ty}, {});
+  auto fn = h.getOrInsertFuncOp("__return", fnTy, LLVM::Linkage::External, mod);
+  fn.setPrivate();
+  return FlatSymbolRefAttr::get(mod.getContext(), "__return");
 }
 
-SymbolRefAttr eravm::BuilderHelper::getOrInsertRevert(ModuleOp mod) {
+FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertRevert(ModuleOp mod) {
   auto *ctx = mod.getContext();
+
   auto i256Ty = IntegerType::get(ctx, 256);
-  h.getOrInsertLLVMFuncOp("__revert", LLVM::LLVMVoidType::get(ctx),
-                          {i256Ty, i256Ty, i256Ty}, mod);
-  return SymbolRefAttr::get(mod.getContext(), "__revert");
+  auto fnTy = FunctionType::get(ctx, {i256Ty, i256Ty, i256Ty}, {});
+  auto fn = h.getOrInsertFuncOp("__revert", fnTy, LLVM::Linkage::External, mod);
+  fn.setPrivate();
+  return FlatSymbolRefAttr::get(mod.getContext(), "__revert");
 }

@@ -79,10 +79,10 @@ namespace {
 
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
-  assert(!isa<LLVM::LLVMFuncOp>(op) && !isa<sol::ObjectOp>(op));
+  assert(!isa<func::FuncOp>(op) && !isa<sol::ObjectOp>(op));
 
   // Check if the parent FuncOp has isRuntime attribute set
-  auto parentFunc = op->getParentOfType<LLVM::LLVMFuncOp>();
+  auto parentFunc = op->getParentOfType<func::FuncOp>();
   if (parentFunc) {
     auto isRuntimeAttr = parentFunc->getAttr("isRuntime");
     assert(isRuntimeAttr);
@@ -325,7 +325,7 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
 
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
     // the unreachable op
-    SymbolRefAttr revertFunc = eravmHelper.getOrInsertRevert(mod);
+    FlatSymbolRefAttr revertFunc = eravmHelper.getOrInsertRevert(mod);
     rewriter.create<func::CallOp>(
         loc, revertFunc, TypeRange{},
         ValueRange{
@@ -424,7 +424,6 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     mlir::Location loc = objOp.getLoc();
 
     auto mod = objOp->getParentOfType<ModuleOp>();
-    auto voidTy = LLVM::LLVMVoidType::get(objOp->getContext());
     auto i256Ty = rewriter.getIntegerType(256);
     solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter);
@@ -479,8 +478,8 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // FIXME: Is there a better way to check this?
     if (objOp.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
-      LLVM::LLVMFuncOp runtimeFunc =
-          eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
+      func::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
+          "__runtime", rewriter.getFunctionType({}, {}), mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
       assert(runtimeFuncRegion.empty());
       rewriter.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
@@ -591,8 +590,8 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         h.getConst(loc, 1));
 
     // Create the __runtime function
-    LLVM::LLVMFuncOp runtimeFunc =
-        eravmHelper.getOrInsertRuntimeFuncOp("__runtime", voidTy, {}, mod);
+    func::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
+        "__runtime", rewriter.getFunctionType({}, {}), mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
     for (auto const &op : *objOp.getBody()) {
@@ -609,8 +608,8 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     }
 
     // Create the __deploy function
-    LLVM::LLVMFuncOp deployFunc =
-        eravmHelper.getOrInsertCreationFuncOp("__deploy", voidTy, {}, mod);
+    func::FuncOp deployFunc = eravmHelper.getOrInsertCreationFuncOp(
+        "__deploy", rewriter.getFunctionType({}, {}), mod);
     Region &deployFuncRegion = deployFunc.getRegion();
     assert(deployFuncRegion.empty());
     rewriter.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
@@ -625,7 +624,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     auto ifOp = rewriter.create<scf::IfOp>(loc, isDeployCallFlag.getResult(),
                                            /*withElseRegion=*/true);
     OpBuilder thenBuilder = ifOp.getThenBodyBuilder();
-    thenBuilder.create<LLVM::CallOp>(loc, deployFunc, ValueRange{});
+    thenBuilder.create<func::CallOp>(loc, deployFunc, ValueRange{});
     // FIXME: Why the following fails with a "does not reference a valid
     // function" error but generating the func::CallOp to __return is fine
     // thenBuilder.create<func::CallOp>(
@@ -634,7 +633,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
     // Else call __runtime()
     OpBuilder elseBuilder = ifOp.getElseBodyBuilder();
-    elseBuilder.create<LLVM::CallOp>(loc, runtimeFunc, ValueRange{});
+    elseBuilder.create<func::CallOp>(loc, runtimeFunc, ValueRange{});
     rewriter.setInsertionPointAfter(ifOp);
     rewriter.create<LLVM::UnreachableOp>(loc);
 
