@@ -29,7 +29,6 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -865,7 +864,7 @@ struct ConvertSolToStandard
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConvertSolToStandard)
   ConvertSolToStandard() = default;
   ConvertSolToStandard(ConvertSolToStandard const &other)
-      : PassWrapper<ConvertSolToStandard, OperationPass<ModuleOp>>(other) {}
+      : PassWrapper(other) {}
 
   void getDependentDialects(DialectRegistry &reg) const override {
     reg.insert<func::FuncDialect, scf::SCFDialect, arith::ArithmeticDialect,
@@ -897,6 +896,7 @@ protected:
       llvm::cl::init("eravm")};
 };
 
+// TODO: Remove this pass.
 struct SolidityDialectLowering
     : public PassWrapper<SolidityDialectLowering, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SolidityDialectLowering)
@@ -917,7 +917,6 @@ struct SolidityDialectLowering
     RewritePatternSet pats(&getContext());
     sol::populateSolLoweringPatterns(pats);
     arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
-    populateMemRefToLLVMConversionPatterns(llTyConv, pats);
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
     populateFuncToLLVMConversionPatterns(llTyConv, pats);

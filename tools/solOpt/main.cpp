@@ -40,9 +40,6 @@ int main(int argc, char **argv) {
   registerPass([](void) -> std::unique_ptr<Pass> {
     return sol::createConvertSolToStandardPass();
   });
-  registerPass([](void) -> std::unique_ptr<Pass> {
-    return sol::createSolidityDialectLoweringPassForEraVM();
-  });
 
   // TODO: registerTransformsPasses()
 

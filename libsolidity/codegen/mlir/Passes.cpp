@@ -17,6 +17,10 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Interface.h"
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
@@ -31,7 +35,10 @@ void solidity::mlirgen::addMLIRPassesForTgt(mlir::PassManager &passMgr,
   switch (tgt) {
   case Target::EraVM:
     passMgr.addPass(mlir::sol::createConvertSolToStandardPass());
-    passMgr.addPass(mlir::sol::createSolidityDialectLoweringPassForEraVM());
+    passMgr.addPass(mlir::createConvertFuncToLLVMPass());
+    passMgr.addPass(mlir::createConvertSCFToCFPass());
+    passMgr.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
+    passMgr.addPass(mlir::arith::createConvertArithmeticToLLVMPass());
     break;
   case Target::Undefined:
     llvm_unreachable("Undefined target");
