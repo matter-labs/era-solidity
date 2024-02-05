@@ -42,7 +42,7 @@ enum class Action {
   PrintInitStg,
 
   /// Print the MLIR after lowering dialect(s) in solc
-  PrintPostSolcDialLowering,
+  PrintStandardMLIR,
 
   /// Print the LLVM-IR
   PrintLLVMIR,

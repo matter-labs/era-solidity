@@ -1164,6 +1164,8 @@ void CommandLineParser::processArgs()
 		std::string val = m_args[g_strMLIRAction].as<std::string>();
 		if (val == "print-init")
 			m_options.mlirGenJob.action = mlirgen::Action::PrintInitStg;
+		else if (val == "print-std-mlir")
+			m_options.mlirGenJob.action = mlirgen::Action::PrintStandardMLIR;
 		else if (val == "print-llvm-ir")
 			m_options.mlirGenJob.action = mlirgen::Action::PrintLLVMIR;
 		else if (val == "print-asm")

@@ -105,7 +105,7 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
   case Action::PrintInitStg:
     mod.print(llvm::outs());
     break;
-  case Action::PrintPostSolcDialLowering:
+  case Action::PrintStandardMLIR:
     assert(job.tgt != Target::Undefined);
     llvm_unreachable("NYI: IR dump post solc dialect lowering");
   case Action::PrintLLVMIR: {
