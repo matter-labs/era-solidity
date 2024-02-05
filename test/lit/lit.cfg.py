@@ -18,7 +18,7 @@ config.name = 'solidity-mlir'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.sol', '.yul']
+config.suffixes = ['.sol', '.yul', '.mlir']
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -27,7 +27,9 @@ config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = os.path.join(config.solidity_obj_root, 'test/lit')
 
 solc_bin_dir = config.solidity_obj_root + '/solc'
+sol_opt_bin_dir = config.solidity_obj_root + '/tools/solOpt'
 llvm_config.with_environment('PATH', solc_bin_dir, append_path=True)
-tool_dirs = [solc_bin_dir]
-tools = ['solc']
+llvm_config.with_environment('PATH', sol_opt_bin_dir, append_path=True)
+tool_dirs = [solc_bin_dir, sol_opt_bin_dir]
+tools = ['solc', 'sol-opt']
 llvm_config.add_tool_substitutions(tools, tool_dirs)
