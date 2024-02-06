@@ -38,16 +38,16 @@ struct Object;
 namespace solidity::mlirgen {
 
 enum class Action {
-  /// Print the MLIR generated from the AST
+  /// Print the MLIR generated from the AST.
   PrintInitStg,
 
-  /// Print the MLIR after lowering dialect(s) in solc
+  /// Print the standard MLIR after lowering dialect(s) in solc.
   PrintStandardMLIR,
 
-  /// Print the LLVM-IR
+  /// Print the LLVM-IR.
   PrintLLVMIR,
 
-  /// Print the assembly
+  /// Print the assembly.
   PrintAsm,
 
   /// Generate the object.
