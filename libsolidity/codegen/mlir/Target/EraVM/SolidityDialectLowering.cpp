@@ -913,37 +913,6 @@ protected:
                                   "EraVM target"))};
 };
 
-// TODO: Remove this pass.
-struct SolidityDialectLowering
-    : public PassWrapper<SolidityDialectLowering, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SolidityDialectLowering)
-
-  void getDependentDialects(DialectRegistry &reg) const override {
-    reg.insert<LLVM::LLVMDialect, func::FuncDialect, arith::ArithmeticDialect,
-               scf::SCFDialect>();
-  }
-
-  StringRef getArgument() const override { return "sol-to-llvm-for-eravm"; }
-
-  void runOnOperation() override {
-    LLVMConversionTarget llConv(getContext());
-    llConv.addLegalOp<ModuleOp>();
-    llConv.addLegalOp<scf::YieldOp>();
-    LLVMTypeConverter llTyConv(&getContext());
-
-    RewritePatternSet pats(&getContext());
-    sol::populateSolLoweringPatternsForEraVM(pats);
-    arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
-    populateSCFToControlFlowConversionPatterns(pats);
-    cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
-    populateFuncToLLVMConversionPatterns(llTyConv, pats);
-
-    ModuleOp mod = getOperation();
-    if (failed(applyFullConversion(mod, llConv, std::move(pats))))
-      signalPassFailure();
-  }
-};
-
 } // namespace
 
 void sol::populateSolLoweringPatternsForEraVM(RewritePatternSet &pats) {
@@ -961,8 +930,4 @@ std::unique_ptr<Pass> sol::createConvertSolToStandardPass() {
 std::unique_ptr<Pass>
 sol::createConvertSolToStandardPass(solidity::mlirgen::Target tgt) {
   return std::make_unique<ConvertSolToStandard>(tgt);
-}
-
-std::unique_ptr<Pass> sol::createSolidityDialectLoweringPassForEraVM() {
-  return std::make_unique<SolidityDialectLowering>();
 }

@@ -43,8 +43,6 @@ std::unique_ptr<Pass> createConvertSolToStandardPass();
 std::unique_ptr<Pass>
 createConvertSolToStandardPass(solidity::mlirgen::Target tgt);
 
-std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
-
 } // namespace sol
 
 } // namespace mlir
