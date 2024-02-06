@@ -30,19 +30,13 @@
 #include "llvm/Support/TargetSelect.h"
 #include <mutex>
 
-void solidity::mlirgen::addMLIRPassesForTgt(mlir::PassManager &passMgr,
+void solidity::mlirgen::addConversionPasses(mlir::PassManager &passMgr,
                                             Target tgt) {
-  switch (tgt) {
-  case Target::EraVM:
-    passMgr.addPass(mlir::sol::createConvertSolToStandardPass());
-    passMgr.addPass(mlir::createConvertFuncToLLVMPass());
-    passMgr.addPass(mlir::createConvertSCFToCFPass());
-    passMgr.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
-    passMgr.addPass(mlir::arith::createConvertArithmeticToLLVMPass());
-    break;
-  case Target::Undefined:
-    llvm_unreachable("Undefined target");
-  }
+  passMgr.addPass(mlir::sol::createConvertSolToStandardPass(tgt));
+  passMgr.addPass(mlir::createConvertFuncToLLVMPass());
+  passMgr.addPass(mlir::createConvertSCFToCFPass());
+  passMgr.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
+  passMgr.addPass(mlir::arith::createConvertArithmeticToLLVMPass());
 }
 
 std::unique_ptr<llvm::TargetMachine>
@@ -110,7 +104,7 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     llvm_unreachable("NYI: IR dump post solc dialect lowering");
   case Action::PrintLLVMIR: {
     assert(job.tgt != Target::Undefined);
-    addMLIRPassesForTgt(passMgr, job.tgt);
+    addConversionPasses(passMgr, job.tgt);
     if (mlir::failed(passMgr.run(mod)))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);
@@ -122,7 +116,7 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
   }
   case Action::PrintAsm: {
     assert(job.tgt != Target::Undefined);
-    addMLIRPassesForTgt(passMgr, job.tgt);
+    addConversionPasses(passMgr, job.tgt);
     if (mlir::failed(passMgr.run(mod)))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);

@@ -1,4 +1,4 @@
-// RUN: sol-opt -convert-sol-to-std %s | FileCheck %s
+// RUN: sol-opt -convert-sol-to-std=target=eravm %s | FileCheck %s
 
 module {
   sol.contract @C {

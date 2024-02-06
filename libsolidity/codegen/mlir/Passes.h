@@ -34,11 +34,14 @@ class Pass;
 
 namespace sol {
 
-/// Populates lowering patterns for all the ops in the sol dialect.
-void populateSolLoweringPatterns(RewritePatternSet &pats);
+/// Populates EraVM specific lowering patterns for all the ops in the sol
+/// dialect.
+void populateSolLoweringPatternsForEraVM(RewritePatternSet &pats);
 
 /// Create a pass to lower sol dialect to standard dialects.
 std::unique_ptr<Pass> createConvertSolToStandardPass();
+std::unique_ptr<Pass>
+createConvertSolToStandardPass(solidity::mlirgen::Target tgt);
 
 std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 
@@ -48,8 +51,8 @@ std::unique_ptr<Pass> createSolidityDialectLoweringPassForEraVM();
 
 namespace solidity::mlirgen {
 
-/// Adds `tgt` specfic MLIR passes (including the lowering passes)
-void addMLIRPassesForTgt(mlir::PassManager &, Target tgt);
+/// Adds dialect conversion passes for the target.
+void addConversionPasses(mlir::PassManager &, Target tgt);
 
 /// Creates and return the llvm::TargetMachine for `tgt`
 std::unique_ptr<llvm::TargetMachine> createTargetMachine(Target tgt);

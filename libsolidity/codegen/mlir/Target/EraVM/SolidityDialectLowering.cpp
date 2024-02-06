@@ -20,6 +20,7 @@
 //
 
 #include "libsolidity/codegen/CompilerUtils.h"
+#include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
@@ -51,6 +52,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/IntrinsicsEraVM.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <climits>
@@ -858,11 +860,16 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 /// Pass for lowering the sol dialect to the standard dialects.
 /// TODO:
 /// - Generate this using mlir-tblgen.
-/// - Move this out of EraVM.
+/// - Move this and createConvertSolToStandardPass out of EraVM.
 struct ConvertSolToStandard
     : public PassWrapper<ConvertSolToStandard, OperationPass<ModuleOp>> {
+
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConvertSolToStandard)
+
   ConvertSolToStandard() = default;
+
+  ConvertSolToStandard(solidity::mlirgen::Target tgt) : tgt(tgt) {}
+
   ConvertSolToStandard(ConvertSolToStandard const &other)
       : PassWrapper(other) {}
 
@@ -872,6 +879,13 @@ struct ConvertSolToStandard
   }
 
   void runOnOperation() override {
+    // We can't check this in the ctor since cl::ParseCommandLineOptions won't
+    // be called then.
+    if (clTgt.getNumOccurrences() > 0) {
+      assert(tgt == solidity::mlirgen::Target::Undefined);
+      tgt = clTgt;
+    }
+
     ConversionTarget convTgt(getContext());
     convTgt.addLegalOp<mlir::ModuleOp>();
     convTgt.addLegalDialect<func::FuncDialect, scf::SCFDialect,
@@ -880,8 +894,8 @@ struct ConvertSolToStandard
 
     RewritePatternSet pats(&getContext());
     // TODO: Add the framework for adding patterns specific to the target.
-    assert(tgtOpt == "eravm");
-    sol::populateSolLoweringPatterns(pats);
+    assert(tgt == solidity::mlirgen::Target::EraVM);
+    sol::populateSolLoweringPatternsForEraVM(pats);
 
     ModuleOp mod = getOperation();
     if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
@@ -891,9 +905,12 @@ struct ConvertSolToStandard
   StringRef getArgument() const override { return "convert-sol-to-std"; }
 
 protected:
-  Pass::Option<std::string> tgtOpt{
+  solidity::mlirgen::Target tgt = solidity::mlirgen::Target::Undefined;
+  Pass::Option<solidity::mlirgen::Target> clTgt{
       *this, "target", llvm::cl::desc("Target for the sol lowering"),
-      llvm::cl::init("eravm")};
+      llvm::cl::init(solidity::mlirgen::Target::Undefined),
+      llvm::cl::values(clEnumValN(solidity::mlirgen::Target::EraVM, "eravm",
+                                  "EraVM target"))};
 };
 
 // TODO: Remove this pass.
@@ -915,7 +932,7 @@ struct SolidityDialectLowering
     LLVMTypeConverter llTyConv(&getContext());
 
     RewritePatternSet pats(&getContext());
-    sol::populateSolLoweringPatterns(pats);
+    sol::populateSolLoweringPatternsForEraVM(pats);
     arith::populateArithmeticToLLVMConversionPatterns(llTyConv, pats);
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(llTyConv, pats);
@@ -929,7 +946,7 @@ struct SolidityDialectLowering
 
 } // namespace
 
-void sol::populateSolLoweringPatterns(RewritePatternSet &pats) {
+void sol::populateSolLoweringPatternsForEraVM(RewritePatternSet &pats) {
   pats.add<ContractOpLowering, ObjectOpLowering, ReturnOpLowering,
            RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
@@ -939,6 +956,11 @@ void sol::populateSolLoweringPatterns(RewritePatternSet &pats) {
 
 std::unique_ptr<Pass> sol::createConvertSolToStandardPass() {
   return std::make_unique<ConvertSolToStandard>();
+}
+
+std::unique_ptr<Pass>
+sol::createConvertSolToStandardPass(solidity::mlirgen::Target tgt) {
+  return std::make_unique<ConvertSolToStandard>(tgt);
 }
 
 std::unique_ptr<Pass> sol::createSolidityDialectLoweringPassForEraVM() {
