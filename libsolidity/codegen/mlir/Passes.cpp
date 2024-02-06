@@ -101,7 +101,11 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     break;
   case Action::PrintStandardMLIR:
     assert(job.tgt != Target::Undefined);
-    llvm_unreachable("NYI: IR dump post solc dialect lowering");
+    passMgr.addPass(mlir::sol::createConvertSolToStandardPass(job.tgt));
+    if (mlir::failed(passMgr.run(mod)))
+      return false;
+    mod.print(llvm::outs());
+    break;
   case Action::PrintLLVMIR: {
     assert(job.tgt != Target::Undefined);
     addConversionPasses(passMgr, job.tgt);
