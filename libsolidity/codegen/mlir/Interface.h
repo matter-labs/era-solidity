@@ -50,6 +50,9 @@ enum class Action {
   /// Print the assembly
   PrintAsm,
 
+  /// Generate the object.
+  GenObj,
+
   Undefined,
 };
 

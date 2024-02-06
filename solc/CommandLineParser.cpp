@@ -1170,6 +1170,8 @@ void CommandLineParser::processArgs()
 			m_options.mlirGenJob.action = mlirgen::Action::PrintLLVMIR;
 		else if (val == "print-asm")
 			m_options.mlirGenJob.action = mlirgen::Action::PrintAsm;
+		else if (val == "gen-obj")
+			m_options.mlirGenJob.action = mlirgen::Action::GenObj;
 		else
 			solThrow(CommandLineValidationError, "Invalid action");
 		if (m_args.count(g_strMLIRTarget))

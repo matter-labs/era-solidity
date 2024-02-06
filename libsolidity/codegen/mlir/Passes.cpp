@@ -118,7 +118,8 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     llvm::outs() << *llvmMod;
     break;
   }
-  case Action::PrintAsm: {
+  case Action::PrintAsm:
+  case Action::GenObj: {
     assert(job.tgt != Target::Undefined);
     addConversionPasses(passMgr, job.tgt);
     if (mlir::failed(passMgr.run(mod)))
@@ -139,7 +140,9 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     llvm::legacy::PassManager llvmPassMgr;
     tgtMach->addPassesToEmitFile(llvmPassMgr, llvm::outs(),
                                  /*DwoOut=*/nullptr,
-                                 llvm::CodeGenFileType::CGFT_AssemblyFile);
+                                 job.action == Action::PrintAsm
+                                     ? llvm::CodeGenFileType::CGFT_AssemblyFile
+                                     : llvm::CodeGenFileType::CGFT_ObjectFile);
     llvmPassMgr.run(*llvmMod);
     break;
   }
