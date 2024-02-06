@@ -220,7 +220,7 @@ set(mlir_sources
 	codegen/mlir/SolidityToMLIR.cpp
 	codegen/mlir/YulToMLIR.cpp
 	codegen/mlir/Target/EraVM/Util.cpp
-	codegen/mlir/Target/EraVM/SolidityDialectLowering.cpp
+  codegen/mlir/Target/EraVM/SolToStandard.cpp
 )
 
 set(mlir_solidity_dialect_sources
