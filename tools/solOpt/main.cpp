@@ -28,6 +28,7 @@
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/Transforms/Passes.h"
 #include <memory>
 
 using namespace mlir;
@@ -41,8 +42,8 @@ int main(int argc, char **argv) {
     return sol::createConvertSolToStandardPass();
   });
 
-  // TODO: registerTransformsPasses()
+  registerTransformsPasses();
 
-  return failed(
-      MlirOptMain(argc, argv, "Sol dialect conversion tool\n", registry));
+  return failed(MlirOptMain(
+      argc, argv, "mlir-opt with sol dialect registered\n", registry));
 }
