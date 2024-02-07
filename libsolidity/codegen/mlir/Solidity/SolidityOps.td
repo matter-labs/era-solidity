@@ -57,7 +57,8 @@ def Sol_ContractKind : I32EnumAttr<"ContractKind",
 def Sol_ContractKindAttr : EnumAttr<Solidity_Dialect, Sol_ContractKind,
                                     "ContractKind">;
 
-def Sol_ContractOp : Sol_Op<"contract", [Symbol, SingleBlock, NoTerminator]> {
+def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
+                                         NoTerminator]> {
   let summary = "An operation that represents a contract";
   let description = [{
     Example:
