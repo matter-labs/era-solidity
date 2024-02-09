@@ -22,9 +22,12 @@
 #ifndef MLIR_SOLIDITY_SOLIDITYOPS_TD
 #define MLIR_SOLIDITY_SOLIDITYOPS_TD
 
+include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
@@ -104,6 +107,152 @@ def Sol_ObjectOp : Sol_Op<"object", [Symbol, SymbolTable, SingleBlock,
   // TODO: Implement a verifier that checks for things like:
   // - Maximum of 2 nesting of sol.object
   // - All func.funcs to be only under sol.object
+}
+
+def Sol_FuncOp : Sol_Op<"func", [AutomaticAllocationScope, CallableOpInterface,
+                                 FunctionOpInterface, IsolatedFromAbove,
+                                 Symbol, SingleBlock]> {
+  let summary = "FuncOp with solidity specific semantics";
+  let description = [{
+    This is similar to a `func.func` but it tracks solidity specific attributes.
+
+    Example:
+
+    sol.func @f() -> () {
+      ...
+    }
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttrOf<FunctionType>:$function_type);
+  let regions = (region SizedRegion<1>:$body);
+
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
+  >];
+
+  let extraClassDeclaration = [{
+    // Copied from func.func.
+    FuncOp clone(BlockAndValueMapping &mapper);
+    FuncOp clone();
+    void cloneInto(FuncOp dest, BlockAndValueMapping &mapper);
+
+    //===------------------------------------------------------------------===//
+    // CallableOpInterface
+    //===------------------------------------------------------------------===//
+
+    /// Returns the region on the current operation that is callable. This may
+    /// return null in the case of an external callable object, e.g. an external
+    /// function.
+    ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
+
+    /// Returns the results types that the callable region produces when
+    /// executed.
+    ArrayRef<Type> getCallableResults() { return getFunctionType().getResults(); }
+
+    //===------------------------------------------------------------------===//
+    // FunctionOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
+
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+def CallOp : Sol_Op<"call", [CallOpInterface,
+                             DeclareOpInterfaceMethods<SymbolUserOpInterface>]
+                   >{
+  let summary = "call operation";
+  let description = [{
+    This is similar to a `func.call` but the callee is expected to be a
+    `sol.func`.
+
+    Example:
+
+    ```mlir
+    %2 = func.call @my_add(%0, %1) : (i32, i32) -> i32
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>);
+
+  let builders = [
+    OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
+      $_state.addTypes(callee.getFunctionType().getResults());
+    }]>,
+    OpBuilder<(ins "SymbolRefAttr":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", callee);
+      $_state.addTypes(results);
+    }]>,
+    OpBuilder<(ins "StringAttr":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, SymbolRefAttr::get(callee), results, operands);
+    }]>,
+    OpBuilder<(ins "StringRef":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, StringAttr::get($_builder.getContext(), callee),
+            results, operands);
+    }]>];
+
+  let extraClassDeclaration = [{
+    FunctionType getCalleeType() {
+      return FunctionType::get(getContext(), getOperandTypes(),
+                               getResultTypes());
+    }
+
+    operand_range getArgOperands() {
+      return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    operand_iterator arg_operand_begin() { return operand_begin(); }
+    operand_iterator arg_operand_end() { return operand_end(); }
+
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+  }];
+
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
+}
+
+def Sol_Return2Op : Sol_Op<"return2", [NoSideEffect, HasParent<"FuncOp">,
+                                       ReturnLike, Terminator]> {
+  let summary = "ReturnOp for sol.func";
+  let description = [{
+    This is similar to a `func.return` but is expected have sol.func as the
+    parent op.
+
+    Example:
+
+    ```mlir
+    sol.func @foo() : (i32, f8) {
+      ...
+      sol.return %0, %1 : i32, f8
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [OpBuilder<(ins), [{
+    build($_builder, $_state, llvm::None);
+  }]>];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
 // TODO: The op definitions of yul builtins should be auto-generated from
