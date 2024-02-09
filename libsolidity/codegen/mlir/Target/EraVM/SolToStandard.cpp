@@ -341,10 +341,10 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
   }
 };
 
-struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
-  using OpRewritePattern<sol::ReturnOp>::OpRewritePattern;
+struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
+  using OpRewritePattern<sol::BuiltinRetOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(sol::ReturnOp op,
+  LogicalResult matchAndRewrite(sol::BuiltinRetOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
@@ -732,7 +732,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     // TODO: Generate the setimmutable's.
 
     // Generate the return for the creation context.
-    r.create<sol::ReturnOp>(loc, freePtr, runtimeObjOffset);
+    r.create<sol::BuiltinRetOp>(loc, freePtr, runtimeObjOffset);
 
     // TODO: Ctor
 
@@ -916,7 +916,7 @@ protected:
 } // namespace
 
 void sol::populateSolLoweringPatternsForEraVM(RewritePatternSet &pats) {
-  pats.add<ContractOpLowering, ObjectOpLowering, ReturnOpLowering,
+  pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
            RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
            MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,

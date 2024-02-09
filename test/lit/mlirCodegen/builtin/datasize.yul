@@ -19,11 +19,11 @@ object "Test" {
 // CHECK-NEXT:     sol.mstore %c64_i256, %0 loc(#loc3)
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc4)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc5)
-// CHECK-NEXT:     sol.return %c0_i256, %c0_i256_0 loc(#loc6)
+// CHECK-NEXT:     sol.builtin_ret %c0_i256, %c0_i256_0 loc(#loc6)
 // CHECK-NEXT:     sol.object @Test_deployed {
 // CHECK-NEXT:       %c0_i256_1 = arith.constant 0 : i256 loc(#loc7)
 // CHECK-NEXT:       %c0_i256_2 = arith.constant 0 : i256 loc(#loc8)
-// CHECK-NEXT:       sol.return %c0_i256_1, %c0_i256_2 loc(#loc9)
+// CHECK-NEXT:       sol.builtin_ret %c0_i256_1, %c0_i256_2 loc(#loc9)
 // CHECK-NEXT:     } loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)
 // CHECK-NEXT: } loc(#loc0)

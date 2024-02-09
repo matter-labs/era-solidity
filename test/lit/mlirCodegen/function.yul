@@ -18,7 +18,7 @@ object "Simple" {
 // CHECK-NEXT:   sol.object @Simple {
 // CHECK-NEXT:     %c10_i256 = arith.constant 10 : i256 loc(#loc1)
 // CHECK-NEXT:     %c11_i256 = arith.constant 11 : i256 loc(#loc2)
-// CHECK-NEXT:     sol.return %c10_i256, %c11_i256 loc(#loc3)
+// CHECK-NEXT:     sol.builtin_ret %c10_i256, %c11_i256 loc(#loc3)
 // CHECK-NEXT:     sol.object @Simple_deployed {
 // CHECK-NEXT:       func.func @f0() -> i256 {
 // CHECK-NEXT:         %c1_i256 = arith.constant 1 : i256 loc(#loc4)
@@ -30,7 +30,7 @@ object "Simple" {
 // CHECK-NEXT:       } loc(#loc4)
 // CHECK-NEXT:       %c20_i256 = arith.constant 20 : i256 loc(#loc8)
 // CHECK-NEXT:       %0 = func.call @f0() : () -> i256 loc(#loc9)
-// CHECK-NEXT:       sol.return %c20_i256, %0 loc(#loc10)
+// CHECK-NEXT:       sol.builtin_ret %c20_i256, %0 loc(#loc10)
 // CHECK-NEXT:     } loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)
 // CHECK-NEXT: } loc(#loc0)

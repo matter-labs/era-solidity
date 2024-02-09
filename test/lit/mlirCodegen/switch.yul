@@ -23,7 +23,7 @@ object "Test" {
 // CHECK-NEXT:   sol.object @Test {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:     sol.return %c0_i256, %c0_i256_0 loc(#loc3)
+// CHECK-NEXT:     sol.builtin_ret %c0_i256, %c0_i256_0 loc(#loc3)
 // CHECK-NEXT:     sol.object @Test_deployed {
 // CHECK-NEXT:       %c0_i256_1 = arith.constant 0 : i256 loc(#loc4)
 // CHECK-NEXT:       %0 = sol.mload %c0_i256_1 loc(#loc5)
@@ -42,7 +42,7 @@ object "Test" {
 // CHECK-NEXT:       }) {cases = dense<[0, 1]> : tensor<2xi256>} : (i256) -> () loc(#loc6)
 // CHECK-NEXT:       %c0_i256_2 = arith.constant 0 : i256 loc(#loc13)
 // CHECK-NEXT:       %c0_i256_3 = arith.constant 0 : i256 loc(#loc14)
-// CHECK-NEXT:       sol.return %c0_i256_2, %c0_i256_3 loc(#loc15)
+// CHECK-NEXT:       sol.builtin_ret %c0_i256_2, %c0_i256_3 loc(#loc15)
 // CHECK-NEXT:     } loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)
 // CHECK-NEXT: } loc(#loc0)

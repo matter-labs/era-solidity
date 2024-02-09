@@ -254,8 +254,8 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       // TODO: The lowering of builtin function should be auto generated from
       // evmasm::InstructionInfo and the corresponding mlir ops
     } else if (builtin->name.str() == "return") {
-      b.create<mlir::sol::ReturnOp>(loc, genDefTyExpr(call.arguments[0]),
-                                    genDefTyExpr(call.arguments[1]));
+      b.create<mlir::sol::BuiltinRetOp>(loc, genDefTyExpr(call.arguments[0]),
+                                        genDefTyExpr(call.arguments[1]));
       return {};
 
     } else if (builtin->name.str() == "revert") {

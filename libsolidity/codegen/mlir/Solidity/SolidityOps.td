@@ -229,8 +229,8 @@ def CallOp : Sol_Op<"call", [CallOpInterface,
   }];
 }
 
-def Sol_Return2Op : Sol_Op<"return2", [NoSideEffect, HasParent<"FuncOp">,
-                                       ReturnLike, Terminator]> {
+def Sol_ReturnOp : Sol_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+                                     ReturnLike, Terminator]> {
   let summary = "ReturnOp for sol.func";
   let description = [{
     This is similar to a `func.return` but is expected have sol.func as the
@@ -258,7 +258,7 @@ def Sol_Return2Op : Sol_Op<"return2", [NoSideEffect, HasParent<"FuncOp">,
 // TODO: The op definitions of yul builtins should be auto-generated from
 // evmasm::InstructionInfo
 
-def Sol_ReturnOp : Sol_Op<"return"> {
+def Sol_BuiltinRetOp : Sol_Op<"builtin_ret"> {
   let summary = "Represents the `return` call in yul";
   let description = [{
     Example:

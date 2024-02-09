@@ -29,7 +29,7 @@ object "Test" {
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc6)
 // CHECK-NEXT:     %c0_i256_1 = arith.constant 0 : i256 loc(#loc7)
-// CHECK-NEXT:     sol.return %c0_i256_0, %c0_i256_1 loc(#loc8)
+// CHECK-NEXT:     sol.builtin_ret %c0_i256_0, %c0_i256_1 loc(#loc8)
 // CHECK-NEXT:     sol.object @Test_deployed {
 // CHECK-NEXT:       %2 = sol.callvalue : i256 loc(#loc9)
 // CHECK-NEXT:       %c0_i256_2 = arith.constant 0 : i256 loc(#loc9)
@@ -41,7 +41,7 @@ object "Test" {
 // CHECK-NEXT:       } loc(#loc10)
 // CHECK-NEXT:       %c0_i256_3 = arith.constant 0 : i256 loc(#loc14)
 // CHECK-NEXT:       %c0_i256_4 = arith.constant 0 : i256 loc(#loc15)
-// CHECK-NEXT:       sol.return %c0_i256_3, %c0_i256_4 loc(#loc16)
+// CHECK-NEXT:       sol.builtin_ret %c0_i256_3, %c0_i256_4 loc(#loc16)
 // CHECK-NEXT:     } loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)
 // CHECK-NEXT: } loc(#loc0)

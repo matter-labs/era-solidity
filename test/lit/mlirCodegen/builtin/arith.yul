@@ -50,7 +50,7 @@ object "Test" {
 // CHECK-NEXT:     sol.mstore %c0_i256_2, %12 loc(#loc23)
 // CHECK-NEXT:     %c0_i256_3 = arith.constant 0 : i256 loc(#loc24)
 // CHECK-NEXT:     %c0_i256_4 = arith.constant 0 : i256 loc(#loc25)
-// CHECK-NEXT:     sol.return %c0_i256_3, %c0_i256_4 loc(#loc26)
+// CHECK-NEXT:     sol.builtin_ret %c0_i256_3, %c0_i256_4 loc(#loc26)
 // CHECK-NEXT:     sol.object @Test_deployed {
 // CHECK-NEXT:       %c1_i256_5 = arith.constant 1 : i256 loc(#loc27)
 // CHECK-NEXT:       %13 = llvm.alloca %c1_i256_5 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc28)
@@ -79,7 +79,7 @@ object "Test" {
 // CHECK-NEXT:       sol.mstore %c0_i256_11, %25 loc(#loc49)
 // CHECK-NEXT:       %c0_i256_12 = arith.constant 0 : i256 loc(#loc50)
 // CHECK-NEXT:       %c0_i256_13 = arith.constant 0 : i256 loc(#loc51)
-// CHECK-NEXT:       sol.return %c0_i256_12, %c0_i256_13 loc(#loc52)
+// CHECK-NEXT:       sol.builtin_ret %c0_i256_12, %c0_i256_13 loc(#loc52)
 // CHECK-NEXT:     } loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)
 // CHECK-NEXT: } loc(#loc0)
