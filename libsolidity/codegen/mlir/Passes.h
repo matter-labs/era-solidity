@@ -34,9 +34,16 @@ class Pass;
 
 namespace sol {
 
-/// Populates EraVM specific lowering patterns for all the ops in the sol
-/// dialect.
-void populateSolLoweringPatternsForEraVM(RewritePatternSet &pats);
+namespace eravm {
+
+/// Populates sol dialect to standard dialects conversion for the first
+/// conversion pass.
+void populateInitialSolToStdConvPatterns(RewritePatternSet &pats);
+/// Populates sol dialect to standard dialects conversion for the last
+/// conversion pass.
+void populateFinalSolToStdConvPatterns(RewritePatternSet &pats);
+
+}; // namespace eravm
 
 /// Create a pass to lower sol dialect to standard dialects.
 std::unique_ptr<Pass> createConvertSolToStandardPass();

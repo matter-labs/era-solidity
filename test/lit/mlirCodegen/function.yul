@@ -20,16 +20,16 @@ object "Simple" {
 // CHECK-NEXT:     %c11_i256 = arith.constant 11 : i256 loc(#loc2)
 // CHECK-NEXT:     sol.builtin_ret %c10_i256, %c11_i256 loc(#loc3)
 // CHECK-NEXT:     sol.object @Simple_deployed {
-// CHECK-NEXT:       func.func @f0() -> i256 {
+// CHECK-NEXT:       sol.func @f0() -> i256 {
 // CHECK-NEXT:         %c1_i256 = arith.constant 1 : i256 loc(#loc4)
 // CHECK-NEXT:         %1 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc5)
 // CHECK-NEXT:         %c0_i256 = arith.constant 0 : i256 loc(#loc6)
 // CHECK-NEXT:         llvm.store %c0_i256, %1 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc7)
 // CHECK-NEXT:         %2 = llvm.load %1 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc5)
-// CHECK-NEXT:         return %2 : i256 loc(#loc4)
+// CHECK-NEXT:         sol.return %2 : i256 loc(#loc4)
 // CHECK-NEXT:       } loc(#loc4)
 // CHECK-NEXT:       %c20_i256 = arith.constant 20 : i256 loc(#loc8)
-// CHECK-NEXT:       %0 = func.call @f0() : () -> i256 loc(#loc9)
+// CHECK-NEXT:       %0 = sol.call @f0() : () -> i256 loc(#loc9)
 // CHECK-NEXT:       sol.builtin_ret %c20_i256, %0 loc(#loc10)
 // CHECK-NEXT:     } loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)

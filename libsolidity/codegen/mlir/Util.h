@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -86,7 +87,7 @@ public:
   mlir::ArrayAttr getZeroInitialzedAttr(mlir::IntegerType ty, unsigned sz);
 
   /// Returns an existing or a new (if not found) FuncOp in the ModuleOp `mod`.
-  mlir::func::FuncOp
+  mlir::sol::FuncOp
   getOrInsertFuncOp(mlir::StringRef name, mlir::FunctionType fnTy,
                     mlir::LLVM::Linkage linkage, mlir::ModuleOp mod,
                     std::vector<mlir::NamedAttribute> attrs = {});

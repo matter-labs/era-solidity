@@ -31,7 +31,6 @@
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/CommonIO.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AsmState.h"
@@ -321,7 +320,7 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
   Expression const *astExpr = ret.expression();
   if (astExpr) {
     mlir::Value expr = genExpr(ret.expression(), currFuncResTys[0]);
-    b.create<mlir::func::ReturnOp>(getLoc(ret.location()), expr);
+    b.create<mlir::sol::ReturnOp>(getLoc(ret.location()), expr);
   } else {
     llvm_unreachable("NYI: Empty return");
   }
@@ -347,11 +346,8 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 
   // TODO: Specify visibility
   auto funcType = b.getFunctionType(inpTys, outTys);
-  auto op = b.create<mlir::func::FuncOp>(
-      getLoc(func.location()), getMangledName(func), funcType,
-      b.getNamedAttr("llvm.linkage",
-                     mlir::LLVM::LinkageAttr::get(
-                         b.getContext(), mlir::LLVM::Linkage::Private)));
+  auto op = b.create<mlir::sol::FuncOp>(getLoc(func.location()),
+                                        getMangledName(func), funcType);
 
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);
@@ -373,7 +369,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 
   // Generate empty return
   if (outTys.empty())
-    b.create<mlir::func::ReturnOp>(getLoc(func.location()));
+    b.create<mlir::sol::ReturnOp>(getLoc(func.location()));
 
   b.setInsertionPointAfter(op);
 }
@@ -414,7 +410,6 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
     CharStream const &stream, solidity::mlirgen::JobSpec const &job) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
-  ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
 

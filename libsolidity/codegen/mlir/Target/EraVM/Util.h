@@ -113,14 +113,14 @@ public:
   mlir::Value getABILen(mlir::Location loc, mlir::Value ptr);
 
   /// Returns an existing or a new (if not found) creation function.
-  mlir::func::FuncOp getOrInsertCreationFuncOp(mlir::StringRef name,
-                                               mlir::FunctionType fnTy,
-                                               mlir::ModuleOp mod);
-
-  /// Returns an existing or a new (if not found) runtime function.
-  mlir::func::FuncOp getOrInsertRuntimeFuncOp(mlir::StringRef name,
+  mlir::sol::FuncOp getOrInsertCreationFuncOp(mlir::StringRef name,
                                               mlir::FunctionType fnTy,
                                               mlir::ModuleOp mod);
+
+  /// Returns an existing or a new (if not found) runtime function.
+  mlir::sol::FuncOp getOrInsertRuntimeFuncOp(mlir::StringRef name,
+                                             mlir::FunctionType fnTy,
+                                             mlir::ModuleOp mod);
 
   /// Returns an existing or a new (if not found) return function symbol.
   mlir::FlatSymbolRefAttr getOrInsertReturn(mlir::ModuleOp mod);

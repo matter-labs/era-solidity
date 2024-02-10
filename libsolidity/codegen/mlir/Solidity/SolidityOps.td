@@ -82,7 +82,7 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
   let assemblyFormat = "$sym_name $bodyRegion attr-dict";
 
   let extraClassDeclaration = [{
-    DictionaryAttr getInterfaceFnAttr(func::FuncOp fn);
+    DictionaryAttr getInterfaceFnAttr(sol::FuncOp fn);
   }];
 }
 

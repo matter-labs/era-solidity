@@ -80,10 +80,10 @@ namespace {
 
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
-  assert(!isa<func::FuncOp>(op) && !isa<sol::ObjectOp>(op));
+  assert(!isa<sol::FuncOp>(op) && !isa<sol::ObjectOp>(op));
 
   // Check if the parent FuncOp has isRuntime attribute set
-  auto parentFunc = op->getParentOfType<func::FuncOp>();
+  auto parentFunc = op->getParentOfType<sol::FuncOp>();
   if (parentFunc) {
     auto isRuntimeAttr = parentFunc->getAttr("isRuntime");
     assert(isRuntimeAttr);
@@ -327,7 +327,7 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
     // the unreachable op
     FlatSymbolRefAttr revertFunc = eravmHelper.getOrInsertRevert(mod);
-    rewriter.create<func::CallOp>(
+    rewriter.create<sol::CallOp>(
         loc, revertFunc, TypeRange{},
         ValueRange{
             op.getInp0(), op.getInp1(),
@@ -360,7 +360,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     if (inRuntimeContext(op)) {
       // Create the return call (__return(offset, length,
       // RetForwardPageType::UseHeap)) and the unreachable op
-      rewriter.create<func::CallOp>(
+      rewriter.create<sol::CallOp>(
           loc, returnFunc, TypeRange{},
           ValueRange{op.getLhs(), op.getRhs(),
                      h.getConst(loc, eravm::RetForwardPageType::UseHeap)});
@@ -405,7 +405,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
     // RetForwardPageType::UseAuxHeap)) and the unreachable op
-    rewriter.create<func::CallOp>(
+    rewriter.create<sol::CallOp>(
         loc, returnFunc, TypeRange{},
         ValueRange{h.getConst(loc, eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(),
@@ -413,6 +413,59 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     h.createCallToUnreachableWrapper(loc, mod);
 
     rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
+  using OpRewritePattern<sol::ReturnOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::ReturnOp op,
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<func::ReturnOp>(op, op.getOperands());
+    return success();
+  }
+};
+
+struct CallOpLowering : public OpRewritePattern<sol::CallOp> {
+  using OpRewritePattern<sol::CallOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallOp op,
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<func::CallOp>(op, op.getCallee(), op.getResultTypes(),
+                                       op.getOperands());
+    return success();
+  }
+};
+
+struct FuncOpLowering : public OpRewritePattern<sol::FuncOp> {
+  using OpRewritePattern<sol::FuncOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::FuncOp op,
+                                PatternRewriter &r) const override {
+    // Collect non-core attributes.
+    std::vector<NamedAttribute> attrs;
+    bool hasLinkageAttr = false;
+    for (NamedAttribute attr : op->getAttrs()) {
+      StringRef attrName = attr.getName();
+      if (attrName == "function_type" || attrName == "sym_name" ||
+          attrName.startswith("sol."))
+        continue;
+      if (attrName == "llvm.linkage")
+        hasLinkageAttr = true;
+      attrs.push_back(attr);
+    }
+
+    // Set llvm.linkage attribute to private if not explicitly specified.
+    if (!hasLinkageAttr)
+      attrs.push_back(r.getNamedAttr(
+          "llvm.linkage", mlir::LLVM::LinkageAttr::get(
+                              r.getContext(), mlir::LLVM::Linkage::Private)));
+
+    auto newOp = r.create<func::FuncOp>(op.getLoc(), op.getName(),
+                                        op.getFunctionType(), attrs);
+    r.inlineRegionBefore(op.getBody(), newOp.getBody(), newOp.end());
+    r.eraseOp(op);
     return success();
   }
 };
@@ -432,7 +485,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // Track the names of the existing function in the module.
     std::set<std::string> fnNamesInMod;
     for (mlir::Operation &op : *mod.getBody()) {
-      if (auto fn = dyn_cast<func::FuncOp>(&op)) {
+      if (auto fn = dyn_cast<sol::FuncOp>(&op)) {
         std::string name(fn.getName());
         assert(fnNamesInMod.count(name) == 0 &&
                "Duplicate functions in module");
@@ -446,7 +499,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // - Is there a better way to do the symbol disambiguation?
     // - replaceAllSymbolUses doesn't affect symbolic reference by attributes.
     //   Is that a problem here?
-    objOp.walk([&](func::FuncOp fn) {
+    objOp.walk([&](sol::FuncOp fn) {
       std::string name(fn.getName());
 
       // Does the module have a function with the same name?
@@ -479,7 +532,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // FIXME: Is there a better way to check this?
     if (objOp.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
-      func::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
+      sol::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
           "__runtime", rewriter.getFunctionType({}, {}), mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
       assert(runtimeFuncRegion.empty());
@@ -500,8 +553,9 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     }
     FunctionType funcType = rewriter.getFunctionType(inTys, {i256Ty});
     rewriter.setInsertionPointToEnd(mod.getBody());
-    func::FuncOp entryFunc =
-        rewriter.create<func::FuncOp>(loc, "__entry", funcType);
+    // FIXME: Assert __entry is created here.
+    sol::FuncOp entryFunc =
+        h.getOrInsertFuncOp("__entry", funcType, LLVM::Linkage::External, mod);
     assert(objOp->getNumRegions() == 1);
 
     // Setup the entry block and set insertion point to it
@@ -591,7 +645,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         h.getConst(loc, 1));
 
     // Create the __runtime function
-    func::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
+    sol::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
         "__runtime", rewriter.getFunctionType({}, {}), mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
@@ -609,7 +663,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     }
 
     // Create the __deploy function
-    func::FuncOp deployFunc = eravmHelper.getOrInsertCreationFuncOp(
+    sol::FuncOp deployFunc = eravmHelper.getOrInsertCreationFuncOp(
         "__deploy", rewriter.getFunctionType({}, {}), mod);
     Region &deployFuncRegion = deployFunc.getRegion();
     assert(deployFuncRegion.empty());
@@ -625,16 +679,16 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     auto ifOp = rewriter.create<scf::IfOp>(loc, isDeployCallFlag.getResult(),
                                            /*withElseRegion=*/true);
     OpBuilder thenBuilder = ifOp.getThenBodyBuilder();
-    thenBuilder.create<func::CallOp>(loc, deployFunc, ValueRange{});
+    thenBuilder.create<sol::CallOp>(loc, deployFunc, ValueRange{});
     // FIXME: Why the following fails with a "does not reference a valid
-    // function" error but generating the func::CallOp to __return is fine
-    // thenBuilder.create<func::CallOp>(
+    // function" error but generating the sol::CallOp to __return is fine
+    // thenBuilder.create<sol::CallOp>(
     //     loc, SymbolRefAttr::get(mod.getContext(), "__deploy"), TypeRange{},
     //     ValueRange{});
 
     // Else call __runtime()
     OpBuilder elseBuilder = ifOp.getElseBodyBuilder();
-    elseBuilder.create<func::CallOp>(loc, runtimeFunc, ValueRange{});
+    elseBuilder.create<sol::CallOp>(loc, runtimeFunc, ValueRange{});
     rewriter.setInsertionPointAfter(ifOp);
     rewriter.create<LLVM::UnreachableOp>(loc);
 
@@ -661,14 +715,14 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
         loc, std::string(op.getSymName()) + "_deployed");
 
     // Copy contained function to creation and runtime ObjectOp.
-    std::vector<func::FuncOp> funcs;
+    std::vector<sol::FuncOp> funcs;
     for (Operation &i : op.getBody()->getOperations()) {
-      if (auto func = dyn_cast<func::FuncOp>(i))
+      if (auto func = dyn_cast<sol::FuncOp>(i))
         funcs.push_back(func);
       else
         llvm_unreachable("NYI: Non function entities in contract");
     }
-    for (func::FuncOp func : funcs) {
+    for (sol::FuncOp func : funcs) {
       // Duplicate the func in both the creation and runtime objects.
       r.clone(*func);
       func->moveBefore(runtimeObj.getBody(), runtimeObj.getBody()->begin());
@@ -755,8 +809,8 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     //
 
     // Collect interface function infos.
-    std::vector<std::pair<func::FuncOp, DictionaryAttr>> interfaceFnInfos;
-    for (func::FuncOp fn : funcs) {
+    std::vector<std::pair<sol::FuncOp, DictionaryAttr>> interfaceFnInfos;
+    for (sol::FuncOp fn : funcs) {
       DictionaryAttr interfaceFnAttr = op.getInterfaceFnAttr(fn);
       if (interfaceFnAttr)
         interfaceFnInfos.emplace_back(fn, interfaceFnAttr);
@@ -827,7 +881,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
         assert(func.getNumResults() == 1 &&
                "NYI: Multi-valued and empty return");
         // TODO: libyul's ABIFunctions::tupleEncoder().
-        auto out = r.create<func::CallOp>(loc, func, ValueRange{});
+        auto out = r.create<sol::CallOp>(loc, func, ValueRange{});
         assert(out.getType(0) == r.getIntegerType(256) &&
                "NYI: Non-ui256 return type");
         auto memPos = r.create<sol::MLoadOp>(loc, h.getConst(loc, 64));
@@ -886,19 +940,43 @@ struct ConvertSolToStandard
       tgt = clTgt;
     }
 
-    ConversionTarget convTgt(getContext());
-    convTgt.addLegalOp<mlir::ModuleOp>();
-    convTgt.addLegalDialect<func::FuncDialect, scf::SCFDialect,
-                            arith::ArithmeticDialect, LLVM::LLVMDialect>();
-    convTgt.addIllegalDialect<sol::SolidityDialect>();
+    // FIXME: Some of the conversion patterns depends on the ancestor/descendant
+    // sol.func ops (e.g.: checking the runtime/creation context). Also APIs
+    // like getOrInsert*FuncOp that are used in the conversion pass works with
+    // sol.func. sol.func conversion in the same conversion pass will require
+    // other conversion to be able to work with sol.func and func.func. To keep
+    // things simple for now, the sol.func and related ops lowering is scheduled
+    // as a separate conversion pass after the main one.  How can we do the
+    // conversion cleanly with one pass? Generally speaking, how should we work
+    // with conversion patterns that depends on other operations in the
+    // ModuleOp?
 
-    RewritePatternSet pats(&getContext());
+    // Create the initial (sol ops excluding sol.func, sol.call and sol.return
+    // registered as illegal) and final (all sol ops registered as illegal)
+    // conversion targets
+    ConversionTarget initialConvTgt(getContext());
+    initialConvTgt.addLegalOp<mlir::ModuleOp>();
+    initialConvTgt
+        .addLegalDialect<func::FuncDialect, scf::SCFDialect,
+                         arith::ArithmeticDialect, LLVM::LLVMDialect>();
+    initialConvTgt.addIllegalDialect<sol::SolidityDialect>();
+    ConversionTarget finalConvTgt = initialConvTgt;
+    initialConvTgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp>();
+
+    // Run the initial conversion pass.
+    ModuleOp mod = getOperation();
+    RewritePatternSet initialPats(&getContext());
     // TODO: Add the framework for adding patterns specific to the target.
     assert(tgt == solidity::mlirgen::Target::EraVM);
-    sol::populateSolLoweringPatternsForEraVM(pats);
+    sol::eravm::populateInitialSolToStdConvPatterns(initialPats);
+    if (failed(applyPartialConversion(mod, initialConvTgt,
+                                      std::move(initialPats))))
+      signalPassFailure();
 
-    ModuleOp mod = getOperation();
-    if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
+    // Run the final conversion pass.
+    RewritePatternSet finalPats(&getContext());
+    sol::eravm::populateFinalSolToStdConvPatterns(finalPats);
+    if (failed(applyPartialConversion(mod, finalConvTgt, std::move(finalPats))))
       signalPassFailure();
   }
 
@@ -915,12 +993,16 @@ protected:
 
 } // namespace
 
-void sol::populateSolLoweringPatternsForEraVM(RewritePatternSet &pats) {
+void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats) {
   pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
            RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
            MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
            CallDataSizeOpLowering>(pats.getContext());
+}
+
+void sol::eravm::populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
+  pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(pats.getContext());
 }
 
 std::unique_ptr<Pass> sol::createConvertSolToStandardPass() {

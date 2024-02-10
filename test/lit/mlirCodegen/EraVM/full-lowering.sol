@@ -101,51 +101,51 @@ contract C {
 // CHECK-NEXT:   unreachable, !dbg !14
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f_9.0() !dbg !16 {
-// CHECK-NEXT:   ret i256 42, !dbg !17
+// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) !dbg !16 {
+// CHECK-NEXT:   store i256 0, ptr @memory_pointer, align 32, !dbg !17
+// CHECK-NEXT:   store i256 0, ptr @calldatasize, align 32, !dbg !17
+// CHECK-NEXT:   store i256 0, ptr @returndatasize, align 32, !dbg !17
+// CHECK-NEXT:   store i256 0, ptr @call_flags, align 32, !dbg !17
+// CHECK-NEXT:   store <10 x i256> zeroinitializer, ptr @extra_abi_data, align 512, !dbg !17
+// CHECK-NEXT:   store ptr addrspace(3) %0, ptr @ptr_calldata, align 32, !dbg !17
+// CHECK-NEXT:   store i256 and (i256 lshr (i256 ptrtoint (ptr @ptr_calldata to i256), i256 96), i256 4294967295), ptr @calldatasize, align 32, !dbg !17
+// CHECK-NEXT:   %13 = load i256, ptr @calldatasize, align 32, !dbg !17
+// CHECK-NEXT:   %14 = getelementptr i8, ptr addrspace(3) %0, i256 %13, !dbg !17
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_return_data, align 32, !dbg !17
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_active, align 32, !dbg !17
+// CHECK-NEXT:   store i256 %1, ptr @call_flags, align 32, !dbg !17
+// CHECK-NEXT:   store i256 %2, ptr @extra_abi_data, align 32, !dbg !17
+// CHECK-NEXT:   store i256 %3, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 1), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %4, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 2), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %5, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 3), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %6, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 4), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %7, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 5), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %8, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 6), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %9, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 7), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %10, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 8), align 32, !dbg !17
+// CHECK-NEXT:   store i256 %11, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 9), align 32, !dbg !17
+// CHECK-NEXT:   %15 = and i256 %1, 1, !dbg !17
+// CHECK-NEXT:   %16 = icmp eq i256 %15, 1, !dbg !17
+// CHECK-NEXT:   br i1 %16, label %17, label %18, !dbg !17
+// CHECK-EMPTY:
+// CHECK-NEXT: 17:                                               ; preds = %12
+// CHECK-NEXT:   call void @__deploy(), !dbg !17
+// CHECK-NEXT:   br label %19, !dbg !17
+// CHECK-EMPTY:
+// CHECK-NEXT: 18:                                               ; preds = %12
+// CHECK-NEXT:   call void @__runtime(), !dbg !17
+// CHECK-NEXT:   br label %19, !dbg !17
+// CHECK-EMPTY:
+// CHECK-NEXT: 19:                                               ; preds = %17, %18
+// CHECK-NEXT:   unreachable, !dbg !17
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f_9() !dbg !19 {
+// CHECK-NEXT: define private i256 @f_9.0() !dbg !19 {
 // CHECK-NEXT:   ret i256 42, !dbg !20
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) !dbg !22 {
-// CHECK-NEXT:   store i256 0, ptr @memory_pointer, align 32, !dbg !23
-// CHECK-NEXT:   store i256 0, ptr @calldatasize, align 32, !dbg !23
-// CHECK-NEXT:   store i256 0, ptr @returndatasize, align 32, !dbg !23
-// CHECK-NEXT:   store i256 0, ptr @call_flags, align 32, !dbg !23
-// CHECK-NEXT:   store <10 x i256> zeroinitializer, ptr @extra_abi_data, align 512, !dbg !23
-// CHECK-NEXT:   store ptr addrspace(3) %0, ptr @ptr_calldata, align 32, !dbg !23
-// CHECK-NEXT:   store i256 and (i256 lshr (i256 ptrtoint (ptr @ptr_calldata to i256), i256 96), i256 4294967295), ptr @calldatasize, align 32, !dbg !23
-// CHECK-NEXT:   %13 = load i256, ptr @calldatasize, align 32, !dbg !23
-// CHECK-NEXT:   %14 = getelementptr i8, ptr addrspace(3) %0, i256 %13, !dbg !23
-// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_return_data, align 32, !dbg !23
-// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_active, align 32, !dbg !23
-// CHECK-NEXT:   store i256 %1, ptr @call_flags, align 32, !dbg !23
-// CHECK-NEXT:   store i256 %2, ptr @extra_abi_data, align 32, !dbg !23
-// CHECK-NEXT:   store i256 %3, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 1), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %4, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 2), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %5, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 3), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %6, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 4), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %7, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 5), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %8, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 6), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %9, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 7), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %10, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 8), align 32, !dbg !23
-// CHECK-NEXT:   store i256 %11, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 9), align 32, !dbg !23
-// CHECK-NEXT:   %15 = and i256 %1, 1, !dbg !23
-// CHECK-NEXT:   %16 = icmp eq i256 %15, 1, !dbg !23
-// CHECK-NEXT:   br i1 %16, label %17, label %18, !dbg !23
-// CHECK-EMPTY:
-// CHECK-NEXT: 17:                                               ; preds = %12
-// CHECK-NEXT:   call void @__deploy(), !dbg !23
-// CHECK-NEXT:   br label %19, !dbg !23
-// CHECK-EMPTY:
-// CHECK-NEXT: 18:                                               ; preds = %12
-// CHECK-NEXT:   call void @__runtime(), !dbg !23
-// CHECK-NEXT:   br label %19, !dbg !23
-// CHECK-EMPTY:
-// CHECK-NEXT: 19:                                               ; preds = %17, %18
-// CHECK-NEXT:   unreachable, !dbg !23
+// CHECK-NEXT: define private i256 @f_9() !dbg !22 {
+// CHECK-NEXT:   ret i256 42, !dbg !23
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nounwind readnone
@@ -176,14 +176,14 @@ contract C {
 // CHECK-NEXT: !13 = distinct !DISubprogram(name: "__runtime", linkageName: "__runtime", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !14 = !DILocation(line: 6, scope: !15)
 // CHECK-NEXT: !15 = !DILexicalBlockFile(scope: !13, file: !9, discriminator: 0)
-// CHECK-NEXT: !16 = distinct !DISubprogram(name: "f_9.0", linkageName: "f_9.0", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
-// CHECK-NEXT: !17 = !DILocation(line: 7, column: 43, scope: !18)
+// CHECK-NEXT: !16 = distinct !DISubprogram(name: "__entry", linkageName: "__entry", scope: null, file: !4, type: !5, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !17 = !DILocation(line: 6, scope: !18)
 // CHECK-NEXT: !18 = !DILexicalBlockFile(scope: !16, file: !9, discriminator: 0)
-// CHECK-NEXT: !19 = distinct !DISubprogram(name: "f_9", linkageName: "f_9", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !19 = distinct !DISubprogram(name: "f_9.0", linkageName: "f_9.0", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
 // CHECK-NEXT: !20 = !DILocation(line: 7, column: 43, scope: !21)
 // CHECK-NEXT: !21 = !DILexicalBlockFile(scope: !19, file: !9, discriminator: 0)
-// CHECK-NEXT: !22 = distinct !DISubprogram(name: "__entry", linkageName: "__entry", scope: null, file: !9, line: 6, type: !5, scopeLine: 6, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
-// CHECK-NEXT: !23 = !DILocation(line: 6, scope: !24)
+// CHECK-NEXT: !22 = distinct !DISubprogram(name: "f_9", linkageName: "f_9", scope: null, file: !9, line: 7, type: !5, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+// CHECK-NEXT: !23 = !DILocation(line: 7, column: 43, scope: !24)
 // CHECK-NEXT: !24 = !DILexicalBlockFile(scope: !22, file: !9, discriminator: 0)
 // CHECK-EMPTY:
 // ASM: 	.text
@@ -259,24 +259,14 @@ contract C {
 // ASM-NEXT: .tmp3:
 // ASM-NEXT: .func_end2:
 // ASM-EMPTY:
-// ASM-NEXT: f_9:
-// ASM-NEXT: .func_begin3:
-// ASM-NEXT: 	.loc	2 7 0
-// ASM-NEXT: 	add	42, r0, r1
-// ASM-NEXT: .tmp4:
-// ASM-NEXT: 	.loc	2 7 43 prologue_end
-// ASM-NEXT: 	ret
-// ASM-NEXT: .tmp5:
-// ASM-NEXT: .func_end3:
-// ASM-EMPTY:
 // ASM-NEXT: 	.globl	__entry
 // ASM-NEXT: __entry:
-// ASM-NEXT: .func_begin4:
-// ASM-NEXT: 	.loc	2 6 0
+// ASM-NEXT: .func_begin3:
+// ASM-NEXT: 	.loc	1 0 0
 // ASM-NEXT: 	.loc	2 6 0 prologue_end
 // ASM-NEXT: 	add	stack[0], r0, r13
 // ASM-NEXT: 	shr.s	96, r13, r13
-// ASM-NEXT: 	and	@CPI4_0[0], r13, r14
+// ASM-NEXT: 	and	@CPI3_0[0], r13, r14
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_return_data]
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active]
 // ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data]
@@ -290,15 +280,25 @@ contract C {
 // ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data+8]
 // ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data+9]
 // ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
-// ASM-NEXT: 	and	@CPI4_0[0], r13, stack[@calldatasize]
+// ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
 // ASM-NEXT: 	add	r2, r0, stack[@call_flags]
 // ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
 // ASM-NEXT: 	add	0, r0, stack[@returndatasize]
 // ASM-NEXT: 	and!	1, r2, r1
-// ASM-NEXT: 	jump.eq	@.BB4_2
+// ASM-NEXT: 	jump.eq	@.BB3_2
 // ASM-NEXT: 	near_call	r0, @__deploy, @DEFAULT_UNWIND
-// ASM-NEXT: .BB4_2:
+// ASM-NEXT: .BB3_2:
 // ASM-NEXT: 	near_call	r0, @__runtime, @DEFAULT_UNWIND
+// ASM-NEXT: .tmp4:
+// ASM-NEXT: .func_end3:
+// ASM-EMPTY:
+// ASM-NEXT: f_9:
+// ASM-NEXT: .func_begin4:
+// ASM-NEXT: 	.loc	2 7 0
+// ASM-NEXT: 	add	42, r0, r1
+// ASM-NEXT: .tmp5:
+// ASM-NEXT: 	.loc	2 7 43 prologue_end
+// ASM-NEXT: 	ret
 // ASM-NEXT: .tmp6:
 // ASM-NEXT: .func_end4:
 // ASM-EMPTY:
@@ -426,13 +426,11 @@ contract C {
 // ASM-NEXT: 	.long	@.info_string5
 // ASM-NEXT: 	.long	@.info_string5
 // ASM-EMPTY:
-// ASM-NEXT: 	.byte	3
+// ASM-NEXT: 	.byte	2
 // ASM-NEXT: .cell	@.func_begin3
 // ASM-NEXT: 	.long	@.func_end3-@.func_begin3
 // ASM-NEXT: 	.long	@.info_string6
 // ASM-NEXT: 	.long	@.info_string6
-// ASM-NEXT: 	.byte	2
-// ASM-NEXT: 	.byte	7
 // ASM-EMPTY:
 // ASM-NEXT: 	.byte	3
 // ASM-NEXT: .cell	@.func_begin4
@@ -440,7 +438,7 @@ contract C {
 // ASM-NEXT: 	.long	@.info_string7
 // ASM-NEXT: 	.long	@.info_string7
 // ASM-NEXT: 	.byte	2
-// ASM-NEXT: 	.byte	6
+// ASM-NEXT: 	.byte	7
 // ASM-EMPTY:
 // ASM-NEXT: 	.byte	0
 // ASM-NEXT: .debug_info_end0:
@@ -458,16 +456,16 @@ contract C {
 // ASM-NEXT: .info_string5:
 // ASM-NEXT: 	.asciz	"__runtime"
 // ASM-NEXT: .info_string6:
-// ASM-NEXT: 	.asciz	"f_9"
-// ASM-NEXT: .info_string7:
 // ASM-NEXT: 	.asciz	"__entry"
+// ASM-NEXT: .info_string7:
+// ASM-NEXT: 	.asciz	"f_9"
 // ASM-NEXT: 	.debug_pubnames
 // ASM-NEXT: 	.long	@.pubNames_end0-@.pubNames_start0
 // ASM-NEXT: .pubNames_start0:
 // ASM-NEXT: 	.short	2
 // ASM-NEXT: 	.long	@.cu_begin0
-// ASM-NEXT: 	.long	296
-// ASM-NEXT: 	.long	248
+// ASM-NEXT: 	.long	294
+// ASM-NEXT: 	.long	201
 // ASM-NEXT: 	.asciz	"__entry"
 // ASM-NEXT: 	.long	156
 // ASM-NEXT: 	.asciz	"__runtime"
@@ -475,7 +473,7 @@ contract C {
 // ASM-NEXT: 	.asciz	".unreachable"
 // ASM-NEXT: 	.long	111
 // ASM-NEXT: 	.asciz	"__deploy"
-// ASM-NEXT: 	.long	201
+// ASM-NEXT: 	.long	246
 // ASM-NEXT: 	.asciz	"f_9"
 // ASM-NEXT: 	.long	0
 // ASM-NEXT: .pubNames_end0:
@@ -484,14 +482,14 @@ contract C {
 // ASM-NEXT: .pubTypes_start0:
 // ASM-NEXT: 	.short	2
 // ASM-NEXT: 	.long	@.cu_begin0
-// ASM-NEXT: 	.long	296
+// ASM-NEXT: 	.long	294
 // ASM-NEXT: 	.long	0
 // ASM-NEXT: .pubTypes_end0:
 // ASM-NEXT: 	.note.GNU-stack
 // ASM-NEXT: 	.rodata
 // ASM-NEXT: CPI2_0:
 // ASM-NEXT: 	.cell 638722032
-// ASM-NEXT: CPI4_0:
+// ASM-NEXT: CPI3_0:
 // ASM-NEXT: 	.cell 4294967295
 // ASM-NEXT: 	.debug_line
 // ASM-NEXT: .line_table_start0:

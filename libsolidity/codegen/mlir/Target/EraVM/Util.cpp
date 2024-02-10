@@ -84,15 +84,16 @@ Value eravm::BuilderHelper::getABILen(Location loc, Value ptr) {
   return b.create<LLVM::AndOp>(loc, lShr, h.getConst(loc, UINT_MAX));
 }
 
-func::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
+sol::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
     llvm::StringRef name, FunctionType fnTy, ModuleOp mod) {
   return h.getOrInsertFuncOp(
       name, fnTy, LLVM::Linkage::Private, mod,
       {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(false)}});
 }
 
-func::FuncOp eravm::BuilderHelper::getOrInsertRuntimeFuncOp(
-    llvm::StringRef name, FunctionType fnTy, ModuleOp mod) {
+sol::FuncOp eravm::BuilderHelper::getOrInsertRuntimeFuncOp(llvm::StringRef name,
+                                                           FunctionType fnTy,
+                                                           ModuleOp mod) {
   return h.getOrInsertFuncOp(
       name, fnTy, LLVM::Linkage::Private, mod,
       {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(true)}});

@@ -72,7 +72,7 @@ object "Test" {
 // CHECK-NEXT:   llvm.mlir.global private @returndatasize(0 : i256) {alignment = 32 : i64} : i256 loc(#loc0)
 // CHECK-NEXT:   llvm.mlir.global private @calldatasize(0 : i256) {alignment = 32 : i64} : i256 loc(#loc0)
 // CHECK-NEXT:   llvm.mlir.global private @memory_pointer(0 : i256) {alignment = 32 : i64} : i256 loc(#loc0)
-// CHECK-NEXT:   func.func @__entry(%arg0: !llvm.ptr<3> loc(unknown), %arg1: i256 loc(unknown), %arg2: i256 loc(unknown), %arg3: i256 loc(unknown), %arg4: i256 loc(unknown), %arg5: i256 loc(unknown), %arg6: i256 loc(unknown), %arg7: i256 loc(unknown), %arg8: i256 loc(unknown), %arg9: i256 loc(unknown), %arg10: i256 loc(unknown), %arg11: i256 loc(unknown)) -> i256 {
+// CHECK-NEXT:   func.func private @__entry(%arg0: !llvm.ptr<3> loc(unknown), %arg1: i256 loc(unknown), %arg2: i256 loc(unknown), %arg3: i256 loc(unknown), %arg4: i256 loc(unknown), %arg5: i256 loc(unknown), %arg6: i256 loc(unknown), %arg7: i256 loc(unknown), %arg8: i256 loc(unknown), %arg9: i256 loc(unknown), %arg10: i256 loc(unknown), %arg11: i256 loc(unknown)) -> i256 attributes {llvm.linkage = #llvm.linkage<external>} {
 // CHECK-NEXT:     %0 = llvm.mlir.addressof @memory_pointer : !llvm.ptr<i256> loc(#loc0)
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc0)
 // CHECK-NEXT:     llvm.store %c0_i256, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc0)

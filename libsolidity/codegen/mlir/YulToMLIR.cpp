@@ -30,7 +30,6 @@
 #include "libyul/Object.h"
 #include "libyul/optimiser/ASTWalker.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -321,15 +320,15 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     }
   }
 
-  mlir::func::FuncOp callee =
-      lookupSymbol<mlir::func::FuncOp>(call.functionName.name.str());
+  mlir::sol::FuncOp callee =
+      lookupSymbol<mlir::sol::FuncOp>(call.functionName.name.str());
   assert(callee);
   std::vector<mlir::Value> args;
   args.reserve(call.arguments.size());
   for (Expression const &arg : call.arguments) {
     args.push_back(genDefTyExpr(arg));
   }
-  auto callOp = b.create<mlir::func::CallOp>(loc, callee, args);
+  auto callOp = b.create<mlir::sol::CallOp>(loc, callee, args);
   assert(callOp.getNumResults() == 1 && "NYI: multivalue return");
   return callOp.getResult(0);
 }
@@ -450,7 +449,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   mlir::Location loc = getLoc(fn.debugData);
 
   // Lookup FuncOp (should be declared by the yul block lowering)
-  auto funcOp = lookupSymbol<mlir::func::FuncOp>(fn.name.str());
+  auto funcOp = lookupSymbol<mlir::sol::FuncOp>(fn.name.str());
   assert(funcOp);
 
   // Add entry block and forward input args
@@ -475,7 +474,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   // Lower the body
   ASTWalker::operator()(fn.body);
 
-  b.create<mlir::func::ReturnOp>(
+  b.create<mlir::sol::ReturnOp>(
       loc,
       mlir::ValueRange{b.create<mlir::LLVM::LoadOp>(
           getLoc(retVar.debugData), getMemRef(retVar.name), getDefAlign())});
@@ -491,15 +490,15 @@ void YulToMLIRPass::operator()(Block const &blk) {
   // TODO: Stop relying on libyul's Disambiguator
   // We tried emitting a single block op for yul blocks with a symbol table
   // trait. We're able to define symbols with the same name in different blocks,
-  // but ops like func::CallOp works with a FlatSymbolRefAttr which needs the
+  // but ops like sol::CallOp works with a FlatSymbolRefAttr which needs the
   // symbol definition to be in the same symbol table
   for (Statement const &stmt : blk.statements) {
     if (auto fn = std::get_if<FunctionDefinition>(&stmt)) {
       std::vector<mlir::Type> inTys(fn->parameters.size(), getDefIntTy()),
           outTys(fn->returnVariables.size(), getDefIntTy());
       mlir::FunctionType funcTy = b.getFunctionType(inTys, outTys);
-      b.create<mlir::func::FuncOp>(getLoc(fn->debugData), fn->name.str(),
-                                   funcTy);
+      b.create<mlir::sol::FuncOp>(getLoc(fn->debugData), fn->name.str(),
+                                  funcTy);
     }
   }
 
@@ -554,7 +553,6 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
   ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   ctx.getOrLoadDialect<mlir::scf::SCFDialect>();
-  ctx.getOrLoadDialect<mlir::func::FuncDialect>();
   ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);
   yulToMLIR.lowerTopLevelObj(obj);

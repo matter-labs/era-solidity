@@ -74,11 +74,11 @@ ArrayAttr BuilderHelper::getZeroInitialzedAttr(IntegerType ty, unsigned sz) {
   return b.getArrayAttr(attrs);
 }
 
-func::FuncOp
+sol::FuncOp
 BuilderHelper::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
                                  LLVM::Linkage linkage, ModuleOp mod,
                                  std::vector<NamedAttribute> attrs) {
-  if (auto found = mod.lookupSymbol<func::FuncOp>(name))
+  if (auto found = mod.lookupSymbol<sol::FuncOp>(name))
     return found;
 
   // Set insertion point to the ModuleOp's body.
@@ -90,16 +90,16 @@ BuilderHelper::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
   attrs.emplace_back(StringAttr::get(ctx, "llvm.linkage"),
                      LLVM::LinkageAttr::get(ctx, linkage));
 
-  auto fn = b.create<func::FuncOp>(mod.getLoc(), name, fnTy, attrs);
+  auto fn = b.create<sol::FuncOp>(mod.getLoc(), name, fnTy, attrs);
   fn.setPrivate();
   return fn;
 }
 
 void BuilderHelper::createCallToUnreachableWrapper(Location loc, ModuleOp mod) {
   auto fnTy = FunctionType::get(mod.getContext(), {}, {});
-  func::FuncOp fn =
+  sol::FuncOp fn =
       getOrInsertFuncOp(".unreachable", fnTy, LLVM::Linkage::Private, mod);
-  b.create<func::CallOp>(
+  b.create<sol::CallOp>(
       loc, FlatSymbolRefAttr::get(mod.getContext(), ".unreachable"),
       TypeRange{}, ValueRange{});
 

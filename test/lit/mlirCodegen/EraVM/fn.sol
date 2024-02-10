@@ -115,17 +115,7 @@ contract C {
 // CHECK-NEXT:   llvm.mlir.global private @returndatasize(0 : i256) {alignment = 32 : i64} : i256 loc(#loc0)
 // CHECK-NEXT:   llvm.mlir.global private @calldatasize(0 : i256) {alignment = 32 : i64} : i256 loc(#loc0)
 // CHECK-NEXT:   llvm.mlir.global private @memory_pointer(0 : i256) {alignment = 32 : i64} : i256 loc(#loc0)
-// CHECK-NEXT:   func.func @f_9.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>} {
-// CHECK-NEXT:     %c42_i8 = arith.constant 42 : i8 loc(#loc3)
-// CHECK-NEXT:     %0 = arith.extui %c42_i8 : i8 to i256 loc(#loc3)
-// CHECK-NEXT:     return %0 : i256 loc(#loc4)
-// CHECK-NEXT:   } loc(#loc2)
-// CHECK-NEXT:   func.func @f_9() -> i256 attributes {llvm.linkage = #llvm.linkage<private>} {
-// CHECK-NEXT:     %c42_i8 = arith.constant 42 : i8 loc(#loc3)
-// CHECK-NEXT:     %0 = arith.extui %c42_i8 : i8 to i256 loc(#loc3)
-// CHECK-NEXT:     return %0 : i256 loc(#loc4)
-// CHECK-NEXT:   } loc(#loc2)
-// CHECK-NEXT:   func.func @__entry(%arg0: !llvm.ptr<3> loc({{.*}}:5:0), %arg1: i256 loc({{.*}}:5:0), %arg2: i256 loc({{.*}}:5:0), %arg3: i256 loc({{.*}}:5:0), %arg4: i256 loc({{.*}}:5:0), %arg5: i256 loc({{.*}}:5:0), %arg6: i256 loc({{.*}}:5:0), %arg7: i256 loc({{.*}}:5:0), %arg8: i256 loc({{.*}}:5:0), %arg9: i256 loc({{.*}}:5:0), %arg10: i256 loc({{.*}}:5:0), %arg11: i256 loc({{.*}}:5:0)) -> i256 {
+// CHECK-NEXT:   func.func private @__entry(%arg0: !llvm.ptr<3> loc({{.*}}:5:0), %arg1: i256 loc({{.*}}:5:0), %arg2: i256 loc({{.*}}:5:0), %arg3: i256 loc({{.*}}:5:0), %arg4: i256 loc({{.*}}:5:0), %arg5: i256 loc({{.*}}:5:0), %arg6: i256 loc({{.*}}:5:0), %arg7: i256 loc({{.*}}:5:0), %arg8: i256 loc({{.*}}:5:0), %arg9: i256 loc({{.*}}:5:0), %arg10: i256 loc({{.*}}:5:0), %arg11: i256 loc({{.*}}:5:0)) -> i256 attributes {llvm.linkage = #llvm.linkage<external>} {
 // CHECK-NEXT:     %0 = llvm.mlir.addressof @memory_pointer : !llvm.ptr<i256> loc(#loc1)
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:     llvm.store %c0_i256, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc1)
@@ -209,7 +199,17 @@ contract C {
 // CHECK-NEXT:       func.call @__runtime() : () -> () loc(#loc1)
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     llvm.unreachable loc(#loc1)
-// CHECK-NEXT:   } loc(#loc1)
+// CHECK-NEXT:   } loc(#loc0)
+// CHECK-NEXT:   func.func @f_9.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:     %c42_i8 = arith.constant 42 : i8 loc(#loc3)
+// CHECK-NEXT:     %0 = arith.extui %c42_i8 : i8 to i256 loc(#loc3)
+// CHECK-NEXT:     return %0 : i256 loc(#loc4)
+// CHECK-NEXT:   } loc(#loc2)
+// CHECK-NEXT:   func.func @f_9() -> i256 attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:     %c42_i8 = arith.constant 42 : i8 loc(#loc3)
+// CHECK-NEXT:     %0 = arith.extui %c42_i8 : i8 to i256 loc(#loc3)
+// CHECK-NEXT:     return %0 : i256 loc(#loc4)
+// CHECK-NEXT:   } loc(#loc2)
 // CHECK-NEXT: } loc(#loc0)
 // CHECK-NEXT: #loc0 = loc(unknown)
 // CHECK-NEXT: #loc2 = loc({{.*}}:6:1)

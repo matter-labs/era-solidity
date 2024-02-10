@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
@@ -42,7 +43,7 @@ void SolidityDialect::initialize() {
       >();
 }
 
-DictionaryAttr ContractOp::getInterfaceFnAttr(func::FuncOp fn) {
+DictionaryAttr ContractOp::getInterfaceFnAttr(sol::FuncOp fn) {
   ArrayAttr interfaceFnsAttr = getInterfaceFnsAttr();
   auto fnSym = SymbolRefAttr::get(fn.getSymNameAttr());
   TypeAttr fnTy = fn.getFunctionTypeAttr();
