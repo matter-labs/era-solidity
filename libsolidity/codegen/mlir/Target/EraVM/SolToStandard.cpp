@@ -84,14 +84,8 @@ static bool inRuntimeContext(Operation *op) {
 
   // Check if the parent FuncOp has isRuntime attribute set
   auto parentFunc = op->getParentOfType<sol::FuncOp>();
-  if (parentFunc) {
-    auto isRuntimeAttr = parentFunc->getAttr("isRuntime");
-    assert(isRuntimeAttr);
-    return isRuntimeAttr.cast<BoolAttr>().getValue();
-    // TODO: The following doesn't work. Find the rationale (or fix?) for the
-    // inconsistent behaviour of llvm::cast and .cast with MLIR data structures
-    // return llvm::cast<BoolAttr>(isRuntimeAttr).getValue();
-  }
+  if (parentFunc)
+    return parentFunc.getRuntime();
 
   // If there's no parent FuncOp, check the parent ObjectOp
   auto parentObj = op->getParentOfType<sol::ObjectOp>();

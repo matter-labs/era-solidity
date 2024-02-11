@@ -17,7 +17,7 @@ object "Test" {
 // CHECK-NEXT:     llvm.unreachable loc(#loc1)
 // CHECK-NEXT:   } loc(#loc0)
 // CHECK-NEXT:   func.func private @__revert(i256, i256, i256) attributes {llvm.linkage = #llvm.linkage<external>} loc(#loc0)
-// CHECK-NEXT:   func.func private @__deploy() attributes {isRuntime = false, llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func private @__deploy() attributes {llvm.linkage = #llvm.linkage<private>} {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc3)
 // CHECK-NEXT:     %c2_i256 = arith.constant 2 : i256 loc(#loc1)
@@ -25,7 +25,7 @@ object "Test" {
 // CHECK-NEXT:     call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:     llvm.unreachable loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)
-// CHECK-NEXT:   func.func private @__runtime() attributes {isRuntime = true, llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func private @__runtime() attributes {llvm.linkage = #llvm.linkage<private>, runtime} {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc4)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc5)
 // CHECK-NEXT:     %c0_i256_1 = arith.constant 0 : i256 loc(#loc6)

@@ -86,17 +86,15 @@ Value eravm::BuilderHelper::getABILen(Location loc, Value ptr) {
 
 sol::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
     llvm::StringRef name, FunctionType fnTy, ModuleOp mod) {
-  return h.getOrInsertFuncOp(
-      name, fnTy, LLVM::Linkage::Private, mod,
-      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(false)}});
+  return h.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
 }
 
 sol::FuncOp eravm::BuilderHelper::getOrInsertRuntimeFuncOp(llvm::StringRef name,
                                                            FunctionType fnTy,
                                                            ModuleOp mod) {
-  return h.getOrInsertFuncOp(
-      name, fnTy, LLVM::Linkage::Private, mod,
-      {NamedAttribute{b.getStringAttr("isRuntime"), b.getBoolAttr(true)}});
+  sol::FuncOp fn = h.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
+  fn.setRuntimeAttr(b.getUnitAttr());
+  return fn;
 }
 
 FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertReturn(ModuleOp mod) {
