@@ -8,7 +8,7 @@ contract C {
 // CHECK: #loc3 = loc({{.*}}:3:12)
 // CHECK-NEXT: module {
 // CHECK-NEXT:   sol.contract @C_13 {
-// CHECK-NEXT:     sol.func @f_12(%arg0: i256 loc({{.*}}:3:12)) -> i256 {
+// CHECK-NEXT:     sol.func @f_12(%arg0: i256 loc({{.*}}:3:12)) -> i256 attributes {state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:       %c1_i256 = arith.constant 1 : i256 loc(#loc3)
 // CHECK-NEXT:       %0 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc3)
 // CHECK-NEXT:       llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc3)

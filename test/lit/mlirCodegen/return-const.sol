@@ -10,17 +10,17 @@ contract C {
 // CHECK: #loc9 = loc({{.*}}:5:14)
 // CHECK-NEXT: module {
 // CHECK-NEXT:   sol.contract @C_27 {
-// CHECK-NEXT:     sol.func @f0_8() -> i256 {
+// CHECK-NEXT:     sol.func @f0_8() -> i256 attributes {state_mutability = #sol<StateMutability Pure>} {
 // CHECK-NEXT:       %c300_i16 = arith.constant 300 : i16 loc(#loc3)
 // CHECK-NEXT:       %0 = arith.extui %c300_i16 : i16 to i256 loc(#loc3)
 // CHECK-NEXT:       sol.return %0 : i256 loc(#loc4)
 // CHECK-NEXT:     } loc(#loc2)
-// CHECK-NEXT:     sol.func @f1_16() -> i256 {
+// CHECK-NEXT:     sol.func @f1_16() -> i256 attributes {state_mutability = #sol<StateMutability Pure>} {
 // CHECK-NEXT:       %c300_i16 = arith.constant 300 : i16 loc(#loc6)
 // CHECK-NEXT:       %0 = arith.extsi %c300_i16 : i16 to i256 loc(#loc6)
 // CHECK-NEXT:       sol.return %0 : i256 loc(#loc7)
 // CHECK-NEXT:     } loc(#loc5)
-// CHECK-NEXT:     sol.func @f2_26(%arg0: i256 loc({{.*}}:5:14)) -> i256 {
+// CHECK-NEXT:     sol.func @f2_26(%arg0: i256 loc({{.*}}:5:14)) -> i256 attributes {state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:       %c1_i256 = arith.constant 1 : i256 loc(#loc9)
 // CHECK-NEXT:       %0 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc9)
 // CHECK-NEXT:       llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc9)

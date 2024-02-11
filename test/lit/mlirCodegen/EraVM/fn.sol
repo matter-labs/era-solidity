@@ -200,12 +200,12 @@ contract C {
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     llvm.unreachable loc(#loc1)
 // CHECK-NEXT:   } loc(#loc0)
-// CHECK-NEXT:   func.func @f_9.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @f_9.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, state_mutability = #sol<StateMutability Pure>} {
 // CHECK-NEXT:     %c42_i8 = arith.constant 42 : i8 loc(#loc3)
 // CHECK-NEXT:     %0 = arith.extui %c42_i8 : i8 to i256 loc(#loc3)
 // CHECK-NEXT:     return %0 : i256 loc(#loc4)
 // CHECK-NEXT:   } loc(#loc2)
-// CHECK-NEXT:   func.func @f_9() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, runtime} {
+// CHECK-NEXT:   func.func @f_9() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, runtime, state_mutability = #sol<StateMutability Pure>} {
 // CHECK-NEXT:     %c42_i8 = arith.constant 42 : i8 loc(#loc3)
 // CHECK-NEXT:     %0 = arith.extui %c42_i8 : i8 to i256 loc(#loc3)
 // CHECK-NEXT:     return %0 : i256 loc(#loc4)

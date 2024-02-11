@@ -853,9 +853,14 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       for (auto [caseRegion, func] :
            llvm::zip(switchOp.getCaseRegions(), funcs)) {
         if (op.getKind() == sol::ContractKind::Library) {
-          // TODO: assert(!func.isPayable());
-          if (/* func.stateMutability() > StateMutability::View */ false) {
-            // TODO: Generate delegate call check.
+          auto optStateMutability = func.getStateMutability();
+          assert(optStateMutability);
+          sol::StateMutability stateMutability = *optStateMutability;
+
+          assert(!(stateMutability == sol::StateMutability::Payable));
+
+          if (stateMutability > sol::StateMutability::View) {
+            assert(false && "NYI: Delegate call check");
           }
         }
 

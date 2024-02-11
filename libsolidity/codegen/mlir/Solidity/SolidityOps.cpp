@@ -87,6 +87,16 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                                                 /*resultAttrs=*/llvm::None);
 }
 
+void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
+                   FunctionType type, StateMutability stateMutability,
+                   ArrayRef<NamedAttribute> attrs,
+                   ArrayRef<DictionaryAttr> argAttrs) {
+  build(builder, state, name, type, attrs, argAttrs);
+  state.addAttribute(
+      getStateMutabilityAttrName(state.name),
+      StateMutabilityAttr::get(builder.getContext(), stateMutability));
+}
+
 void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<StringAttr, Attribute> newAttrMap;

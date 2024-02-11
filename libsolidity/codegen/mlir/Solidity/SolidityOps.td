@@ -60,6 +60,18 @@ def Sol_ContractKind : I32EnumAttr<"ContractKind",
 def Sol_ContractKindAttr : EnumAttr<Solidity_Dialect, Sol_ContractKind,
                                     "ContractKind">;
 
+def Sol_StateMutability :
+    I32EnumAttr<"StateMutability", "Represents the state mutability of functions",
+                 [I32EnumAttrCase<"Pure", 0>,
+                  I32EnumAttrCase<"View", 1>,
+                  I32EnumAttrCase<"NonPayable", 2>,
+                  I32EnumAttrCase<"Payable", 3>]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::sol";
+}
+def Sol_StateMutabilityAttr : EnumAttr<Solidity_Dialect, Sol_StateMutability,
+                                       "StateMutability">;
+
 def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
                                          NoTerminator]> {
   let summary = "An operation that represents a contract";
@@ -126,14 +138,19 @@ def Sol_FuncOp : Sol_Op<"func", [AutomaticAllocationScope, CallableOpInterface,
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttrOf<FunctionType>:$function_type,
                        UnitAttr:$runtime,
+                       OptionalAttr<Sol_StateMutabilityAttr>:$state_mutability,
                        OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$type,
-    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
-    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
-  >];
+  let builders = [
+    OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>,
+    OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
+      "StateMutability":$stateMutability,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>
+  ];
 
   let extraClassDeclaration = [{
     // Copied from func.func.

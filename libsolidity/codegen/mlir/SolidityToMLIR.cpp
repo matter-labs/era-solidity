@@ -328,6 +328,21 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
   return true;
 }
 
+/// Returns the mlir::sol::StateMutability of the function
+static mlir::sol::StateMutability
+getStateMutability(FunctionDefinition const &fn) {
+  switch (fn.stateMutability()) {
+  case StateMutability::Pure:
+    return mlir::sol::StateMutability::Pure;
+  case StateMutability::View:
+    return mlir::sol::StateMutability::View;
+  case StateMutability::NonPayable:
+    return mlir::sol::StateMutability::NonPayable;
+  case StateMutability::Payable:
+    return mlir::sol::StateMutability::Payable;
+  }
+}
+
 void SolidityToMLIRPass::run(FunctionDefinition const &func) {
   currFunc = &func;
   std::vector<mlir::Type> inpTys, outTys;
@@ -346,8 +361,9 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
 
   // TODO: Specify visibility
   auto funcType = b.getFunctionType(inpTys, outTys);
-  auto op = b.create<mlir::sol::FuncOp>(getLoc(func.location()),
-                                        getMangledName(func), funcType);
+  auto op =
+      b.create<mlir::sol::FuncOp>(getLoc(func.location()), getMangledName(func),
+                                  funcType, getStateMutability(func));
 
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);
