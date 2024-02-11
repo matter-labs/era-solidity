@@ -720,6 +720,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       // Duplicate the func in both the creation and runtime objects.
       r.clone(*func);
       func->moveBefore(runtimeObj.getBody(), runtimeObj.getBody()->begin());
+      func.setRuntimeAttr(r.getUnitAttr());
     }
 
     //
