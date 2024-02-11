@@ -941,10 +941,11 @@ struct ConvertSolToStandard
     // sol.func. sol.func conversion in the same conversion pass will require
     // other conversion to be able to work with sol.func and func.func. To keep
     // things simple for now, the sol.func and related ops lowering is scheduled
-    // as a separate conversion pass after the main one.  How can we do the
-    // conversion cleanly with one pass? Generally speaking, how should we work
-    // with conversion patterns that depends on other operations in the
-    // ModuleOp?
+    // in a separate conversion pass after the main one.
+    //
+    // How can we do the conversion cleanly with one pass? Generally speaking,
+    // how should we work with conversion patterns that depends on other
+    // operations?
 
     // Create the initial (sol ops excluding sol.func, sol.call and sol.return
     // registered as illegal) and final (all sol ops registered as illegal)
