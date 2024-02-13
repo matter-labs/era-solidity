@@ -1,5 +1,7 @@
 add_mlir_doc(SolidityDialect SolidityDialect Solidity/ -gen-dialect-doc)
 add_mlir_doc(SolidityOps SolidityOps Solidity/ -gen-op-doc)
+add_mlir_doc(SolidityAttrs SolidityAttrs Dialects/ -gen-attrdef-doc)
+add_mlir_doc(SolidityTypes SolidityTypes Dialects/ -gen-typedef-doc)
 
 # Create MLIRSolidityOpsIncGen
 add_mlir_dialect(SolidityOps sol)
