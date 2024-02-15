@@ -26,6 +26,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -34,6 +35,9 @@
 
 #define GET_ATTRDEF_CLASSES
 #include "Solidity/SolidityOpsAttributes.h.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "Solidity/SolidityOpsTypes.h.inc"
 
 #define GET_OP_CLASSES
 #include "Solidity/SolidityOps.h.inc"

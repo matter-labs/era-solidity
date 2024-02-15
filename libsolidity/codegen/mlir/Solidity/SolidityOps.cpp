@@ -25,13 +25,20 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::sol;
 
 void SolidityDialect::initialize() {
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "Solidity/SolidityOpsTypes.cpp.inc"
+      >();
+
   addOperations<
 #define GET_OP_LIST
 #include "Solidity/SolidityOps.cpp.inc"
@@ -41,6 +48,61 @@ void SolidityDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "Solidity/SolidityOpsAttributes.cpp.inc"
       >();
+}
+
+/// Parses a sol.array type.
+///
+///   array-type ::= `<` size `x` elt-ty `,` data-location `>`
+///   size ::= fixed-size | `?`
+///
+Type ArrayType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  int64_t size = -1;
+  if (parser.parseOptionalQuestion()) {
+    if (parser.parseInteger(size))
+      return {};
+  }
+
+  if (parser.parseKeyword("x"))
+    return {};
+
+  Type eleTy;
+  if (parser.parseType(eleTy))
+    return {};
+
+  if (parser.parseComma())
+    return {};
+
+  StringRef dataLocationTok;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&dataLocationTok))
+    return {};
+
+  auto dataLocation = symbolizeDataLocation(dataLocationTok);
+  if (!dataLocation) {
+    parser.emitError(loc, "Invalid data-location");
+    return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(parser.getContext(), size, eleTy, *dataLocation);
+}
+
+/// Prints a sol.array type.
+void ArrayType::print(AsmPrinter &printer) const {
+  printer << "<";
+
+  if (getSize() == -1)
+    printer << "?";
+  else
+    printer << getSize();
+
+  printer << " x " << getEltTy() << ", "
+          << stringifyDataLocation(getDataLocation()) << ">";
 }
 
 DictionaryAttr ContractOp::getInterfaceFnAttr(sol::FuncOp fn) {
@@ -216,3 +278,6 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 #define GET_ATTRDEF_CLASSES
 #include "Solidity/SolidityOpsAttributes.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "Solidity/SolidityOpsTypes.cpp.inc"

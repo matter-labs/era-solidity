@@ -42,8 +42,49 @@ def Solidity_Dialect : Dialect {
   }];
   let cppNamespace = "::mlir::sol";
   let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+}
+
+class Sol_Type<string name, string typeMnemonic, list<Trait> traits = []> :
+    TypeDef<Solidity_Dialect, name, traits> {
+  let mnemonic = typeMnemonic;
+}
+
+def Sol_DataLocation : I32EnumAttr<"DataLocation",
+                                   "Data-location in reference-types",
+                                   [I32EnumAttrCase<"Storage", 0>,
+                                    I32EnumAttrCase<"CallData", 1>,
+                                    I32EnumAttrCase<"Memory", 2>]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::sol";
+}
+
+def Sol_ArrayType : Sol_Type<"Array", "array"> {
+  let summary = "Sol array type";
+  let description = [{
+    `sol.array` represents solidity arrays.
+
+    Example:
+
+    ```mlir
+    !sol.array<2xi256, CallData>
+    !sol.array<?xi256, Memory>
+    ```
+  }];
+
+  // TODO? Tracking the whole shape here (instead of the recursive
+  // representation) can make the dump easier to read (like that of memref). Is
+  // that better?  Solidity ast-type for arrays use a recursive representation.
+  let parameters = (ins "int64_t":$size, "Type":$eltTy,
+                    Sol_DataLocation:$dataLocation);
+
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    /// Returns true if the size is dynamic.
+    bool isDynSized() { return getSize() == -1; }
+  }];
 }
 
 class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Solidity_Dialect,
