@@ -105,11 +105,11 @@ void ArrayType::print(AsmPrinter &printer) const {
           << stringifyDataLocation(getDataLocation()) << ">";
 }
 
-/// Parses a sol.ptr type.
+/// Parses a sol.opqptr type.
 ///
 ///   ptr-type ::= `<` data-location `>`
 ///
-Type PointerType::parse(AsmParser &parser) {
+Type OpqPointerType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return {};
 
@@ -130,8 +130,8 @@ Type PointerType::parse(AsmParser &parser) {
   return get(parser.getContext(), *dataLocation);
 }
 
-/// Prints a sol.ptr type.
-void PointerType::print(AsmPrinter &printer) const {
+/// Prints a sol.opqptr type.
+void OpqPointerType::print(AsmPrinter &printer) const {
   printer << "<" << stringifyDataLocation(getDataLocation()) << ">";
 }
 
