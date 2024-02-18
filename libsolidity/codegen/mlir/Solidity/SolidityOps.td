@@ -87,6 +87,24 @@ def Sol_ArrayType : Sol_Type<"Array", "array"> {
   }];
 }
 
+def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
+  let summary = "Sol pointer type";
+  let description = [{
+    `sol.ptr` represents an opaque pointer type that tracks the solidity
+    data-location.
+
+    Example:
+
+    ```mlir
+    !sol.ptr<Memory>
+    !sol.ptr<Storage>
+    ```
+  }];
+
+  let parameters = (ins Sol_DataLocation:$dataLocation);
+  let hasCustomAssemblyFormat = 1;
+}
+
 class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Solidity_Dialect,
                                                             mnemonic, traits>;
 

@@ -105,6 +105,36 @@ void ArrayType::print(AsmPrinter &printer) const {
           << stringifyDataLocation(getDataLocation()) << ">";
 }
 
+/// Parses a sol.ptr type.
+///
+///   ptr-type ::= `<` data-location `>`
+///
+Type PointerType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  StringRef dataLocationTok;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&dataLocationTok))
+    return {};
+
+  auto dataLocation = symbolizeDataLocation(dataLocationTok);
+  if (!dataLocation) {
+    parser.emitError(loc, "Invalid data-location");
+    return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(parser.getContext(), *dataLocation);
+}
+
+/// Prints a sol.ptr type.
+void PointerType::print(AsmPrinter &printer) const {
+  printer << "<" << stringifyDataLocation(getDataLocation()) << ">";
+}
+
 DictionaryAttr ContractOp::getInterfaceFnAttr(sol::FuncOp fn) {
   ArrayAttr interfaceFnsAttr = getInterfaceFnsAttr();
   auto fnSym = SymbolRefAttr::get(fn.getSymNameAttr());
