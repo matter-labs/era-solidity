@@ -69,8 +69,8 @@ def Sol_ArrayType : Sol_Type<"Array", "array"> {
     Example:
 
     ```mlir
-    !sol.array<2xi256, CallData>
-    !sol.array<?xi256, Memory>
+    !sol.array<2 x i256, CallData>
+    !sol.array<? x i256, Memory>
     ```
   }];
 
