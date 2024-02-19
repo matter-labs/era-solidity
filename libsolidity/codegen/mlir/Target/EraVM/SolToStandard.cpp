@@ -16,13 +16,13 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// Solidity dialect lowering pass
+// Sol dialect lowering pass for EraVM.
 //
 
 #include "libsolidity/codegen/CompilerUtils.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
-#include "libsolidity/codegen/mlir/Solidity/SolidityOps.h"
+#include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
@@ -960,7 +960,7 @@ struct ConvertSolToStandard
     initialConvTgt
         .addLegalDialect<func::FuncDialect, scf::SCFDialect,
                          arith::ArithmeticDialect, LLVM::LLVMDialect>();
-    initialConvTgt.addIllegalDialect<sol::SolidityDialect>();
+    initialConvTgt.addIllegalDialect<sol::SolDialect>();
     ConversionTarget finalConvTgt = initialConvTgt;
     initialConvTgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp>();
 

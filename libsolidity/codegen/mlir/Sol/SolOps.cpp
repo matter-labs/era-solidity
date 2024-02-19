@@ -15,9 +15,9 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-#include "SolidityOps.h"
-#include "Solidity/SolidityOpsDialect.cpp.inc"
-#include "Solidity/SolidityOpsEnums.cpp.inc"
+#include "SolOps.h"
+#include "Sol/SolOpsDialect.cpp.inc"
+#include "Sol/SolOpsEnums.cpp.inc"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -33,20 +33,20 @@
 using namespace mlir;
 using namespace mlir::sol;
 
-void SolidityDialect::initialize() {
+void SolDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "Solidity/SolidityOpsTypes.cpp.inc"
+#include "Sol/SolOpsTypes.cpp.inc"
       >();
 
   addOperations<
 #define GET_OP_LIST
-#include "Solidity/SolidityOps.cpp.inc"
+#include "Sol/SolOps.cpp.inc"
       >();
 
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "Solidity/SolidityOpsAttributes.cpp.inc"
+#include "Sol/SolOpsAttributes.cpp.inc"
       >();
 }
 
@@ -304,10 +304,10 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 #define GET_OP_CLASSES
-#include "Solidity/SolidityOps.cpp.inc"
+#include "Sol/SolOps.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "Solidity/SolidityOpsAttributes.cpp.inc"
+#include "Sol/SolOpsAttributes.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "Solidity/SolidityOpsTypes.cpp.inc"
+#include "Sol/SolOpsTypes.cpp.inc"

@@ -223,20 +223,20 @@ set(mlir_sources
   codegen/mlir/Target/EraVM/SolToStandard.cpp
 )
 
-set(mlir_solidity_dialect_sources
-	codegen/mlir/Solidity/SolidityOps.cpp
+set(mlir_sol_dialect_sources
+	codegen/mlir/Sol/SolOps.cpp
 )
 
 include_directories(${PROJECT_BINARY_DIR}/libsolidity/codegen/mlir)
 
-add_subdirectory(codegen/mlir/Solidity)
+add_subdirectory(codegen/mlir/Sol)
 
-add_mlir_dialect_library(MLIRSolidity
-	${mlir_solidity_dialect_sources}
+add_mlir_dialect_library(MLIRSol
+	${mlir_sol_dialect_sources}
 
 	DEPENDS
-	MLIRSolidityOpsIncGen
-	MLIRSolidityExtraIncGen
+	MLIRSolOpsIncGen
+	MLIRSolExtraIncGen
 
 	LINK_LIBS PUBLIC
 )

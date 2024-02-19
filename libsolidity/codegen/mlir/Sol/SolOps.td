@@ -16,11 +16,11 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// Solidity operations
+// Sol dialect operations
 //
 
-#ifndef MLIR_SOLIDITY_SOLIDITYOPS_TD
-#define MLIR_SOLIDITY_SOLIDITYOPS_TD
+#ifndef MLIR_SOL_SOLOPS_TD
+#define MLIR_SOL_SOLOPS_TD
 
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
@@ -34,7 +34,7 @@ include "mlir/IR/SymbolInterfaces.td"
 def I256Attr : SignlessIntegerAttrBase<I<256>,
                                         "256-bit signless integer attribute">;
 
-def Solidity_Dialect : Dialect {
+def Sol_Dialect : Dialect {
   let name = "sol";
   let summary = "Solidity dialect";
   let description = [{
@@ -48,7 +48,7 @@ def Solidity_Dialect : Dialect {
 }
 
 class Sol_Type<string name, string typeMnemonic, list<Trait> traits = []> :
-    TypeDef<Solidity_Dialect, name, traits> {
+    TypeDef<Sol_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
 
@@ -126,7 +126,7 @@ def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_ArrayType],
                              "Solidity reference types and pointers">;
 
 
-class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Solidity_Dialect,
+class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Sol_Dialect,
                                                             mnemonic, traits>;
 
 def Sol_ContractKind : I32EnumAttr<"ContractKind",
@@ -137,7 +137,7 @@ def Sol_ContractKind : I32EnumAttr<"ContractKind",
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::sol";
 }
-def Sol_ContractKindAttr : EnumAttr<Solidity_Dialect, Sol_ContractKind,
+def Sol_ContractKindAttr : EnumAttr<Sol_Dialect, Sol_ContractKind,
                                     "ContractKind">;
 
 def Sol_StateMutability :
@@ -149,7 +149,7 @@ def Sol_StateMutability :
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::sol";
 }
-def Sol_StateMutabilityAttr : EnumAttr<Solidity_Dialect, Sol_StateMutability,
+def Sol_StateMutabilityAttr : EnumAttr<Sol_Dialect, Sol_StateMutability,
                                        "StateMutability">;
 
 def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
@@ -463,4 +463,4 @@ def Sol_MemGuardOp : Sol_Op<"memoryguard", [NoSideEffect,
   let assemblyFormat = "$inp attr-dict `:` type($out)";
 }
 
-#endif // MLIR_SOLIDITY_SOLIDITYOPS_TD
+#endif // MLIR_SOL_SOLOPS_TD

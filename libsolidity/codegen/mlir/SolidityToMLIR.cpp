@@ -19,7 +19,7 @@
 // Solidity to MLIR pass
 //
 
-#include "Solidity/SolidityOps.h"
+#include "Sol/SolOps.h"
 #include "liblangutil/CharStream.h"
 #include "liblangutil/Exceptions.h"
 #include "liblangutil/SourceLocation.h"
@@ -425,7 +425,7 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
     std::vector<ContractDefinition const *> const &contracts,
     CharStream const &stream, solidity::mlirgen::JobSpec const &job) {
   mlir::MLIRContext ctx;
-  ctx.getOrLoadDialect<mlir::sol::SolidityDialect>();
+  ctx.getOrLoadDialect<mlir::sol::SolDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
 

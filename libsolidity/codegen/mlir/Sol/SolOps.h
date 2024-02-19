@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// Solidity operations
+// Sol operations
 //
 
 #pragma once
@@ -30,14 +30,14 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-#include "Solidity/SolidityOpsDialect.h.inc"
-#include "Solidity/SolidityOpsEnums.h.inc"
+#include "Sol/SolOpsDialect.h.inc"
+#include "Sol/SolOpsEnums.h.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "Solidity/SolidityOpsAttributes.h.inc"
+#include "Sol/SolOpsAttributes.h.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "Solidity/SolidityOpsTypes.h.inc"
+#include "Sol/SolOpsTypes.h.inc"
 
 #define GET_OP_CLASSES
-#include "Solidity/SolidityOps.h.inc"
+#include "Sol/SolOps.h.inc"
