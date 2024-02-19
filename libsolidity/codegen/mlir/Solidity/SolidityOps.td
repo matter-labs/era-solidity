@@ -105,6 +105,27 @@ def Sol_OpqPtrType : Sol_Type<"OpqPointer", "opqptr"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+// FIXME: Rename this! Is ScalarPtrType correct?
+def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
+  let summary = "Sol pointer type";
+  let description = [{
+    `sol.ptr` represents a pointer with an element type that's not a reference
+    type.
+
+    Example:
+
+    ```mlir
+    !sol.ptr<i256>
+    ```
+  }];
+  let parameters = (ins "Type":$pointeeTy);
+  let assemblyFormat = [{ `<` $pointeeTy `>` }];
+}
+
+def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_ArrayType],
+                             "Solidity reference types and pointers">;
+
+
 class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Solidity_Dialect,
                                                             mnemonic, traits>;
 
@@ -331,6 +352,16 @@ def Sol_ReturnOp : Sol_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
   }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+
+def Sol_LoadOp : Sol_Op<"load"> {
+  let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$ptr,
+                       Variadic<AnySignlessInteger>:$indices);
+  let results = (outs AnyType:$out);
+  let assemblyFormat = [{
+    $ptr (`[` $indices^ `:` type($indices) `]`)? attr-dict
+      `:` type($ptr) `,` type($out)
+  }];
 }
 
 // TODO: The op definitions of yul builtins should be auto-generated from
