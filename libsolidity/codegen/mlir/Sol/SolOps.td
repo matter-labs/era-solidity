@@ -232,6 +232,10 @@ def Sol_ReturnOp : Sol_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
+// TODO: Simplify the asm format by inferring element type of Sol_RefType.
+// TODO? Use a single type (index?) for array/struct size and indexing that
+// conforms to that of solidity.
+
 def Sol_LoadOp : Sol_Op<"load"> {
   let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$ptr,
                        Variadic<AnySignlessInteger>:$indices);
@@ -239,6 +243,15 @@ def Sol_LoadOp : Sol_Op<"load"> {
   let assemblyFormat = [{
     $ptr (`[` $indices^ `:` type($indices) `]`)? attr-dict
       `:` type($ptr) `,` type($out)
+  }];
+}
+
+def Sol_StoreOp : Sol_Op<"store"> {
+  let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$ptr,
+                       Variadic<AnySignlessInteger>:$indices);
+  let assemblyFormat = [{
+    $val `:` type($val) `,` $ptr (`[` $indices^ `:` type($indices) `]`)?
+      attr-dict `:` type($ptr)
   }];
 }
 
