@@ -50,6 +50,23 @@ void SolDialect::initialize() {
       >();
 }
 
+static ParseResult parseDataLocation(AsmParser &parser,
+                                     DataLocation &dataLocation) {
+  StringRef dataLocationTok;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&dataLocationTok))
+    return failure();
+
+  auto parsedDataLoc = symbolizeDataLocation(dataLocationTok);
+  if (!parsedDataLoc) {
+    parser.emitError(loc, "Invalid data-location");
+    return failure();
+  }
+
+  dataLocation = *parsedDataLoc;
+  return success();
+}
+
 /// Parses a sol.array type.
 ///
 ///   array-type ::= `<` size `x` elt-ty `,` data-location `>`
@@ -75,21 +92,14 @@ Type ArrayType::parse(AsmParser &parser) {
   if (parser.parseComma())
     return {};
 
-  StringRef dataLocationTok;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseKeyword(&dataLocationTok))
+  DataLocation dataLocation = DataLocation::Memory;
+  if (parseDataLocation(parser, dataLocation))
     return {};
-
-  auto dataLocation = symbolizeDataLocation(dataLocationTok);
-  if (!dataLocation) {
-    parser.emitError(loc, "Invalid data-location");
-    return {};
-  }
 
   if (parser.parseGreater())
     return {};
 
-  return get(parser.getContext(), size, eleTy, *dataLocation);
+  return get(parser.getContext(), size, eleTy, dataLocation);
 }
 
 /// Prints a sol.array type.
@@ -134,21 +144,14 @@ Type StructType::parse(AsmParser &parser) {
   if (parser.parseComma())
     return {};
 
-  StringRef dataLocationTok;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseKeyword(&dataLocationTok))
+  DataLocation dataLocation = DataLocation::Memory;
+  if (parseDataLocation(parser, dataLocation))
     return {};
-
-  auto dataLocation = symbolizeDataLocation(dataLocationTok);
-  if (!dataLocation) {
-    parser.emitError(loc, "Invalid data-location");
-    return {};
-  }
 
   if (parser.parseGreater())
     return {};
 
-  return get(parser.getContext(), memTys, *dataLocation);
+  return get(parser.getContext(), memTys, dataLocation);
 }
 
 /// Prints a sol.array type.
@@ -167,21 +170,14 @@ Type OpqPointerType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return {};
 
-  StringRef dataLocationTok;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseKeyword(&dataLocationTok))
+  DataLocation dataLocation = DataLocation::Memory;
+  if (parseDataLocation(parser, dataLocation))
     return {};
-
-  auto dataLocation = symbolizeDataLocation(dataLocationTok);
-  if (!dataLocation) {
-    parser.emitError(loc, "Invalid data-location");
-    return {};
-  }
 
   if (parser.parseGreater())
     return {};
 
-  return get(parser.getContext(), *dataLocation);
+  return get(parser.getContext(), dataLocation);
 }
 
 /// Prints a sol.opqptr type.
