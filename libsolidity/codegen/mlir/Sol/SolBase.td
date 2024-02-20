@@ -90,6 +90,25 @@ def Sol_ArrayType : Sol_Type<"Array", "array"> {
   }];
 }
 
+def Sol_StructType : Sol_Type<"Struct", "struct"> {
+  let summary = "Sol struct type";
+  let description = [{
+    `sol.struct` represents solidity struct.
+
+    Example:
+
+    ```mlir
+    !sol.struct<(i256), CallData>
+    ```
+  }];
+
+  let parameters = (ins ArrayRefParameter<"Type">:$memTys,
+                        Sol_DataLocation:$dataLocation);
+
+  // let assemblyFormat = [{ `<` `(` $memTys `)` `,` $dataLocation `>` }];
+  let hasCustomAssemblyFormat = 1;
+}
+
 def Sol_OpqPtrType : Sol_Type<"OpqPointer", "opqptr"> {
   let summary = "Sol pointer type";
   let description = [{

@@ -105,6 +105,60 @@ void ArrayType::print(AsmPrinter &printer) const {
           << stringifyDataLocation(getDataLocation()) << ">";
 }
 
+//===----------------------------------------------------------------------===//
+// StructType
+//===----------------------------------------------------------------------===//
+
+/// Parses a sol.struct type.
+///
+///   struct-type ::= `<` `(` member-types `)` `,` data-location `>`
+///
+Type StructType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  if (parser.parseLParen())
+    return {};
+
+  SmallVector<Type, 4> memTys;
+  do {
+    Type memTy;
+    if (parser.parseType(memTy))
+      return {};
+    memTys.push_back(memTy);
+  } while (succeeded(parser.parseOptionalComma()));
+
+  if (parser.parseRParen())
+    return {};
+
+  if (parser.parseComma())
+    return {};
+
+  StringRef dataLocationTok;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&dataLocationTok))
+    return {};
+
+  auto dataLocation = symbolizeDataLocation(dataLocationTok);
+  if (!dataLocation) {
+    parser.emitError(loc, "Invalid data-location");
+    return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(parser.getContext(), memTys, *dataLocation);
+}
+
+/// Prints a sol.array type.
+void StructType::print(AsmPrinter &printer) const {
+  printer << "<(";
+  llvm::interleaveComma(getMemTys(), printer.getStream(),
+                        [&](Type memTy) { printer << memTy; });
+  printer << "), " << stringifyDataLocation(getDataLocation()) << ">";
+}
+
 /// Parses a sol.opqptr type.
 ///
 ///   ptr-type ::= `<` data-location `>`
