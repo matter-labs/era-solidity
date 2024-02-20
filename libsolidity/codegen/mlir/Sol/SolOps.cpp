@@ -67,6 +67,10 @@ static ParseResult parseDataLocation(AsmParser &parser,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// ArrayType
+//===----------------------------------------------------------------------===//
+
 /// Parses a sol.array type.
 ///
 ///   array-type ::= `<` size `x` elt-ty `,` data-location `>`
@@ -162,6 +166,10 @@ void StructType::print(AsmPrinter &printer) const {
   printer << "), " << stringifyDataLocation(getDataLocation()) << ">";
 }
 
+//===----------------------------------------------------------------------===//
+// OpqPointerType
+//===----------------------------------------------------------------------===//
+
 /// Parses a sol.opqptr type.
 ///
 ///   ptr-type ::= `<` data-location `>`
@@ -200,6 +208,10 @@ DictionaryAttr ContractOp::getInterfaceFnAttr(sol::FuncOp fn) {
 
   return {};
 }
+
+//===----------------------------------------------------------------------===//
+// ObjectOp
+//===----------------------------------------------------------------------===//
 
 void ObjectOp::build(OpBuilder &builder, OperationState &state,
                      StringRef name) {
