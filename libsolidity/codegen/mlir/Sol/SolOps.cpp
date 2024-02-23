@@ -390,6 +390,31 @@ void AllocaOp::print(OpAsmPrinter &p) {
   p << " : " << getAllocType();
 }
 
+//===----------------------------------------------------------------------===//
+// MallocOp
+//===----------------------------------------------------------------------===//
+
+ParseResult MallocOp::parse(OpAsmParser &parser, OperationState &result) {
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  if (parser.parseColon())
+    return failure();
+
+  Type allocType;
+  if (parser.parseType(allocType))
+    return failure();
+  result.addAttribute("alloc_type", TypeAttr::get(allocType));
+  result.addTypes(allocType);
+
+  return success();
+}
+
+void MallocOp::print(OpAsmPrinter &p) {
+  p.printOptionalAttrDict((*this)->getAttrs(), {"alloc_type"});
+  p << " : " << getAllocType();
+}
+
 #define GET_OP_CLASSES
 #include "Sol/SolOps.cpp.inc"
 

@@ -251,6 +251,25 @@ def Sol_AllocaOp : Sol_Op<"alloca"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def Sol_MallocOp : Sol_Op<"malloc"> {
+  let summary = "Memory allocation op";
+  let description = [{
+    This operation performs allocations for aggregate types on the memory
+    data-location.
+
+    Example:
+
+    ```mlir
+    %addr = sol.alloca : !sol.ptr<i256>
+    ```
+  }];
+
+  let arguments = (ins TypeAttr:$alloc_type);
+  let results = (outs Sol_AggType:$addr);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 // TODO: Simplify the asm format by inferring element type of Sol_RefType.
 // TODO? Use a single type (index?) for array/struct size and indexing that
 // conforms to that of solidity.

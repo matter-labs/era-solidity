@@ -144,8 +144,10 @@ def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
   let assemblyFormat = [{ `<` $pointeeTy `>` }];
 }
 
-def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_ArrayType],
-                             "Solidity reference types and pointers">;
+def Sol_AggType : AnyTypeOf<[Sol_ArrayType],
+                             "Solidity aggregate types">;
+def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_AggType],
+                             "Solidity aggregate types and pointers">;
 
 
 //===----------------------------------------------------------------------===//

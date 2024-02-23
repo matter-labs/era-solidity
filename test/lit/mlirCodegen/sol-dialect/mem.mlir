@@ -22,6 +22,11 @@ module {
     %stk = sol.alloca : !sol.ptr<i256>
     sol.return %stk : !sol.ptr<i256>
   }
+
+  sol.func @malloc() -> !sol.array<2 x i256, Memory> {
+    %mem = sol.malloc : !sol.array<2 x i256, Memory>
+    sol.return %mem : !sol.array<2 x i256, Memory>
+  }
 }
 
 // CHECK: module {
@@ -42,5 +47,9 @@ module {
 // CHECK-NEXT:   sol.func @alloca() -> !sol.ptr<i256> {
 // CHECK-NEXT:     %0 = sol.alloca : !sol.ptr<i256>
 // CHECK-NEXT:     sol.return %0 : !sol.ptr<i256>
+// CHECK-NEXT:   }
+// CHECK-NEXT:   sol.func @malloc() -> !sol.array<2 x i256, Memory> {
+// CHECK-NEXT:     %0 = sol.malloc : !sol.array<2 x i256, Memory>
+// CHECK-NEXT:     sol.return %0 : !sol.array<2 x i256, Memory>
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
