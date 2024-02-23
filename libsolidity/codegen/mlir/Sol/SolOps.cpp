@@ -369,7 +369,8 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
-ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseAllocationOp(OpAsmParser &parser,
+                                     OperationState &result) {
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
@@ -385,35 +386,26 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-void AllocaOp::print(OpAsmPrinter &p) {
-  p.printOptionalAttrDict((*this)->getAttrs(), {"alloc_type"});
-  p << " : " << getAllocType();
+static void printAllocationOp(Operation *op, OpAsmPrinter &p) {
+  p.printOptionalAttrDict(op->getAttrs(), {"alloc_type"});
+  p << " : " << op->getResultTypes()[0];
 }
+
+ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseAllocationOp(parser, result);
+}
+
+void AllocaOp::print(OpAsmPrinter &p) { printAllocationOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
 // MallocOp
 //===----------------------------------------------------------------------===//
 
 ParseResult MallocOp::parse(OpAsmParser &parser, OperationState &result) {
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  if (parser.parseColon())
-    return failure();
-
-  Type allocType;
-  if (parser.parseType(allocType))
-    return failure();
-  result.addAttribute("alloc_type", TypeAttr::get(allocType));
-  result.addTypes(allocType);
-
-  return success();
+  return parseAllocationOp(parser, result);
 }
 
-void MallocOp::print(OpAsmPrinter &p) {
-  p.printOptionalAttrDict((*this)->getAttrs(), {"alloc_type"});
-  p << " : " << getAllocType();
-}
+void MallocOp::print(OpAsmPrinter &p) { printAllocationOp(*this, p); }
 
 #define GET_OP_CLASSES
 #include "Sol/SolOps.cpp.inc"
