@@ -260,7 +260,7 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
     Example:
 
     ```mlir
-    %addr = sol.alloca : !sol.ptr<i256>
+    %addr = sol.malloc : !sol.array<2 x i256, Memory>
     ```
   }];
 
