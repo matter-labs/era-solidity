@@ -283,6 +283,13 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     } else if (builtin->name.str() == "calldatasize") {
       return b.create<mlir::sol::CallDataSizeOp>(loc);
 
+    } else if (builtin->name.str() == "calldatacopy") {
+      mlir::Value dst = genDefTyExpr(call.arguments[0]);
+      mlir::Value offset = genDefTyExpr(call.arguments[1]);
+      mlir::Value size = genDefTyExpr(call.arguments[2]);
+      b.create<mlir::sol::CallDataCopyOp>(loc, dst, offset, size);
+      return {};
+
     } else if (builtin->name.str() == "dataoffset") {
       auto *objectName = std::get_if<Literal>(&call.arguments[0]);
       assert(objectName);

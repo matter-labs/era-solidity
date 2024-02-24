@@ -178,6 +178,68 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
   }
 };
 
+struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
+  using OpRewritePattern<sol::CallDataCopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallDataCopyOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    auto mod = op->getParentOfType<ModuleOp>();
+    solidity::mlirgen::BuilderHelper h(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter);
+
+    mlir::Value srcOffset;
+    if (inRuntimeContext(op)) {
+      srcOffset = op.getInp1();
+    } else {
+      // Generate GlobCallDataSize load
+      solidity::mlirgen::BuilderHelper h(rewriter);
+      LLVM::GlobalOp globCallDataSzDef = h.getGlobalOp(
+          eravm::GlobCallDataSize, op->getParentOfType<ModuleOp>());
+      auto globCallDataSz =
+          rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
+      srcOffset = rewriter.create<LLVM::LoadOp>(
+          loc, globCallDataSz, eravm::getAlignment(globCallDataSz));
+    }
+
+    mlir::Value dstOffset = op.getInp0();
+    mlir::Value size = op.getInp2();
+
+    // TODO: The following is copied from CodeCopyOpLowering; Move to eravm
+    // util?
+
+    // Generate the destination pointer.
+    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                                         eravm::AddrSpace_Heap);
+    auto dst =
+        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstOffset);
+
+    // Generate the source pointer.
+    LLVM::GlobalOp callDataPtrDef = h.getGlobalOp(eravm::GlobCallDataPtr, mod);
+    auto callDataPtrAddr =
+        rewriter.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
+    unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
+                                        .cast<LLVM::LLVMPointerType>()
+                                        .getAddressSpace();
+    auto callDataPtr = rewriter.create<LLVM::LoadOp>(
+        loc, callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
+    auto src = rewriter.create<LLVM::GEPOp>(
+        loc,
+        /*resultType=*/
+        LLVM::LLVMPointerType::get(mod.getContext(), callDataPtrAddrSpace),
+        /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
+        callDataPtr, ValueRange{srcOffset});
+
+    // Generate the memcpy
+    Value isVolatile = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
+    rewriter.create<LLVM::MemcpyOp>(loc, dst, src, size, isVolatile);
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 struct DataOffsetOpLowering : public OpRewritePattern<sol::DataOffsetOp> {
   using OpRewritePattern<sol::DataOffsetOp>::OpRewritePattern;
 
@@ -470,7 +532,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
   /// Generates the memory allocation code
   void genMemAlloc(Type ty, PatternRewriter &r, Location loc) const {
-    Value freePtr = genMemAlloc(getSize(ty), r, loc);
+    AllocSize size = getSize(ty);
+    Value freePtr = genMemAlloc(size, r, loc);
 
     solidity::mlirgen::BuilderHelper h(r);
 
@@ -490,11 +553,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       } else {
         Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
-        (void)freePtr;
-        (void)callDataSz;
-        // TODO: Implement CallDataCopyOp.
-        // r.create<sol::CallDataCopyOp>(
-        //     loc, h.getConst(loc, freePtr, callDataSz, getSize(ty)))
+        r.create<sol::CallDataCopyOp>(loc, freePtr, callDataSz,
+                                      h.getConst(loc, size));
       }
 
       // TODO: Support other types.
@@ -1104,7 +1164,7 @@ void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats) {
            RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
            MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
-           CallDataSizeOpLowering>(pats.getContext());
+           CallDataSizeOpLowering, CallDataCopyOpLowering>(pats.getContext());
 }
 
 void sol::eravm::populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
