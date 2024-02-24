@@ -78,6 +78,9 @@ namespace {
 // target that lower high level dialects to the llvm dialect.
 //
 
+// FIXME: getGlobalOp() should be used iff we can guarantee the presence of the
+// global op. Only ContractOpLowering is following this.
+
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
   assert(!isa<sol::FuncOp>(op) && !isa<sol::ObjectOp>(op));
@@ -194,8 +197,8 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
     } else {
       // Generate GlobCallDataSize load
       solidity::mlirgen::BuilderHelper h(rewriter);
-      LLVM::GlobalOp globCallDataSzDef = h.getGlobalOp(
-          eravm::GlobCallDataSize, op->getParentOfType<ModuleOp>());
+      LLVM::GlobalOp globCallDataSzDef = h.getOrInsertIntGlobalOp(
+          eravm::GlobCallDataSize, mod, eravm::AddrSpace_Stack);
       auto globCallDataSz =
           rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
       srcOffset = rewriter.create<LLVM::LoadOp>(
@@ -215,7 +218,8 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
         rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstOffset);
 
     // Generate the source pointer.
-    LLVM::GlobalOp callDataPtrDef = h.getGlobalOp(eravm::GlobCallDataPtr, mod);
+    LLVM::GlobalOp callDataPtrDef = h.getOrInsertPtrGlobalOp(
+        eravm::GlobCallDataPtr, mod, eravm::AddrSpace_Generic);
     auto callDataPtrAddr =
         rewriter.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
     unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
@@ -531,7 +535,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   }
 
   /// Generates the memory allocation code
-  void genMemAlloc(Type ty, PatternRewriter &r, Location loc) const {
+  Value genMemAlloc(Type ty, PatternRewriter &r, Location loc) const {
     AllocSize size = getSize(ty);
     Value freePtr = genMemAlloc(size, r, loc);
 
@@ -566,12 +570,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     } else {
       llvm_unreachable("Invalid type");
     }
+
+    return freePtr;
   }
 
   LogicalResult matchAndRewrite(sol::MallocOp op,
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
-    genMemAlloc(op.getAllocType(), r, loc);
+    Value freePtr = genMemAlloc(op.getAllocType(), r, loc);
+    r.replaceOp(op, freePtr);
     return success();
   }
 };
@@ -1160,11 +1167,12 @@ protected:
 } // namespace
 
 void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats) {
-  pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
-           RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
-           DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
-           MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
-           CallDataSizeOpLowering, CallDataCopyOpLowering>(pats.getContext());
+  pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
+           BuiltinRetOpLowering, RevertOpLowering, MLoadOpLowering,
+           MStoreOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
+           CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
+           CallDataLoadOpLowering, CallDataSizeOpLowering,
+           CallDataCopyOpLowering>(pats.getContext());
 }
 
 void sol::eravm::populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
