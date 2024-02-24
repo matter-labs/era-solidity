@@ -411,6 +411,111 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
   }
 };
 
+//
+// TODO: Move evm specific code to solidity::mlirgen
+//
+using AllocSize = int64_t;
+
+struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
+  using OpRewritePattern<sol::MallocOp>::OpRewritePattern;
+
+  /// Returns the total size (in bytes) of type (recursively).
+  AllocSize getTotalSize(Type ty) const {
+    // Array type.
+    if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+      return arrayTy.getSize() * getTotalSize(arrayTy.getEltTy());
+
+      // Struct type.
+    } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+      assert(false && "NYI: Struct type");
+    }
+
+    // Value type.
+    return 32;
+  }
+
+  /// Returns the size (in bytes) of type without recursively calculating the
+  /// element type size.
+  AllocSize getSize(Type ty) const {
+    // Array type.
+    if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+      return arrayTy.getSize() * 32;
+
+      // Struct type.
+    } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+      // TODO: Round up size to multiple of 32
+      assert(false && "NYI: Struct type");
+    }
+
+    // Value type.
+    return 32;
+  }
+
+  /// Generates the memory allocation code
+  Value genMemAlloc(AllocSize size, PatternRewriter &r, Location loc) const {
+    assert(size % 32 == 0);
+
+    solidity::mlirgen::BuilderHelper h(r);
+    Value freePtr = r.create<sol::MLoadOp>(loc, h.getConst(loc, 64));
+
+    Value newFreePtr =
+        r.create<arith::AddIOp>(loc, freePtr, h.getConst(loc, size));
+
+    // TODO: Generate PanicCode::ResourceError condition
+
+    r.create<sol::MStoreOp>(loc, newFreePtr, h.getConst(loc, 64));
+
+    return freePtr;
+  }
+
+  /// Generates the memory allocation code
+  void genMemAlloc(Type ty, PatternRewriter &r, Location loc) const {
+    Value freePtr = genMemAlloc(getSize(ty), r, loc);
+
+    solidity::mlirgen::BuilderHelper h(r);
+
+    // Array type.
+    if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+      assert(arrayTy.getDataLocation() == sol::DataLocation::Memory);
+
+      Type eltTy = arrayTy.getEltTy();
+
+      // Multi-dimensional array.
+      if (auto arrEltTy = eltTy.dyn_cast<sol::ArrayType>()) {
+        assert(false && "NYI: Multi-dimensional arrays");
+
+        // Array of struct.
+      } else if (auto structEltTy = eltTy.dyn_cast<sol::StructType>()) {
+        assert(false && "NYI: Array of struct");
+
+      } else {
+        Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
+        (void)freePtr;
+        (void)callDataSz;
+        // TODO: Implement CallDataCopyOp.
+        // r.create<sol::CallDataCopyOp>(
+        //     loc, h.getConst(loc, freePtr, callDataSz, getSize(ty)))
+      }
+
+      // TODO: Support other types.
+    } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+      assert(structTy.getDataLocation() == sol::DataLocation::Memory);
+
+      assert(false && "NYI: Struct type");
+
+    } else {
+      llvm_unreachable("Invalid type");
+    }
+  }
+
+  LogicalResult matchAndRewrite(sol::MallocOp op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    genMemAlloc(op.getAllocType(), r, loc);
+    return success();
+  }
+};
+
 struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
   using OpRewritePattern<sol::ReturnOp>::OpRewritePattern;
 
