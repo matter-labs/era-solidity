@@ -161,7 +161,7 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
 
     if (inRuntimeContext(op)) {
       eravm::BuilderHelper eravmHelper(rewriter, loc);
-      Value callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
       rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
           op, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     } else {
@@ -188,7 +188,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
       srcOffset = op.getInp1();
     } else {
       eravm::BuilderHelper eravmHelper(rewriter, loc);
-      Value callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
       srcOffset = rewriter.create<LLVM::LoadOp>(
           loc, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     }
@@ -722,7 +722,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
     // Store the calldata ABI size to the global calldata size
     Value abiLen = eravmHelper.getABILen(loc, callDataPtrAddr);
-    Value callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+    LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
     rewriter.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
                                    eravm::getAlignment(callDataSizeAddr));
 

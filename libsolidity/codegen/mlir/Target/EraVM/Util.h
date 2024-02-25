@@ -136,7 +136,7 @@ public:
 
   /// Returns the address to the calldatasize global variable (creates the
   /// variable if it doesn't exist).
-  mlir::Value
+  mlir::LLVM::AddressOfOp
   getCallDataSizeAddr(mlir::ModuleOp mod,
                       std::optional<mlir::Location> loc = std::nullopt);
 
