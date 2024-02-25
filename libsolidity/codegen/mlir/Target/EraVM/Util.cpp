@@ -116,3 +116,10 @@ FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertRevert(ModuleOp mod) {
   fn.setPrivate();
   return FlatSymbolRefAttr::get(mod.getContext(), "__revert");
 }
+
+Value eravm::BuilderHelper::getCallDataSizeAddr(ModuleOp mod,
+                                                std::optional<Location> loc) {
+  LLVM::GlobalOp globCallDataSzDef = h.getOrInsertIntGlobalOp(
+      eravm::GlobCallDataSize, mod, eravm::AddrSpace_Stack);
+  return b.create<LLVM::AddressOfOp>(loc ? *loc : defLoc, globCallDataSzDef);
+}

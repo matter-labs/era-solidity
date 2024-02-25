@@ -162,16 +162,13 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
   LogicalResult matchAndRewrite(sol::CallDataSizeOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
+    auto mod = op->getParentOfType<ModuleOp>();
 
     if (inRuntimeContext(op)) {
-      // Generate GlobCallDataSize load
-      solidity::mlirgen::BuilderHelper h(rewriter);
-      LLVM::GlobalOp globCallDataSzDef = h.getGlobalOp(
-          eravm::GlobCallDataSize, op->getParentOfType<ModuleOp>());
-      auto globCallDataSz =
-          rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
+      eravm::BuilderHelper eravmHelper(rewriter, loc);
+      Value callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
       rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-          op, globCallDataSz, eravm::getAlignment(globCallDataSz));
+          op, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     } else {
       rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
                                                         /*width=*/256);
@@ -195,14 +192,10 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
     if (inRuntimeContext(op)) {
       srcOffset = op.getInp1();
     } else {
-      // Generate GlobCallDataSize load
-      solidity::mlirgen::BuilderHelper h(rewriter);
-      LLVM::GlobalOp globCallDataSzDef = h.getOrInsertIntGlobalOp(
-          eravm::GlobCallDataSize, mod, eravm::AddrSpace_Stack);
-      auto globCallDataSz =
-          rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
+      eravm::BuilderHelper eravmHelper(rewriter, loc);
+      Value callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
       srcOffset = rewriter.create<LLVM::LoadOp>(
-          loc, globCallDataSz, eravm::getAlignment(globCallDataSz));
+          loc, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     }
 
     mlir::Value dstOffset = op.getInp0();
@@ -646,7 +639,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     auto mod = objOp->getParentOfType<ModuleOp>();
     auto i256Ty = rewriter.getIntegerType(256);
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter, loc);
 
     // Track the names of the existing function in the module.
     std::set<std::string> fnNamesInMod;
@@ -746,17 +739,14 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
     // Store the calldata ABI size to the global calldata size
     Value abiLen = eravmHelper.getABILen(loc, globCallDataPtr);
-    LLVM::GlobalOp globCallDataSzDef =
-        h.getGlobalOp(eravm::GlobCallDataSize, mod);
-    Value globCallDataSz =
-        rewriter.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
-    rewriter.create<LLVM::StoreOp>(loc, abiLen, globCallDataSz,
-                                   eravm::getAlignment(globCallDataSz));
+    Value callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+    rewriter.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
+                                   eravm::getAlignment(callDataSizeAddr));
 
     // Store calldatasize[calldata abi arg] to the global ret data ptr and
     // active ptr
     auto callDataSz = rewriter.create<LLVM::LoadOp>(
-        loc, globCallDataSz, eravm::getAlignment(globCallDataSz));
+        loc, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     auto retDataABIInitializer = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/

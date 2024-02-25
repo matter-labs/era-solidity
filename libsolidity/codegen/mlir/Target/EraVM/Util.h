@@ -37,6 +37,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 namespace eravm {
 
@@ -101,10 +102,15 @@ unsigned getAlignment(mlir::Value ptr);
 /// Builder extension for EraVM
 class BuilderHelper {
   mlir::OpBuilder &b;
+  mlir::Location defLoc;
   solidity::mlirgen::BuilderHelper h;
 
 public:
-  explicit BuilderHelper(mlir::OpBuilder &b) : b(b), h(b) {}
+  explicit BuilderHelper(mlir::OpBuilder &b)
+      : b(b), defLoc(b.getUnknownLoc()), h(b) {}
+
+  explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
+      : b(b), defLoc(loc), h(b) {}
 
   /// Initialize global variables for EraVM
   void initGlobs(mlir::Location loc, mlir::ModuleOp mod);
@@ -127,6 +133,12 @@ public:
 
   /// Returns an existing or a new (if not found) revert function symbol.
   mlir::FlatSymbolRefAttr getOrInsertRevert(mlir::ModuleOp mod);
+
+  /// Returns the address to the calldatasize global variable (creates the
+  /// variable if it doesn't exist).
+  mlir::Value
+  getCallDataSizeAddr(mlir::ModuleOp mod,
+                      std::optional<mlir::Location> loc = std::nullopt);
 };
 
 } // namespace eravm
