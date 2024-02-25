@@ -139,6 +139,18 @@ public:
   mlir::Value
   getCallDataSizeAddr(mlir::ModuleOp mod,
                       std::optional<mlir::Location> loc = std::nullopt);
+
+  /// Returns the address to the ptr_calldata global variable (creates the
+  /// variable if it doesn't exist).
+  mlir::LLVM::AddressOfOp
+  getCallDataPtrAddr(mlir::ModuleOp mod,
+                     std::optional<mlir::Location> loc = std::nullopt);
+
+  /// Loads the ptr_calldata global variable (creates the variable if it doesn't
+  /// exist).
+  mlir::LLVM::LoadOp
+  loadCallDataPtr(mlir::ModuleOp mod,
+                  std::optional<mlir::Location> loc = std::nullopt);
 };
 
 } // namespace eravm

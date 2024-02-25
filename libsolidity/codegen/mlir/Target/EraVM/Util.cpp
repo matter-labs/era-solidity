@@ -123,3 +123,19 @@ Value eravm::BuilderHelper::getCallDataSizeAddr(ModuleOp mod,
       eravm::GlobCallDataSize, mod, eravm::AddrSpace_Stack);
   return b.create<LLVM::AddressOfOp>(loc ? *loc : defLoc, globCallDataSzDef);
 }
+
+LLVM::AddressOfOp
+eravm::BuilderHelper::getCallDataPtrAddr(ModuleOp mod,
+                                         std::optional<Location> loc) {
+  LLVM::GlobalOp callDataPtrDef = h.getOrInsertPtrGlobalOp(
+      eravm::GlobCallDataPtr, mod, eravm::AddrSpace_Generic);
+  return b.create<LLVM::AddressOfOp>(loc ? *loc : defLoc, callDataPtrDef);
+}
+
+LLVM::LoadOp
+eravm::BuilderHelper::loadCallDataPtr(ModuleOp mod,
+                                      std::optional<Location> loc) {
+  LLVM::AddressOfOp callDataPtrAddr = getCallDataPtrAddr(mod, loc);
+  return b.create<LLVM::LoadOp>(loc ? *loc : defLoc, callDataPtrAddr,
+                                eravm::getAlignment(callDataPtrAddr));
+}

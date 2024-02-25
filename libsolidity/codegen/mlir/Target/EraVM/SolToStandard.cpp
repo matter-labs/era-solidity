@@ -121,21 +121,16 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter, loc);
 
     Value offset = op.getInp0();
 
     if (inRuntimeContext(op)) {
       // Generate the `GlobCallDataPtr` + `offset` load
-      LLVM::GlobalOp callDataPtrDef = h.getGlobalOp(
-          eravm::GlobCallDataPtr, op->getParentOfType<ModuleOp>());
-      auto callDataPtrAddr =
-          rewriter.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
-      unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
-                                          .cast<LLVM::LLVMPointerType>()
-                                          .getAddressSpace();
-      auto callDataPtr = rewriter.create<LLVM::LoadOp>(
-          loc, callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
+      LLVM::LoadOp callDataPtr =
+          eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
+      unsigned callDataPtrAddrSpace =
+          callDataPtr.getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
       auto callDataOffset = rewriter.create<LLVM::GEPOp>(
           loc,
           /*resultType=*/
@@ -186,7 +181,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
     mlir::Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter, loc);
 
     mlir::Value srcOffset;
     if (inRuntimeContext(op)) {
@@ -211,15 +206,10 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
         rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstOffset);
 
     // Generate the source pointer.
-    LLVM::GlobalOp callDataPtrDef = h.getOrInsertPtrGlobalOp(
-        eravm::GlobCallDataPtr, mod, eravm::AddrSpace_Generic);
-    auto callDataPtrAddr =
-        rewriter.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
-    unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
-                                        .cast<LLVM::LLVMPointerType>()
-                                        .getAddressSpace();
-    auto callDataPtr = rewriter.create<LLVM::LoadOp>(
-        loc, callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
+    LLVM::LoadOp callDataPtr =
+        eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
+    unsigned callDataPtrAddrSpace =
+        callDataPtr.getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
@@ -273,7 +263,7 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
     mlir::Location loc = op->getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter);
+    eravm::BuilderHelper eravmHelper(rewriter, loc);
 
     assert(!inRuntimeContext(op) &&
            "codecopy is not supported in runtime context");
@@ -289,14 +279,10 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
         rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstOffset);
 
     // Generate the source pointer
-    LLVM::GlobalOp callDataPtrDef = h.getGlobalOp(eravm::GlobCallDataPtr, mod);
-    auto callDataPtrAddr =
-        rewriter.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
-    unsigned callDataPtrAddrSpace = callDataPtrDef.getType()
-                                        .cast<LLVM::LLVMPointerType>()
-                                        .getAddressSpace();
-    auto callDataPtr = rewriter.create<LLVM::LoadOp>(
-        loc, callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
+    LLVM::LoadOp callDataPtr =
+        eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
+    unsigned callDataPtrAddrSpace =
+        callDataPtr.getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
@@ -729,16 +715,13 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     eravmHelper.initGlobs(loc, mod);
 
     // Store the calldata ABI arg to the global calldata ptr
-    LLVM::GlobalOp globCallDataPtrDef = h.getOrInsertPtrGlobalOp(
-        eravm::GlobCallDataPtr, mod, eravm::AddrSpace_Generic);
-    Value globCallDataPtr =
-        rewriter.create<LLVM::AddressOfOp>(loc, globCallDataPtrDef);
+    LLVM::AddressOfOp callDataPtrAddr = eravmHelper.getCallDataPtrAddr(mod);
     rewriter.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
-        globCallDataPtr, eravm::getAlignment(globCallDataPtr));
+        callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
 
     // Store the calldata ABI size to the global calldata size
-    Value abiLen = eravmHelper.getABILen(loc, globCallDataPtr);
+    Value abiLen = eravmHelper.getABILen(loc, callDataPtrAddr);
     Value callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
     rewriter.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
                                    eravm::getAlignment(callDataSizeAddr));
@@ -751,7 +734,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         loc,
         /*resultType=*/
         LLVM::LLVMPointerType::get(mod.getContext(),
-                                   globCallDataPtrDef.getAddrSpace()),
+                                   callDataPtrAddr.getGlobal().getAddrSpace()),
         /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
         entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataSz.getResult());
