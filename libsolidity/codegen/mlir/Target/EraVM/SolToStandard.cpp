@@ -711,17 +711,17 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     }
     rewriter.setInsertionPointToStart(entryBlk);
 
-    // Initialize globals
-    eravmHelper.initGlobs(loc, mod);
+    // Initialize globals.
+    eravmHelper.initGlobs(mod);
 
-    // Store the calldata ABI arg to the global calldata ptr
+    // Store the calldata ABI arg to the global calldata ptr.
     LLVM::AddressOfOp callDataPtrAddr = eravmHelper.getCallDataPtrAddr(mod);
     rewriter.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
 
-    // Store the calldata ABI size to the global calldata size
-    Value abiLen = eravmHelper.getABILen(loc, callDataPtrAddr);
+    // Store the calldata ABI size to the global calldata size.
+    Value abiLen = eravmHelper.getABILen(callDataPtrAddr);
     LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
     rewriter.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
                                    eravm::getAlignment(callDataSizeAddr));

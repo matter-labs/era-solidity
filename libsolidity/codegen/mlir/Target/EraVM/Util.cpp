@@ -45,7 +45,10 @@ unsigned eravm::getAlignment(Value ptr) {
   return getAlignment(static_cast<AddrSpace>(ty.getAddressSpace()));
 }
 
-void eravm::BuilderHelper::initGlobs(Location loc, ModuleOp mod) {
+void eravm::BuilderHelper::initGlobs(ModuleOp mod,
+                                     std::optional<Location> locArg) {
+
+  Location loc = locArg ? *locArg : defLoc;
 
   auto initInt = [&](const char *name) {
     LLVM::GlobalOp globOp =
@@ -75,10 +78,13 @@ void eravm::BuilderHelper::initGlobs(Location loc, ModuleOp mod) {
       extraABIDataAddr);
 }
 
-Value eravm::BuilderHelper::getABILen(Location loc, Value ptr) {
+Value eravm::BuilderHelper::getABILen(Value ptr,
+                                      std::optional<Location> locArg) {
   auto i256Ty = b.getIntegerType(256);
+  Location loc = locArg ? *locArg : defLoc;
 
   Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
+  // TODO: Pass argLoc to h.getConst once it has support for default location.
   Value lShr = b.create<LLVM::LShrOp>(loc, ptrToInt,
                                       h.getConst(loc, eravm::BitLen_X32 * 3));
   return b.create<LLVM::AndOp>(loc, lShr, h.getConst(loc, UINT_MAX));

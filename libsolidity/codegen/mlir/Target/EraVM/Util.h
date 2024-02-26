@@ -112,11 +112,13 @@ public:
   explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc), h(b) {}
 
-  /// Initialize global variables for EraVM
-  void initGlobs(mlir::Location loc, mlir::ModuleOp mod);
+  /// Initialize global variables for EraVM.
+  void initGlobs(mlir::ModuleOp mod,
+                 std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Generates and return the ABI length for the pointer `ptr`
-  mlir::Value getABILen(mlir::Location loc, mlir::Value ptr);
+  /// Generates and return the ABI length for the pointer `ptr`.
+  mlir::Value getABILen(mlir::Value ptr,
+                        std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Returns an existing or a new (if not found) creation function.
   mlir::sol::FuncOp getOrInsertCreationFuncOp(mlir::StringRef name,
