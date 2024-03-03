@@ -570,8 +570,8 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r);
 
-    Type addrTy = op.getPtr().getType();
-    Value addr = op.getPtr();
+    Type addrTy = op.getAddr().getType();
+    Value addr = op.getAddr();
 
     auto dataLoc = sol::DataLocation::Stack;
     if (auto arrTy = addrTy.dyn_cast<sol::ArrayType>()) {
@@ -593,7 +593,7 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
     }
     case sol::DataLocation::Memory: {
       assert(!op.getIndices().empty());
-      Value remappedAddr = adaptor.getPtr();
+      Value remappedAddr = adaptor.getAddr();
 
       // TODO: Generate PanicCode::ArrayOutOfBounds check.
 

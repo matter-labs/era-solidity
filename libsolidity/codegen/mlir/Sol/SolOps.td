@@ -275,21 +275,21 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
 // conforms to that of solidity.
 
 def Sol_LoadOp : Sol_Op<"load"> {
-  let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$ptr,
+  let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$addr,
                        Variadic<AnySignlessInteger>:$indices);
   let results = (outs AnyType:$out);
   let assemblyFormat = [{
-    $ptr (`[` $indices^ `:` type($indices) `]`)? attr-dict
-      `:` type($ptr) `,` type($out)
+    $addr (`[` $indices^ `:` type($indices) `]`)? attr-dict
+      `:` type($addr) `,` type($out)
   }];
 }
 
 def Sol_StoreOp : Sol_Op<"store"> {
-  let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$ptr,
+  let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$addr,
                        Variadic<AnySignlessInteger>:$indices);
   let assemblyFormat = [{
-    $val `:` type($val) `,` $ptr (`[` $indices^ `:` type($indices) `]`)?
-      attr-dict `:` type($ptr)
+    $val `:` type($val) `,` $addr (`[` $indices^ `:` type($indices) `]`)?
+      attr-dict `:` type($addr)
   }];
 }
 
