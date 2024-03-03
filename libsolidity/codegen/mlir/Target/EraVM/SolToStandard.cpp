@@ -562,6 +562,55 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   }
 };
 
+struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
+  using OpConversionPattern<sol::LoadOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::LoadOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r);
+
+    Type addrTy = op.getPtr().getType();
+    Value addr = op.getPtr();
+
+    auto dataLoc = sol::DataLocation::Stack;
+    if (auto arrTy = addrTy.dyn_cast<sol::ArrayType>()) {
+      dataLoc = arrTy.getDataLocation();
+    } else if (auto structTy = addrTy.dyn_cast<sol::StructType>()) {
+      dataLoc = structTy.getDataLocation();
+    }
+
+    switch (dataLoc) {
+    case sol::DataLocation::Stack: {
+      auto stkPtrTy =
+          LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
+      if (!op.getIndices().empty())
+        addr = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
+                                     /*basePtrType=*/addrTy, addr,
+                                     op.getIndices());
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, addr, eravm::getAlignment(addr));
+      break;
+    }
+    case sol::DataLocation::Memory: {
+      assert(!op.getIndices().empty());
+      Value remappedAddr = adaptor.getPtr();
+
+      // TODO: Generate PanicCode::ArrayOutOfBounds check.
+
+      Value idx = op.getIndices()[0];
+      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(loc, 32));
+      auto offset = r.create<arith::AddIOp>(loc, remappedAddr, scaledIdx);
+      r.replaceOpWithNewOp<sol::MLoadOp>(op, offset);
+      break;
+    }
+    default:
+      assert(false && "NYI: Storage and calldata data-locations");
+      break;
+    };
+    return success();
+  }
+};
+
 struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
   using OpRewritePattern<sol::ReturnOp>::OpRewritePattern;
 
@@ -1085,6 +1134,23 @@ struct ConvertSolToStandard
       tgt = clTgt;
     }
 
+    // Create the TypeConverter.
+    TypeConverter tyConv;
+
+    tyConv.addConversion([&](IntegerType type) -> Type { return type; });
+
+    tyConv.addConversion([&](sol::ArrayType ty) -> Type {
+      switch (ty.getDataLocation()) {
+      case sol::DataLocation::Memory:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+      default:
+        break;
+      }
+
+      return ty;
+    });
+
     // FIXME: Some of the conversion patterns depends on the ancestor/descendant
     // sol.func ops (e.g.: checking the runtime/creation context). Also APIs
     // like getOrInsert*FuncOp that are used in the conversion pass works with
@@ -1114,7 +1180,7 @@ struct ConvertSolToStandard
     RewritePatternSet initialPats(&getContext());
     // TODO: Add the framework for adding patterns specific to the target.
     assert(tgt == solidity::mlirgen::Target::EraVM);
-    sol::eravm::populateInitialSolToStdConvPatterns(initialPats);
+    sol::eravm::populateInitialSolToStdConvPatterns(initialPats, tyConv);
     if (failed(applyPartialConversion(mod, initialConvTgt,
                                       std::move(initialPats))))
       signalPassFailure();
@@ -1139,7 +1205,9 @@ protected:
 
 } // namespace
 
-void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats) {
+void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
+                                                     TypeConverter &tyConv) {
+  pats.add<LoadOpLowering>(tyConv, pats.getContext());
   pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
            BuiltinRetOpLowering, RevertOpLowering, MLoadOpLowering,
            MStoreOpLowering, DataOffsetOpLowering, DataSizeOpLowering,

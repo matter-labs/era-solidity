@@ -25,6 +25,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
@@ -38,7 +39,8 @@ namespace eravm {
 
 /// Populates sol dialect to standard dialects conversion for the first
 /// conversion pass.
-void populateInitialSolToStdConvPatterns(RewritePatternSet &pats);
+void populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
+                                         TypeConverter &tyConv);
 /// Populates sol dialect to standard dialects conversion for the last
 /// conversion pass.
 void populateFinalSolToStdConvPatterns(RewritePatternSet &pats);

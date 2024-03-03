@@ -59,7 +59,8 @@ def Sol_DataLocation : I32EnumAttr<"DataLocation",
                                    "Data-location in reference-types",
                                    [I32EnumAttrCase<"Storage", 0>,
                                     I32EnumAttrCase<"CallData", 1>,
-                                    I32EnumAttrCase<"Memory", 2>]> {
+                                    I32EnumAttrCase<"Memory", 2>,
+                                    I32EnumAttrCase<"Stack", 3>]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::sol";
 }

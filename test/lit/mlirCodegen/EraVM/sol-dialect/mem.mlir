@@ -3,6 +3,8 @@
 module {
   sol.func @malloc() {
     %mem = sol.malloc : !sol.array<3 x i256, Memory>
+    %zero = arith.constant 0 : i256
+    %ld = sol.load %mem[%zero : i256] : !sol.array<3 x i256, Memory>, i256
     sol.return
   }
 }
@@ -30,6 +32,12 @@ module {
 // CHECK-NEXT:     %9 = llvm.getelementptr %8[%5] : (!llvm.ptr<3>, i256) -> !llvm.ptr<3>, i8
 // CHECK-NEXT:     %10 = llvm.mlir.constant(false) : i1
 // CHECK-NEXT:     "llvm.intr.memcpy"(%6, %9, %c96_i256_1, %10) : (!llvm.ptr<1>, !llvm.ptr<3>, i256, i1) -> ()
+// CHECK-NEXT:     %c0_i256_2 = arith.constant 0 : i256
+// CHECK-NEXT:     %c32_i256 = arith.constant 32 : i256
+// CHECK-NEXT:     %11 = arith.muli %c0_i256_2, %c32_i256 : i256
+// CHECK-NEXT:     %12 = arith.addi %1, %11 : i256
+// CHECK-NEXT:     %13 = llvm.inttoptr %12 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:     %14 = llvm.load %13 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
