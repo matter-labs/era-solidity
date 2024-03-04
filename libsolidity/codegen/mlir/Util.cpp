@@ -95,10 +95,12 @@ BuilderHelper::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
   return fn;
 }
 
-void BuilderHelper::createCallToUnreachableWrapper(Location loc, ModuleOp mod) {
+void BuilderHelper::createCallToUnreachableWrapper(
+    ModuleOp mod, std::optional<Location> locArg) {
   auto fnTy = FunctionType::get(mod.getContext(), {}, {});
   sol::FuncOp fn =
       getOrInsertFuncOp(".unreachable", fnTy, LLVM::Linkage::Private, mod);
+  Location loc = locArg ? *locArg : defLoc;
   b.create<sol::CallOp>(
       loc, FlatSymbolRefAttr::get(mod.getContext(), ".unreachable"),
       TypeRange{}, ValueRange{});

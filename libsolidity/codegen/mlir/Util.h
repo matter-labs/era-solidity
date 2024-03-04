@@ -35,32 +35,41 @@
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include <optional>
 
 namespace solidity {
 namespace mlirgen {
 
 class BuilderHelper {
   mlir::OpBuilder &b;
+  mlir::Location defLoc;
 
 public:
-  explicit BuilderHelper(mlir::OpBuilder &b) : b(b) {}
+  explicit BuilderHelper(mlir::OpBuilder &b)
+      : b(b), defLoc(b.getUnknownLoc()) {}
 
-  mlir::Value getConst(mlir::Location loc, int64_t val, unsigned width = 256) {
+  explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
+      : b(b), defLoc(loc) {}
+
+  mlir::Value getConst(int64_t val, unsigned width = 256,
+                       std::optional<mlir::Location> locArg = std::nullopt) {
     mlir::IntegerType ty = b.getIntegerType(width);
     auto op = b.create<mlir::arith::ConstantOp>(
-        loc, b.getIntegerAttr(ty, llvm::APInt(width, val, /*isSigned=*/true)));
+        locArg ? *locArg : defLoc,
+        b.getIntegerAttr(ty, llvm::APInt(width, val, /*isSigned=*/true)));
     return op.getResult();
   }
 
   // FIXME: How do we create a constant int array? What's wrong with using
   // LLVM::LLVMArrayType instead of VectorType here?  Is
   // https://github.com/llvm/llvm-project/pull/65508 the only way?
-  mlir::Value getConstSplat(mlir::Location loc,
-                            llvm::ArrayRef<llvm::APInt> vals,
-                            unsigned width = 256) {
+  mlir::Value
+  getConstSplat(llvm::ArrayRef<llvm::APInt> vals, unsigned width = 256,
+                std::optional<mlir::Location> locArg = std::nullopt) {
     auto ty = mlir::VectorType::get(vals.size(), b.getIntegerType(width));
     auto attr = mlir::DenseIntElementsAttr::get(ty, vals);
-    auto op = b.create<mlir::LLVM::ConstantOp>(loc, ty, attr);
+    auto op =
+        b.create<mlir::LLVM::ConstantOp>(locArg ? *locArg : defLoc, ty, attr);
     return op.getResult();
   }
 
@@ -94,7 +103,8 @@ public:
 
   /// Creates a call to a wrapper function of the LLVM::UnreachableOp. This is a
   /// hack to create a non-terminator unreachable op
-  void createCallToUnreachableWrapper(mlir::Location loc, mlir::ModuleOp mod);
+  void createCallToUnreachableWrapper(
+      mlir::ModuleOp mod, std::optional<mlir::Location> locArg = std::nullopt);
 };
 
 } // namespace mlirgen

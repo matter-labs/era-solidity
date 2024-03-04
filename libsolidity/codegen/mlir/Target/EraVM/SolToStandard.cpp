@@ -360,7 +360,7 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
     mlir::Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
 
-    solidity::mlirgen::BuilderHelper h(rewriter);
+    solidity::mlirgen::BuilderHelper h(rewriter, loc);
     eravm::BuilderHelper eravmHelper(rewriter);
 
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
@@ -368,12 +368,11 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
     FlatSymbolRefAttr revertFunc = eravmHelper.getOrInsertRevert(mod);
     rewriter.create<sol::CallOp>(
         loc, revertFunc, TypeRange{},
-        ValueRange{
-            op.getInp0(), op.getInp1(),
-            h.getConst(loc, inRuntimeContext(op)
-                                ? eravm::RetForwardPageType::UseHeap
-                                : eravm::RetForwardPageType::UseAuxHeap)});
-    h.createCallToUnreachableWrapper(loc, mod);
+        ValueRange{op.getInp0(), op.getInp1(),
+                   h.getConst(inRuntimeContext(op)
+                                  ? eravm::RetForwardPageType::UseHeap
+                                  : eravm::RetForwardPageType::UseAuxHeap)});
+    h.createCallToUnreachableWrapper(mod);
 
     rewriter.eraseOp(op);
     return success();
@@ -388,7 +387,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     mlir::Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
 
-    solidity::mlirgen::BuilderHelper h(rewriter);
+    solidity::mlirgen::BuilderHelper h(rewriter, loc);
     eravm::BuilderHelper eravmHelper(rewriter);
     SymbolRefAttr returnFunc =
         eravmHelper.getOrInsertReturn(op->getParentOfType<ModuleOp>());
@@ -402,8 +401,8 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
       rewriter.create<sol::CallOp>(
           loc, returnFunc, TypeRange{},
           ValueRange{op.getLhs(), op.getRhs(),
-                     h.getConst(loc, eravm::RetForwardPageType::UseHeap)});
-      h.createCallToUnreachableWrapper(loc, mod);
+                     h.getConst(eravm::RetForwardPageType::UseHeap)});
+      h.createCallToUnreachableWrapper(mod);
 
       rewriter.eraseOp(op);
       return success();
@@ -418,8 +417,8 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     // Store ByteLen_Field to the immutables offset
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        h.getConst(loc, eravm::HeapAuxOffsetCtorRetData));
-    rewriter.create<LLVM::StoreOp>(loc, h.getConst(loc, eravm::ByteLen_Field),
+        h.getConst(eravm::HeapAuxOffsetCtorRetData));
+    rewriter.create<LLVM::StoreOp>(loc, h.getConst(eravm::ByteLen_Field),
                                    immutablesOffsetPtr,
                                    eravm::getAlignment(immutablesOffsetPtr));
 
@@ -428,28 +427,27 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     auto immutablesSize = 0; // TODO: Implement this!
     auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        h.getConst(loc,
-                   eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field));
+        h.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field));
     rewriter.create<LLVM::StoreOp>(
-        loc, h.getConst(loc, immutablesSize / eravm::ByteLen_Field),
+        loc, h.getConst(immutablesSize / eravm::ByteLen_Field),
         immutablesNumPtr, eravm::getAlignment(immutablesNumPtr));
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
     // ByteLen_Field * 2
     auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
-        loc, h.getConst(loc, immutablesSize), h.getConst(loc, 2));
-    auto returnDataLen = rewriter.create<arith::AddIOp>(
-        loc, immutablesCalcSize.getResult(),
-        h.getConst(loc, eravm::ByteLen_Field * 2));
+        loc, h.getConst(immutablesSize), h.getConst(2));
+    auto returnDataLen =
+        rewriter.create<arith::AddIOp>(loc, immutablesCalcSize.getResult(),
+                                       h.getConst(eravm::ByteLen_Field * 2));
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
     // RetForwardPageType::UseAuxHeap)) and the unreachable op
     rewriter.create<sol::CallOp>(
         loc, returnFunc, TypeRange{},
-        ValueRange{h.getConst(loc, eravm::HeapAuxOffsetCtorRetData),
+        ValueRange{h.getConst(eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(),
-                   h.getConst(loc, eravm::RetForwardPageType::UseAuxHeap)});
-    h.createCallToUnreachableWrapper(loc, mod);
+                   h.getConst(eravm::RetForwardPageType::UseAuxHeap)});
+    h.createCallToUnreachableWrapper(mod);
 
     rewriter.eraseOp(op);
     return success();
@@ -483,12 +481,11 @@ struct AllocaOpLowering : public OpConversionPattern<sol::AllocaOp> {
   LogicalResult matchAndRewrite(sol::AllocaOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderHelper h(r);
+    solidity::mlirgen::BuilderHelper h(r, loc);
 
     Type convertedEltTy = getTypeConverter()->convertType(op.getAllocType());
     AllocSize size = getTotalSize<1>(op.getAllocType());
-    r.replaceOpWithNewOp<LLVM::AllocaOp>(op, convertedEltTy,
-                                         h.getConst(loc, size));
+    r.replaceOpWithNewOp<LLVM::AllocaOp>(op, convertedEltTy, h.getConst(size));
     return success();
   }
 };
@@ -517,15 +514,14 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   Value genMemAlloc(AllocSize size, PatternRewriter &r, Location loc) const {
     assert(size % 32 == 0);
 
-    solidity::mlirgen::BuilderHelper h(r);
-    Value freePtr = r.create<sol::MLoadOp>(loc, h.getConst(loc, 64));
+    solidity::mlirgen::BuilderHelper h(r, loc);
+    Value freePtr = r.create<sol::MLoadOp>(loc, h.getConst(64));
 
-    Value newFreePtr =
-        r.create<arith::AddIOp>(loc, freePtr, h.getConst(loc, size));
+    Value newFreePtr = r.create<arith::AddIOp>(loc, freePtr, h.getConst(size));
 
     // TODO: Generate PanicCode::ResourceError condition
 
-    r.create<sol::MStoreOp>(loc, newFreePtr, h.getConst(loc, 64));
+    r.create<sol::MStoreOp>(loc, newFreePtr, h.getConst(64));
 
     return freePtr;
   }
@@ -535,7 +531,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     AllocSize size = getSize(ty);
     Value freePtr = genMemAlloc(size, r, loc);
 
-    solidity::mlirgen::BuilderHelper h(r);
+    solidity::mlirgen::BuilderHelper h(r, loc);
 
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
@@ -554,7 +550,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       } else {
         Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
         r.create<sol::CallDataCopyOp>(loc, freePtr, callDataSz,
-                                      h.getConst(loc, size));
+                                      h.getConst(size));
       }
 
       // TODO: Support other types.
@@ -585,7 +581,7 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
   LogicalResult matchAndRewrite(sol::LoadOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderHelper h(r);
+    solidity::mlirgen::BuilderHelper h(r, loc);
 
     Value addr = op.getAddr();
     Type addrTy = addr.getType();
@@ -617,7 +613,7 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
       // TODO: Generate PanicCode::ArrayOutOfBounds check.
 
       Value idx = op.getIndices()[0];
-      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(loc, 32));
+      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
       auto offset = r.create<arith::AddIOp>(loc, remappedAddr, scaledIdx);
       r.replaceOpWithNewOp<sol::MLoadOp>(op, offset);
       break;
@@ -692,7 +688,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
     auto mod = objOp->getParentOfType<ModuleOp>();
     auto i256Ty = rewriter.getIntegerType(256);
-    solidity::mlirgen::BuilderHelper h(rewriter);
+    solidity::mlirgen::BuilderHelper h(rewriter, loc);
     eravm::BuilderHelper eravmHelper(rewriter, loc);
 
     // Track the names of the existing function in the module.
@@ -835,7 +831,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
           LLVM::LLVMPointerType::get(mod.getContext(),
                                      globExtraABIDataDef.getAddrSpace()),
           /*basePtrType=*/globExtraABIDataDef.getType(), globExtraABIData,
-          ValueRange{h.getConst(loc, 0), h.getConst(loc, i - 2)});
+          ValueRange{h.getConst(0), h.getConst(i - 2)});
       // FIXME: How does the opaque ptr geps with scalar element types lower
       // without explictly setting the elem_type attr?
       gep.setElemTypeAttr(TypeAttr::get(globExtraABIDataDef.getType()));
@@ -846,10 +842,10 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // Check Deploy call flag
     auto deployCallFlag = rewriter.create<arith::AndIOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
-        h.getConst(loc, 1));
+        h.getConst(1));
     auto isDeployCallFlag = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::eq, deployCallFlag.getResult(),
-        h.getConst(loc, 1));
+        h.getConst(1));
 
     // Create the __runtime function
     sol::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
@@ -913,7 +909,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   LogicalResult matchAndRewrite(sol::ContractOp op,
                                 PatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
-    solidity::mlirgen::BuilderHelper h(r);
+    solidity::mlirgen::BuilderHelper h(r, loc);
 
     // Generate the creation and runtime ObjectOp.
     auto creationObj = r.replaceOpWithNewOp<sol::ObjectOp>(op, op.getSymName());
@@ -947,8 +943,8 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       mlir::Value freeMemStart{};
       if (/* TODO: op.memoryUnsafeInlineAssemblySeen */ false) {
         freeMemStart = h.getConst(
-            loc, solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
-                     /* TODO: op.getReservedMem() */ 0);
+            solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
+            /* TODO: op.getReservedMem() */ 0);
       } else {
         freeMemStart = r.create<sol::MemGuardOp>(
             loc,
@@ -957,7 +953,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
                 solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
                     /* TODO: op.getReservedMem() */ 0));
       }
-      r.create<sol::MStoreOp>(loc, h.getConst(loc, 64), freeMemStart);
+      r.create<sol::MStoreOp>(loc, h.getConst(64), freeMemStart);
     };
     genMemInit();
 
@@ -965,12 +961,12 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     auto genCallValChk = [&]() {
       auto callVal = r.create<sol::CallValOp>(loc);
       auto callValChk = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
-                                                callVal, h.getConst(loc, 0));
+                                                callVal, h.getConst(0));
       auto ifOp =
           r.create<scf::IfOp>(loc, callValChk, /*withElseRegion=*/false);
       OpBuilder::InsertionGuard insertGuard(r);
       r.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      r.create<sol::RevertOp>(loc, h.getConst(loc, 0), h.getConst(loc, 0));
+      r.create<sol::RevertOp>(loc, h.getConst(0), h.getConst(0));
     };
 
     assert(!op.getCtorAttr() && "NYI: Ctors");
@@ -985,7 +981,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     }
 
     // Generate the codecopy of the runtime object to the free ptr.
-    auto freePtr = r.create<sol::MLoadOp>(loc, h.getConst(loc, 64));
+    auto freePtr = r.create<sol::MLoadOp>(loc, h.getConst(64));
     auto runtimeObjSym = FlatSymbolRefAttr::get(runtimeObj);
     auto runtimeObjOffset = r.create<sol::DataOffsetOp>(loc, runtimeObjSym);
     auto runtimeObjSize = r.create<sol::DataSizeOp>(loc, runtimeObjSym);
@@ -1028,13 +1024,13 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       auto callDataSz = r.create<sol::CallDataSizeOp>(loc);
       // Generate `iszero(lt(calldatasize(), 4))`.
       auto callDataSzCmp = r.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::uge, callDataSz, h.getConst(loc, 4));
+          loc, arith::CmpIPredicate::uge, callDataSz, h.getConst(4));
       auto ifOp =
           r.create<scf::IfOp>(loc, callDataSzCmp, /*withElseRegion=*/false);
 
       OpBuilder::InsertionGuard insertGuard(r);
       r.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      auto callDataLd = r.create<sol::CallDataLoadOp>(loc, h.getConst(loc, 0));
+      auto callDataLd = r.create<sol::CallDataLoadOp>(loc, h.getConst(0));
 
       // Collect the ABI selectors and create the switch case attribute.
       std::vector<llvm::APInt> selectors;
@@ -1097,8 +1093,8 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
         auto out = r.create<sol::CallOp>(loc, func, ValueRange{});
         assert(out.getType(0) == r.getIntegerType(256) &&
                "NYI: Non-ui256 return type");
-        auto memPos = r.create<sol::MLoadOp>(loc, h.getConst(loc, 64));
-        auto memEnd = r.create<arith::AddIOp>(loc, memPos, h.getConst(loc, 32));
+        auto memPos = r.create<sol::MLoadOp>(loc, h.getConst(64));
+        auto memEnd = r.create<arith::AddIOp>(loc, memPos, h.getConst(32));
         auto retMemPos = r.create<arith::SubIOp>(loc, memEnd, memPos);
         r.create<sol::MStoreOp>(loc, retMemPos, out.getResult(0));
         r.create<mlir::scf::YieldOp>(loc);
@@ -1116,7 +1112,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 
     } else {
       // TODO: Generate error message.
-      r.create<sol::RevertOp>(loc, h.getConst(loc, 0), h.getConst(loc, 0));
+      r.create<sol::RevertOp>(loc, h.getConst(0), h.getConst(0));
     }
 
     // TODO: Subobjects

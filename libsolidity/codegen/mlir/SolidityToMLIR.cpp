@@ -375,7 +375,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
     // TODO: Support non-scalars.
     mlir::Value addr = b.create<mlir::LLVM::AllocaOp>(
                             inpLoc, mlir::LLVM::LLVMPointerType::get(inpTy),
-                            h.getConst(inpLoc, 1), /*alignment=*/32)
+                            h.getConst(1, 256, inpLoc), /*alignment=*/32)
                            .getResult();
     setMemRef(param.get(), addr);
     b.create<mlir::LLVM::StoreOp>(inpLoc, arg, addr, /*alignment=*/32);

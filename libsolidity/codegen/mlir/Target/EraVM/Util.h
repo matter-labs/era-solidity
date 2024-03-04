@@ -107,10 +107,10 @@ class BuilderHelper {
 
 public:
   explicit BuilderHelper(mlir::OpBuilder &b)
-      : b(b), defLoc(b.getUnknownLoc()), h(b) {}
+      : b(b), defLoc(b.getUnknownLoc()), h(b, defLoc) {}
 
   explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
-      : b(b), defLoc(loc), h(b) {}
+      : b(b), defLoc(loc), h(b, defLoc) {}
 
   /// Initialize global variables for EraVM.
   void initGlobs(mlir::ModuleOp mod,

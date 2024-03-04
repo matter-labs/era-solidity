@@ -191,14 +191,14 @@ mlir::Value YulToMLIRPass::getMemRef(YulString var) {
 
 mlir::Value YulToMLIRPass::convToBool(mlir::Value val) {
   mlir::Location loc = val.getLoc();
-  BuilderHelper h(b);
+  BuilderHelper h(b, loc);
 
   auto ty = val.getType().cast<mlir::IntegerType>();
   if (ty.getWidth() == 1)
     return val;
   else if (ty == getDefIntTy())
     return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne,
-                                         val, h.getConst(loc, 0));
+                                         val, h.getConst(0));
   llvm_unreachable("Invalid type");
 }
 
@@ -218,9 +218,9 @@ mlir::Value YulToMLIRPass::genExpr(Identifier const &id) {
 }
 
 mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
-  BuilderHelper h(b);
   BuiltinFunction const *builtin = yulDialect.builtin(call.functionName.name);
   mlir::Location loc = getLoc(call.debugData);
+  BuilderHelper h(b, loc);
   if (builtin) {
     if (builtin->name.str() == "add") {
       return b.create<mlir::arith::AddIOp>(loc, genDefTyExpr(call.arguments[0]),
@@ -243,7 +243,7 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     } else if (builtin->name.str() == "iszero") {
       return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
                                            genDefTyExpr(call.arguments[0]),
-                                           h.getConst(loc, 0));
+                                           h.getConst(0));
 
     } else if (builtin->name.str() == "shr") {
       return b.create<mlir::arith::ShRUIOp>(loc,
@@ -376,14 +376,14 @@ void YulToMLIRPass::operator()(Assignment const &asgn) {
 }
 
 void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
-  BuilderHelper h(b);
   mlir::Location loc = getLoc(decl.debugData);
+  BuilderHelper h(b, loc);
 
   assert(decl.variables.size() == 1 && "NYI: Multivalued assignment");
   TypedName const &var = decl.variables[0];
   auto addr = b.create<mlir::LLVM::AllocaOp>(
       getLoc(var.debugData), mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
-      h.getConst(loc, 1), getDefAlign());
+      h.getConst(1), getDefAlign());
   setMemRef(var.name, addr);
   b.create<mlir::LLVM::StoreOp>(loc, genDefTyExpr(*decl.value), addr,
                                 getDefAlign());
@@ -452,8 +452,8 @@ void YulToMLIRPass::operator()(Switch const &switchStmt) {
 }
 
 void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
-  BuilderHelper h(b);
   mlir::Location loc = getLoc(fn.debugData);
+  BuilderHelper h(b, loc);
 
   // Lookup FuncOp (should be declared by the yul block lowering)
   auto funcOp = lookupSymbol<mlir::sol::FuncOp>(fn.name.str());
@@ -476,7 +476,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   setMemRef(retVar.name, b.create<mlir::LLVM::AllocaOp>(
                              getLoc(retVar.debugData),
                              mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
-                             h.getConst(loc, 1), getDefAlign()));
+                             h.getConst(1), getDefAlign()));
 
   // Lower the body
   ASTWalker::operator()(fn.body);
