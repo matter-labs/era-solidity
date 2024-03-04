@@ -1,7 +1,13 @@
 // RUN: sol-opt -convert-sol-to-std=target=eravm %s | FileCheck %s
 
 module {
-  sol.func @malloc() {
+  sol.func @stk() {
+    %stk = sol.alloca : !sol.ptr<i256>
+    %ld = sol.load %stk : !sol.ptr<i256>, i256
+    sol.return
+  }
+
+  sol.func @mem() {
     %mem = sol.malloc : !sol.array<3 x i256, Memory>
     %zero = arith.constant 0 : i256
     %ld = sol.load %mem[%zero : i256] : !sol.array<3 x i256, Memory>, i256
@@ -13,7 +19,13 @@ module {
 // CHECK: module {
 // CHECK-NEXT:   llvm.mlir.global private @ptr_calldata() : !llvm.ptr<3>
 // CHECK-NEXT:   llvm.mlir.global private @calldatasize(0 : i256) {alignment = 32 : i64} : i256
-// CHECK-NEXT:   func.func @malloc() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @stk() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:     %c1_i256 = arith.constant 1 : i256
+// CHECK-NEXT:     %0 = llvm.alloca %c1_i256 x i256 : (i256) -> !llvm.ptr<i256>
+// CHECK-NEXT:     %1 = llvm.load %0 {alignment = 32 : i64} : !llvm.ptr<i256>
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+// CHECK-NEXT:   func.func @mem() attributes {llvm.linkage = #llvm.linkage<private>} {
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
 // CHECK-NEXT:     %0 = llvm.inttoptr %c64_i256 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:     %1 = llvm.load %0 {alignment = 1 : i64} : !llvm.ptr<1> -> i256

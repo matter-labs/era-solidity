@@ -461,14 +461,15 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
 //
 using AllocSize = int64_t;
 
-struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
-  using OpRewritePattern<sol::MallocOp>::OpRewritePattern;
+struct AllocaOpLowering : public OpConversionPattern<sol::AllocaOp> {
+  using OpConversionPattern<sol::AllocaOp>::OpConversionPattern;
 
   /// Returns the total size (in bytes) of type (recursively).
+  template <AllocSize ValSize>
   AllocSize getTotalSize(Type ty) const {
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
-      return arrayTy.getSize() * getTotalSize(arrayTy.getEltType());
+      return arrayTy.getSize() * getTotalSize<ValSize>(arrayTy.getEltType());
 
       // Struct type.
     } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
@@ -476,8 +477,24 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     }
 
     // Value type.
-    return 32;
+    return ValSize;
   }
+
+  LogicalResult matchAndRewrite(sol::AllocaOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r);
+
+    Type convertedEltTy = getTypeConverter()->convertType(op.getAllocType());
+    AllocSize size = getTotalSize<1>(op.getAllocType());
+    r.replaceOpWithNewOp<LLVM::AllocaOp>(op, convertedEltTy,
+                                         h.getConst(loc, size));
+    return success();
+  }
+};
+
+struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
+  using OpRewritePattern<sol::MallocOp>::OpRewritePattern;
 
   /// Returns the size (in bytes) of type without recursively calculating the
   /// element type size.
@@ -570,8 +587,10 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r);
 
-    Type addrTy = op.getAddr().getType();
     Value addr = op.getAddr();
+    Type addrTy = addr.getType();
+    Value remappedAddr = adaptor.getAddr();
+    Type remappedAddrTy = remappedAddr.getType();
 
     auto dataLoc = sol::DataLocation::Stack;
     if (auto arrTy = addrTy.dyn_cast<sol::ArrayType>()) {
@@ -585,15 +604,15 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
       auto stkPtrTy =
           LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
       if (!op.getIndices().empty())
-        addr = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
-                                     /*basePtrType=*/addrTy, addr,
-                                     op.getIndices());
-      r.replaceOpWithNewOp<LLVM::LoadOp>(op, addr, eravm::getAlignment(addr));
+        remappedAddr = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
+                                             /*basePtrType=*/remappedAddrTy,
+                                             remappedAddr, op.getIndices());
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, remappedAddr,
+                                         eravm::getAlignment(remappedAddr));
       break;
     }
     case sol::DataLocation::Memory: {
       assert(!op.getIndices().empty());
-      Value remappedAddr = adaptor.getAddr();
 
       // TODO: Generate PanicCode::ArrayOutOfBounds check.
 
@@ -1139,8 +1158,17 @@ struct ConvertSolToStandard
 
     tyConv.addConversion([&](IntegerType type) -> Type { return type; });
 
+    tyConv.addConversion([&](sol::PointerType ty) -> Type {
+      Type eltTy = tyConv.convertType(ty.getPointeeType());
+      return LLVM::LLVMPointerType::get(eltTy);
+    });
+
     tyConv.addConversion([&](sol::ArrayType ty) -> Type {
       switch (ty.getDataLocation()) {
+      case sol::DataLocation::Stack: {
+        Type eltTy = tyConv.convertType(ty.getEltType());
+        return LLVM::LLVMArrayType::get(eltTy, ty.getSize());
+      }
       case sol::DataLocation::Memory:
         return IntegerType::get(ty.getContext(), 256,
                                 IntegerType::SignednessSemantics::Signless);
@@ -1207,7 +1235,7 @@ protected:
 
 void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
                                                      TypeConverter &tyConv) {
-  pats.add<LoadOpLowering>(tyConv, pats.getContext());
+  pats.add<AllocaOpLowering, LoadOpLowering>(tyConv, pats.getContext());
   pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
            BuiltinRetOpLowering, RevertOpLowering, MLoadOpLowering,
            MStoreOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
