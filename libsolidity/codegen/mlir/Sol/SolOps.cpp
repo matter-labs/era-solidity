@@ -115,7 +115,7 @@ void ArrayType::print(AsmPrinter &printer) const {
   else
     printer << getSize();
 
-  printer << " x " << getEltTy() << ", "
+  printer << " x " << getEltType() << ", "
           << stringifyDataLocation(getDataLocation()) << ">";
 }
 

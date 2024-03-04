@@ -468,7 +468,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   AllocSize getTotalSize(Type ty) const {
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
-      return arrayTy.getSize() * getTotalSize(arrayTy.getEltTy());
+      return arrayTy.getSize() * getTotalSize(arrayTy.getEltType());
 
       // Struct type.
     } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
@@ -524,7 +524,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
       assert(arrayTy.getDataLocation() == sol::DataLocation::Memory);
 
-      Type eltTy = arrayTy.getEltTy();
+      Type eltTy = arrayTy.getEltType();
 
       // Multi-dimensional array.
       if (auto arrEltTy = eltTy.dyn_cast<sol::ArrayType>()) {

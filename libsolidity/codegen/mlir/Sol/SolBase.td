@@ -81,7 +81,7 @@ def Sol_ArrayType : Sol_Type<"Array", "array"> {
   // TODO? Tracking the whole shape here (instead of the recursive
   // representation) can make the dump easier to read (like that of memref). Is
   // that better?  Solidity ast-type for arrays use a recursive representation.
-  let parameters = (ins "int64_t":$size, "Type":$eltTy,
+  let parameters = (ins "int64_t":$size, "Type":$eltType,
                     Sol_DataLocation:$dataLocation);
 
   let hasCustomAssemblyFormat = 1;
@@ -141,8 +141,8 @@ def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
     !sol.ptr<i256>
     ```
   }];
-  let parameters = (ins "Type":$pointeeTy);
-  let assemblyFormat = [{ `<` $pointeeTy `>` }];
+  let parameters = (ins "Type":$pointeeType);
+  let assemblyFormat = [{ `<` $pointeeType `>` }];
 }
 
 def Sol_AggType : AnyTypeOf<[Sol_ArrayType],
