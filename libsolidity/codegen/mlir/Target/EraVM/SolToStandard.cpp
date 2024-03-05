@@ -25,6 +25,7 @@
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
+#include "libsolutil/ErrorCodes.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -515,11 +516,20 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     assert(size % 32 == 0);
 
     solidity::mlirgen::BuilderHelper h(r, loc);
+    eravm::BuilderHelper eravmHelper(r, loc);
+
     Value freePtr = r.create<sol::MLoadOp>(loc, h.getConst(64));
 
     Value newFreePtr = r.create<arith::AddIOp>(loc, freePtr, h.getConst(size));
 
-    // TODO: Generate PanicCode::ResourceError condition
+    // Generate the PanicCode::ResourceError check.
+    auto newPtrGtMax =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, newFreePtr,
+                                h.getConst("0xffffffffffffffff"));
+    auto newPtrLtOrig = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                                newFreePtr, freePtr);
+    auto panicCond = r.create<arith::OrIOp>(loc, newPtrGtMax, newPtrLtOrig);
+    eravmHelper.genPanic(solidity::util::PanicCode::ResourceError, panicCond);
 
     r.create<sol::MStoreOp>(loc, newFreePtr, h.getConst(64));
 
@@ -582,6 +592,7 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r, loc);
+    eravm::BuilderHelper eravmHelper(r, loc);
 
     Value addr = op.getAddr();
     Type addrTy = addr.getType();
@@ -610,9 +621,17 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
     case sol::DataLocation::Memory: {
       assert(!op.getIndices().empty());
 
-      // TODO: Generate PanicCode::ArrayOutOfBounds check.
-
       Value idx = op.getIndices()[0];
+
+      // Generate PanicCode::ArrayOutOfBounds check.
+
+      // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
+      auto panicCond = r.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::uge, idx,
+          h.getConst(addrTy.cast<sol::ArrayType>().getSize()));
+      eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
+                           panicCond);
+
       auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
       auto offset = r.create<arith::AddIOp>(loc, remappedAddr, scaledIdx);
       r.replaceOpWithNewOp<sol::MLoadOp>(op, offset);

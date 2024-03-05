@@ -16,9 +16,13 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
+#include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Util.h"
+#include "libsolutil/ErrorCodes.h"
+#include "libsolutil/FunctionSelector.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -146,4 +150,23 @@ eravm::BuilderHelper::loadCallDataPtr(ModuleOp mod,
   LLVM::AddressOfOp callDataPtrAddr = getCallDataPtrAddr(mod, loc);
   return b.create<LLVM::LoadOp>(loc ? *loc : defLoc, callDataPtrAddr,
                                 eravm::getAlignment(callDataPtrAddr));
+}
+
+void eravm::BuilderHelper::genPanic(solidity::util::PanicCode code, Value cond,
+                                    std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  std::string selector =
+      solidity::util::selectorFromSignatureU256("Panic(uint256)").str();
+
+  b.create<scf::IfOp>(
+      loc, cond, /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
+        b.create<sol::MStoreOp>(loc, h.getConst(0, 256, locArg),
+                                h.getConst(selector, 256, locArg));
+        b.create<sol::MStoreOp>(
+            loc, h.getConst(4, 256, locArg),
+            h.getConst(static_cast<int64_t>(code), 256, locArg));
+        b.create<sol::RevertOp>(loc, h.getConst(0, 256, locArg),
+                                h.getConst(24, 256, locArg));
+        b.create<scf::YieldOp>(loc);
+      });
 }

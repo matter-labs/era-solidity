@@ -60,6 +60,22 @@ public:
     return op.getResult();
   }
 
+  mlir::Value getConst(std::string val, unsigned width = 256,
+                       std::optional<mlir::Location> locArg = std::nullopt) {
+    mlir::IntegerType ty = b.getIntegerType(width);
+
+    uint8_t radix = 10;
+    llvm::StringRef intStr = val;
+    if (intStr.consume_front("0x")) {
+      radix = 16;
+    }
+
+    auto op = b.create<mlir::arith::ConstantOp>(
+        locArg ? *locArg : defLoc,
+        b.getIntegerAttr(ty, llvm::APInt(width, intStr, radix)));
+    return op.getResult();
+  }
+
   // FIXME: How do we create a constant int array? What's wrong with using
   // LLVM::LLVMArrayType instead of VectorType here?  Is
   // https://github.com/llvm/llvm-project/pull/65508 the only way?

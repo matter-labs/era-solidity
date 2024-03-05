@@ -22,6 +22,7 @@
 #pragma once
 
 #include "libsolidity/codegen/mlir/Util.h"
+#include "libsolutil/ErrorCodes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
@@ -153,6 +154,10 @@ public:
   mlir::LLVM::LoadOp
   loadCallDataPtr(mlir::ModuleOp mod,
                   std::optional<mlir::Location> loc = std::nullopt);
+
+  /// Generates the panic code.
+  void genPanic(solidity::util::PanicCode code, mlir::Value cond,
+                std::optional<mlir::Location> locArg = std::nullopt);
 };
 
 } // namespace eravm
