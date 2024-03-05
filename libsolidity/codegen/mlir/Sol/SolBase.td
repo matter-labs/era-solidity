@@ -106,7 +106,6 @@ def Sol_StructType : Sol_Type<"Struct", "struct"> {
   let parameters = (ins ArrayRefParameter<"Type">:$memTys,
                         Sol_DataLocation:$dataLocation);
 
-  // let assemblyFormat = [{ `<` `(` $memTys `)` `,` $dataLocation `>` }];
   let hasCustomAssemblyFormat = 1;
 }
 
