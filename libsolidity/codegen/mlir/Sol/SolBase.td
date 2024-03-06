@@ -103,7 +103,7 @@ def Sol_StructType : Sol_Type<"Struct", "struct"> {
     ```
   }];
 
-  let parameters = (ins ArrayRefParameter<"Type">:$memTys,
+  let parameters = (ins ArrayRefParameter<"Type">:$memTypes,
                         Sol_DataLocation:$dataLocation);
 
   let hasCustomAssemblyFormat = 1;
@@ -144,7 +144,7 @@ def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
   let assemblyFormat = [{ `<` $pointeeType `>` }];
 }
 
-def Sol_AggType : AnyTypeOf<[Sol_ArrayType],
+def Sol_AggType : AnyTypeOf<[Sol_ArrayType, Sol_StructType],
                              "Solidity aggregate types">;
 def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_AggType],
                              "Solidity aggregate types and pointers">;

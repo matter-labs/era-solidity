@@ -161,7 +161,7 @@ Type StructType::parse(AsmParser &parser) {
 /// Prints a sol.array type.
 void StructType::print(AsmPrinter &printer) const {
   printer << "<(";
-  llvm::interleaveComma(getMemTys(), printer.getStream(),
+  llvm::interleaveComma(getMemTypes(), printer.getStream(),
                         [&](Type memTy) { printer << memTy; });
   printer << "), " << stringifyDataLocation(getDataLocation()) << ">";
 }

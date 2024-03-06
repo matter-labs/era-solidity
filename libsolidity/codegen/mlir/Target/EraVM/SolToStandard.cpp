@@ -499,19 +499,21 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   AllocSize getSize(Type ty) const {
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+      // FIXME: 32 -> 1 for byte arrays.
       return arrayTy.getSize() * 32;
 
       // Struct type.
     } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
-      // TODO: Round up size to multiple of 32
-      assert(false && "NYI: Struct type");
+      // FIXME: Is the memoryHeadSize 32 for all the types (assuming padding is
+      // enabled by default) in StructType::memoryDataSize?
+      return structTy.getMemTypes().size() * 32;
     }
 
     // Value type.
     return 32;
   }
 
-  /// Generates the memory allocation code
+  /// Generates the memory allocation code.
   Value genMemAlloc(AllocSize size, PatternRewriter &r, Location loc) const {
     assert(size % 32 == 0);
 
@@ -536,8 +538,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     return freePtr;
   }
 
-  /// Generates the memory allocation code
-  Value genMemAlloc(Type ty, PatternRewriter &r, Location loc) const {
+  /// Generates the memory allocation and zeroing code.
+  Value genZeroedMemAlloc(Type ty, PatternRewriter &r, Location loc) const {
     AllocSize size = getSize(ty);
     Value freePtr = genMemAlloc(size, r, loc);
 
@@ -567,7 +569,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
 
-      assert(false && "NYI: Struct type");
+      for (auto memTy : structTy.getMemTypes()) {
+        Value initVal;
+        if (memTy.isa<sol::StructType>() || memTy.isa<sol::ArrayType>())
+          initVal = genZeroedMemAlloc(memTy, r, loc);
+        else
+          initVal = h.getConst(0);
+
+        r.create<sol::MStoreOp>(loc, freePtr, initVal);
+      }
 
     } else {
       llvm_unreachable("Invalid type");
@@ -579,7 +589,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   LogicalResult matchAndRewrite(sol::MallocOp op,
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
-    Value freePtr = genMemAlloc(op.getAllocType(), r, loc);
+    Value freePtr = genZeroedMemAlloc(op.getAllocType(), r, loc);
     r.replaceOp(op, freePtr);
     return success();
   }
