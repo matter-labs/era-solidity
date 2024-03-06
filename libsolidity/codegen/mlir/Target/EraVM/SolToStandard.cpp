@@ -533,7 +533,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     auto panicCond = r.create<arith::OrIOp>(loc, newPtrGtMax, newPtrLtOrig);
     eravmHelper.genPanic(solidity::util::PanicCode::ResourceError, panicCond);
 
-    r.create<sol::MStoreOp>(loc, newFreePtr, h.getConst(64));
+    r.create<sol::MStoreOp>(loc, h.getConst(64), newFreePtr);
 
     return freePtr;
   }
