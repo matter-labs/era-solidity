@@ -52,12 +52,12 @@ module {
 // CHECK-NEXT:     scf.if %5 {
 // CHECK-NEXT:       %c0_i256_3 = arith.constant 0 : i256
 // CHECK-NEXT:       %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256 = arith.constant 35408467139433450592217433187231851964531694900788300625387963629091585785856 : i256
-// CHECK-NEXT:       %19 = llvm.inttoptr %c0_i256_3 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %19 {alignment = 1 : i64} : i256, !llvm.ptr<1>
+// CHECK-NEXT:       %18 = llvm.inttoptr %c0_i256_3 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %18 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:       %c4_i256 = arith.constant 4 : i256
 // CHECK-NEXT:       %c65_i256 = arith.constant 65 : i256
-// CHECK-NEXT:       %20 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c65_i256, %20 {alignment = 1 : i64} : i256, !llvm.ptr<1>
+// CHECK-NEXT:       %19 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:       llvm.store %c65_i256, %19 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:       %c0_i256_4 = arith.constant 0 : i256
 // CHECK-NEXT:       %c24_i256 = arith.constant 24 : i256
 // CHECK-NEXT:       %c2_i256 = arith.constant 2 : i256
@@ -78,28 +78,11 @@ module {
 // CHECK-NEXT:     %13 = llvm.mlir.constant(false) : i1
 // CHECK-NEXT:     "llvm.intr.memcpy"(%9, %12, %c96_i256_1, %13) : (!llvm.ptr<1>, !llvm.ptr<3>, i256, i1) -> ()
 // CHECK-NEXT:     %c0_i256_2 = arith.constant 0 : i256
-// CHECK-NEXT:     %c3_i256 = arith.constant 3 : i256
-// CHECK-NEXT:     %14 = arith.cmpi uge, %c0_i256_2, %c3_i256 : i256
-// CHECK-NEXT:     scf.if %14 {
-// CHECK-NEXT:       %c0_i256_3 = arith.constant 0 : i256
-// CHECK-NEXT:       %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256 = arith.constant 35408467139433450592217433187231851964531694900788300625387963629091585785856 : i256
-// CHECK-NEXT:       %19 = llvm.inttoptr %c0_i256_3 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %19 {alignment = 1 : i64} : i256, !llvm.ptr<1>
-// CHECK-NEXT:       %c4_i256 = arith.constant 4 : i256
-// CHECK-NEXT:       %c50_i256 = arith.constant 50 : i256
-// CHECK-NEXT:       %20 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c50_i256, %20 {alignment = 1 : i64} : i256, !llvm.ptr<1>
-// CHECK-NEXT:       %c0_i256_4 = arith.constant 0 : i256
-// CHECK-NEXT:       %c24_i256 = arith.constant 24 : i256
-// CHECK-NEXT:       %c2_i256 = arith.constant 2 : i256
-// CHECK-NEXT:       func.call @__revert(%c0_i256_4, %c24_i256, %c2_i256) : (i256, i256, i256) -> ()
-// CHECK-NEXT:       func.call @".unreachable"() : () -> ()
-// CHECK-NEXT:     }
 // CHECK-NEXT:     %c32_i256 = arith.constant 32 : i256
-// CHECK-NEXT:     %15 = arith.muli %c0_i256_2, %c32_i256 : i256
-// CHECK-NEXT:     %16 = arith.addi %1, %15 : i256
-// CHECK-NEXT:     %17 = llvm.inttoptr %16 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:     %18 = llvm.load %17 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
+// CHECK-NEXT:     %14 = arith.muli %c0_i256_2, %c32_i256 : i256
+// CHECK-NEXT:     %15 = arith.addi %1, %14 : i256
+// CHECK-NEXT:     %16 = llvm.inttoptr %15 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:     %17 = llvm.load %16 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
 // CHECK-NEXT:   func.func @mem_struct() attributes {llvm.linkage = #llvm.linkage<private>} {
@@ -115,12 +98,12 @@ module {
 // CHECK-NEXT:     scf.if %5 {
 // CHECK-NEXT:       %c0_i256_10 = arith.constant 0 : i256
 // CHECK-NEXT:       %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256 = arith.constant 35408467139433450592217433187231851964531694900788300625387963629091585785856 : i256
-// CHECK-NEXT:       %36 = llvm.inttoptr %c0_i256_10 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %36 {alignment = 1 : i64} : i256, !llvm.ptr<1>
+// CHECK-NEXT:       %35 = llvm.inttoptr %c0_i256_10 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %35 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:       %c4_i256 = arith.constant 4 : i256
 // CHECK-NEXT:       %c65_i256 = arith.constant 65 : i256
-// CHECK-NEXT:       %37 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c65_i256, %37 {alignment = 1 : i64} : i256, !llvm.ptr<1>
+// CHECK-NEXT:       %36 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:       llvm.store %c65_i256, %36 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:       %c0_i256_11 = arith.constant 0 : i256
 // CHECK-NEXT:       %c24_i256 = arith.constant 24 : i256
 // CHECK-NEXT:       %c2_i256 = arith.constant 2 : i256
@@ -145,12 +128,12 @@ module {
 // CHECK-NEXT:     scf.if %13 {
 // CHECK-NEXT:       %c0_i256_10 = arith.constant 0 : i256
 // CHECK-NEXT:       %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256 = arith.constant 35408467139433450592217433187231851964531694900788300625387963629091585785856 : i256
-// CHECK-NEXT:       %36 = llvm.inttoptr %c0_i256_10 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %36 {alignment = 1 : i64} : i256, !llvm.ptr<1>
+// CHECK-NEXT:       %35 = llvm.inttoptr %c0_i256_10 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %35 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:       %c4_i256 = arith.constant 4 : i256
 // CHECK-NEXT:       %c65_i256 = arith.constant 65 : i256
-// CHECK-NEXT:       %37 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c65_i256, %37 {alignment = 1 : i64} : i256, !llvm.ptr<1>
+// CHECK-NEXT:       %36 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:       llvm.store %c65_i256, %36 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:       %c0_i256_11 = arith.constant 0 : i256
 // CHECK-NEXT:       %c24_i256 = arith.constant 24 : i256
 // CHECK-NEXT:       %c2_i256 = arith.constant 2 : i256
@@ -184,28 +167,11 @@ module {
 // CHECK-NEXT:     %28 = arith.addi %1, %27 : i256
 // CHECK-NEXT:     %29 = llvm.inttoptr %28 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:     %30 = llvm.load %29 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
-// CHECK-NEXT:     %c3_i256 = arith.constant 3 : i256
-// CHECK-NEXT:     %31 = arith.cmpi uge, %c0_i256_7, %c3_i256 : i256
-// CHECK-NEXT:     scf.if %31 {
-// CHECK-NEXT:       %c0_i256_10 = arith.constant 0 : i256
-// CHECK-NEXT:       %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256 = arith.constant 35408467139433450592217433187231851964531694900788300625387963629091585785856 : i256
-// CHECK-NEXT:       %36 = llvm.inttoptr %c0_i256_10 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c35408467139433450592217433187231851964531694900788300625387963629091585785856_i256, %36 {alignment = 1 : i64} : i256, !llvm.ptr<1>
-// CHECK-NEXT:       %c4_i256 = arith.constant 4 : i256
-// CHECK-NEXT:       %c50_i256 = arith.constant 50 : i256
-// CHECK-NEXT:       %37 = llvm.inttoptr %c4_i256 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:       llvm.store %c50_i256, %37 {alignment = 1 : i64} : i256, !llvm.ptr<1>
-// CHECK-NEXT:       %c0_i256_11 = arith.constant 0 : i256
-// CHECK-NEXT:       %c24_i256 = arith.constant 24 : i256
-// CHECK-NEXT:       %c2_i256 = arith.constant 2 : i256
-// CHECK-NEXT:       func.call @__revert(%c0_i256_11, %c24_i256, %c2_i256) : (i256, i256, i256) -> ()
-// CHECK-NEXT:       func.call @".unreachable"() : () -> ()
-// CHECK-NEXT:     }
 // CHECK-NEXT:     %c32_i256_9 = arith.constant 32 : i256
-// CHECK-NEXT:     %32 = arith.muli %c0_i256_7, %c32_i256_9 : i256
-// CHECK-NEXT:     %33 = arith.addi %30, %32 : i256
-// CHECK-NEXT:     %34 = llvm.inttoptr %33 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:     %35 = llvm.load %34 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
+// CHECK-NEXT:     %31 = arith.muli %c0_i256_7, %c32_i256_9 : i256
+// CHECK-NEXT:     %32 = arith.addi %30, %31 : i256
+// CHECK-NEXT:     %33 = llvm.inttoptr %32 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:     %34 = llvm.load %33 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

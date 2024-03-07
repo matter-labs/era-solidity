@@ -634,14 +634,21 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
       Value idx = op.getIndices()[0];
 
       if (auto arrayTy = addrTy.dyn_cast<sol::ArrayType>()) {
-        // Generate PanicCode::ArrayOutOfBounds check.
+        if (auto constIdx =
+                dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp())) {
+          // FIXME: Should this be done by the verifier?
+          assert(constIdx.value() < arrayTy.getSize());
+        } else {
+          // Generate PanicCode::ArrayOutOfBounds check.
+          //
+          // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
+          auto panicCond =
+              r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge, idx,
+                                      h.getConst(arrayTy.getSize()));
 
-        // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
-        auto panicCond = r.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::uge, idx, h.getConst(arrayTy.getSize()));
-
-        eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
-                             panicCond);
+          eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
+                               panicCond);
+        }
       }
 
       auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
