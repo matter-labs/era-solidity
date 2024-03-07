@@ -282,6 +282,9 @@ def Sol_LoadOp : Sol_Op<"load"> {
     $addr (`[` $indices^ `:` type($indices) `]`)? attr-dict
       `:` type($addr) `,` type($out)
   }];
+
+  // TODO: Implement a verifier to check the validity of constant index of
+  // struct types.
 }
 
 def Sol_StoreOp : Sol_Op<"store"> {

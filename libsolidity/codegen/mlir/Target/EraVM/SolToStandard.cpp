@@ -633,14 +633,16 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
 
       Value idx = op.getIndices()[0];
 
-      // Generate PanicCode::ArrayOutOfBounds check.
+      if (auto arrayTy = addrTy.dyn_cast<sol::ArrayType>()) {
+        // Generate PanicCode::ArrayOutOfBounds check.
 
-      // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
-      auto panicCond = r.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::uge, idx,
-          h.getConst(addrTy.cast<sol::ArrayType>().getSize()));
-      eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
-                           panicCond);
+        // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
+        auto panicCond = r.create<arith::CmpIOp>(
+            loc, arith::CmpIPredicate::uge, idx, h.getConst(arrayTy.getSize()));
+
+        eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
+                             panicCond);
+      }
 
       auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
       auto offset = r.create<arith::AddIOp>(loc, remappedAddr, scaledIdx);
@@ -1201,7 +1203,19 @@ struct ConvertSolToStandard
         break;
       }
 
-      return ty;
+      llvm_unreachable("Unimplemented type conversion");
+    });
+
+    tyConv.addConversion([&](sol::StructType ty) -> Type {
+      switch (ty.getDataLocation()) {
+      case sol::DataLocation::Memory:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+      default:
+        break;
+      }
+
+      llvm_unreachable("Unimplemented type conversion");
     });
 
     // FIXME: Some of the conversion patterns depends on the ancestor/descendant
