@@ -261,10 +261,11 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
 
     ```mlir
     %addr = sol.malloc : !sol.array<2 x i256, Memory>
+    %addr = sol.malloc %size : !sol.array<? x i256, Memory>
     ```
   }];
 
-  let arguments = (ins TypeAttr:$alloc_type);
+  let arguments = (ins TypeAttr:$alloc_type, Variadic<I<256>>:$sizes);
   let results = (outs Sol_AggType:$addr);
 
   let hasCustomAssemblyFormat = 1;

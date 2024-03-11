@@ -27,6 +27,12 @@ module {
     %mem = sol.malloc : !sol.array<2 x i256, Memory>
     sol.return %mem : !sol.array<2 x i256, Memory>
   }
+
+  sol.func @dyn_malloc() -> !sol.array<? x i256, Memory> {
+    %ten = arith.constant 10 : i256
+    %mem = sol.malloc %ten : !sol.array<? x i256, Memory>
+    sol.return %mem : !sol.array<? x i256, Memory>
+  }
 }
 
 // CHECK: module {
@@ -51,5 +57,10 @@ module {
 // CHECK-NEXT:   sol.func @malloc() -> !sol.array<2 x i256, Memory> {
 // CHECK-NEXT:     %0 = sol.malloc : !sol.array<2 x i256, Memory>
 // CHECK-NEXT:     sol.return %0 : !sol.array<2 x i256, Memory>
+// CHECK-NEXT:   }
+// CHECK-NEXT:   sol.func @dyn_malloc() -> !sol.array<? x i256, Memory> {
+// CHECK-NEXT:     %c10_i256 = arith.constant 10 : i256
+// CHECK-NEXT:     %0 = sol.malloc %c10_i256 : !sol.array<? x i256, Memory>
+// CHECK-NEXT:     sol.return %0 : !sol.array<? x i256, Memory>
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

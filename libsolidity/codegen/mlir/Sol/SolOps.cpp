@@ -25,10 +25,12 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sol;
@@ -369,8 +371,19 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
+/// Parses an allocation op.
+///
+///   ssa-id = alloc-op ssa-use-list? attr-dict `:` type
+///
 static ParseResult parseAllocationOp(OpAsmParser &parser,
                                      OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> sizes;
+  if (parser.parseOperandList(sizes))
+    return failure();
+  Type i256Ty = parser.getBuilder().getIntegerType(256);
+  if (parser.resolveOperands(sizes, i256Ty, result.operands))
+    return failure();
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
@@ -386,7 +399,11 @@ static ParseResult parseAllocationOp(OpAsmParser &parser,
   return success();
 }
 
-static void printAllocationOp(Operation *op, OpAsmPrinter &p) {
+static void
+printAllocationOp(Operation *op, OpAsmPrinter &p,
+                  std::optional<OperandRange> sizes = std::nullopt) {
+  if (sizes && !sizes->empty())
+    p << ' ' << *sizes;
   p.printOptionalAttrDict(op->getAttrs(), {"alloc_type"});
   p << " : " << op->getResultTypes()[0];
 }
@@ -405,7 +422,9 @@ ParseResult MallocOp::parse(OpAsmParser &parser, OperationState &result) {
   return parseAllocationOp(parser, result);
 }
 
-void MallocOp::print(OpAsmPrinter &p) { printAllocationOp(*this, p); }
+void MallocOp::print(OpAsmPrinter &p) {
+  printAllocationOp(*this, p, getSizes());
+}
 
 #define GET_OP_CLASSES
 #include "Sol/SolOps.cpp.inc"
