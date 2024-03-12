@@ -494,11 +494,12 @@ struct AllocaOpLowering : public OpConversionPattern<sol::AllocaOp> {
 struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   using OpRewritePattern<sol::MallocOp>::OpRewritePattern;
 
-  /// Returns the size (in bytes) of type without recursively calculating the
-  /// element type size.
+  /// Returns the size (in bytes) of static type without recursively calculating
+  /// the element type size.
   AllocSize getSize(Type ty) const {
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+      assert(!arrayTy.isDynSized());
       // FIXME: 32 -> 1 for byte arrays.
       return arrayTy.getSize() * 32;
 
@@ -514,15 +515,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   }
 
   /// Generates the memory allocation code.
-  Value genMemAlloc(AllocSize size, PatternRewriter &r, Location loc) const {
-    assert(size % 32 == 0);
-
+  Value genMemAlloc(Value size, PatternRewriter &r, Location loc) const {
     solidity::mlirgen::BuilderHelper h(r, loc);
     eravm::BuilderHelper eravmHelper(r, loc);
 
     Value freePtr = r.create<sol::MLoadOp>(loc, h.getConst(64));
 
-    Value newFreePtr = r.create<arith::AddIOp>(loc, freePtr, h.getConst(size));
+    // FIXME: Shouldn't we check for overflow in the freePtr + size operation
+    // and generate PanicCode::ResourceError?
+    Value newFreePtr = r.create<arith::AddIOp>(loc, freePtr, size);
 
     // Generate the PanicCode::ResourceError check.
     auto newPtrGtMax =
@@ -538,16 +539,47 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     return freePtr;
   }
 
-  /// Generates the memory allocation and zeroing code.
-  Value genZeroedMemAlloc(Type ty, PatternRewriter &r, Location loc) const {
-    AllocSize size = getSize(ty);
-    Value freePtr = genMemAlloc(size, r, loc);
+  Value genMemAlloc(AllocSize size, PatternRewriter &r, Location loc) const {
+    assert(size % 32 == 0);
+    solidity::mlirgen::BuilderHelper h(r, loc);
+    return genMemAlloc(h.getConst(size), r, loc);
+  }
 
+  /// Generates the memory allocation code for dynamic array.
+  Value genMemAllocForDynArray(Value size, PatternRewriter &r,
+                               Location loc) const {
+    solidity::mlirgen::BuilderHelper h(r, loc);
+
+    // dynSize is size + length-slot where length-slot's size is 32 bytes.
+    auto dynSize = r.create<arith::AddIOp>(loc, size, h.getConst(32));
+    auto memPtr = genMemAlloc(dynSize, r, loc);
+    r.create<sol::MStoreOp>(loc, memPtr, size);
+
+    // Return the memory ptr after the length-slot.
+    return r.create<arith::AddIOp>(loc, memPtr, h.getConst(32));
+  }
+
+  /// Generates the memory allocation and zeroing code. `currSizeVar` is the
+  /// size variable for the dynamic array allocation. The expected order of the
+  /// size variables are defined the sol.malloc doc.
+  Value genZeroedMemAlloc(Type ty, Operation::operand_iterator currSizeVar,
+                          PatternRewriter &r, Location loc) const {
+    Value memPtr;
     solidity::mlirgen::BuilderHelper h(r, loc);
 
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
       assert(arrayTy.getDataLocation() == sol::DataLocation::Memory);
+
+      Value size;
+      // FIXME: Round up size for byte arays.
+      if (arrayTy.isDynSized()) {
+        size = r.create<arith::MulIOp>(loc, *currSizeVar++, h.getConst(32));
+        memPtr = genMemAllocForDynArray(size, r, loc);
+      } else {
+        size = h.getConst(getSize(ty));
+        memPtr = genMemAlloc(size, r, loc);
+      }
 
       Type eltTy = arrayTy.getEltType();
 
@@ -561,36 +593,38 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       } else {
         Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
-        r.create<sol::CallDataCopyOp>(loc, freePtr, callDataSz,
-                                      h.getConst(size));
+        r.create<sol::CallDataCopyOp>(loc, memPtr, callDataSz, size);
       }
 
       // TODO: Support other types.
     } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+      memPtr = genMemAlloc(getSize(ty), r, loc);
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
 
       for (auto memTy : structTy.getMemTypes()) {
         Value initVal;
         if (memTy.isa<sol::StructType>() || memTy.isa<sol::ArrayType>())
-          initVal = genZeroedMemAlloc(memTy, r, loc);
+          initVal = genZeroedMemAlloc(memTy, currSizeVar, r, loc);
         else
           initVal = h.getConst(0);
 
-        r.create<sol::MStoreOp>(loc, freePtr, initVal);
+        r.create<sol::MStoreOp>(loc, memPtr, initVal);
       }
 
     } else {
       llvm_unreachable("Invalid type");
     }
 
-    return freePtr;
+    return memPtr;
   }
 
   LogicalResult matchAndRewrite(sol::MallocOp op,
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
-    Value freePtr = genZeroedMemAlloc(op.getAllocType(), r, loc);
+    Value freePtr =
+        genZeroedMemAlloc(op.getAllocType(), op.getSizes().begin(), r, loc);
     r.replaceOp(op, freePtr);
+    op->getParentOfType<ModuleOp>().dump();
     return success();
   }
 };
@@ -634,8 +668,8 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
       Value idx = op.getIndices()[0];
 
       if (auto arrayTy = addrTy.dyn_cast<sol::ArrayType>()) {
-        if (auto constIdx =
-                dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp())) {
+        auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
+        if (constIdx && !arrayTy.isDynSized()) {
           // FIXME: Should this be done by the verifier?
           assert(constIdx.value() < arrayTy.getSize());
         } else {

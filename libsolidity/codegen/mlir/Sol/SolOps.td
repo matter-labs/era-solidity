@@ -255,7 +255,9 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
   let summary = "Memory allocation op";
   let description = [{
     This operation performs allocations for aggregate types on the memory
-    data-location.
+    data-location. The size arguments, from left to right, represent the size
+    for each dynamic dimension (represented by '?') from outer to inner
+    dimension.
 
     Example:
 
