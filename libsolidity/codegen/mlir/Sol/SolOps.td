@@ -279,11 +279,10 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
 
 def Sol_LoadOp : Sol_Op<"load"> {
   let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$addr,
-                       Variadic<AnySignlessInteger>:$indices);
+                       Variadic<I<256>>:$indices);
   let results = (outs AnyType:$out);
   let assemblyFormat = [{
-    $addr (`[` $indices^ `:` type($indices) `]`)? attr-dict
-      `:` type($addr) `,` type($out)
+    $addr (`[` $indices^ `]`)? attr-dict `:` type($addr) `,` type($out)
   }];
 
   // TODO: Implement a verifier to check the validity of constant index of
@@ -292,10 +291,9 @@ def Sol_LoadOp : Sol_Op<"load"> {
 
 def Sol_StoreOp : Sol_Op<"store"> {
   let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$addr,
-                       Variadic<AnySignlessInteger>:$indices);
+                       Variadic<I<256>>:$indices);
   let assemblyFormat = [{
-    $val `:` type($val) `,` $addr (`[` $indices^ `:` type($indices) `]`)?
-      attr-dict `:` type($addr)
+    $val `:` type($val) `,` $addr (`[` $indices^ `]`)? attr-dict `:` type($addr)
   }];
 }
 

@@ -10,17 +10,17 @@ module {
   sol.func @mem() {
     %mem = sol.malloc : !sol.array<3 x i256, Memory>
     %zero = arith.constant 0 : i256
-    %ld = sol.load %mem[%zero : i256] : !sol.array<3 x i256, Memory>, i256
+    %ld = sol.load %mem[%zero] : !sol.array<3 x i256, Memory>, i256
     sol.return
   }
 
   sol.func @mem_struct() {
     %mem = sol.malloc : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>
     %zero = arith.constant 0 : i256
-    %ld.0 = sol.load %mem[%zero : i256] : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>, i256
+    %ld.0 = sol.load %mem[%zero] : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>, i256
     %one = arith.constant 1 : i256
-    %ld.1 = sol.load %mem[%one : i256] : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>, !sol.array<3 x i256, Memory>
-    %ld.1.0 = sol.load %ld.1[%zero : i256] : !sol.array<3 x i256, Memory>, i256
+    %ld.1 = sol.load %mem[%one] : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>, !sol.array<3 x i256, Memory>
+    %ld.1.0 = sol.load %ld.1[%zero] : !sol.array<3 x i256, Memory>, i256
     sol.return
   }
 
@@ -28,7 +28,7 @@ module {
     %ten = arith.constant 10 : i256
     %mem = sol.malloc %ten : !sol.array<? x i256, Memory>
     %zero = arith.constant 0 : i256
-    %ld = sol.load %mem[%zero : i256] : !sol.array<? x i256, Memory>, i256
+    %ld = sol.load %mem[%zero] : !sol.array<? x i256, Memory>, i256
     sol.return
   }
 }
