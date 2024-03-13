@@ -76,6 +76,29 @@ public:
     return op.getResult();
   }
 
+  mlir::Value
+  genCastToIdx(mlir::Value val,
+               std::optional<mlir::Location> locArg = std::nullopt) {
+    assert(val.getType() == b.getIntegerType(256));
+    return b.create<mlir::arith::IndexCastOp>(locArg ? *locArg : defLoc,
+                                              b.getIndexType(), val);
+  }
+
+  mlir::Value
+  genCastToI256(mlir::Value val,
+                std::optional<mlir::Location> locArg = std::nullopt) {
+    // TODO: Support other source types.
+    assert(val.getType() == b.getIndexType());
+    return b.create<mlir::arith::IndexCastOp>(locArg ? *locArg : defLoc,
+                                              b.getIntegerType(256), val);
+  }
+
+  mlir::Value genIdxConst(int64_t val,
+                          std::optional<mlir::Location> locArg = std::nullopt) {
+    return b.create<mlir::arith::ConstantOp>(locArg ? *locArg : defLoc,
+                                             b.getIndexAttr(val));
+  }
+
   // FIXME: How do we create a constant int array? What's wrong with using
   // LLVM::LLVMArrayType instead of VectorType here?  Is
   // https://github.com/llvm/llvm-project/pull/65508 the only way?

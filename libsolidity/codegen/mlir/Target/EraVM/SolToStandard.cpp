@@ -576,14 +576,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
       assert(arrayTy.getDataLocation() == sol::DataLocation::Memory);
 
-      Value size;
+      Value sizeInBytes;
       // FIXME: Round up size for byte arays.
       if (arrayTy.isDynSized()) {
-        size = r.create<arith::MulIOp>(loc, *currSizeVar++, h.getConst(32));
-        memPtr = genMemAllocForDynArray(size, r, loc);
+        sizeInBytes =
+            r.create<arith::MulIOp>(loc, *currSizeVar++, h.getConst(32));
+        memPtr = genMemAllocForDynArray(sizeInBytes, r, loc);
       } else {
-        size = h.getConst(getSize(ty));
-        memPtr = genMemAlloc(size, r, loc);
+        sizeInBytes = h.getConst(getSize(ty));
+        memPtr = genMemAlloc(sizeInBytes, r, loc);
       }
 
       Type eltTy = arrayTy.getEltType();
@@ -594,15 +595,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         // Store the offsets to the "inner" allocations.
         //
         if (auto constSize =
-                dyn_cast<arith::ConstantIntOp>(size.getDefiningOp())) {
+                dyn_cast<arith::ConstantIntOp>(sizeInBytes.getDefiningOp())) {
           assert(constSize.value() >= 32);
           // Generate the "unrolled" stores of offsets since the size is static.
           r.create<sol::MStoreOp>(
               loc, memPtr, genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
           // FIXME: Is the stride always 32?
           assert(constSize.value() % 32 == 0);
-          auto i256WordSize = constSize.value() / 32;
-          for (int64_t i = 1; i < i256WordSize; ++i) {
+          auto sizeInWords = constSize.value() / 32;
+          for (int64_t i = 1; i < sizeInWords; ++i) {
             Value incrMemPtr =
                 r.create<arith::AddIOp>(loc, memPtr, h.getConst(32 * i));
             r.create<sol::MStoreOp>(
@@ -610,8 +611,29 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
                 genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
           }
         } else {
-          // TODO: Generate the loop for the stores of offsets.
-          assert(false && "NYI: Multi-dimensional dynamic arrays");
+          // Generate the loop for the stores of offsets.
+
+          // TODO? Generate an unrolled loop if the size variable is a
+          // ConstantOp?
+
+          // `size` should be a multiple of 32.
+
+          // FIXME: Make sure that the index type is lowered to i256 in the
+          // pipeline.
+          r.create<scf::ForOp>(
+              loc, /*lowerBound=*/h.genIdxConst(0),
+              /*upperBound=*/h.genCastToIdx(sizeInBytes),
+              /*step=*/h.genIdxConst(32), llvm::None,
+              /*builder=*/
+              [&](OpBuilder &b, Location loc, Value indVar,
+                  ValueRange iterArgs) {
+                Value incrMemPtr = r.create<arith::AddIOp>(
+                    loc, memPtr, h.genCastToI256(indVar));
+                r.create<sol::MStoreOp>(
+                    loc, incrMemPtr,
+                    genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
+                b.create<scf::YieldOp>(loc);
+              });
         }
 
         // Array of struct.
@@ -620,7 +642,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       } else {
         Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
-        r.create<sol::CallDataCopyOp>(loc, memPtr, callDataSz, size);
+        r.create<sol::CallDataCopyOp>(loc, memPtr, callDataSz, sizeInBytes);
       }
 
       // TODO: Support other types.
