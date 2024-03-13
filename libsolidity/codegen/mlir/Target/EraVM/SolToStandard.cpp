@@ -68,7 +68,7 @@ namespace {
 // the EraVM backend in llvm. How should we perform the lowering when we support
 // other targets?
 //
-// (a) If we do a condition lowering in this pass, the code can quickly get
+// (a) If we do a conditional lowering in this pass, the code can quickly get
 // messy
 //
 // (b) If we have a high level dialect for each target, the lowering will be,
@@ -81,6 +81,11 @@ namespace {
 
 // FIXME: getGlobalOp() should be used iff we can guarantee the presence of the
 // global op. Only ContractOpLowering is following this.
+
+// FIXME: How can we break up lengthy op conversion? MallocOpLowering's helper
+// function needs to always pass around invariants like the rewriter, location
+// etc. It would be nice if they could be member variables. Do we need to create
+// helper classes for such lowering?
 
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
@@ -585,7 +590,29 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       // Multi-dimensional array.
       if (auto arrEltTy = eltTy.dyn_cast<sol::ArrayType>()) {
-        assert(false && "NYI: Multi-dimensional arrays");
+        //
+        // Store the offsets to the "inner" allocations.
+        //
+        if (auto constSize =
+                dyn_cast<arith::ConstantIntOp>(size.getDefiningOp())) {
+          assert(constSize.value() >= 32);
+          // Generate the "unrolled" stores of offsets since the size is static.
+          r.create<sol::MStoreOp>(
+              loc, memPtr, genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
+          // FIXME: Is the stride always 32?
+          assert(constSize.value() % 32 == 0);
+          auto i256WordSize = constSize.value() / 32;
+          for (int64_t i = 1; i < i256WordSize; ++i) {
+            Value incrMemPtr =
+                r.create<arith::AddIOp>(loc, memPtr, h.getConst(32 * i));
+            r.create<sol::MStoreOp>(
+                loc, incrMemPtr,
+                genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
+          }
+        } else {
+          // TODO: Generate the loop for the stores of offsets.
+          assert(false && "NYI: Multi-dimensional dynamic arrays");
+        }
 
         // Array of struct.
       } else if (auto structEltTy = eltTy.dyn_cast<sol::StructType>()) {
@@ -624,7 +651,6 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     Value freePtr =
         genZeroedMemAlloc(op.getAllocType(), op.getSizes().begin(), r, loc);
     r.replaceOp(op, freePtr);
-    op->getParentOfType<ModuleOp>().dump();
     return success();
   }
 };
