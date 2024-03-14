@@ -60,7 +60,7 @@ public:
     return op.getResult();
   }
 
-  mlir::Value getConst(std::string val, unsigned width = 256,
+  mlir::Value getConst(std::string const &val, unsigned width = 256,
                        std::optional<mlir::Location> locArg = std::nullopt) {
     mlir::IntegerType ty = b.getIntegerType(width);
 
