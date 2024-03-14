@@ -589,17 +589,18 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       Type eltTy = arrayTy.getEltType();
 
-      // Multi-dimensional array.
-      if (auto arrEltTy = eltTy.dyn_cast<sol::ArrayType>()) {
+      // Multi-dimensional array / array of structs.
+      if (eltTy.isa<sol::StructType>() || eltTy.isa<sol::ArrayType>()) {
         //
         // Store the offsets to the "inner" allocations.
         //
         if (auto constSize =
                 dyn_cast<arith::ConstantIntOp>(sizeInBytes.getDefiningOp())) {
+          // FIXME: .value() yields s64!
           assert(constSize.value() >= 32);
           // Generate the "unrolled" stores of offsets since the size is static.
           r.create<sol::MStoreOp>(
-              loc, memPtr, genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
+              loc, memPtr, genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
           // FIXME: Is the stride always 32?
           assert(constSize.value() % 32 == 0);
           auto sizeInWords = constSize.value() / 32;
@@ -607,8 +608,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
             Value incrMemPtr =
                 r.create<arith::AddIOp>(loc, memPtr, h.getConst(32 * i));
             r.create<sol::MStoreOp>(
-                loc, incrMemPtr,
-                genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
+                loc, incrMemPtr, genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
           }
         } else {
           // Generate the loop for the stores of offsets.
@@ -631,14 +631,10 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
                     loc, memPtr, h.genCastToI256(indVar));
                 r.create<sol::MStoreOp>(
                     loc, incrMemPtr,
-                    genZeroedMemAlloc(arrEltTy, currSizeVar, r, loc));
+                    genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
                 b.create<scf::YieldOp>(loc);
               });
         }
-
-        // Array of struct.
-      } else if (auto structEltTy = eltTy.dyn_cast<sol::StructType>()) {
-        assert(false && "NYI: Array of struct");
 
       } else {
         Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
@@ -659,7 +655,6 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
         r.create<sol::MStoreOp>(loc, memPtr, initVal);
       }
-
     } else {
       llvm_unreachable("Invalid type");
     }
