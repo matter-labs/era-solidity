@@ -551,17 +551,16 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   }
 
   /// Generates the memory allocation code for dynamic array.
-  Value genMemAllocForDynArray(Value size, PatternRewriter &r,
-                               Location loc) const {
+  Value genMemAllocForDynArray(Value sizeVar, Value sizeInBytes,
+                               PatternRewriter &r, Location loc) const {
     solidity::mlirgen::BuilderHelper h(r, loc);
 
     // dynSize is size + length-slot where length-slot's size is 32 bytes.
-    auto dynSize = r.create<arith::AddIOp>(loc, size, h.getConst(32));
-    auto memPtr = genMemAlloc(dynSize, r, loc);
-    r.create<sol::MStoreOp>(loc, memPtr, size);
-
-    // Return the memory ptr after the length-slot.
-    return r.create<arith::AddIOp>(loc, memPtr, h.getConst(32));
+    auto dynSizeInBytes =
+        r.create<arith::AddIOp>(loc, sizeInBytes, h.getConst(32));
+    auto memPtr = genMemAlloc(dynSizeInBytes, r, loc);
+    r.create<sol::MStoreOp>(loc, memPtr, sizeVar);
+    return memPtr;
   }
 
   /// Generates the memory allocation and zeroing code. `currSizeVar` is the
@@ -576,16 +575,19 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
       assert(arrayTy.getDataLocation() == sol::DataLocation::Memory);
 
-      Value sizeInBytes;
+      Value sizeInBytes, dataPtr;
       // FIXME: Round up size for byte arays.
       if (arrayTy.isDynSized()) {
         sizeInBytes =
-            r.create<arith::MulIOp>(loc, *currSizeVar++, h.getConst(32));
-        memPtr = genMemAllocForDynArray(sizeInBytes, r, loc);
+            r.create<arith::MulIOp>(loc, *currSizeVar, h.getConst(32));
+        memPtr = genMemAllocForDynArray(*currSizeVar++, sizeInBytes, r, loc);
+        dataPtr = r.create<arith::AddIOp>(loc, memPtr, h.getConst(32));
       } else {
         sizeInBytes = h.getConst(getSize(ty));
         memPtr = genMemAlloc(sizeInBytes, r, loc);
+        dataPtr = memPtr;
       }
+      assert(sizeInBytes && dataPtr && memPtr);
 
       Type eltTy = arrayTy.getEltType();
 
@@ -600,13 +602,13 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
           assert(constSize.value() >= 32);
           // Generate the "unrolled" stores of offsets since the size is static.
           r.create<sol::MStoreOp>(
-              loc, memPtr, genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
+              loc, dataPtr, genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
           // FIXME: Is the stride always 32?
           assert(constSize.value() % 32 == 0);
           auto sizeInWords = constSize.value() / 32;
           for (int64_t i = 1; i < sizeInWords; ++i) {
             Value incrMemPtr =
-                r.create<arith::AddIOp>(loc, memPtr, h.getConst(32 * i));
+                r.create<arith::AddIOp>(loc, dataPtr, h.getConst(32 * i));
             r.create<sol::MStoreOp>(
                 loc, incrMemPtr, genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
           }
@@ -628,7 +630,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
               [&](OpBuilder &b, Location loc, Value indVar,
                   ValueRange iterArgs) {
                 Value incrMemPtr = r.create<arith::AddIOp>(
-                    loc, memPtr, h.genCastToI256(indVar));
+                    loc, dataPtr, h.genCastToI256(indVar));
                 r.create<sol::MStoreOp>(
                     loc, incrMemPtr,
                     genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
@@ -638,7 +640,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       } else {
         Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
-        r.create<sol::CallDataCopyOp>(loc, memPtr, callDataSz, sizeInBytes);
+        r.create<sol::CallDataCopyOp>(loc, dataPtr, callDataSz, sizeInBytes);
       }
 
       // TODO: Support other types.
@@ -681,15 +683,15 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
     solidity::mlirgen::BuilderHelper h(r, loc);
     eravm::BuilderHelper eravmHelper(r, loc);
 
-    Value addr = op.getAddr();
-    Type addrTy = addr.getType();
-    Value remappedAddr = adaptor.getAddr();
-    Type remappedAddrTy = remappedAddr.getType();
+    Value baseAddr = op.getAddr();
+    Type baseAddrTy = baseAddr.getType();
+    Value remappedBaseAddr = adaptor.getAddr();
+    Type remappedBaseAddrTy = remappedBaseAddr.getType();
 
     auto dataLoc = sol::DataLocation::Stack;
-    if (auto arrTy = addrTy.dyn_cast<sol::ArrayType>()) {
+    if (auto arrTy = baseAddrTy.dyn_cast<sol::ArrayType>()) {
       dataLoc = arrTy.getDataLocation();
-    } else if (auto structTy = addrTy.dyn_cast<sol::StructType>()) {
+    } else if (auto structTy = baseAddrTy.dyn_cast<sol::StructType>()) {
       dataLoc = structTy.getDataLocation();
     }
 
@@ -697,40 +699,69 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
     case sol::DataLocation::Stack: {
       auto stkPtrTy =
           LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
+      Value addrAtIdx = remappedBaseAddr;
       if (!op.getIndices().empty())
-        remappedAddr = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
-                                             /*basePtrType=*/remappedAddrTy,
-                                             remappedAddr, op.getIndices());
-      r.replaceOpWithNewOp<LLVM::LoadOp>(op, remappedAddr,
-                                         eravm::getAlignment(remappedAddr));
+        addrAtIdx = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
+                                          /*basePtrType=*/remappedBaseAddrTy,
+                                          remappedBaseAddr, op.getIndices());
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, addrAtIdx,
+                                         eravm::getAlignment(remappedBaseAddr));
       break;
     }
     case sol::DataLocation::Memory: {
       assert(!op.getIndices().empty());
 
       Value idx = op.getIndices()[0];
+      Value addrAtIdx;
 
-      if (auto arrayTy = addrTy.dyn_cast<sol::ArrayType>()) {
+      if (auto arrayTy = baseAddrTy.dyn_cast<sol::ArrayType>()) {
         auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
         if (constIdx && !arrayTy.isDynSized()) {
           // FIXME: Should this be done by the verifier?
           assert(constIdx.value() < arrayTy.getSize());
+          addrAtIdx = r.create<arith::AddIOp>(
+              loc, remappedBaseAddr, h.getConst(constIdx.value() * 32));
         } else {
+          //
           // Generate PanicCode::ArrayOutOfBounds check.
           //
-          // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
-          auto panicCond =
-              r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge, idx,
-                                      h.getConst(arrayTy.getSize()));
+          Value size;
+          if (arrayTy.isDynSized()) {
+            size = r.create<sol::MLoadOp>(loc, remappedBaseAddr);
+          } else {
+            size = h.getConst(arrayTy.getSize());
+          }
 
+          // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
+          auto panicCond = r.create<arith::CmpIOp>(
+              loc, arith::CmpIPredicate::uge, idx, size);
           eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
                                panicCond);
+
+          //
+          // Generate the address
+          //
+          Value scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
+          if (arrayTy.isDynSized()) {
+            // Get the address after the length-slot.
+            Value dataAddr =
+                r.create<arith::AddIOp>(loc, remappedBaseAddr, h.getConst(32));
+            addrAtIdx = r.create<arith::AddIOp>(loc, dataAddr, scaledIdx);
+          } else {
+            addrAtIdx =
+                r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
+          }
         }
+      } else if (auto structTy = baseAddrTy.dyn_cast<sol::StructType>()) {
+        auto constIdx = cast<arith::ConstantIntOp>(idx.getDefiningOp());
+        (void)constIdx;
+        assert(constIdx.value() <
+               static_cast<int64_t>(structTy.getMemTypes().size()));
+        auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
+        addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
       }
 
-      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
-      auto offset = r.create<arith::AddIOp>(loc, remappedAddr, scaledIdx);
-      r.replaceOpWithNewOp<sol::MLoadOp>(op, offset);
+      r.replaceOpWithNewOp<sol::MLoadOp>(op, addrAtIdx);
       break;
     }
     default:
