@@ -373,16 +373,18 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 /// Parses an allocation op.
 ///
-///   ssa-id = alloc-op ssa-use-list? attr-dict `:` type
+///   ssa-id = alloc-op ssa-use? attr-dict `:` type
 ///
 static ParseResult parseAllocationOp(OpAsmParser &parser,
                                      OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 2> sizes;
-  if (parser.parseOperandList(sizes))
-    return failure();
-  Type i256Ty = parser.getBuilder().getIntegerType(256);
-  if (parser.resolveOperands(sizes, i256Ty, result.operands))
-    return failure();
+  OpAsmParser::UnresolvedOperand sizeOperand;
+  auto parseRes = parser.parseOptionalOperand(sizeOperand);
+  if (parseRes.hasValue() && succeeded(parseRes.getValue())) {
+    if (parser.resolveOperand(sizeOperand,
+                              parser.getBuilder().getIntegerType(256),
+                              result.operands))
+      return failure();
+  }
 
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
@@ -399,11 +401,9 @@ static ParseResult parseAllocationOp(OpAsmParser &parser,
   return success();
 }
 
-static void
-printAllocationOp(Operation *op, OpAsmPrinter &p,
-                  std::optional<OperandRange> sizes = std::nullopt) {
-  if (sizes && !sizes->empty())
-    p << ' ' << *sizes;
+static void printAllocationOp(Operation *op, OpAsmPrinter &p, Value size = {}) {
+  if (size)
+    p << ' ' << size;
   p.printOptionalAttrDict(op->getAttrs(), {"alloc_type"});
   p << " : " << op->getResultTypes()[0];
 }
@@ -423,7 +423,7 @@ ParseResult MallocOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MallocOp::print(OpAsmPrinter &p) {
-  printAllocationOp(*this, p, getSizes());
+  printAllocationOp(*this, p, getSize());
 }
 
 #define GET_OP_CLASSES

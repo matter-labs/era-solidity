@@ -255,9 +255,10 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
   let summary = "Memory allocation op";
   let description = [{
     This operation performs allocations for aggregate types on the memory
-    data-location. The size arguments, from left to right, represent the size
-    for each dynamic dimension (represented by '?') from outer to inner
-    dimension.
+    data-location. The optional size argument is used in the dynamic allocation
+    of the outermost dimension. Inner dynamic allocations are initialized to the
+    zero pointer. The outermost dimension is initialized to the zero pointer if
+    the size argument is absent.
 
     Example:
 
@@ -267,7 +268,7 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
     ```
   }];
 
-  let arguments = (ins TypeAttr:$alloc_type, Variadic<I<256>>:$sizes);
+  let arguments = (ins TypeAttr:$alloc_type, Optional<I<256>>:$size);
   let results = (outs Sol_AggType:$addr);
 
   let hasCustomAssemblyFormat = 1;

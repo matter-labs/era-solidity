@@ -563,11 +563,11 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     return memPtr;
   }
 
-  /// Generates the memory allocation and zeroing code. `currSizeVar` is the
-  /// size variable for the dynamic array allocation. The expected order of the
-  /// size variables are defined the sol.malloc doc.
-  Value genZeroedMemAlloc(Type ty, Operation::operand_iterator currSizeVar,
+  /// Generates the memory allocation and zeroing code.
+  Value genZeroedMemAlloc(Type ty, Value sizeVar, int64_t recDepth,
                           PatternRewriter &r, Location loc) const {
+    recDepth++;
+
     Value memPtr;
     solidity::mlirgen::BuilderHelper h(r, loc);
 
@@ -578,10 +578,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       Value sizeInBytes, dataPtr;
       // FIXME: Round up size for byte arays.
       if (arrayTy.isDynSized()) {
-        sizeInBytes =
-            r.create<arith::MulIOp>(loc, *currSizeVar, h.getConst(32));
-        memPtr = genMemAllocForDynArray(*currSizeVar++, sizeInBytes, r, loc);
-        dataPtr = r.create<arith::AddIOp>(loc, memPtr, h.getConst(32));
+        // Dynamic allocation is only performed for the outermost dimension.
+        if (recDepth == 0) {
+          assert(sizeVar);
+          sizeInBytes = r.create<arith::MulIOp>(loc, sizeVar, h.getConst(32));
+          memPtr = genMemAllocForDynArray(sizeVar, sizeInBytes, r, loc);
+          dataPtr = r.create<arith::AddIOp>(loc, memPtr, h.getConst(32));
+        } else {
+          return h.getConst(solidity::frontend::CompilerUtils::zeroPointer);
+        }
       } else {
         sizeInBytes = h.getConst(getSize(ty));
         memPtr = genMemAlloc(sizeInBytes, r, loc);
@@ -602,7 +607,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
           assert(constSize.value() >= 32);
           // Generate the "unrolled" stores of offsets since the size is static.
           r.create<sol::MStoreOp>(
-              loc, dataPtr, genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
+              loc, dataPtr,
+              genZeroedMemAlloc(eltTy, sizeVar, recDepth, r, loc));
           // FIXME: Is the stride always 32?
           assert(constSize.value() % 32 == 0);
           auto sizeInWords = constSize.value() / 32;
@@ -610,7 +616,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
             Value incrMemPtr =
                 r.create<arith::AddIOp>(loc, dataPtr, h.getConst(32 * i));
             r.create<sol::MStoreOp>(
-                loc, incrMemPtr, genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
+                loc, incrMemPtr,
+                genZeroedMemAlloc(eltTy, sizeVar, recDepth, r, loc));
           }
         } else {
           // Generate the loop for the stores of offsets.
@@ -633,7 +640,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
                     loc, dataPtr, h.genCastToI256(indVar));
                 r.create<sol::MStoreOp>(
                     loc, incrMemPtr,
-                    genZeroedMemAlloc(eltTy, currSizeVar, r, loc));
+                    genZeroedMemAlloc(eltTy, sizeVar, recDepth, r, loc));
                 b.create<scf::YieldOp>(loc);
               });
         }
@@ -651,7 +658,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       for (auto memTy : structTy.getMemTypes()) {
         Value initVal;
         if (memTy.isa<sol::StructType>() || memTy.isa<sol::ArrayType>())
-          initVal = genZeroedMemAlloc(memTy, currSizeVar, r, loc);
+          initVal = genZeroedMemAlloc(memTy, sizeVar, recDepth, r, loc);
         else
           initVal = h.getConst(0);
 
@@ -664,11 +671,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     return memPtr;
   }
 
+  Value genZeroedMemAlloc(Type ty, Value sizeVar, PatternRewriter &r,
+                          Location loc) const {
+    return genZeroedMemAlloc(ty, sizeVar, /*recDepth=*/-1, r, loc);
+  }
+
   LogicalResult matchAndRewrite(sol::MallocOp op,
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
-    Value freePtr =
-        genZeroedMemAlloc(op.getAllocType(), op.getSizes().begin(), r, loc);
+    Value freePtr = genZeroedMemAlloc(op.getAllocType(), op.getSize(), r, loc);
     r.replaceOp(op, freePtr);
     return success();
   }
