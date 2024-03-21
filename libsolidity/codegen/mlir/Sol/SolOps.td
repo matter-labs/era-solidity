@@ -246,7 +246,12 @@ def Sol_AllocaOp : Sol_Op<"alloca"> {
 
   let arguments = (ins TypeAttr:$alloc_type);
   let results = (outs Res<Sol_PtrType, "",
-                      [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
+                          [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
+  let skipDefaultBuilders = 1;
+  let builders = [OpBuilder<(ins "Type":$allocType), [{
+    $_state.addAttribute("alloc_type", mlir::TypeAttr::get(allocType));
+    $_state.addTypes(allocType);
+  }]>];
 
   let hasCustomAssemblyFormat = 1;
 }
