@@ -52,6 +52,15 @@ void SolDialect::initialize() {
       >();
 }
 
+DataLocation mlir::sol::getDataLocation(Type ty) {
+  if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
+    return arrTy.getDataLocation();
+  } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+    return structTy.getDataLocation();
+  }
+  return DataLocation::Stack;
+}
+
 static ParseResult parseDataLocation(AsmParser &parser,
                                      DataLocation &dataLocation) {
   StringRef dataLocationTok;

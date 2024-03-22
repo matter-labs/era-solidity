@@ -41,3 +41,10 @@
 
 #define GET_OP_CLASSES
 #include "Sol/SolOps.h.inc"
+
+namespace mlir {
+namespace sol {
+/// Returns the data-location of type.
+DataLocation getDataLocation(Type ty);
+} // namespace sol
+} // namespace mlir

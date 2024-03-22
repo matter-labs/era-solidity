@@ -685,101 +685,130 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   }
 };
 
+template <typename OpT>
+static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
+                         ConversionPatternRewriter &r) {
+  Location loc = op.getLoc();
+  solidity::mlirgen::BuilderHelper h(r, loc);
+  eravm::BuilderHelper eravmHelper(r, loc);
+
+  Type baseAddrTy = op.getAddr().getType();
+  Value remappedBaseAddr = adaptor.getAddr();
+
+  switch (sol::getDataLocation(baseAddrTy)) {
+  case sol::DataLocation::Stack: {
+    auto stkPtrTy =
+        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
+    Value addrAtIdx = remappedBaseAddr;
+    if (!op.getIndices().empty())
+      addrAtIdx =
+          r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
+                                /*basePtrType=*/remappedBaseAddr.getType(),
+                                remappedBaseAddr, op.getIndices());
+    return addrAtIdx;
+  }
+  case sol::DataLocation::Memory: {
+    assert(!op.getIndices().empty());
+
+    Value idx = op.getIndices()[0];
+    Value addrAtIdx;
+
+    if (auto arrayTy = baseAddrTy.dyn_cast<sol::ArrayType>()) {
+      auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
+      if (constIdx && !arrayTy.isDynSized()) {
+        // FIXME: Should this be done by the verifier?
+        assert(constIdx.value() < arrayTy.getSize());
+        addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr,
+                                            h.getConst(constIdx.value() * 32));
+      } else {
+        //
+        // Generate PanicCode::ArrayOutOfBounds check.
+        //
+        Value size;
+        if (arrayTy.isDynSized()) {
+          size = r.create<sol::MLoadOp>(loc, remappedBaseAddr);
+        } else {
+          size = h.getConst(arrayTy.getSize());
+        }
+
+        // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
+        auto panicCond =
+            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge, idx, size);
+        eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
+                             panicCond);
+
+        //
+        // Generate the address
+        //
+        Value scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
+        if (arrayTy.isDynSized()) {
+          // Get the address after the length-slot.
+          Value dataAddr =
+              r.create<arith::AddIOp>(loc, remappedBaseAddr, h.getConst(32));
+          addrAtIdx = r.create<arith::AddIOp>(loc, dataAddr, scaledIdx);
+        } else {
+          addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
+        }
+      }
+    } else if (auto structTy = baseAddrTy.dyn_cast<sol::StructType>()) {
+      auto constIdx = cast<arith::ConstantIntOp>(idx.getDefiningOp());
+      (void)constIdx;
+      assert(constIdx.value() <
+             static_cast<int64_t>(structTy.getMemTypes().size()));
+      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
+      addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
+    }
+
+    return addrAtIdx;
+  }
+  default:
+    break;
+  };
+
+  llvm_unreachable("NYI: Storage and calldata data-locations");
+}
+
 struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
   using OpConversionPattern<sol::LoadOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(sol::LoadOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    Location loc = op.getLoc();
-    solidity::mlirgen::BuilderHelper h(r, loc);
-    eravm::BuilderHelper eravmHelper(r, loc);
+    Value addrAtIdx = genAddrCalc(op, adaptor, r);
 
-    Value baseAddr = op.getAddr();
-    Type baseAddrTy = baseAddr.getType();
-    Value remappedBaseAddr = adaptor.getAddr();
-    Type remappedBaseAddrTy = remappedBaseAddr.getType();
-
-    auto dataLoc = sol::DataLocation::Stack;
-    if (auto arrTy = baseAddrTy.dyn_cast<sol::ArrayType>()) {
-      dataLoc = arrTy.getDataLocation();
-    } else if (auto structTy = baseAddrTy.dyn_cast<sol::StructType>()) {
-      dataLoc = structTy.getDataLocation();
-    }
-
-    switch (dataLoc) {
-    case sol::DataLocation::Stack: {
-      auto stkPtrTy =
-          LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
-      Value addrAtIdx = remappedBaseAddr;
-      if (!op.getIndices().empty())
-        addrAtIdx = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
-                                          /*basePtrType=*/remappedBaseAddrTy,
-                                          remappedBaseAddr, op.getIndices());
-      r.replaceOpWithNewOp<LLVM::LoadOp>(op, addrAtIdx,
-                                         eravm::getAlignment(remappedBaseAddr));
-      break;
-    }
-    case sol::DataLocation::Memory: {
-      assert(!op.getIndices().empty());
-
-      Value idx = op.getIndices()[0];
-      Value addrAtIdx;
-
-      if (auto arrayTy = baseAddrTy.dyn_cast<sol::ArrayType>()) {
-        auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
-        if (constIdx && !arrayTy.isDynSized()) {
-          // FIXME: Should this be done by the verifier?
-          assert(constIdx.value() < arrayTy.getSize());
-          addrAtIdx = r.create<arith::AddIOp>(
-              loc, remappedBaseAddr, h.getConst(constIdx.value() * 32));
-        } else {
-          //
-          // Generate PanicCode::ArrayOutOfBounds check.
-          //
-          Value size;
-          if (arrayTy.isDynSized()) {
-            size = r.create<sol::MLoadOp>(loc, remappedBaseAddr);
-          } else {
-            size = h.getConst(arrayTy.getSize());
-          }
-
-          // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
-          auto panicCond = r.create<arith::CmpIOp>(
-              loc, arith::CmpIPredicate::uge, idx, size);
-          eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
-                               panicCond);
-
-          //
-          // Generate the address
-          //
-          Value scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
-          if (arrayTy.isDynSized()) {
-            // Get the address after the length-slot.
-            Value dataAddr =
-                r.create<arith::AddIOp>(loc, remappedBaseAddr, h.getConst(32));
-            addrAtIdx = r.create<arith::AddIOp>(loc, dataAddr, scaledIdx);
-          } else {
-            addrAtIdx =
-                r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
-          }
-        }
-      } else if (auto structTy = baseAddrTy.dyn_cast<sol::StructType>()) {
-        auto constIdx = cast<arith::ConstantIntOp>(idx.getDefiningOp());
-        (void)constIdx;
-        assert(constIdx.value() <
-               static_cast<int64_t>(structTy.getMemTypes().size()));
-        auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
-        addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
-      }
-
+    switch (sol::getDataLocation(op.getAddr().getType())) {
+    case sol::DataLocation::Stack:
+      r.replaceOpWithNewOp<LLVM::LoadOp>(
+          op, addrAtIdx, eravm::getAlignment(adaptor.getAddr()));
+      return success();
+    case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MLoadOp>(op, addrAtIdx);
-      break;
-    }
+      return success();
     default:
-      assert(false && "NYI: Storage and calldata data-locations");
       break;
     };
-    return success();
+    llvm_unreachable("NYI: Storage and calldata data-locations");
+  }
+};
+
+struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
+  using OpConversionPattern<sol::StoreOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::StoreOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Value addrAtIdx = genAddrCalc(op, adaptor, r);
+
+    switch (sol::getDataLocation(op.getAddr().getType())) {
+    case sol::DataLocation::Stack:
+      r.replaceOpWithNewOp<LLVM::StoreOp>(
+          op, op.getVal(), addrAtIdx, eravm::getAlignment(adaptor.getAddr()));
+      return success();
+    case sol::DataLocation::Memory:
+      r.replaceOpWithNewOp<sol::MStoreOp>(op, addrAtIdx, op.getVal());
+      return success();
+    default:
+      break;
+    };
+    llvm_unreachable("NYI: Storage and calldata data-locations");
   }
 };
 
@@ -1400,7 +1429,8 @@ protected:
 
 void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
                                                      TypeConverter &tyConv) {
-  pats.add<AllocaOpLowering, LoadOpLowering>(tyConv, pats.getContext());
+  pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
+      tyConv, pats.getContext());
   pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
            BuiltinRetOpLowering, RevertOpLowering, MLoadOpLowering,
            MStoreOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
