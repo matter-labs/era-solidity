@@ -692,8 +692,8 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
   solidity::mlirgen::BuilderHelper h(r, loc);
   eravm::BuilderHelper eravmHelper(r, loc);
 
-  Type baseAddrTy = op.getAddr().getType();
-  Value remappedBaseAddr = adaptor.getAddr();
+  Type baseAddrTy = op.getBaseAddr().getType();
+  Value remappedBaseAddr = adaptor.getBaseAddr();
 
   switch (sol::getDataLocation(baseAddrTy)) {
   case sol::DataLocation::Stack: {
@@ -775,10 +775,10 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
                                 ConversionPatternRewriter &r) const override {
     Value addrAtIdx = genAddrCalc(op, adaptor, r);
 
-    switch (sol::getDataLocation(op.getAddr().getType())) {
+    switch (sol::getDataLocation(op.getBaseAddr().getType())) {
     case sol::DataLocation::Stack:
       r.replaceOpWithNewOp<LLVM::LoadOp>(
-          op, addrAtIdx, eravm::getAlignment(adaptor.getAddr()));
+          op, addrAtIdx, eravm::getAlignment(adaptor.getBaseAddr()));
       return success();
     case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MLoadOp>(op, addrAtIdx);
@@ -797,10 +797,11 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
                                 ConversionPatternRewriter &r) const override {
     Value addrAtIdx = genAddrCalc(op, adaptor, r);
 
-    switch (sol::getDataLocation(op.getAddr().getType())) {
+    switch (sol::getDataLocation(op.getBaseAddr().getType())) {
     case sol::DataLocation::Stack:
       r.replaceOpWithNewOp<LLVM::StoreOp>(
-          op, op.getVal(), addrAtIdx, eravm::getAlignment(adaptor.getAddr()));
+          op, op.getVal(), addrAtIdx,
+          eravm::getAlignment(adaptor.getBaseAddr()));
       return success();
     case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MStoreOp>(op, addrAtIdx, op.getVal());
