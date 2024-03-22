@@ -52,6 +52,17 @@ void SolDialect::initialize() {
       >();
 }
 
+static Type getEltType(Type ty, Index index = 0) {
+  if (auto ptrTy = ty.dyn_cast<sol::PointerType>()) {
+    return ptrTy.getPointeeType();
+  } else if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
+    return arrTy.getEltType();
+  } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+    return structTy.getMemTypes()[index];
+  }
+  llvm_unreachable("Invalid type");
+}
+
 DataLocation mlir::sol::getDataLocation(Type ty) {
   if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
     return arrTy.getDataLocation();

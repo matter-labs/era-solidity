@@ -291,6 +291,12 @@ def Sol_LoadOp : Sol_Op<"load"> {
     $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr) `,` type($out)
   }];
 
+  let builders = [
+    OpBuilder<(ins "Value":$baseAddr, CArg<"ValueRange", "{}">:$indices), [{
+      build($_builder, $_state, getEltType(baseAddr.getType()),
+        baseAddr, indices);
+    }]>
+  ];
   // TODO: Implement a verifier to check the validity of constant index of
   // struct types.
 }
@@ -302,6 +308,12 @@ def Sol_StoreOp : Sol_Op<"store"> {
     $val `:` type($val) `,`
       $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr)
   }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$val, "Value":$baseAddr), [{
+      build($_builder, $_state, val, baseAddr, /*indices=*/{});
+    }]>
+  ];
 }
 
 // TODO: The op definitions of yul builtins should be auto-generated from

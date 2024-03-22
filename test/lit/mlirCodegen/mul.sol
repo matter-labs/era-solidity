@@ -9,10 +9,9 @@ contract C {
 // CHECK-NEXT: module {
 // CHECK-NEXT:   sol.contract @C_13 {
 // CHECK-NEXT:     sol.func @f_12(%arg0: i256 loc({{.*}}:3:12)) -> i256 attributes {state_mutability = #sol<StateMutability NonPayable>} {
-// CHECK-NEXT:       %c1_i256 = arith.constant 1 : i256 loc(#loc3)
-// CHECK-NEXT:       %0 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc3)
-// CHECK-NEXT:       llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc3)
-// CHECK-NEXT:       %1 = llvm.load %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc4)
+// CHECK-NEXT:       %0 = sol.alloca : !sol.ptr<i256> loc(#loc3)
+// CHECK-NEXT:       sol.store %arg0 : i256, %0 : !sol.ptr<i256> loc(#loc3)
+// CHECK-NEXT:       %1 = sol.load %0 : !sol.ptr<i256>, i256 loc(#loc4)
 // CHECK-NEXT:       %c7_i8 = arith.constant 7 : i8 loc(#loc5)
 // CHECK-NEXT:       %2 = arith.extui %c7_i8 : i8 to i256 loc(#loc5)
 // CHECK-NEXT:       %3 = arith.muli %1, %2 : i256 loc(#loc4)

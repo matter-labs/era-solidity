@@ -269,8 +269,7 @@ mlir::Value SolidityToMLIRPass::genExpr(Expression const *expr,
   else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
     auto addr = getMemRef(ident);
     assert(addr);
-    val = b.create<mlir::LLVM::LoadOp>(getLoc(expr->location()), addr,
-                                       /*alignment=*/32);
+    val = b.create<mlir::sol::LoadOp>(getLoc(expr->location()), addr);
   }
   // Generate binary operation
   else if (auto *binOp = dynamic_cast<BinaryOperation const *>(expr)) {
@@ -373,12 +372,10 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
        ranges::views::zip(inpTys, inpLocs, func.parameters())) {
     mlir::Value arg = entryBlk->addArgument(inpTy, inpLoc);
     // TODO: Support non-scalars.
-    mlir::Value addr = b.create<mlir::LLVM::AllocaOp>(
-                            inpLoc, mlir::LLVM::LLVMPointerType::get(inpTy),
-                            h.getConst(1, 256, inpLoc), /*alignment=*/32)
-                           .getResult();
+    auto addr = b.create<mlir::sol::AllocaOp>(
+        inpLoc, mlir::sol::PointerType::get(b.getContext(), inpTy));
     setMemRef(param.get(), addr);
-    b.create<mlir::LLVM::StoreOp>(inpLoc, arg, addr, /*alignment=*/32);
+    b.create<mlir::sol::StoreOp>(inpLoc, arg, addr);
   }
 
   func.accept(*this);
@@ -427,7 +424,6 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolDialect>();
   ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
-  ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
 
   SolidityToMLIRPass gen(ctx, stream);
   for (auto *contract : contracts) {

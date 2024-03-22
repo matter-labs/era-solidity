@@ -46,5 +46,6 @@ namespace mlir {
 namespace sol {
 /// Returns the data-location of type.
 DataLocation getDataLocation(Type ty);
+using Index = uint64_t;
 } // namespace sol
 } // namespace mlir

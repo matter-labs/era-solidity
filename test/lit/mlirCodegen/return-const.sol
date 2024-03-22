@@ -21,9 +21,8 @@ contract C {
 // CHECK-NEXT:       sol.return %0 : i256 loc(#loc7)
 // CHECK-NEXT:     } loc(#loc5)
 // CHECK-NEXT:     sol.func @f2_26(%arg0: i256 loc({{.*}}:5:14)) -> i256 attributes {state_mutability = #sol<StateMutability NonPayable>} {
-// CHECK-NEXT:       %c1_i256 = arith.constant 1 : i256 loc(#loc9)
-// CHECK-NEXT:       %0 = llvm.alloca %c1_i256 x i256 {alignment = 32 : i64} : (i256) -> !llvm.ptr<i256> loc(#loc9)
-// CHECK-NEXT:       llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc9)
+// CHECK-NEXT:       %0 = sol.alloca : !sol.ptr<i256> loc(#loc9)
+// CHECK-NEXT:       sol.store %arg0 : i256, %0 : !sol.ptr<i256> loc(#loc9)
 // CHECK-NEXT:       %c7_i8 = arith.constant 7 : i8 loc(#loc10)
 // CHECK-NEXT:       %1 = arith.extui %c7_i8 : i8 to i256 loc(#loc10)
 // CHECK-NEXT:       sol.return %1 : i256 loc(#loc11)
