@@ -61,10 +61,10 @@ solidity::mlirgen::createTargetMachine(Target tgt) {
       llvm_unreachable(errMsg.c_str());
 
     // Create and return the llvm::TargetMachine
-    llvm::TargetOptions Options;
+    llvm::TargetOptions options;
     return std::unique_ptr<llvm::TargetMachine>(
         llvmTgt->createTargetMachine("eravm", /*CPU=*/"", /*Features=*/"",
-                                     Options, /*Reloc::Model=*/llvm::None));
+                                     options, /*Reloc::Model=*/llvm::None));
 
     // TODO: Set code-model?
     // tgtMach->setCodeModel(?);

@@ -82,7 +82,7 @@ BuilderHelper::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
     return found;
 
   // Set insertion point to the ModuleOp's body.
-  auto ctx = mod.getContext();
+  auto *ctx = mod.getContext();
   OpBuilder::InsertionGuard insertGuard(b);
   b.setInsertionPointToStart(mod.getBody());
 

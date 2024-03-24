@@ -474,9 +474,9 @@ struct AllocaOpLowering : public OpConversionPattern<sol::AllocaOp> {
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
       return arrayTy.getSize() * getTotalSize<ValSize>(arrayTy.getEltType());
-
-      // Struct type.
-    } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+    }
+    // Struct type.
+    if (auto structTy = ty.dyn_cast<sol::StructType>()) {
       assert(false && "NYI: Struct type");
     }
 
@@ -507,9 +507,9 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       assert(!arrayTy.isDynSized());
       // FIXME: 32 -> 1 for byte arrays.
       return arrayTy.getSize() * 32;
-
-      // Struct type.
-    } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+    }
+    // Struct type.
+    if (auto structTy = ty.dyn_cast<sol::StructType>()) {
       // FIXME: Is the memoryHeadSize 32 for all the types (assuming padding is
       // enabled by default) in StructType::memoryDataSize?
       return structTy.getMemTypes().size() * 32;

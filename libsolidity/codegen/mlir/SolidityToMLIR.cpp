@@ -31,8 +31,6 @@
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/CommonIO.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -45,7 +43,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "range/v3/view/zip.hpp"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 using namespace solidity::langutil;
@@ -133,20 +130,20 @@ private:
 
 mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
   // Integer type
-  if (auto *i = dynamic_cast<IntegerType const *>(ty)) {
+  if (const auto *i = dynamic_cast<IntegerType const *>(ty)) {
     return b.getIntegerType(i->numBits());
-
-    // Rational number type
-  } else if (auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
+  }
+  // Rational number type
+  if (const auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
     if (ratNumTy->isFractional())
       llvm_unreachable("NYI: Fractional type");
 
     // Integral rational number type
     const IntegerType *intTy = ratNumTy->integerType();
     return b.getIntegerType(intTy->numBits());
-
-    // Function type
-  } else if (auto *fnTy = dynamic_cast<FunctionType const *>(ty)) {
+  }
+  // Function type
+  if (const auto *fnTy = dynamic_cast<FunctionType const *>(ty)) {
     std::vector<mlir::Type> inTys, outTys;
 
     inTys.reserve(fnTy->parameterTypes().size());
@@ -203,7 +200,7 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
     return val;
 
   auto getAsIntTy = [](Type const *ty) -> IntegerType const * {
-    auto intTy = dynamic_cast<IntegerType const *>(ty);
+    const auto *intTy = dynamic_cast<IntegerType const *>(ty);
     if (!intTy) {
       if (auto *ratTy = dynamic_cast<RationalNumberType const *>(ty)) {
         if (auto *intRatTy = ratTy->integerType())
@@ -218,11 +215,11 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
   // type to perform "sign aware lowering".
   //
   // Casting between integers
-  auto srcIntTy = getAsIntTy(srcTy);
-  auto dstIntTy = getAsIntTy(dstTy);
+  const auto *srcIntTy = getAsIntTy(srcTy);
+  const auto *dstIntTy = getAsIntTy(dstTy);
 
   if (srcIntTy && dstIntTy) {
-    // Generate extends
+    // Generate extends.
     if (dstIntTy->numBits() > srcIntTy->numBits()) {
       return dstIntTy->isSigned()
                  ? b.create<mlir::arith::ExtSIOp>(val.getLoc(),
@@ -231,8 +228,6 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
                  : b.create<mlir::arith::ExtUIOp>(val.getLoc(),
                                                   getType(dstIntTy), val)
                        ->getResult(0);
-    } else {
-      llvm_unreachable("NYI: Unknown cast");
     }
   }
 
@@ -240,7 +235,7 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
-  auto resTy = binOp->annotation().type;
+  const auto *resTy = binOp->annotation().type;
   auto lc = getLoc(binOp->location());
 
   mlir::Value lhs = genExpr(&binOp->leftExpression(), resTy);
@@ -301,9 +296,8 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
         lc,
         b.getIntegerAttr(getType(ty), llvm::APInt(intTy->numBits(), val.str(),
                                                   /*radix=*/10)));
-  } else {
-    llvm_unreachable("NYI: Literal");
   }
+  llvm_unreachable("NYI: Literal");
 }
 
 bool SolidityToMLIRPass::visit(Return const &ret) {

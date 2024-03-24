@@ -30,7 +30,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <optional>
 
 using namespace mlir;
 using namespace mlir::sol;
@@ -55,9 +54,11 @@ void SolDialect::initialize() {
 static Type getEltType(Type ty, Index index = 0) {
   if (auto ptrTy = ty.dyn_cast<sol::PointerType>()) {
     return ptrTy.getPointeeType();
-  } else if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
+  }
+  if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
     return arrTy.getEltType();
-  } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+  }
+  if (auto structTy = ty.dyn_cast<sol::StructType>()) {
     return structTy.getMemTypes()[index];
   }
   llvm_unreachable("Invalid type");
@@ -66,7 +67,8 @@ static Type getEltType(Type ty, Index index = 0) {
 DataLocation mlir::sol::getDataLocation(Type ty) {
   if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
     return arrTy.getDataLocation();
-  } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+  }
+  if (auto structTy = ty.dyn_cast<sol::StructType>()) {
     return structTy.getDataLocation();
   }
   return DataLocation::Stack;
