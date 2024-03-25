@@ -233,6 +233,46 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
   }
 };
 
+struct SLoadOpLowering : public OpRewritePattern<sol::SLoadOp> {
+  using OpRewritePattern<sol::SLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::SLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op->getLoc();
+
+    mlir::Value addr = op.getInp0();
+    auto storageAddrSpacePtrTy = LLVM::LLVMPointerType::get(
+        rewriter.getContext(), eravm::AddrSpace_Storage);
+    mlir::Value offset =
+        rewriter.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, addr);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+        op, rewriter.getIntegerType(256), offset, eravm::getAlignment(offset));
+
+    return success();
+  }
+};
+
+struct SStoreOpLowering : public OpRewritePattern<sol::SStoreOp> {
+  using OpRewritePattern<sol::SStoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::SStoreOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op->getLoc();
+
+    mlir::Value addr = op.getInp0();
+    mlir::Value val = op.getInp1();
+    auto storageAddrSpacePtrTy = LLVM::LLVMPointerType::get(
+        rewriter.getContext(), eravm::AddrSpace_Storage);
+    mlir::Value offset =
+        rewriter.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, addr);
+    rewriter.create<LLVM::StoreOp>(loc, val, offset,
+                                   eravm::getAlignment(offset));
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 struct DataOffsetOpLowering : public OpRewritePattern<sol::DataOffsetOp> {
   using OpRewritePattern<sol::DataOffsetOp>::OpRewritePattern;
 
@@ -1437,7 +1477,8 @@ void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
            MStoreOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
            CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
            CallDataLoadOpLowering, CallDataSizeOpLowering,
-           CallDataCopyOpLowering>(pats.getContext());
+           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering>(
+      pats.getContext());
 }
 
 void sol::eravm::populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
