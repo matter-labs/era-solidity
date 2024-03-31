@@ -65,13 +65,12 @@ static Type getEltType(Type ty, Index index = 0) {
 }
 
 DataLocation mlir::sol::getDataLocation(Type ty) {
-  if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
-    return arrTy.getDataLocation();
-  }
-  if (auto structTy = ty.dyn_cast<sol::StructType>()) {
-    return structTy.getDataLocation();
-  }
-  return DataLocation::Stack;
+  return TypeSwitch<Type, DataLocation>(ty)
+      .Case<sol::ArrayType>(
+          [&](sol::ArrayType arrTy) { return arrTy.getDataLocation(); })
+      .Case<sol::StructType>(
+          [&](sol::StructType structTy) { return structTy.getDataLocation(); })
+      .Default([&](Type) { return DataLocation::Stack; });
 }
 
 unsigned mlir::sol::getStorageByteCount(Type ty) {
