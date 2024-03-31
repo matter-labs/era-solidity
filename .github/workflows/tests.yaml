@@ -1,8 +1,8 @@
 name: Integration testing
 
 on:
-  workflow_dispatch:
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -12,15 +12,19 @@ jobs:
   testing:
     runs-on: [self-hosted, ci-runner-compiler]
     container:
-      image: matterlabs/llvm_runner:latest
-      credentials:
-        username: ${{ secrets.DOCKERHUB_USER }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      image: matterlabs/llvm_runner:ubuntu22-llvm15-latest
     steps:
-      - name: Getting the branch name (pull request)
-        if: github.event_name == 'pull_request'
+      - name: Extract branch name
         shell: bash
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_BASE_REF} | tr / -)" >> $GITHUB_ENV
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
+      - name: Checking out the compiler-tester repository
+        uses: actions/checkout@v4
+        with:
+          repository: matter-labs/era-compiler-tester
+          submodules: recursive
+          persist-credentials: false
 
       - name: Checking out the Solidity repository
         uses: actions/checkout@v4
@@ -28,48 +32,39 @@ jobs:
           submodules: recursive
           path: solidity
 
-      - name: Checking out the compiler-tester repository
-        uses: actions/checkout@v4
-        with:
-          repository: matter-labs/era-compiler-tester
-          path: compiler-tester
-          submodules: recursive
-
       - name: Building the Solidity compiler
         working-directory: solidity
         run: |
           mkdir -p ./build
           cd ./build
           cmake .. -DCMAKE_BUILD_TYPE='Release' -DSOLC_VERSION_ZKEVM='1.0.0-lts' -DPEDANTIC=OFF -DCMAKE_CXX_FLAGS='-w' -DUSE_Z3=OFF -DUSE_CVC4=OFF
-          make -j$(nproc)
+          make -j
+
+      - name: Build LLVM
+        uses: ./.github/actions/build-llvm
 
       - name: Building and running the compiler tester
-        id: compiler_tester_run
-        working-directory: compiler-tester
         run: |
           mkdir -p './solc-bin/'
-          cp '../solidity/build/solc/solc' "./solc-bin/solc-${BRANCH_NAME}"
-          chmod +x "./solc-bin/solc-${BRANCH_NAME}"
-
-          cargo install compiler-llvm-builder
-          /usr/local/cargo/bin/zkevm-llvm clone && /usr/local/cargo/bin/zkevm-llvm build
+          cp './solidity/build/solc/solc' "./solc-bin/solc-${{ steps.extract_branch.outputs.branch }}"
+          chmod +x "./solc-bin/solc-${{ steps.extract_branch.outputs.branch }}"
 
           export RUST_BACKTRACE='full'
           export LLVM_SYS_150_PREFIX="$(pwd)/target-llvm/target-final/"
           cargo build --verbose --release --bin 'compiler-tester'
-          cargo build --verbose --release --manifest-path /usr/local/cargo/git/checkouts/era-compiler-solidity-*/*/Cargo.toml --target-dir './target-zksolc/'
-          cargo build --verbose --release --manifest-path /usr/local/cargo/git/checkouts/era-compiler-vyper-*/*/Cargo.toml --target-dir './target-zkvyper/'
+          cargo build --verbose --release \
+            --manifest-path /usr/local/cargo/git/checkouts/era-compiler-solidity-*/*/Cargo.toml \
+            --target-dir './target-zksolc/'
 
           ./target/release/compiler-tester \
             --zksolc './target-zksolc/release/zksolc' \
-            --zkvyper './target-zkvyper/release/zkvyper' \
             --path='tests/solidity/' \
-            --solc-bin-config-path="configs/solc-bin-zkevm-candidate-${BRANCH_NAME}.json"
+            --solc-bin-config-path="configs/solc-bin-zkevm-candidate-${{ steps.extract_branch.outputs.branch }}.json"
 
       - uses: 8398a7/action-slack@v3
+        if: ${{ failure() || success() }} # Skip canceled jobs
         with:
           status: ${{ job.status }}
-          fields: repo,commit,author,action,eventName,ref,workflow,job,took,pullRequest # selectable (default: repo,message)
+          fields: repo,commit,author,action,eventName,ref,workflow,job,took,pullRequest
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.COMPILER_CI_MATTERMOST_WEBHOOK }} # required
-        if: ${{ failure() || success() }} # Skip canceled jobs
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
