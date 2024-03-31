@@ -47,5 +47,8 @@ namespace sol {
 /// Returns the data-location of type.
 DataLocation getDataLocation(Type ty);
 using Index = uint64_t;
+
+/// sol dialect version of solc's Type::storageBytes().
+unsigned getStorageByteCount(Type ty);
 } // namespace sol
 } // namespace mlir

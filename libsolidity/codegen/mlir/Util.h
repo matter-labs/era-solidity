@@ -51,29 +51,28 @@ public:
   explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc) {}
 
-  mlir::Value getConst(int64_t val, unsigned width = 256,
+  mlir::Value getConst(llvm::APInt const &val, unsigned width = 256,
                        std::optional<mlir::Location> locArg = std::nullopt) {
     mlir::IntegerType ty = b.getIntegerType(width);
-    auto op = b.create<mlir::arith::ConstantOp>(
-        locArg ? *locArg : defLoc,
-        b.getIntegerAttr(ty, llvm::APInt(width, val, /*isSigned=*/true)));
+    auto op = b.create<mlir::arith::ConstantOp>(locArg ? *locArg : defLoc,
+                                                b.getIntegerAttr(ty, val));
     return op.getResult();
+  }
+
+  mlir::Value getConst(int64_t val, unsigned width = 256,
+                       std::optional<mlir::Location> locArg = std::nullopt) {
+    return getConst(llvm::APInt(width, val, /*isSigned=*/true), width, locArg);
   }
 
   mlir::Value getConst(std::string const &val, unsigned width = 256,
                        std::optional<mlir::Location> locArg = std::nullopt) {
-    mlir::IntegerType ty = b.getIntegerType(width);
-
     uint8_t radix = 10;
     llvm::StringRef intStr = val;
     if (intStr.consume_front("0x")) {
       radix = 16;
     }
 
-    auto op = b.create<mlir::arith::ConstantOp>(
-        locArg ? *locArg : defLoc,
-        b.getIntegerAttr(ty, llvm::APInt(width, intStr, radix)));
-    return op.getResult();
+    return getConst(llvm::APInt(width, intStr, radix), width, locArg);
   }
 
   mlir::Value

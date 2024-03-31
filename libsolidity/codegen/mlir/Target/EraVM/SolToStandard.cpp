@@ -830,6 +830,37 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
   }
 };
 
+struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
+  using OpRewritePattern<sol::StorageLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::StorageLoadOp op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r, loc);
+
+    assert(op.getType() == r.getIntegerType(256) &&
+           "NYI: Storage types other than uint256");
+
+    auto slotLd = r.create<sol::SLoadOp>(loc, h.getConst(op.getSlotOffset()));
+
+    auto byteOffset =
+        cast<arith::ConstantIntOp>(op.getByteOffset().getDefiningOp());
+    assert(byteOffset.getType() == r.getI32Type());
+    assert(sol::getStorageByteCount(op.getType()) == 32 &&
+           "NYI: Cleanup functions");
+    auto byteOffsetZext =
+        r.create<arith::ExtUIOp>(loc, r.getIntegerType(256), byteOffset);
+    // FIXME: Can we expect this instead? (The current version follows the
+    // "extract_from_storage_value_offset_" yul util function).
+    auto byteOffsetInBits =
+        r.create<arith::MulIOp>(loc, byteOffsetZext, h.getConst(8));
+
+    // Extract the sload'ed value.
+    r.replaceOpWithNewOp<arith::ShRUIOp>(op, slotLd, byteOffsetInBits);
+    return success();
+  }
+};
+
 struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
   using OpConversionPattern<sol::StoreOp>::OpConversionPattern;
 
@@ -1473,10 +1504,10 @@ void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
   pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
       tyConv, pats.getContext());
   pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
-           BuiltinRetOpLowering, RevertOpLowering, MLoadOpLowering,
-           MStoreOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
-           CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
-           CallDataLoadOpLowering, CallDataSizeOpLowering,
+           StorageLoadOpLowering, BuiltinRetOpLowering, RevertOpLowering,
+           MLoadOpLowering, MStoreOpLowering, DataOffsetOpLowering,
+           DataSizeOpLowering, CodeCopyOpLowering, MemGuardOpLowering,
+           CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
            CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering>(
       pats.getContext());
 }

@@ -74,6 +74,12 @@ DataLocation mlir::sol::getDataLocation(Type ty) {
   return DataLocation::Stack;
 }
 
+unsigned mlir::sol::getStorageByteCount(Type ty) {
+  assert(ty == IntegerType::get(ty.getContext(), 256) &&
+         "NYI: Storage types other than uint256");
+  return 32;
+}
+
 static ParseResult parseDataLocation(AsmParser &parser,
                                      DataLocation &dataLocation) {
   StringRef dataLocationTok;

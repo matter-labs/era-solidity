@@ -279,6 +279,20 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
+  let summary = "Storage load op";
+  let description = [{
+    Example:
+    sol.storage_load @var %byte_offset {slot_offset = 0 : i256} : i256
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$sym_name,
+                       I256Attr:$slot_offset, I32:$byte_offset);
+  let results = (outs AnyType:$out);
+  // TODO: Can we get the asm format to assume that the slot_offset is an i256?
+  let assemblyFormat = "$sym_name $byte_offset attr-dict `:` type($out)";
+}
+
 // TODO: Simplify the asm format by inferring element type of Sol_RefType.
 // TODO? Use a single type (index?) for array/struct size and indexing that
 // conforms to that of solidity.
