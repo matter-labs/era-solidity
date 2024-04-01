@@ -282,15 +282,19 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
 def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
   let summary = "Storage load op";
   let description = [{
+    This operation loads an i256 value from storage at the given offsets. The
+    value is truncated or extended to the effective type (but always yields an
+    i256).
+
     Example:
-    sol.storage_load @var %byte_offset {slot_offset = 0 : i256} : i256
+    sol.storage_load i32 @var %byte_offset {slot_offset = 0 : i256}
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$sym_name,
+  let arguments = (ins FlatSymbolRefAttr:$sym_name, TypeAttr:$effective_type,
                        I256Attr:$slot_offset, I32:$byte_offset);
-  let results = (outs AnyType:$out);
+  let results = (outs I<256>:$out);
   // TODO: Can we get the asm format to assume that the slot_offset is an i256?
-  let assemblyFormat = "$sym_name $byte_offset attr-dict `:` type($out)";
+  let assemblyFormat = "$effective_type $sym_name $byte_offset attr-dict";
 }
 
 // TODO: Simplify the asm format by inferring element type of Sol_RefType.

@@ -838,25 +838,53 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r, loc);
 
-    assert(op.getType() == r.getIntegerType(256) &&
-           "NYI: Storage types other than uint256");
+    Type effTy = op.getEffectiveType();
+    assert(effTy.isa<IntegerType>() &&
+           "NYI: Storage types other than int types");
 
+    // Genrate the slot load.
     auto slotLd = r.create<sol::SLoadOp>(loc, h.getConst(op.getSlotOffset()));
 
+    // Generate the byte offset in bits.
+    //
+    // FIXME: Can we expect this instead? (The current version follows the
+    // "extract_from_storage_value_offset_" yul util function).
     auto byteOffset =
         cast<arith::ConstantIntOp>(op.getByteOffset().getDefiningOp());
     assert(byteOffset.getType() == r.getI32Type());
-    assert(sol::getStorageByteCount(op.getType()) == 32 &&
-           "NYI: Cleanup functions");
     auto byteOffsetZext =
         r.create<arith::ExtUIOp>(loc, r.getIntegerType(256), byteOffset);
-    // FIXME: Can we expect this instead? (The current version follows the
-    // "extract_from_storage_value_offset_" yul util function).
     auto byteOffsetInBits =
         r.create<arith::MulIOp>(loc, byteOffsetZext, h.getConst(8));
 
-    // Extract the sload'ed value.
-    r.replaceOpWithNewOp<arith::ShRUIOp>(op, slotLd, byteOffsetInBits);
+    // Generate the extraction of the sload'ed value.
+    auto partiallyExtractedVal =
+        r.create<arith::ShRUIOp>(loc, slotLd, byteOffsetInBits);
+    Value extractedVal;
+    if (sol::getStorageByteCount(effTy) == 32) {
+      extractedVal = partiallyExtractedVal;
+    } else {
+      if (auto intTy = effTy.dyn_cast<IntegerType>()) {
+        if (intTy.isSigned()) {
+          llvm_unreachable("NYI: signextend builtin");
+        } else {
+          if (sol::isLeftAligned(effTy)) {
+            extractedVal = r.create<arith::ShLIOp>(
+                loc, partiallyExtractedVal,
+                h.getConst(256 - 8 * sol::getStorageByteCount(effTy)));
+          } else {
+            // Zero the irrelevant high bits.
+            llvm::APInt maskVal(256, 0);
+            maskVal.setLowBits(8 * sol::getStorageByteCount(effTy));
+            extractedVal = r.create<arith::AndIOp>(loc, partiallyExtractedVal,
+                                                   h.getConst(maskVal));
+          }
+        }
+      }
+    }
+    assert(extractedVal);
+
+    r.replaceOp(op, extractedVal);
     return success();
   }
 };

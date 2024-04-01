@@ -73,10 +73,16 @@ DataLocation mlir::sol::getDataLocation(Type ty) {
       .Default([&](Type) { return DataLocation::Stack; });
 }
 
+bool mlir::sol::isLeftAligned(Type ty) {
+  if (ty.isa<IntegerType>())
+    return false;
+  llvm_unreachable("NYI: isLeftAligned of other types");
+}
+
 unsigned mlir::sol::getStorageByteCount(Type ty) {
-  assert(ty == IntegerType::get(ty.getContext(), 256) &&
-         "NYI: Storage types other than uint256");
-  return 32;
+  if (auto intTy = ty.dyn_cast<IntegerType>())
+    return intTy.getWidth() / 8;
+  llvm_unreachable("NYI: getStorageByteCount of other types");
 }
 
 static ParseResult parseDataLocation(AsmParser &parser,
