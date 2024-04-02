@@ -845,6 +845,10 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
     // Genrate the slot load.
     auto slotLd = r.create<sol::SLoadOp>(loc, h.getConst(op.getSlotOffset()));
 
+    // TODO: Can we align storage allocations by 32 bytes for all value types?
+    // Then we can avoid the following "extraction" code (and also get rid of
+    // the byte offset).
+
     // Generate the byte offset in bits.
     //
     // FIXME: Can we expect this instead? (The current version follows the

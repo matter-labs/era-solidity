@@ -279,6 +279,8 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+// TODO: Can we let the target decided the layout in the storage? This can, for
+// instance, enable targets to align storage allocations.
 def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
   let summary = "Storage load op";
   let description = [{
