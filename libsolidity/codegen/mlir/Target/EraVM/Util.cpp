@@ -128,6 +128,18 @@ FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertRevert(ModuleOp mod) {
   return FlatSymbolRefAttr::get(mod.getContext(), "__revert");
 }
 
+FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertSha3(ModuleOp mod) {
+  auto *ctx = mod.getContext();
+
+  auto i1Ty = IntegerType::get(ctx, 1);
+  auto i256Ty = IntegerType::get(ctx, 256);
+  auto heapPtrTy = LLVM::LLVMPointerType::get(ctx, AddrSpace_Heap);
+  auto fnTy = FunctionType::get(ctx, {heapPtrTy, i256Ty, i1Ty}, {i256Ty});
+  auto fn = h.getOrInsertFuncOp("__sha3", fnTy, LLVM::Linkage::External, mod);
+  fn.setPrivate();
+  return FlatSymbolRefAttr::get(mod.getContext(), "__sha3");
+}
+
 LLVM::AddressOfOp
 eravm::BuilderHelper::getCallDataSizeAddr(ModuleOp mod,
                                           std::optional<Location> loc) {

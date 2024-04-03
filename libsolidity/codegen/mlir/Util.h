@@ -51,6 +51,14 @@ public:
   explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc) {}
 
+  mlir::Value genBool(bool val,
+                      std::optional<mlir::Location> locArg = std::nullopt) {
+    mlir::IntegerType ty = b.getIntegerType(1);
+    auto op = b.create<mlir::arith::ConstantOp>(locArg ? *locArg : defLoc,
+                                                b.getIntegerAttr(ty, val));
+    return op.getResult();
+  }
+
   mlir::Value getConst(llvm::APInt const &val, unsigned width = 256,
                        std::optional<mlir::Location> locArg = std::nullopt) {
     mlir::IntegerType ty = b.getIntegerType(width);

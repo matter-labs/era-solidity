@@ -333,6 +333,11 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       assert(arg);
       return b.create<mlir::sol::MemGuardOp>(loc, getIntAttr(arg->value));
     }
+    if (builtin->name.str() == "keccak256") {
+      return b.create<mlir::sol::Keccak256Op>(loc,
+                                              genDefTyExpr(call.arguments[0]),
+                                              genDefTyExpr(call.arguments[1]));
+    }
 
     solUnimplementedAssert(false, "NYI: builtin " + builtin->name.str());
   }

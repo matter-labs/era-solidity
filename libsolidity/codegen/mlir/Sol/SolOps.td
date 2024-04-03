@@ -454,4 +454,12 @@ def Sol_MemGuardOp : Sol_Op<"memoryguard", [NoSideEffect,
   let assemblyFormat = "$inp attr-dict `:` type($out)";
 }
 
+def Sol_Keccak256Op : Sol_Op<"keccak256"> {
+  // Note that the keccak256 yul builtin has side effects.
+  let summary = "Represents the `keccak256` call in yul";
+  let arguments = (ins I<256>:$inp0, I<256>:$inp1);
+  let results = (outs I<256>:$out);
+  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
+}
+
 #endif // MLIR_SOL_SOLOPS_TD

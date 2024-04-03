@@ -137,6 +137,9 @@ public:
   /// Returns an existing or a new (if not found) revert function symbol.
   mlir::FlatSymbolRefAttr getOrInsertRevert(mlir::ModuleOp mod);
 
+  /// Returns an existing or a new (if not found) sha3 function symbol.
+  mlir::FlatSymbolRefAttr getOrInsertSha3(mlir::ModuleOp mod);
+
   /// Returns the address to the calldatasize global variable (creates the
   /// variable if it doesn't exist).
   mlir::LLVM::AddressOfOp

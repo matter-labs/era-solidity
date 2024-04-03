@@ -107,6 +107,38 @@ static bool inRuntimeContext(Operation *op) {
 
 // TODO? Move simple builtin lowering to tblgen (`Pat` records)?
 
+struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
+  using OpRewritePattern<sol::Keccak256Op>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::Keccak256Op op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r);
+    eravm::BuilderHelper eravmHelper(r, loc);
+
+    // Setup arguments for the call to sha3.
+    Value length = op.getInp1();
+    Value offset = op.getInp0();
+    auto heapAddrSpacePtrTy =
+        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Heap);
+    auto offsetPtr =
+        r.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offset);
+    // FIXME: When will this
+    // (`context.get_function(EraVMFunction::ZKSYNC_NEAR_CALL_ABI_EXCEPTION_HANDLER).is_some()`)
+    // be true?
+    auto throwAtFail = h.genBool(false);
+
+    // Generate the call to sha3.
+    auto i256Ty = r.getIntegerType(256);
+    FlatSymbolRefAttr sha3Func =
+        eravmHelper.getOrInsertSha3(op->getParentOfType<ModuleOp>());
+    r.replaceOpWithNewOp<sol::CallOp>(
+        op, sha3Func, TypeRange{i256Ty},
+        ValueRange{offsetPtr, length, throwAtFail});
+    return success();
+  }
+};
+
 struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   using OpRewritePattern<sol::CallValOp>::OpRewritePattern;
 
@@ -1540,8 +1572,8 @@ void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
            MLoadOpLowering, MStoreOpLowering, DataOffsetOpLowering,
            DataSizeOpLowering, CodeCopyOpLowering, MemGuardOpLowering,
            CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
-           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering>(
-      pats.getContext());
+           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
+           Keccak256OpLowering>(pats.getContext());
 }
 
 void sol::eravm::populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
