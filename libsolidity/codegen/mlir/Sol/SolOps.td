@@ -279,6 +279,19 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def Sol_GetSlotOp : Sol_Op<"get_slot"> {
+  let summary = "Maps slot+key to slot";
+  let description = [{
+    Example:
+    %mapped_slot = sol.get_slot %slot_offset %key
+  }];
+
+  let arguments = (ins I<256>:$inpSlot, I<256>:$key);
+  let results = (outs I<256>:$outSlot);
+
+  let assemblyFormat = "$inpSlot `,` $key attr-dict";
+}
+
 // TODO: Can we let the target decided the layout in the storage? This can, for
 // instance, enable targets to align storage allocations.
 def Sol_StorageLoadOp : Sol_Op<"storage_load"> {

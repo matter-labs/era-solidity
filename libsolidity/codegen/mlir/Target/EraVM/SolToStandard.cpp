@@ -862,6 +862,25 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
   }
 };
 
+struct GetSlotOpLowering : public OpRewritePattern<sol::GetSlotOp> {
+  using OpRewritePattern<sol::GetSlotOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::GetSlotOp op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r, loc);
+
+    // Setup arguments to keccak256
+    // FIXME: Is it necessary to do the "cleanup" of the key?
+    auto zero = h.getConst(0);
+    r.create<sol::MStoreOp>(loc, zero, op.getKey());
+    r.create<sol::MStoreOp>(loc, h.getConst(0x20), op.getInpSlot());
+
+    r.replaceOpWithNewOp<sol::Keccak256Op>(op, zero, h.getConst(0x40));
+    return success();
+  }
+};
+
 struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
   using OpRewritePattern<sol::StorageLoadOp>::OpRewritePattern;
 
@@ -1568,12 +1587,12 @@ void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
   pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
       tyConv, pats.getContext());
   pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
-           StorageLoadOpLowering, BuiltinRetOpLowering, RevertOpLowering,
-           MLoadOpLowering, MStoreOpLowering, DataOffsetOpLowering,
-           DataSizeOpLowering, CodeCopyOpLowering, MemGuardOpLowering,
-           CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
-           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
-           Keccak256OpLowering>(pats.getContext());
+           GetSlotOpLowering, StorageLoadOpLowering, BuiltinRetOpLowering,
+           RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
+           DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
+           MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
+           CallDataSizeOpLowering, CallDataCopyOpLowering, SLoadOpLowering,
+           SStoreOpLowering, Keccak256OpLowering>(pats.getContext());
 }
 
 void sol::eravm::populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
