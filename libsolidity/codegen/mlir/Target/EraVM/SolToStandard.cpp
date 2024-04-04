@@ -894,7 +894,7 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
            "NYI: Storage types other than int types");
 
     // Genrate the slot load.
-    auto slotLd = r.create<sol::SLoadOp>(loc, h.getConst(op.getSlotOffset()));
+    auto slotLd = r.create<sol::SLoadOp>(loc, op.getSlot());
 
     // TODO: Can we align storage allocations by 32 bytes for all value types?
     // Then we can avoid the following "extraction" code (and also get rid of

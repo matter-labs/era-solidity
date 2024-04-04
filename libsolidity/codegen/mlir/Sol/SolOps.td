@@ -302,14 +302,13 @@ def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
     i256).
 
     Example:
-    sol.storage_load i32 @var %byte_offset {slot_offset = 0 : i256}
+    %ld = sol.storage_load i32 %slot_offset %byte_offset
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$sym_name, TypeAttr:$effective_type,
-                       I256Attr:$slot_offset, I32:$byte_offset);
+  let arguments = (ins TypeAttr:$effectiveType, I<256>:$slot,
+                       I32:$byteOffset);
   let results = (outs I<256>:$out);
-  // TODO: Can we get the asm format to assume that the slot_offset is an i256?
-  let assemblyFormat = "$effective_type $sym_name $byte_offset attr-dict";
+  let assemblyFormat = "$effectiveType $slot `,` $byteOffset attr-dict";
 }
 
 // TODO: Simplify the asm format by inferring element type of Sol_RefType.
