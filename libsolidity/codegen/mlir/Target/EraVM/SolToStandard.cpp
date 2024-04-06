@@ -1253,7 +1253,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     solidity::mlirgen::BuilderHelper h(r, loc);
 
     // Generate the creation and runtime ObjectOp.
-    auto creationObj = r.replaceOpWithNewOp<sol::ObjectOp>(op, op.getSymName());
+    auto creationObj = r.create<sol::ObjectOp>(loc, op.getSymName());
     r.setInsertionPointToStart(creationObj.getBody());
     auto runtimeObj = r.create<sol::ObjectOp>(
         loc, std::string(op.getSymName()) + "_deployed");
@@ -1456,6 +1456,8 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       r.create<sol::RevertOp>(loc, h.getConst(0), h.getConst(0));
     }
 
+    assert(op.getBody()->empty());
+    r.eraseOp(op);
     // TODO: Subobjects
     return success();
   }
