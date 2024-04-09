@@ -15,7 +15,7 @@ object "Test" {
 // CHECK: module {
 // CHECK-NEXT:   sol.object @Test {
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256 loc(#loc1)
-// CHECK-NEXT:     %0 = sol.datasize {sym = @Test_deployed} : i256 loc(#loc2)
+// CHECK-NEXT:     %0 = sol.datasize {sym = @Test_deployed} loc(#loc2)
 // CHECK-NEXT:     sol.mstore %c64_i256, %0 loc(#loc3)
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc4)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc5)

@@ -14,11 +14,11 @@ object "Test" {
 // CHECK: module {
 // CHECK-NEXT:   sol.object @Test {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc1)
-// CHECK-NEXT:     %0 = sol.calldatasize : i256 loc(#loc2)
+// CHECK-NEXT:     %0 = sol.calldatasize loc(#loc2)
 // CHECK-NEXT:     sol.builtin_ret %c0_i256, %0 loc(#loc3)
 // CHECK-NEXT:     sol.object @Test_deployed {
 // CHECK-NEXT:       %c0_i256_0 = arith.constant 0 : i256 loc(#loc4)
-// CHECK-NEXT:       %1 = sol.calldatasize : i256 loc(#loc5)
+// CHECK-NEXT:       %1 = sol.calldatasize loc(#loc5)
 // CHECK-NEXT:       sol.builtin_ret %c0_i256_0, %1 loc(#loc6)
 // CHECK-NEXT:     } loc(#loc0)
 // CHECK-NEXT:   } loc(#loc0)

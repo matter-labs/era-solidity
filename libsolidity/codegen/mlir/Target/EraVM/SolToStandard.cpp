@@ -161,7 +161,7 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
     solidity::mlirgen::BuilderHelper h(rewriter);
     eravm::BuilderHelper eravmHelper(rewriter, loc);
 
-    Value offset = op.getInp0();
+    Value offset = op.getInp();
 
     if (inRuntimeContext(op)) {
       // Generate the `GlobCallDataPtr` + `offset` load
@@ -272,7 +272,7 @@ struct SLoadOpLowering : public OpRewritePattern<sol::SLoadOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
 
-    mlir::Value addr = op.getInp0();
+    mlir::Value addr = op.getInp();
     auto storageAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), eravm::AddrSpace_Storage);
     mlir::Value offset =
@@ -385,7 +385,7 @@ struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
 
-    mlir::Value offsetInt = op.getInp0();
+    mlir::Value offsetInt = op.getInp();
     auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
                                                          eravm::AddrSpace_Heap);
     mlir::Value offset =
@@ -478,7 +478,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
       // RetForwardPageType::UseHeap)) and the unreachable op
       rewriter.create<sol::CallOp>(
           loc, returnFunc, TypeRange{},
-          ValueRange{op.getLhs(), op.getRhs(),
+          ValueRange{op.getInp0(), op.getInp1(),
                      h.getConst(eravm::RetForwardPageType::UseHeap)});
       h.createCallToUnreachableWrapper(mod);
 
