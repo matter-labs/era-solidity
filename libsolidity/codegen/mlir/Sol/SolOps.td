@@ -273,7 +273,7 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
     ```
   }];
 
-  let arguments = (ins TypeAttr:$alloc_type, Optional<I<256>>:$size);
+  let arguments = (ins TypeAttr:$alloc_type, Optional<I256>:$size);
   let results = (outs Sol_AggType:$addr);
 
   let hasCustomAssemblyFormat = 1;
@@ -286,8 +286,8 @@ def Sol_GetSlotOp : Sol_Op<"get_slot"> {
     %mapped_slot = sol.get_slot %slot_offset %key
   }];
 
-  let arguments = (ins I<256>:$inpSlot, I<256>:$key);
-  let results = (outs I<256>:$outSlot);
+  let arguments = (ins I256:$inpSlot, I256:$key);
+  let results = (outs I256:$outSlot);
 
   let assemblyFormat = "$inpSlot `,` $key attr-dict";
 }
@@ -305,9 +305,9 @@ def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
     %ld = sol.storage_load i32 %slot_offset %byte_offset
   }];
 
-  let arguments = (ins TypeAttr:$effectiveType, I<256>:$slot,
+  let arguments = (ins TypeAttr:$effectiveType, I256:$slot,
                        I32:$byteOffset);
-  let results = (outs I<256>:$out);
+  let results = (outs I256:$out);
   let assemblyFormat = "$effectiveType $slot `,` $byteOffset attr-dict";
 }
 
@@ -317,7 +317,7 @@ def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
 
 def Sol_LoadOp : Sol_Op<"load"> {
   let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
-                       Variadic<I<256>>:$indices);
+                       Variadic<I256>:$indices);
   let results = (outs AnyType:$out);
   let assemblyFormat = [{
     $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr) `,` type($out)
@@ -335,7 +335,7 @@ def Sol_LoadOp : Sol_Op<"load"> {
 
 def Sol_StoreOp : Sol_Op<"store"> {
   let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
-                       Variadic<I<256>>:$indices);
+                       Variadic<I256>:$indices);
   let assemblyFormat = [{
     $val `:` type($val) `,`
       $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr)
@@ -357,21 +357,21 @@ def Sol_BuiltinRetOp : Sol_Op<"builtin_ret"> {
     Example:
     sol.return %a %b
   }];
-  let arguments = (ins I<256>:$lhs, I<256>:$rhs);
+  let arguments = (ins I256:$lhs, I256:$rhs);
   let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Sol_RevertOp : Sol_Op<"revert"> {
   let summary = "Represents the `revert` call in yul";
   // TODO: Support revert strings
-  let arguments = (ins I<256>:$inp0, I<256>:$inp1);
+  let arguments = (ins I256:$inp0, I256:$inp1);
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
 def Sol_MLoadOp : Sol_Op<"mload"> {
   let summary = "Represents the `mload` call in yul";
-  let arguments = (ins I<256>:$inp0);
-  let results = (outs I<256>:$out);
+  let arguments = (ins I256:$inp0);
+  let results = (outs I256:$out);
   let assemblyFormat = "$inp0 attr-dict";
 }
 
@@ -381,54 +381,54 @@ def Sol_MStoreOp : Sol_Op<"mstore"> {
     Example:
     sol.mstore %a %b
   }];
-  let arguments = (ins I<256>:$inp0, I<256>:$inp1);
+  let arguments = (ins I256:$inp0, I256:$inp1);
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
 def Sol_MSizeOp : Sol_Op<"msize", [NoSideEffect]> {
   let summary = "Represents the `msize` call in yul";
   let arguments = (ins);
-  let results = (outs I<256>:$out);
+  let results = (outs I256:$out);
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
 def Sol_CallValOp : Sol_Op<"callvalue", [NoSideEffect]> {
   let summary = "Represents the `callvalue` call in yul";
   let arguments = (ins);
-  let results = (outs I<256>:$out);
+  let results = (outs I256:$out);
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
 def Sol_CallDataLoadOp : Sol_Op<"calldataload"> {
   let summary = "Represents the `calldataload` call in yul";
-  let arguments = (ins I<256>:$inp0);
-  let results = (outs I<256>:$out);
+  let arguments = (ins I256:$inp0);
+  let results = (outs I256:$out);
   let assemblyFormat = "$inp0 attr-dict";
 }
 
 def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [NoSideEffect]> {
   let summary = "Represents the `calldatasize` call in yul";
   let arguments = (ins);
-  let results = (outs I<256>:$out);
+  let results = (outs I256:$out);
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
 def Sol_CallDataCopyOp : Sol_Op<"calldatacopy", [NoSideEffect]> {
   let summary = "Represents the `calldatacopy` call in yul";
-  let arguments = (ins I<256>:$inp0, I<256>:$inp1, I<256>:$inp2);
+  let arguments = (ins I256:$inp0, I256:$inp1, I256:$inp2);
   let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
 }
 
 def Sol_SLoadOp : Sol_Op<"sload"> {
   let summary = "Represents the `sload` call in yul";
-  let arguments = (ins I<256>:$inp0);
-  let results = (outs I<256>:$out);
+  let arguments = (ins I256:$inp0);
+  let results = (outs I256:$out);
   let assemblyFormat = "$inp0 attr-dict";
 }
 
 def Sol_SStoreOp : Sol_Op<"sstore"> {
   let summary = "Represents the `sstore` call in yul";
-  let arguments = (ins I<256>:$inp0, I<256>:$inp1);
+  let arguments = (ins I256:$inp0, I256:$inp1);
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
@@ -439,20 +439,20 @@ def Sol_SStoreOp : Sol_Op<"sstore"> {
 def Sol_DataOffsetOp : Sol_Op<"dataoffset", [NoSideEffect]> {
   let summary = "Represents the `dataoffset` call in yul";
   let arguments = (ins FlatSymbolRefAttr:$sym);
-  let results = (outs I<256>:$out);
+  let results = (outs I256:$out);
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
 def Sol_DataSizeOp : Sol_Op<"datasize", [NoSideEffect]> {
   let summary = "Represents the `datasize` call in yul";
   let arguments = (ins FlatSymbolRefAttr:$sym);
-  let results = (outs I<256>:$out);
+  let results = (outs I256:$out);
   let assemblyFormat = "attr-dict `:` type($out)";
 }
 
 def Sol_CodeCopyOp : Sol_Op<"codecopy"> {
   let summary = "Represents the `codecopy` call in yul";
-  let arguments = (ins I<256>:$inp0, I<256>:$inp1, I<256>:$inp2);
+  let arguments = (ins I256:$inp0, I256:$inp1, I256:$inp2);
   let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
 }
 
@@ -462,15 +462,15 @@ def Sol_MemGuardOp : Sol_Op<"memoryguard", [NoSideEffect,
                                             AllTypesMatch<["inp", "out"]>]> {
   let summary = "Represents the `memoryguard` call in yul";
   let arguments = (ins I256Attr:$inp);
-  let results = (outs I<256>:$out);
+  let results = (outs I256:$out);
   let assemblyFormat = "$inp attr-dict `:` type($out)";
 }
 
 def Sol_Keccak256Op : Sol_Op<"keccak256"> {
   // Note that the keccak256 yul builtin has side effects.
   let summary = "Represents the `keccak256` call in yul";
-  let arguments = (ins I<256>:$inp0, I<256>:$inp1);
-  let results = (outs I<256>:$out);
+  let arguments = (ins I256:$inp0, I256:$inp1);
+  let results = (outs I256:$out);
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 

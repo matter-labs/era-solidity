@@ -26,7 +26,8 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
-def I256Attr : SignlessIntegerAttrBase<I<256>,
+def I256 : I<256>;
+def I256Attr : SignlessIntegerAttrBase<I256,
                                         "256-bit signless integer attribute">;
 
 //===----------------------------------------------------------------------===//
