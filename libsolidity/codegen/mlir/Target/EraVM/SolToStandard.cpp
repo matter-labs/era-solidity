@@ -574,10 +574,11 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   /// Returns the size (in bytes) of static type without recursively calculating
   /// the element type size.
   AllocSize getSize(Type ty) const {
+    // String type is dynamic.
+    assert(!ty.isa<sol::StringType>());
     // Array type.
     if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
       assert(!arrayTy.isDynSized());
-      // FIXME: 32 -> 1 for byte arrays.
       return arrayTy.getSize() * 32;
     }
     // Struct type.
@@ -722,7 +723,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         r.create<sol::CallDataCopyOp>(loc, dataPtr, callDataSz, sizeInBytes);
       }
 
-      // TODO: Support other types.
+      // String type.
+    } else if (auto stringTy = ty.dyn_cast<sol::StringType>()) {
+      if (sizeVar)
+        // FIXME: Do we need to round up sizeVar to a multiple of 256?
+        memPtr = genMemAllocForDynArray(sizeVar, sizeVar, r, loc);
+      else
+        return h.getConst(solidity::frontend::CompilerUtils::zeroPointer);
+
+      // Struct type.
     } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
       memPtr = genMemAlloc(getSize(ty), r, loc);
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
@@ -736,10 +745,12 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
         r.create<sol::MStoreOp>(loc, memPtr, initVal);
       }
+      // TODO: Support other types.
     } else {
       llvm_unreachable("Invalid type");
     }
 
+    assert(memPtr);
     return memPtr;
   }
 

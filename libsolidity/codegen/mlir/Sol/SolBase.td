@@ -66,6 +66,24 @@ def Sol_DataLocation : I32EnumAttr<"DataLocation",
   let cppNamespace = "::mlir::sol";
 }
 
+def Sol_StringType : Sol_Type<"String", "string"> {
+  let summary = "Sol string type";
+  let description = [{
+    `sol.string` represents solidity string and bytes type.
+
+    Example:
+
+    ```mlir
+    !sol.string<Memory>
+    !sol.string<Storage>
+    ```
+  }];
+
+  let parameters = (ins Sol_DataLocation:$dataLocation);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 def Sol_ArrayType : Sol_Type<"Array", "array"> {
   let summary = "Sol array type";
   let description = [{
@@ -145,7 +163,7 @@ def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
   let assemblyFormat = [{ `<` $pointeeType `>` }];
 }
 
-def Sol_AggType : AnyTypeOf<[Sol_ArrayType, Sol_StructType],
+def Sol_AggType : AnyTypeOf<[Sol_StringType, Sol_ArrayType, Sol_StructType],
                              "Solidity aggregate types">;
 def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_AggType],
                              "Solidity aggregate types and pointers">;

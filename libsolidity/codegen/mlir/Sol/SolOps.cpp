@@ -155,6 +155,33 @@ void ArrayType::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// StringType
+//===----------------------------------------------------------------------===//
+
+/// Parses a sol.string type.
+///
+///   string-type ::= `<` data-location `>`
+///
+Type StringType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  DataLocation dataLocation = DataLocation::Memory;
+  if (parseDataLocation(parser, dataLocation))
+    return {};
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(parser.getContext(), dataLocation);
+}
+
+/// Prints a sol.string type.
+void StringType::print(AsmPrinter &printer) const {
+  printer << "<" << stringifyDataLocation(this->getDataLocation()) << ">";
+}
+
+//===----------------------------------------------------------------------===//
 // StructType
 //===----------------------------------------------------------------------===//
 
