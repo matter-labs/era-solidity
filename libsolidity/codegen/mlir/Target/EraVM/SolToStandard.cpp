@@ -418,6 +418,35 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
   }
 };
 
+struct MCopyOpLowering : public OpRewritePattern<sol::MCopyOp> {
+  using OpRewritePattern<sol::MCopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::MCopyOp op,
+                                PatternRewriter &rewriter) const override {
+    mlir::Location loc = op->getLoc();
+
+    Value dstAddr = op.getInp0();
+    Value srcAddr = op.getInp1();
+    Value size = op.getInp2();
+
+    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                                         eravm::AddrSpace_Heap);
+    dstAddr =
+        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstAddr);
+    srcAddr =
+        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, srcAddr);
+
+    // Generate the memmove
+    Value isVolatile = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
+    // FIXME: Add align(1) param attribute.
+    rewriter.create<LLVM::MemmoveOp>(loc, dstAddr, srcAddr, size, isVolatile);
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 struct MemGuardOpLowering : public OpRewritePattern<sol::MemGuardOp> {
   using OpRewritePattern<sol::MemGuardOp>::OpRewritePattern;
 
@@ -1601,7 +1630,7 @@ void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
       tyConv, pats.getContext());
   pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
            GetSlotOpLowering, StorageLoadOpLowering, BuiltinRetOpLowering,
-           RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
+           RevertOpLowering, MLoadOpLowering, MStoreOpLowering, MCopyOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
            MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
            CallDataSizeOpLowering, CallDataCopyOpLowering, SLoadOpLowering,

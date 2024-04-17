@@ -377,6 +377,12 @@ def Sol_MStoreOp : Sol_Op<"mstore"> {
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
+def Sol_MCopyOp : Sol_Op<"mcopy"> {
+  let summary = "Represents the `mcopy` call in yul";
+  let arguments = (ins I256:$inp0, I256:$inp1, I256:$inp2);
+  let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
+}
+
 def Sol_MSizeOp : Sol_Op<"msize", [NoSideEffect]> {
   let summary = "Represents the `msize` call in yul";
   let arguments = (ins);
