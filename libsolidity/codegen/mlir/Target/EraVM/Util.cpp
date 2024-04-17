@@ -20,6 +20,7 @@
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/ErrorCodes.h"
 #include "libsolutil/FunctionSelector.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -33,6 +34,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -47,6 +49,16 @@ unsigned eravm::getAlignment(AddrSpace addrSpace) {
 unsigned eravm::getAlignment(Value ptr) {
   auto ty = ptr.getType().cast<LLVM::LLVMPointerType>();
   return getAlignment(static_cast<AddrSpace>(ty.getAddressSpace()));
+}
+
+unsigned eravm::getCallDataHeadSize(Type ty) {
+  if (auto intTy = ty.dyn_cast<IntegerType>()) {
+    return 32;
+  }
+  if (sol::hasDynamicallySizedElt(ty))
+    return 32;
+
+  llvm_unreachable("NYI: Other types");
 }
 
 void eravm::BuilderHelper::initGlobs(ModuleOp mod,
@@ -93,6 +105,63 @@ Value eravm::BuilderHelper::getABILen(Value ptr,
   Value lShr = b.create<LLVM::LShrOp>(
       loc, ptrToInt, h.getConst(eravm::BitLen_X32 * 3, 256, locArg));
   return b.create<LLVM::AndOp>(loc, lShr, h.getConst(UINT_MAX, 256, locArg));
+}
+
+Value eravm::BuilderHelper::genABITupleEncoding(
+    ArrayRef<Type> tys, ArrayRef<Value> vals, Value headStart,
+    std::optional<mlir::Location> locArg) {
+  // TODO: Move this to the evm namespace.
+
+  Location loc = locArg ? *locArg : defLoc;
+
+  unsigned totCallDataHeadSz = 0;
+  for (Type ty : tys)
+    totCallDataHeadSz += getCallDataHeadSize(ty);
+
+  auto tail =
+      b.create<arith::AddIOp>(loc, headStart, h.getConst(totCallDataHeadSz));
+  size_t headPos = 0;
+
+  for (auto it : llvm::zip(tys, vals)) {
+    Type ty = std::get<0>(it);
+    Value val = std::get<1>(it);
+    if (sol::hasDynamicallySizedElt(ty)) {
+      auto headPosOffset =
+          b.create<arith::AddIOp>(loc, headStart, h.getConst(headPos));
+      b.create<sol::MStoreOp>(loc, headPosOffset,
+                              b.create<arith::SubIOp>(loc, tail, headStart));
+
+      if (auto stringTy = ty.dyn_cast<sol::StringType>()) {
+        // Copy the length field.
+        auto size = b.create<sol::MLoadOp>(loc, val);
+        b.create<sol::MStoreOp>(loc, tail, size);
+
+        // Copy the data.
+        auto dataAddr = b.create<arith::AddIOp>(loc, val, h.getConst(32));
+        auto tailDataAddr = b.create<arith::AddIOp>(loc, tail, h.getConst(32));
+        // TODO: Define sol.mcopy
+        (void)dataAddr;
+        // b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr);
+
+        // Write 0 at the end.
+        b.create<sol::MStoreOp>(
+            loc, b.create<arith::AddIOp>(loc, tailDataAddr, size),
+            h.getConst(0));
+
+        // FIXME: The round up should be consistent with the lowering of
+        // memory-string
+        tail = b.create<arith::AddIOp>(loc, tailDataAddr,
+                                       h.genRoundUpToMultiple<32>(size));
+      } else {
+        llvm_unreachable("NYI");
+      }
+    } else {
+      llvm_unreachable("NYI");
+    }
+    headPos += getCallDataHeadSize(ty);
+  }
+
+  return tail;
 }
 
 sol::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(

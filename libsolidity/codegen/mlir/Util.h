@@ -119,6 +119,16 @@ public:
     return op.getResult();
   }
 
+  /// Generates the round-up to multiple.
+  template <unsigned multiple>
+  mlir::Value
+  genRoundUpToMultiple(mlir::Value val,
+                       std::optional<mlir::Location> locArg = std::nullopt) {
+    mlir::Location loc = locArg ? *locArg : defLoc;
+    auto add = b.create<mlir::arith::AddIOp>(loc, val, getConst(multiple - 1));
+    return b.create<mlir::arith::AndIOp>(loc, add, getConst(~(multiple - 1)));
+  }
+
   /// Returns an existing LLVM::GlobalOp with the name `name`; Assert fails if
   /// not found
   mlir::LLVM::GlobalOp getGlobalOp(llvm::StringRef name, mlir::ModuleOp mod);

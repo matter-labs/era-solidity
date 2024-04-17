@@ -16,6 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include "libsolidity/codegen/mlir/Util.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"

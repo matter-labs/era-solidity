@@ -55,5 +55,9 @@ unsigned getStorageByteCount(Type ty);
 /// sol dialect version of solc's Type::leftAligned().
 bool isLeftAligned(Type ty);
 
+/// Returns true if type or its element or member type type (recursively) is
+/// dynamically sized.
+bool hasDynamicallySizedElt(Type ty);
+
 } // namespace sol
 } // namespace mlir

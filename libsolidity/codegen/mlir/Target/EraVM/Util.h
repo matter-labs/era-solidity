@@ -32,6 +32,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -100,6 +101,9 @@ unsigned getAlignment(AddrSpace addrSpace);
 /// Returns the alignment of the LLVMPointerType value `ptr`
 unsigned getAlignment(mlir::Value ptr);
 
+/// EraVM version of solidity ast's Type::calldataHeadSize.
+unsigned getCallDataHeadSize(mlir::Type ty);
+
 /// Builder extension for EraVM
 class BuilderHelper {
   mlir::OpBuilder &b;
@@ -120,6 +124,12 @@ public:
   /// Generates and return the ABI length for the pointer `ptr`.
   mlir::Value getABILen(mlir::Value ptr,
                         std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates the tuple encoding as per ABI and return the "tail" address.
+  mlir::Value
+  genABITupleEncoding(mlir::ArrayRef<mlir::Type> tys,
+                      mlir::ArrayRef<mlir::Value> vals, mlir::Value headStart,
+                      std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Returns an existing or a new (if not found) creation function.
   mlir::sol::FuncOp getOrInsertCreationFuncOp(mlir::StringRef name,

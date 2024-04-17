@@ -79,10 +79,25 @@ bool mlir::sol::isLeftAligned(Type ty) {
   llvm_unreachable("NYI: isLeftAligned of other types");
 }
 
+// TODO: Make this target specific?
 unsigned mlir::sol::getStorageByteCount(Type ty) {
   if (auto intTy = ty.dyn_cast<IntegerType>())
     return intTy.getWidth() / 8;
   llvm_unreachable("NYI: getStorageByteCount of other types");
+}
+
+bool mlir::sol::hasDynamicallySizedElt(Type ty) {
+  if (ty.isa<StringType>())
+    return true;
+
+  if (auto arrTy = ty.dyn_cast<ArrayType>())
+    return arrTy.isDynSized() || hasDynamicallySizedElt(arrTy.getEltType());
+
+  if (auto structTy = ty.dyn_cast<StructType>())
+    return llvm::any_of(structTy.getMemTypes(),
+                        [](Type ty) { return hasDynamicallySizedElt(ty); });
+
+  return false;
 }
 
 static ParseResult parseDataLocation(AsmParser &parser,
