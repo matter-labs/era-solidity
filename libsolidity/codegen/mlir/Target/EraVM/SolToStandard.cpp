@@ -758,8 +758,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       // String type.
     } else if (auto stringTy = ty.dyn_cast<sol::StringType>()) {
       if (sizeVar)
-        // FIXME: Do we need to round up sizeVar to a multiple of 256?
-        memPtr = genMemAllocForDynArray(sizeVar, sizeVar, r, loc);
+        memPtr = genMemAllocForDynArray(
+            sizeVar, h.genRoundUpToMultiple<32>(sizeVar), r, loc);
       else
         return h.genI256Const(solidity::frontend::CompilerUtils::zeroPointer);
 
