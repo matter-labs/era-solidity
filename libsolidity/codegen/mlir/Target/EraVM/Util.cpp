@@ -65,6 +65,7 @@ void eravm::BuilderHelper::initGlobs(ModuleOp mod,
                                      std::optional<Location> locArg) {
 
   Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
 
   auto initInt = [&](const char *name) {
     LLVM::GlobalOp globOp =
@@ -99,6 +100,7 @@ Value eravm::BuilderHelper::getABILen(Value ptr,
                                       std::optional<Location> locArg) {
   auto i256Ty = b.getIntegerType(256);
   Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
 
   Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
   Value lShr = b.create<LLVM::LShrOp>(
@@ -112,6 +114,7 @@ Value eravm::BuilderHelper::genABITupleEncoding(
   // TODO: Move this to the evm namespace.
 
   Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
 
   unsigned totCallDataHeadSz = 0;
   for (Type ty : tys)
@@ -164,12 +167,14 @@ Value eravm::BuilderHelper::genABITupleEncoding(
 
 sol::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
     llvm::StringRef name, FunctionType fnTy, ModuleOp mod) {
+  solidity::mlirgen::BuilderHelper h(b);
   return h.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
 }
 
 sol::FuncOp eravm::BuilderHelper::getOrInsertRuntimeFuncOp(llvm::StringRef name,
                                                            FunctionType fnTy,
                                                            ModuleOp mod) {
+  solidity::mlirgen::BuilderHelper h(b);
   sol::FuncOp fn = h.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
   fn.setRuntimeAttr(b.getUnitAttr());
   return fn;
@@ -177,8 +182,9 @@ sol::FuncOp eravm::BuilderHelper::getOrInsertRuntimeFuncOp(llvm::StringRef name,
 
 FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertReturn(ModuleOp mod) {
   auto *ctx = mod.getContext();
-
+  solidity::mlirgen::BuilderHelper h(b);
   auto i256Ty = IntegerType::get(ctx, 256);
+
   auto fnTy = FunctionType::get(ctx, {i256Ty, i256Ty, i256Ty}, {});
   auto fn = h.getOrInsertFuncOp("__return", fnTy, LLVM::Linkage::External, mod);
   fn.setPrivate();
@@ -187,8 +193,9 @@ FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertReturn(ModuleOp mod) {
 
 FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertRevert(ModuleOp mod) {
   auto *ctx = mod.getContext();
-
+  solidity::mlirgen::BuilderHelper h(b);
   auto i256Ty = IntegerType::get(ctx, 256);
+
   auto fnTy = FunctionType::get(ctx, {i256Ty, i256Ty, i256Ty}, {});
   auto fn = h.getOrInsertFuncOp("__revert", fnTy, LLVM::Linkage::External, mod);
   fn.setPrivate();
@@ -197,6 +204,7 @@ FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertRevert(ModuleOp mod) {
 
 FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertSha3(ModuleOp mod) {
   auto *ctx = mod.getContext();
+  solidity::mlirgen::BuilderHelper h(b);
 
   auto i1Ty = IntegerType::get(ctx, 1);
   auto i256Ty = IntegerType::get(ctx, 256);
@@ -209,31 +217,42 @@ FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertSha3(ModuleOp mod) {
 
 LLVM::AddressOfOp
 eravm::BuilderHelper::getCallDataSizeAddr(ModuleOp mod,
-                                          std::optional<Location> loc) {
+                                          std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+
   LLVM::GlobalOp globCallDataSzDef = h.getOrInsertIntGlobalOp(
       eravm::GlobCallDataSize, mod, eravm::AddrSpace_Stack);
-  return b.create<LLVM::AddressOfOp>(loc ? *loc : defLoc, globCallDataSzDef);
+  return b.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
 }
 
 LLVM::AddressOfOp
 eravm::BuilderHelper::getCallDataPtrAddr(ModuleOp mod,
-                                         std::optional<Location> loc) {
+                                         std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+
   LLVM::GlobalOp callDataPtrDef = h.getOrInsertPtrGlobalOp(
       eravm::GlobCallDataPtr, mod, eravm::AddrSpace_Generic);
-  return b.create<LLVM::AddressOfOp>(loc ? *loc : defLoc, callDataPtrDef);
+  return b.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
 }
 
 LLVM::LoadOp
 eravm::BuilderHelper::loadCallDataPtr(ModuleOp mod,
-                                      std::optional<Location> loc) {
+                                      std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+
   LLVM::AddressOfOp callDataPtrAddr = getCallDataPtrAddr(mod, loc);
-  return b.create<LLVM::LoadOp>(loc ? *loc : defLoc, callDataPtrAddr,
+  return b.create<LLVM::LoadOp>(loc, callDataPtrAddr,
                                 eravm::getAlignment(callDataPtrAddr));
 }
 
 void eravm::BuilderHelper::genPanic(solidity::util::PanicCode code, Value cond,
                                     std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+
   std::string selector =
       solidity::util::selectorFromSignatureU256("Panic(uint256)").str();
 

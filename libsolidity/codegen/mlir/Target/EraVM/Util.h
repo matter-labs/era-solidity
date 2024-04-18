@@ -104,18 +104,21 @@ unsigned getAlignment(mlir::Value ptr);
 /// EraVM version of solidity ast's Type::calldataHeadSize.
 unsigned getCallDataHeadSize(mlir::Type ty);
 
-/// Builder extension for EraVM
+/// Builder extension for EraVM.
 class BuilderHelper {
+  // It's possible to provide a mlirgen::BuilderHelper member with same default
+  // location, but then it becomes tricky to keep the default location behaviour
+  // consistent.
+
   mlir::OpBuilder &b;
   mlir::Location defLoc;
-  solidity::mlirgen::BuilderHelper h;
 
 public:
   explicit BuilderHelper(mlir::OpBuilder &b)
-      : b(b), defLoc(b.getUnknownLoc()), h(b, defLoc) {}
+      : b(b), defLoc(b.getUnknownLoc()) {}
 
   explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
-      : b(b), defLoc(loc), h(b, defLoc) {}
+      : b(b), defLoc(loc) {}
 
   /// Initialize global variables for EraVM.
   void initGlobs(mlir::ModuleOp mod,
@@ -154,19 +157,19 @@ public:
   /// variable if it doesn't exist).
   mlir::LLVM::AddressOfOp
   getCallDataSizeAddr(mlir::ModuleOp mod,
-                      std::optional<mlir::Location> loc = std::nullopt);
+                      std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Returns the address to the ptr_calldata global variable (creates the
   /// variable if it doesn't exist).
   mlir::LLVM::AddressOfOp
   getCallDataPtrAddr(mlir::ModuleOp mod,
-                     std::optional<mlir::Location> loc = std::nullopt);
+                     std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Loads the ptr_calldata global variable (creates the variable if it doesn't
   /// exist).
   mlir::LLVM::LoadOp
   loadCallDataPtr(mlir::ModuleOp mod,
-                  std::optional<mlir::Location> loc = std::nullopt);
+                  std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the panic code.
   void genPanic(solidity::util::PanicCode code, mlir::Value cond,
