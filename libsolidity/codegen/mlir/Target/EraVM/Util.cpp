@@ -139,9 +139,7 @@ Value eravm::BuilderHelper::genABITupleEncoding(
         // Copy the data.
         auto dataAddr = b.create<arith::AddIOp>(loc, val, h.getConst(32));
         auto tailDataAddr = b.create<arith::AddIOp>(loc, tail, h.getConst(32));
-        // TODO: Define sol.mcopy
-        (void)dataAddr;
-        // b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr);
+        b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr, size);
 
         // Write 0 at the end.
         b.create<sol::MStoreOp>(
