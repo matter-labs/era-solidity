@@ -959,7 +959,7 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
     auto partiallyExtractedVal =
         r.create<arith::ShRUIOp>(loc, slotLd, byteOffsetInBits);
     Value extractedVal;
-    if (sol::getStorageByteCount(effTy) == 32) {
+    if (eravm::getStorageByteCount(effTy) == 32) {
       extractedVal = partiallyExtractedVal;
     } else {
       if (auto intTy = effTy.dyn_cast<IntegerType>()) {
@@ -969,11 +969,11 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
           if (sol::isLeftAligned(effTy)) {
             extractedVal = r.create<arith::ShLIOp>(
                 loc, partiallyExtractedVal,
-                h.genI256Const(256 - 8 * sol::getStorageByteCount(effTy)));
+                h.genI256Const(256 - 8 * eravm::getStorageByteCount(effTy)));
           } else {
             // Zero the irrelevant high bits.
             llvm::APInt maskVal(256, 0);
-            maskVal.setLowBits(8 * sol::getStorageByteCount(effTy));
+            maskVal.setLowBits(8 * eravm::getStorageByteCount(effTy));
             extractedVal = r.create<arith::AndIOp>(loc, partiallyExtractedVal,
                                                    h.genI256Const(maskVal));
           }

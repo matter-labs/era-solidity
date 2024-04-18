@@ -79,13 +79,6 @@ bool mlir::sol::isLeftAligned(Type ty) {
   llvm_unreachable("NYI: isLeftAligned of other types");
 }
 
-// TODO: Make this target specific?
-unsigned mlir::sol::getStorageByteCount(Type ty) {
-  if (auto intTy = ty.dyn_cast<IntegerType>())
-    return intTy.getWidth() / 8;
-  llvm_unreachable("NYI: getStorageByteCount of other types");
-}
-
 bool mlir::sol::hasDynamicallySizedElt(Type ty) {
   if (ty.isa<StringType>())
     return true;

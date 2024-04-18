@@ -104,6 +104,9 @@ unsigned getAlignment(mlir::Value ptr);
 /// EraVM version of solidity ast's Type::calldataHeadSize.
 unsigned getCallDataHeadSize(mlir::Type ty);
 
+/// EraVM version of solidity ast's Type::storageBytes().
+unsigned getStorageByteCount(mlir::Type ty);
+
 /// Builder extension for EraVM.
 class BuilderHelper {
   // It's possible to provide a mlirgen::BuilderHelper member with same default

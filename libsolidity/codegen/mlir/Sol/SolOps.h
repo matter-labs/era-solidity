@@ -49,9 +49,6 @@ namespace sol {
 DataLocation getDataLocation(Type ty);
 using Index = uint64_t;
 
-/// sol dialect version of solc's Type::storageBytes().
-unsigned getStorageByteCount(Type ty);
-
 /// sol dialect version of solc's Type::leftAligned().
 bool isLeftAligned(Type ty);
 

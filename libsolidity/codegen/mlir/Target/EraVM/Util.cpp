@@ -61,6 +61,12 @@ unsigned eravm::getCallDataHeadSize(Type ty) {
   llvm_unreachable("NYI: Other types");
 }
 
+unsigned eravm::getStorageByteCount(Type ty) {
+  if (auto intTy = ty.dyn_cast<IntegerType>())
+    return intTy.getWidth() / 8;
+  llvm_unreachable("NYI: Other types");
+}
+
 void eravm::BuilderHelper::initGlobs(ModuleOp mod,
                                      std::optional<Location> locArg) {
 
