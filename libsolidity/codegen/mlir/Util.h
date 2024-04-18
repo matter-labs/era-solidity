@@ -59,7 +59,7 @@ public:
     return op.getResult();
   }
 
-  mlir::Value getConst(llvm::APInt const &val, unsigned width = 256,
+  mlir::Value genConst(llvm::APInt const &val, unsigned width,
                        std::optional<mlir::Location> locArg = std::nullopt) {
     mlir::IntegerType ty = b.getIntegerType(width);
     auto op = b.create<mlir::arith::ConstantOp>(locArg ? *locArg : defLoc,
@@ -67,12 +67,12 @@ public:
     return op.getResult();
   }
 
-  mlir::Value getConst(int64_t val, unsigned width = 256,
+  mlir::Value genConst(int64_t val, unsigned width,
                        std::optional<mlir::Location> locArg = std::nullopt) {
-    return getConst(llvm::APInt(width, val, /*isSigned=*/true), width, locArg);
+    return genConst(llvm::APInt(width, val, /*isSigned=*/true), width, locArg);
   }
 
-  mlir::Value getConst(std::string const &val, unsigned width = 256,
+  mlir::Value genConst(std::string const &val, unsigned width,
                        std::optional<mlir::Location> locArg = std::nullopt) {
     uint8_t radix = 10;
     llvm::StringRef intStr = val;
@@ -80,7 +80,26 @@ public:
       radix = 16;
     }
 
-    return getConst(llvm::APInt(width, intStr, radix), width, locArg);
+    return genConst(llvm::APInt(width, intStr, radix), width, locArg);
+  }
+
+  mlir::Value
+  genI256Const(llvm::APInt const &val,
+               std::optional<mlir::Location> locArg = std::nullopt) {
+
+    return genConst(val, 256, locArg);
+  }
+
+  mlir::Value
+  genI256Const(std::string const &val,
+               std::optional<mlir::Location> locArg = std::nullopt) {
+    return genConst(val, 256, locArg);
+  }
+
+  mlir::Value
+  genI256Const(int64_t val,
+               std::optional<mlir::Location> locArg = std::nullopt) {
+    return genConst(val, 256, locArg);
   }
 
   mlir::Value
@@ -110,9 +129,9 @@ public:
   // LLVM::LLVMArrayType instead of VectorType here?  Is
   // https://github.com/llvm/llvm-project/pull/65508 the only way?
   mlir::Value
-  getConstSplat(llvm::ArrayRef<llvm::APInt> vals, unsigned width = 256,
-                std::optional<mlir::Location> locArg = std::nullopt) {
-    auto ty = mlir::VectorType::get(vals.size(), b.getIntegerType(width));
+  genI256ConstSplat(llvm::ArrayRef<llvm::APInt> vals,
+                    std::optional<mlir::Location> locArg = std::nullopt) {
+    auto ty = mlir::VectorType::get(vals.size(), b.getIntegerType(256));
     auto attr = mlir::DenseIntElementsAttr::get(ty, vals);
     auto op =
         b.create<mlir::LLVM::ConstantOp>(locArg ? *locArg : defLoc, ty, attr);
@@ -125,8 +144,10 @@ public:
   genRoundUpToMultiple(mlir::Value val,
                        std::optional<mlir::Location> locArg = std::nullopt) {
     mlir::Location loc = locArg ? *locArg : defLoc;
-    auto add = b.create<mlir::arith::AddIOp>(loc, val, getConst(multiple - 1));
-    return b.create<mlir::arith::AndIOp>(loc, add, getConst(~(multiple - 1)));
+    auto add =
+        b.create<mlir::arith::AddIOp>(loc, val, genI256Const(multiple - 1));
+    return b.create<mlir::arith::AndIOp>(loc, add,
+                                         genI256Const(~(multiple - 1)));
   }
 
   /// Returns an existing LLVM::GlobalOp with the name `name`; Assert fails if

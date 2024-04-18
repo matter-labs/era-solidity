@@ -197,7 +197,7 @@ mlir::Value YulToMLIRPass::convToBool(mlir::Value val) {
     return val;
   if (ty == getDefIntTy())
     return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne,
-                                         val, h.getConst(0));
+                                         val, h.genI256Const(0));
   llvm_unreachable("Invalid type");
 }
 
@@ -242,7 +242,7 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
     if (builtin->name.str() == "iszero") {
       return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
                                            genDefTyExpr(call.arguments[0]),
-                                           h.getConst(0));
+                                           h.genI256Const(0));
     }
     if (builtin->name.str() == "shr") {
       return b.create<mlir::arith::ShRUIOp>(loc,
@@ -404,7 +404,7 @@ void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
   TypedName const &var = decl.variables[0];
   auto addr = b.create<mlir::LLVM::AllocaOp>(
       getLoc(var.debugData), mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
-      h.getConst(1), getDefAlign());
+      h.genI256Const(1), getDefAlign());
   setMemRef(var.name, addr);
   b.create<mlir::LLVM::StoreOp>(loc, genDefTyExpr(*decl.value), addr,
                                 getDefAlign());
@@ -497,7 +497,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   setMemRef(retVar.name, b.create<mlir::LLVM::AllocaOp>(
                              getLoc(retVar.debugData),
                              mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
-                             h.getConst(1), getDefAlign()));
+                             h.genI256Const(1), getDefAlign()));
 
   // Lower the body
   ASTWalker::operator()(fn.body);

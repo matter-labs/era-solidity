@@ -475,10 +475,11 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
     FlatSymbolRefAttr revertFunc = eravmHelper.getOrInsertRevert(mod);
     rewriter.create<sol::CallOp>(
         loc, revertFunc, TypeRange{},
-        ValueRange{op.getInp0(), op.getInp1(),
-                   h.getConst(inRuntimeContext(op)
-                                  ? eravm::RetForwardPageType::UseHeap
-                                  : eravm::RetForwardPageType::UseAuxHeap)});
+        ValueRange{
+            op.getInp0(), op.getInp1(),
+            h.genI256Const(inRuntimeContext(op)
+                               ? eravm::RetForwardPageType::UseHeap
+                               : eravm::RetForwardPageType::UseAuxHeap)});
     h.createCallToUnreachableWrapper(mod);
 
     rewriter.eraseOp(op);
@@ -508,7 +509,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
       rewriter.create<sol::CallOp>(
           loc, returnFunc, TypeRange{},
           ValueRange{op.getInp0(), op.getInp1(),
-                     h.getConst(eravm::RetForwardPageType::UseHeap)});
+                     h.genI256Const(eravm::RetForwardPageType::UseHeap)});
       h.createCallToUnreachableWrapper(mod);
 
       rewriter.eraseOp(op);
@@ -524,8 +525,8 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     // Store ByteLen_Field to the immutables offset
     auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        h.getConst(eravm::HeapAuxOffsetCtorRetData));
-    rewriter.create<LLVM::StoreOp>(loc, h.getConst(eravm::ByteLen_Field),
+        h.genI256Const(eravm::HeapAuxOffsetCtorRetData));
+    rewriter.create<LLVM::StoreOp>(loc, h.genI256Const(eravm::ByteLen_Field),
                                    immutablesOffsetPtr,
                                    eravm::getAlignment(immutablesOffsetPtr));
 
@@ -534,26 +535,26 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     auto immutablesSize = 0; // TODO: Implement this!
     auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
-        h.getConst(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field));
+        h.genI256Const(eravm::HeapAuxOffsetCtorRetData + eravm::ByteLen_Field));
     rewriter.create<LLVM::StoreOp>(
-        loc, h.getConst(immutablesSize / eravm::ByteLen_Field),
+        loc, h.genI256Const(immutablesSize / eravm::ByteLen_Field),
         immutablesNumPtr, eravm::getAlignment(immutablesNumPtr));
 
     // Calculate the return data length (i.e. immutablesSize * 2 +
     // ByteLen_Field * 2
     auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
-        loc, h.getConst(immutablesSize), h.getConst(2));
-    auto returnDataLen =
-        rewriter.create<arith::AddIOp>(loc, immutablesCalcSize.getResult(),
-                                       h.getConst(eravm::ByteLen_Field * 2));
+        loc, h.genI256Const(immutablesSize), h.genI256Const(2));
+    auto returnDataLen = rewriter.create<arith::AddIOp>(
+        loc, immutablesCalcSize.getResult(),
+        h.genI256Const(eravm::ByteLen_Field * 2));
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
     // RetForwardPageType::UseAuxHeap)) and the unreachable op
     rewriter.create<sol::CallOp>(
         loc, returnFunc, TypeRange{},
-        ValueRange{h.getConst(eravm::HeapAuxOffsetCtorRetData),
+        ValueRange{h.genI256Const(eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(),
-                   h.getConst(eravm::RetForwardPageType::UseAuxHeap)});
+                   h.genI256Const(eravm::RetForwardPageType::UseAuxHeap)});
     h.createCallToUnreachableWrapper(mod);
 
     rewriter.eraseOp(op);
@@ -592,7 +593,8 @@ struct AllocaOpLowering : public OpConversionPattern<sol::AllocaOp> {
 
     Type convertedEltTy = getTypeConverter()->convertType(op.getAllocType());
     AllocSize size = getTotalSize<1>(op.getAllocType());
-    r.replaceOpWithNewOp<LLVM::AllocaOp>(op, convertedEltTy, h.getConst(size));
+    r.replaceOpWithNewOp<LLVM::AllocaOp>(op, convertedEltTy,
+                                         h.genI256Const(size));
     return success();
   }
 };
@@ -626,7 +628,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     solidity::mlirgen::BuilderHelper h(r, loc);
     eravm::BuilderHelper eravmHelper(r, loc);
 
-    Value freePtr = r.create<sol::MLoadOp>(loc, h.getConst(64));
+    Value freePtr = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
 
     // FIXME: Shouldn't we check for overflow in the freePtr + size operation
     // and generate PanicCode::ResourceError?
@@ -635,13 +637,13 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     // Generate the PanicCode::ResourceError check.
     auto newPtrGtMax =
         r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, newFreePtr,
-                                h.getConst("0xffffffffffffffff"));
+                                h.genI256Const("0xffffffffffffffff"));
     auto newPtrLtOrig = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
                                                 newFreePtr, freePtr);
     auto panicCond = r.create<arith::OrIOp>(loc, newPtrGtMax, newPtrLtOrig);
     eravmHelper.genPanic(solidity::util::PanicCode::ResourceError, panicCond);
 
-    r.create<sol::MStoreOp>(loc, h.getConst(64), newFreePtr);
+    r.create<sol::MStoreOp>(loc, h.genI256Const(64), newFreePtr);
 
     return freePtr;
   }
@@ -649,7 +651,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   Value genMemAlloc(AllocSize size, PatternRewriter &r, Location loc) const {
     assert(size % 32 == 0);
     solidity::mlirgen::BuilderHelper h(r, loc);
-    return genMemAlloc(h.getConst(size), r, loc);
+    return genMemAlloc(h.genI256Const(size), r, loc);
   }
 
   /// Generates the memory allocation code for dynamic array.
@@ -659,7 +661,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
     // dynSize is size + length-slot where length-slot's size is 32 bytes.
     auto dynSizeInBytes =
-        r.create<arith::AddIOp>(loc, sizeInBytes, h.getConst(32));
+        r.create<arith::AddIOp>(loc, sizeInBytes, h.genI256Const(32));
     auto memPtr = genMemAlloc(dynSizeInBytes, r, loc);
     r.create<sol::MStoreOp>(loc, memPtr, sizeVar);
     return memPtr;
@@ -683,14 +685,15 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         // Dynamic allocation is only performed for the outermost dimension.
         if (recDepth == 0) {
           assert(sizeVar);
-          sizeInBytes = r.create<arith::MulIOp>(loc, sizeVar, h.getConst(32));
+          sizeInBytes =
+              r.create<arith::MulIOp>(loc, sizeVar, h.genI256Const(32));
           memPtr = genMemAllocForDynArray(sizeVar, sizeInBytes, r, loc);
-          dataPtr = r.create<arith::AddIOp>(loc, memPtr, h.getConst(32));
+          dataPtr = r.create<arith::AddIOp>(loc, memPtr, h.genI256Const(32));
         } else {
-          return h.getConst(solidity::frontend::CompilerUtils::zeroPointer);
+          return h.genI256Const(solidity::frontend::CompilerUtils::zeroPointer);
         }
       } else {
-        sizeInBytes = h.getConst(getSize(ty));
+        sizeInBytes = h.genI256Const(getSize(ty));
         memPtr = genMemAlloc(sizeInBytes, r, loc);
         dataPtr = memPtr;
       }
@@ -716,7 +719,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
           auto sizeInWords = constSize.value() / 32;
           for (int64_t i = 1; i < sizeInWords; ++i) {
             Value incrMemPtr =
-                r.create<arith::AddIOp>(loc, dataPtr, h.getConst(32 * i));
+                r.create<arith::AddIOp>(loc, dataPtr, h.genI256Const(32 * i));
             r.create<sol::MStoreOp>(
                 loc, incrMemPtr,
                 genZeroedMemAlloc(eltTy, sizeVar, recDepth, r, loc));
@@ -758,7 +761,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         // FIXME: Do we need to round up sizeVar to a multiple of 256?
         memPtr = genMemAllocForDynArray(sizeVar, sizeVar, r, loc);
       else
-        return h.getConst(solidity::frontend::CompilerUtils::zeroPointer);
+        return h.genI256Const(solidity::frontend::CompilerUtils::zeroPointer);
 
       // Struct type.
     } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
@@ -770,7 +773,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         if (memTy.isa<sol::StructType>() || memTy.isa<sol::ArrayType>())
           initVal = genZeroedMemAlloc(memTy, sizeVar, recDepth, r, loc);
         else
-          initVal = h.getConst(0);
+          initVal = h.genI256Const(0);
 
         r.create<sol::MStoreOp>(loc, memPtr, initVal);
       }
@@ -830,8 +833,8 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
       if (constIdx && !arrayTy.isDynSized()) {
         // FIXME: Should this be done by the verifier?
         assert(constIdx.value() < arrayTy.getSize());
-        addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr,
-                                            h.getConst(constIdx.value() * 32));
+        addrAtIdx = r.create<arith::AddIOp>(
+            loc, remappedBaseAddr, h.genI256Const(constIdx.value() * 32));
       } else {
         //
         // Generate PanicCode::ArrayOutOfBounds check.
@@ -840,7 +843,7 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
         if (arrayTy.isDynSized()) {
           size = r.create<sol::MLoadOp>(loc, remappedBaseAddr);
         } else {
-          size = h.getConst(arrayTy.getSize());
+          size = h.genI256Const(arrayTy.getSize());
         }
 
         // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
@@ -852,11 +855,11 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
         //
         // Generate the address
         //
-        Value scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
+        Value scaledIdx = r.create<arith::MulIOp>(loc, idx, h.genI256Const(32));
         if (arrayTy.isDynSized()) {
           // Get the address after the length-slot.
-          Value dataAddr =
-              r.create<arith::AddIOp>(loc, remappedBaseAddr, h.getConst(32));
+          Value dataAddr = r.create<arith::AddIOp>(loc, remappedBaseAddr,
+                                                   h.genI256Const(32));
           addrAtIdx = r.create<arith::AddIOp>(loc, dataAddr, scaledIdx);
         } else {
           addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
@@ -867,7 +870,7 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
       (void)constIdx;
       assert(constIdx.value() <
              static_cast<int64_t>(structTy.getMemTypes().size()));
-      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.getConst(32));
+      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, h.genI256Const(32));
       addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
     }
 
@@ -912,11 +915,11 @@ struct GetSlotOpLowering : public OpRewritePattern<sol::GetSlotOp> {
 
     // Setup arguments to keccak256
     // FIXME: Is it necessary to do the "cleanup" of the key?
-    auto zero = h.getConst(0);
+    auto zero = h.genI256Const(0);
     r.create<sol::MStoreOp>(loc, zero, op.getKey());
-    r.create<sol::MStoreOp>(loc, h.getConst(0x20), op.getInpSlot());
+    r.create<sol::MStoreOp>(loc, h.genI256Const(0x20), op.getInpSlot());
 
-    r.replaceOpWithNewOp<sol::Keccak256Op>(op, zero, h.getConst(0x40));
+    r.replaceOpWithNewOp<sol::Keccak256Op>(op, zero, h.genI256Const(0x40));
     return success();
   }
 };
@@ -950,7 +953,7 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
     auto byteOffsetZext =
         r.create<arith::ExtUIOp>(loc, r.getIntegerType(256), byteOffset);
     auto byteOffsetInBits =
-        r.create<arith::MulIOp>(loc, byteOffsetZext, h.getConst(8));
+        r.create<arith::MulIOp>(loc, byteOffsetZext, h.genI256Const(8));
 
     // Generate the extraction of the sload'ed value.
     auto partiallyExtractedVal =
@@ -966,13 +969,13 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
           if (sol::isLeftAligned(effTy)) {
             extractedVal = r.create<arith::ShLIOp>(
                 loc, partiallyExtractedVal,
-                h.getConst(256 - 8 * sol::getStorageByteCount(effTy)));
+                h.genI256Const(256 - 8 * sol::getStorageByteCount(effTy)));
           } else {
             // Zero the irrelevant high bits.
             llvm::APInt maskVal(256, 0);
             maskVal.setLowBits(8 * sol::getStorageByteCount(effTy));
             extractedVal = r.create<arith::AndIOp>(loc, partiallyExtractedVal,
-                                                   h.getConst(maskVal));
+                                                   h.genI256Const(maskVal));
           }
         }
       }
@@ -1212,7 +1215,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
           LLVM::LLVMPointerType::get(mod.getContext(),
                                      globExtraABIDataDef.getAddrSpace()),
           /*basePtrType=*/globExtraABIDataDef.getType(), globExtraABIData,
-          ValueRange{h.getConst(0), h.getConst(i - 2)});
+          ValueRange{h.genI256Const(0), h.genI256Const(i - 2)});
       // FIXME: How does the opaque ptr geps with scalar element types lower
       // without explictly setting the elem_type attr?
       gep.setElemTypeAttr(TypeAttr::get(globExtraABIDataDef.getType()));
@@ -1223,10 +1226,10 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // Check Deploy call flag
     auto deployCallFlag = rewriter.create<arith::AndIOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
-        h.getConst(1));
+        h.genI256Const(1));
     auto isDeployCallFlag = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::eq, deployCallFlag.getResult(),
-        h.getConst(1));
+        h.genI256Const(1));
 
     // Create the __runtime function
     sol::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
@@ -1323,7 +1326,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     auto genMemInit = [&]() {
       mlir::Value freeMemStart{};
       if (/* TODO: op.memoryUnsafeInlineAssemblySeen */ false) {
-        freeMemStart = h.getConst(
+        freeMemStart = h.genI256Const(
             solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
             /* TODO: op.getReservedMem() */ 0);
       } else {
@@ -1334,7 +1337,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
                 solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
                     /* TODO: op.getReservedMem() */ 0));
       }
-      r.create<sol::MStoreOp>(loc, h.getConst(64), freeMemStart);
+      r.create<sol::MStoreOp>(loc, h.genI256Const(64), freeMemStart);
     };
     genMemInit();
 
@@ -1342,12 +1345,12 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     auto genCallValChk = [&]() {
       auto callVal = r.create<sol::CallValOp>(loc);
       auto callValChk = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
-                                                callVal, h.getConst(0));
+                                                callVal, h.genI256Const(0));
       auto ifOp =
           r.create<scf::IfOp>(loc, callValChk, /*withElseRegion=*/false);
       OpBuilder::InsertionGuard insertGuard(r);
       r.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      r.create<sol::RevertOp>(loc, h.getConst(0), h.getConst(0));
+      r.create<sol::RevertOp>(loc, h.genI256Const(0), h.genI256Const(0));
     };
 
     assert(!op.getCtorAttr() && "NYI: Ctors");
@@ -1362,7 +1365,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     }
 
     // Generate the codecopy of the runtime object to the free ptr.
-    auto freePtr = r.create<sol::MLoadOp>(loc, h.getConst(64));
+    auto freePtr = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
     auto runtimeObjSym = FlatSymbolRefAttr::get(runtimeObj);
     auto runtimeObjOffset = r.create<sol::DataOffsetOp>(loc, runtimeObjSym);
     auto runtimeObjSize = r.create<sol::DataSizeOp>(loc, runtimeObjSym);
@@ -1405,13 +1408,13 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       auto callDataSz = r.create<sol::CallDataSizeOp>(loc);
       // Generate `iszero(lt(calldatasize(), 4))`.
       auto callDataSzCmp = r.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::uge, callDataSz, h.getConst(4));
+          loc, arith::CmpIPredicate::uge, callDataSz, h.genI256Const(4));
       auto ifOp =
           r.create<scf::IfOp>(loc, callDataSzCmp, /*withElseRegion=*/false);
 
       OpBuilder::InsertionGuard insertGuard(r);
       r.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      auto callDataLd = r.create<sol::CallDataLoadOp>(loc, h.getConst(0));
+      auto callDataLd = r.create<sol::CallDataLoadOp>(loc, h.genI256Const(0));
 
       // Collect the ABI selectors and create the switch case attribute.
       std::vector<llvm::APInt> selectors;
@@ -1474,8 +1477,8 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
         auto out = r.create<sol::CallOp>(loc, func, ValueRange{});
         assert(out.getType(0) == r.getIntegerType(256) &&
                "NYI: Non-ui256 return type");
-        auto memPos = r.create<sol::MLoadOp>(loc, h.getConst(64));
-        auto memEnd = r.create<arith::AddIOp>(loc, memPos, h.getConst(32));
+        auto memPos = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
+        auto memEnd = r.create<arith::AddIOp>(loc, memPos, h.genI256Const(32));
         auto retMemPos = r.create<arith::SubIOp>(loc, memEnd, memPos);
         r.create<sol::MStoreOp>(loc, retMemPos, out.getResult(0));
         r.create<mlir::scf::YieldOp>(loc);
@@ -1493,7 +1496,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 
     } else {
       // TODO: Generate error message.
-      r.create<sol::RevertOp>(loc, h.getConst(0), h.getConst(0));
+      r.create<sol::RevertOp>(loc, h.genI256Const(0), h.genI256Const(0));
     }
 
     assert(op.getBody()->empty());

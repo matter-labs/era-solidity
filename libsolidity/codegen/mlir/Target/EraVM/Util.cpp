@@ -70,7 +70,7 @@ void eravm::BuilderHelper::initGlobs(ModuleOp mod,
     LLVM::GlobalOp globOp =
         h.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
     Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
-    b.create<LLVM::StoreOp>(loc, h.getConst(0, 256, locArg), globAddr,
+    b.create<LLVM::StoreOp>(loc, h.genI256Const(0, locArg), globAddr,
                             getAlignment(globAddr));
   };
 
@@ -90,8 +90,8 @@ void eravm::BuilderHelper::initGlobs(ModuleOp mod,
   Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
   b.create<LLVM::StoreOp>(
       loc,
-      h.getConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)), 256,
-                      locArg),
+      h.genI256ConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)),
+                          locArg),
       extraABIDataAddr);
 }
 
@@ -101,10 +101,9 @@ Value eravm::BuilderHelper::getABILen(Value ptr,
   Location loc = locArg ? *locArg : defLoc;
 
   Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
-  // TODO: Pass argLoc to h.getConst once it has support for default location.
   Value lShr = b.create<LLVM::LShrOp>(
-      loc, ptrToInt, h.getConst(eravm::BitLen_X32 * 3, 256, locArg));
-  return b.create<LLVM::AndOp>(loc, lShr, h.getConst(UINT_MAX, 256, locArg));
+      loc, ptrToInt, h.genI256Const(eravm::BitLen_X32 * 3, locArg));
+  return b.create<LLVM::AndOp>(loc, lShr, h.genI256Const(UINT_MAX, locArg));
 }
 
 Value eravm::BuilderHelper::genABITupleEncoding(
@@ -118,8 +117,8 @@ Value eravm::BuilderHelper::genABITupleEncoding(
   for (Type ty : tys)
     totCallDataHeadSz += getCallDataHeadSize(ty);
 
-  auto tail =
-      b.create<arith::AddIOp>(loc, headStart, h.getConst(totCallDataHeadSz));
+  auto tail = b.create<arith::AddIOp>(loc, headStart,
+                                      h.genI256Const(totCallDataHeadSz));
   size_t headPos = 0;
 
   for (auto it : llvm::zip(tys, vals)) {
@@ -127,7 +126,7 @@ Value eravm::BuilderHelper::genABITupleEncoding(
     Value val = std::get<1>(it);
     if (sol::hasDynamicallySizedElt(ty)) {
       auto headPosOffset =
-          b.create<arith::AddIOp>(loc, headStart, h.getConst(headPos));
+          b.create<arith::AddIOp>(loc, headStart, h.genI256Const(headPos));
       b.create<sol::MStoreOp>(loc, headPosOffset,
                               b.create<arith::SubIOp>(loc, tail, headStart));
 
@@ -137,14 +136,15 @@ Value eravm::BuilderHelper::genABITupleEncoding(
         b.create<sol::MStoreOp>(loc, tail, size);
 
         // Copy the data.
-        auto dataAddr = b.create<arith::AddIOp>(loc, val, h.getConst(32));
-        auto tailDataAddr = b.create<arith::AddIOp>(loc, tail, h.getConst(32));
+        auto dataAddr = b.create<arith::AddIOp>(loc, val, h.genI256Const(32));
+        auto tailDataAddr =
+            b.create<arith::AddIOp>(loc, tail, h.genI256Const(32));
         b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr, size);
 
         // Write 0 at the end.
         b.create<sol::MStoreOp>(
             loc, b.create<arith::AddIOp>(loc, tailDataAddr, size),
-            h.getConst(0));
+            h.genI256Const(0));
 
         // FIXME: The round up should be consistent with the lowering of
         // memory-string
@@ -239,13 +239,13 @@ void eravm::BuilderHelper::genPanic(solidity::util::PanicCode code, Value cond,
 
   b.create<scf::IfOp>(
       loc, cond, /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
-        b.create<sol::MStoreOp>(loc, h.getConst(0, 256, locArg),
-                                h.getConst(selector, 256, locArg));
+        b.create<sol::MStoreOp>(loc, h.genI256Const(0, locArg),
+                                h.genI256Const(selector, locArg));
         b.create<sol::MStoreOp>(
-            loc, h.getConst(4, 256, locArg),
-            h.getConst(static_cast<int64_t>(code), 256, locArg));
-        b.create<sol::RevertOp>(loc, h.getConst(0, 256, locArg),
-                                h.getConst(24, 256, locArg));
+            loc, h.genI256Const(4, locArg),
+            h.genI256Const(static_cast<int64_t>(code), locArg));
+        b.create<sol::RevertOp>(loc, h.genI256Const(0, locArg),
+                                h.genI256Const(24, locArg));
         b.create<scf::YieldOp>(loc);
       });
 }
