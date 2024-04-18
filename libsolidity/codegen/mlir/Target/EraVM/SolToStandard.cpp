@@ -117,12 +117,9 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
     eravm::BuilderHelper eravmHelper(r, loc);
 
     // Setup arguments for the call to sha3.
+    Value offset = eravmHelper.genHeapPtr(op.getInp0());
     Value length = op.getInp1();
-    Value offset = op.getInp0();
-    auto heapAddrSpacePtrTy =
-        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Heap);
-    auto offsetPtr =
-        r.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offset);
+
     // FIXME: When will this
     // (`context.get_function(EraVMFunction::ZKSYNC_NEAR_CALL_ABI_EXCEPTION_HANDLER).is_some()`)
     // be true?
@@ -132,9 +129,8 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
     auto i256Ty = r.getIntegerType(256);
     FlatSymbolRefAttr sha3Func =
         eravmHelper.getOrInsertSha3(op->getParentOfType<ModuleOp>());
-    r.replaceOpWithNewOp<sol::CallOp>(
-        op, sha3Func, TypeRange{i256Ty},
-        ValueRange{offsetPtr, length, throwAtFail});
+    r.replaceOpWithNewOp<sol::CallOp>(op, sha3Func, TypeRange{i256Ty},
+                                      ValueRange{offset, length, throwAtFail});
     return success();
   }
 };
@@ -231,17 +227,8 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
           loc, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     }
 
-    mlir::Value dstOffset = op.getInp0();
+    mlir::Value dst = eravmHelper.genHeapPtr(op.getInp0());
     mlir::Value size = op.getInp2();
-
-    // TODO: The following is copied from CodeCopyOpLowering; Move to eravm
-    // util?
-
-    // Generate the destination pointer.
-    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                                         eravm::AddrSpace_Heap);
-    auto dst =
-        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstOffset);
 
     // Generate the source pointer.
     LLVM::LoadOp callDataPtr =
@@ -346,15 +333,9 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
     assert(!inRuntimeContext(op) &&
            "codecopy is not supported in runtime context");
 
-    Value dstOffset = op.getInp0();
+    Value dst = eravmHelper.genHeapPtr(op.getInp0());
     Value srcOffset = op.getInp1();
     Value size = op.getInp2();
-
-    // Generate the destination pointer
-    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                                         eravm::AddrSpace_Heap);
-    auto dst =
-        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstOffset);
 
     // Generate the source pointer
     LLVM::LoadOp callDataPtr =
@@ -384,15 +365,11 @@ struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
   LogicalResult matchAndRewrite(sol::MLoadOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
+    eravm::BuilderHelper eravmHelper(rewriter, loc);
 
-    mlir::Value offsetInt = op.getInp();
-    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                                         eravm::AddrSpace_Heap);
-    mlir::Value offset =
-        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offsetInt);
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-        op, rewriter.getIntegerType(256), offset, eravm::getAlignment(offset));
-
+    mlir::Value addr = eravmHelper.genHeapPtr(op.getInp());
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, rewriter.getIntegerType(256),
+                                              addr, eravm::getAlignment(addr));
     return success();
   }
 };
@@ -403,13 +380,10 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
   LogicalResult matchAndRewrite(sol::MStoreOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
+    eravm::BuilderHelper eravmHelper(rewriter, loc);
 
-    mlir::Value offsetInt = op.getInp0();
+    mlir::Value offset = eravmHelper.genHeapPtr(op.getInp0());
     mlir::Value val = op.getInp1();
-    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                                         eravm::AddrSpace_Heap);
-    mlir::Value offset =
-        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, offsetInt);
     rewriter.create<LLVM::StoreOp>(loc, val, offset,
                                    eravm::getAlignment(offset));
 
@@ -424,22 +398,16 @@ struct MCopyOpLowering : public OpRewritePattern<sol::MCopyOp> {
   LogicalResult matchAndRewrite(sol::MCopyOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
+    eravm::BuilderHelper eravmHelper(rewriter, loc);
 
-    Value dstAddr = op.getInp0();
-    Value srcAddr = op.getInp1();
+    Value dstAddr = eravmHelper.genHeapPtr(op.getInp0());
+    Value srcAddr = eravmHelper.genHeapPtr(op.getInp1());
     Value size = op.getInp2();
 
-    auto heapAddrSpacePtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                                         eravm::AddrSpace_Heap);
-    dstAddr =
-        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, dstAddr);
-    srcAddr =
-        rewriter.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, srcAddr);
-
-    // Generate the memmove
+    // Generate the memmove.
     Value isVolatile = rewriter.create<LLVM::ConstantOp>(
         loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
-    // FIXME: Add align(1) param attribute.
+    // FIXME: Add align 1 param attribute.
     rewriter.create<LLVM::MemmoveOp>(loc, dstAddr, srcAddr, size, isVolatile);
 
     rewriter.eraseOp(op);

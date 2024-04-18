@@ -67,6 +67,15 @@ unsigned eravm::getStorageByteCount(Type ty) {
   llvm_unreachable("NYI: Other types");
 }
 
+Value eravm::BuilderHelper::genHeapPtr(Value addr,
+                                       std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  auto heapAddrSpacePtrTy =
+      LLVM::LLVMPointerType::get(b.getContext(), AddrSpace_Heap);
+  return b.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, addr);
+}
+
 void eravm::BuilderHelper::initGlobs(ModuleOp mod,
                                      std::optional<Location> locArg) {
 
