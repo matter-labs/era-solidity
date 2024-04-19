@@ -30,6 +30,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
@@ -137,8 +138,8 @@ public:
 
   /// Generates the tuple encoding as per ABI and return the "tail" address.
   mlir::Value
-  genABITupleEncoding(mlir::ArrayRef<mlir::Type> tys,
-                      mlir::ArrayRef<mlir::Value> vals, mlir::Value headStart,
+  genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
+                      mlir::Value headStart,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Returns an existing or a new (if not found) creation function.

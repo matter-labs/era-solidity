@@ -124,7 +124,7 @@ Value eravm::BuilderHelper::getABILen(Value ptr,
 }
 
 Value eravm::BuilderHelper::genABITupleEncoding(
-    ArrayRef<Type> tys, ArrayRef<Value> vals, Value headStart,
+    TypeRange tys, ValueRange vals, Value headStart,
     std::optional<mlir::Location> locArg) {
   // TODO: Move this to the evm namespace.
 
@@ -135,49 +135,50 @@ Value eravm::BuilderHelper::genABITupleEncoding(
   for (Type ty : tys)
     totCallDataHeadSz += getCallDataHeadSize(ty);
 
-  auto tail = b.create<arith::AddIOp>(loc, headStart,
-                                      h.genI256Const(totCallDataHeadSz));
-  size_t headPos = 0;
-
+  size_t headOffset = 0;
+  Value currTailAddr;
   for (auto it : llvm::zip(tys, vals)) {
     Type ty = std::get<0>(it);
     Value val = std::get<1>(it);
-    if (sol::hasDynamicallySizedElt(ty)) {
-      auto headPosOffset =
-          b.create<arith::AddIOp>(loc, headStart, h.genI256Const(headPos));
-      b.create<sol::MStoreOp>(loc, headPosOffset,
-                              b.create<arith::SubIOp>(loc, tail, headStart));
+    auto currHeadAddr =
+        b.create<arith::AddIOp>(loc, headStart, h.genI256Const(headOffset));
+    currTailAddr = b.create<arith::AddIOp>(loc, headStart,
+                                           h.genI256Const(totCallDataHeadSz));
 
-      if (auto stringTy = ty.dyn_cast<sol::StringType>()) {
-        // Copy the length field.
-        auto size = b.create<sol::MLoadOp>(loc, val);
-        b.create<sol::MStoreOp>(loc, tail, size);
+    // String type.
+    if (auto stringTy = ty.dyn_cast<sol::StringType>()) {
+      b.create<sol::MStoreOp>(
+          loc, currHeadAddr,
+          b.create<arith::SubIOp>(loc, currTailAddr, headStart));
 
-        // Copy the data.
-        auto dataAddr = b.create<arith::AddIOp>(loc, val, h.genI256Const(32));
-        auto tailDataAddr =
-            b.create<arith::AddIOp>(loc, tail, h.genI256Const(32));
-        b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr, size);
+      // Copy the length field.
+      auto size = b.create<sol::MLoadOp>(loc, val);
+      b.create<sol::MStoreOp>(loc, currTailAddr, size);
 
-        // Write 0 at the end.
-        b.create<sol::MStoreOp>(
-            loc, b.create<arith::AddIOp>(loc, tailDataAddr, size),
-            h.genI256Const(0));
+      // Copy the data.
+      auto dataAddr = b.create<arith::AddIOp>(loc, val, h.genI256Const(32));
+      auto tailDataAddr =
+          b.create<arith::AddIOp>(loc, currTailAddr, h.genI256Const(32));
+      b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr, size);
 
-        // FIXME: The round up should be consistent with the lowering of
-        // memory-string
-        tail = b.create<arith::AddIOp>(loc, tailDataAddr,
-                                       h.genRoundUpToMultiple<32>(size));
-      } else {
-        llvm_unreachable("NYI");
-      }
+      // Write 0 at the end.
+      b.create<sol::MStoreOp>(loc,
+                              b.create<arith::AddIOp>(loc, tailDataAddr, size),
+                              h.genI256Const(0));
+
+      currTailAddr = b.create<arith::AddIOp>(loc, tailDataAddr,
+                                             h.genRoundUpToMultiple<32>(size));
+      // Integer type.
+    } else if (ty.isa<IntegerType>()) {
+      b.create<sol::MStoreOp>(loc, currHeadAddr, val);
+
     } else {
       llvm_unreachable("NYI");
     }
-    headPos += getCallDataHeadSize(ty);
+    headOffset += getCallDataHeadSize(ty);
   }
 
-  return tail;
+  return currTailAddr;
 }
 
 sol::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(

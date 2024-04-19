@@ -1262,6 +1262,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
                                 PatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r, loc);
+    eravm::BuilderHelper eravmHelper(r, loc);
 
     // Generate the creation and runtime ObjectOp.
     auto creationObj = r.create<sol::ObjectOp>(loc, op.getSymName());
@@ -1439,16 +1440,17 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
         assert(func.getNumArguments() == 0 &&
                "NYI: Interface function arguments");
         // TODO: libyul's ABIFunctions::tupleDecoder().
-        assert(func.getNumResults() == 1 &&
-               "NYI: Multi-valued and empty return");
-        // TODO: libyul's ABIFunctions::tupleEncoder().
-        auto out = r.create<sol::CallOp>(loc, func, ValueRange{});
-        assert(out.getType(0) == r.getIntegerType(256) &&
-               "NYI: Non-ui256 return type");
-        auto memPos = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
-        auto memEnd = r.create<arith::AddIOp>(loc, memPos, h.genI256Const(32));
-        auto retMemPos = r.create<arith::SubIOp>(loc, memEnd, memPos);
-        r.create<sol::MStoreOp>(loc, retMemPos, out.getResult(0));
+        auto callOp = r.create<sol::CallOp>(loc, func, ValueRange{});
+
+        // Encode the result using the ABI's tuple encoder.
+        auto headStart = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
+        auto tail = eravmHelper.genABITupleEncoding(
+            callOp.getResultTypes(), callOp.getResults(), headStart);
+        auto tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
+
+        // Generate the return.
+        r.create<sol::BuiltinRetOp>(loc, headStart, tupleSize);
+
         r.create<mlir::scf::YieldOp>(loc);
       }
     }
