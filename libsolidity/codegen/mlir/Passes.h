@@ -35,18 +35,6 @@ class Pass;
 
 namespace sol {
 
-namespace eravm {
-
-/// Populates sol dialect to standard dialects conversion for the first
-/// conversion pass.
-void populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
-                                         TypeConverter &tyConv);
-/// Populates sol dialect to standard dialects conversion for the last
-/// conversion pass.
-void populateFinalSolToStdConvPatterns(RewritePatternSet &pats);
-
-}; // namespace eravm
-
 /// Create a pass to lower sol dialect to standard dialects.
 std::unique_ptr<Pass> createConvertSolToStandardPass();
 std::unique_ptr<Pass>

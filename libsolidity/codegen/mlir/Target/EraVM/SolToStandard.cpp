@@ -1497,6 +1497,25 @@ struct ConvertSolToStandard
                LLVM::LLVMDialect>();
   }
 
+  void populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
+                                           TypeConverter &tyConv) {
+    pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
+        tyConv, pats.getContext());
+    pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
+             GetSlotOpLowering, StorageLoadOpLowering, BuiltinRetOpLowering,
+             RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
+             MCopyOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
+             CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
+             CallDataLoadOpLowering, CallDataSizeOpLowering,
+             CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
+             Keccak256OpLowering>(pats.getContext());
+  }
+
+  void populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
+    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(
+        pats.getContext());
+  }
+
   void runOnOperation() override {
     // We can't check this in the ctor since cl::ParseCommandLineOptions won't
     // be called then.
@@ -1572,14 +1591,14 @@ struct ConvertSolToStandard
     RewritePatternSet initialPats(&getContext());
     // TODO: Add the framework for adding patterns specific to the target.
     assert(tgt == solidity::mlirgen::Target::EraVM);
-    sol::eravm::populateInitialSolToStdConvPatterns(initialPats, tyConv);
+    populateInitialSolToStdConvPatterns(initialPats, tyConv);
     if (failed(applyPartialConversion(mod, initialConvTgt,
                                       std::move(initialPats))))
       signalPassFailure();
 
     // Run the final conversion pass.
     RewritePatternSet finalPats(&getContext());
-    sol::eravm::populateFinalSolToStdConvPatterns(finalPats);
+    populateFinalSolToStdConvPatterns(finalPats);
     if (failed(applyPartialConversion(mod, finalConvTgt, std::move(finalPats))))
       signalPassFailure();
   }
@@ -1596,23 +1615,6 @@ protected:
 };
 
 } // namespace
-
-void sol::eravm::populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
-                                                     TypeConverter &tyConv) {
-  pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
-      tyConv, pats.getContext());
-  pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
-           GetSlotOpLowering, StorageLoadOpLowering, BuiltinRetOpLowering,
-           RevertOpLowering, MLoadOpLowering, MStoreOpLowering, MCopyOpLowering,
-           DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
-           MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
-           CallDataSizeOpLowering, CallDataCopyOpLowering, SLoadOpLowering,
-           SStoreOpLowering, Keccak256OpLowering>(pats.getContext());
-}
-
-void sol::eravm::populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
-  pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(pats.getContext());
-}
 
 std::unique_ptr<Pass> sol::createConvertSolToStandardPass() {
   return std::make_unique<ConvertSolToStandard>();
