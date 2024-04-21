@@ -229,6 +229,11 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
                                                   getType(dstIntTy), val)
                        ->getResult(0);
     }
+
+    // In case of cast between literal and non-literal ints of same bitwidth.
+    if (dstIntTy->numBits() == srcIntTy->numBits()) {
+      return val;
+    }
   }
 
   llvm_unreachable("NYI: Unknown cast");
