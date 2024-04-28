@@ -11,8 +11,8 @@ contract C {
 // CHECK-NEXT:       sol.return loc(#loc2)
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:   } {interface_fns = [{selector = "26121ff0", sym = @f_4, type = () -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
-// CHECK-NEXT: } loc(#loc0)
-// CHECK-NEXT: #loc0 = loc(unknown)
+// CHECK-NEXT: } loc(#loc)
+// CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)
 // CHECK-NEXT: #loc2 = loc({{.*}}:3:2)
 // CHECK-EMPTY:

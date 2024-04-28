@@ -17,7 +17,7 @@ module {
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
 // CHECK-NEXT:     %0 = llvm.inttoptr %c64_i256 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:     llvm.store %c128_i256, %0 {alignment = 1 : i64} : i256, !llvm.ptr<1>
-// CHECK-NEXT:     %1 = "llvm.intrcall"() {id = 2630 : i32, name = "eravm.getu128"} : () -> i256
+// CHECK-NEXT:     %1 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256
 // CHECK-NEXT:     %2 = arith.cmpi ne, %1, %c0_i256 : i256
 // CHECK-NEXT:     scf.if %2 {
@@ -36,24 +36,23 @@ module {
 // CHECK-NEXT:     %6 = llvm.mlir.addressof @ptr_calldata : !llvm.ptr<ptr<3>>
 // CHECK-NEXT:     %7 = llvm.load %6 {alignment = 32 : i64} : !llvm.ptr<ptr<3>>
 // CHECK-NEXT:     %8 = llvm.getelementptr %7[%c0_i256_1] : (!llvm.ptr<3>, i256) -> !llvm.ptr<3>, i8
-// CHECK-NEXT:     %9 = llvm.mlir.constant(false) : i1
-// CHECK-NEXT:     "llvm.intr.memcpy"(%5, %8, %c0_i256_2, %9) : (!llvm.ptr<1>, !llvm.ptr<3>, i256, i1) -> ()
+// CHECK-NEXT:     "llvm.intr.memcpy"(%5, %8, %c0_i256_2) <{isVolatile = false}> : (!llvm.ptr<1>, !llvm.ptr<3>, i256) -> ()
 // CHECK-NEXT:     %c256_i256 = arith.constant 256 : i256
-// CHECK-NEXT:     %10 = llvm.inttoptr %c256_i256 : i256 to !llvm.ptr<2>
+// CHECK-NEXT:     %9 = llvm.inttoptr %c256_i256 : i256 to !llvm.ptr<2>
 // CHECK-NEXT:     %c32_i256 = arith.constant 32 : i256
-// CHECK-NEXT:     llvm.store %c32_i256, %10 {alignment = 1 : i64} : i256, !llvm.ptr<2>
+// CHECK-NEXT:     llvm.store %c32_i256, %9 {alignment = 1 : i64} : i256, !llvm.ptr<2>
 // CHECK-NEXT:     %c288_i256 = arith.constant 288 : i256
-// CHECK-NEXT:     %11 = llvm.inttoptr %c288_i256 : i256 to !llvm.ptr<2>
+// CHECK-NEXT:     %10 = llvm.inttoptr %c288_i256 : i256 to !llvm.ptr<2>
 // CHECK-NEXT:     %c0_i256_3 = arith.constant 0 : i256
-// CHECK-NEXT:     llvm.store %c0_i256_3, %11 {alignment = 1 : i64} : i256, !llvm.ptr<2>
+// CHECK-NEXT:     llvm.store %c0_i256_3, %10 {alignment = 1 : i64} : i256, !llvm.ptr<2>
 // CHECK-NEXT:     %c0_i256_4 = arith.constant 0 : i256
 // CHECK-NEXT:     %c2_i256 = arith.constant 2 : i256
-// CHECK-NEXT:     %12 = arith.muli %c0_i256_4, %c2_i256 : i256
+// CHECK-NEXT:     %11 = arith.muli %c0_i256_4, %c2_i256 : i256
 // CHECK-NEXT:     %c64_i256_5 = arith.constant 64 : i256
-// CHECK-NEXT:     %13 = arith.addi %12, %c64_i256_5 : i256
+// CHECK-NEXT:     %12 = arith.addi %11, %c64_i256_5 : i256
 // CHECK-NEXT:     %c256_i256_6 = arith.constant 256 : i256
 // CHECK-NEXT:     %c2_i256_7 = arith.constant 2 : i256
-// CHECK-NEXT:     call @__return(%c256_i256_6, %13, %c2_i256_7) : (i256, i256, i256) -> ()
+// CHECK-NEXT:     call @__return(%c256_i256_6, %12, %c2_i256_7) : (i256, i256, i256) -> ()
 // CHECK-NEXT:     call @".unreachable"() : () -> ()
 // CHECK-NEXT:     llvm.unreachable
 // CHECK-NEXT:   }
@@ -69,14 +68,14 @@ module {
 // CHECK-NEXT:     call @".unreachable"() : () -> ()
 // CHECK-NEXT:     llvm.unreachable
 // CHECK-NEXT:   }
-// CHECK-NEXT:   llvm.mlir.global private @ptr_active() : !llvm.ptr<3>
-// CHECK-NEXT:   llvm.mlir.global private @ptr_return_data() : !llvm.ptr<3>
-// CHECK-NEXT:   llvm.mlir.global private @ptr_calldata() : !llvm.ptr<3>
-// CHECK-NEXT:   llvm.mlir.global private @extra_abi_data(dense<0> : tensor<10xi256>) {alignment = 32 : i64} : !llvm.array<10 x i256>
-// CHECK-NEXT:   llvm.mlir.global private @call_flags(0 : i256) {alignment = 32 : i64} : i256
-// CHECK-NEXT:   llvm.mlir.global private @returndatasize(0 : i256) {alignment = 32 : i64} : i256
-// CHECK-NEXT:   llvm.mlir.global private @calldatasize(0 : i256) {alignment = 32 : i64} : i256
-// CHECK-NEXT:   llvm.mlir.global private @memory_pointer(0 : i256) {alignment = 32 : i64} : i256
+// CHECK-NEXT:   llvm.mlir.global private @ptr_active() {addr_space = 0 : i32} : !llvm.ptr<3>
+// CHECK-NEXT:   llvm.mlir.global private @ptr_return_data() {addr_space = 0 : i32} : !llvm.ptr<3>
+// CHECK-NEXT:   llvm.mlir.global private @ptr_calldata() {addr_space = 0 : i32} : !llvm.ptr<3>
+// CHECK-NEXT:   llvm.mlir.global private @extra_abi_data(dense<0> : tensor<10xi256>) {addr_space = 0 : i32, alignment = 32 : i64} : !llvm.array<10 x i256>
+// CHECK-NEXT:   llvm.mlir.global private @call_flags(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256
+// CHECK-NEXT:   llvm.mlir.global private @returndatasize(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256
+// CHECK-NEXT:   llvm.mlir.global private @calldatasize(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256
+// CHECK-NEXT:   llvm.mlir.global private @memory_pointer(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256
 // CHECK-NEXT:   func.func private @__entry(%arg0: !llvm.ptr<3>, %arg1: i256, %arg2: i256, %arg3: i256, %arg4: i256, %arg5: i256, %arg6: i256, %arg7: i256, %arg8: i256, %arg9: i256, %arg10: i256, %arg11: i256) -> i256 attributes {llvm.linkage = #llvm.linkage<external>} {
 // CHECK-NEXT:     %0 = llvm.mlir.addressof @memory_pointer : !llvm.ptr<i256>
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256

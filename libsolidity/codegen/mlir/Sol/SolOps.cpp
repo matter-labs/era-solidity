@@ -19,11 +19,11 @@
 #include "Sol/SolOpsDialect.cpp.inc"
 #include "Sol/SolOpsEnums.cpp.inc"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
@@ -299,16 +299,17 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    ArrayRef<DictionaryAttr> argAttrs) {
   state.addAttribute(SymbolTable::getSymbolAttrName(),
                      builder.getStringAttr(name));
-  state.addAttribute(FunctionOpInterface::getTypeAttrName(),
-                     TypeAttr::get(type));
+  state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
 
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(builder, state, argAttrs,
-                                                /*resultAttrs=*/llvm::None);
+  function_interface_impl::addArgAndResultAttrs(
+      builder, state, argAttrs,
+      /*resultAttrs=*/{}, getArgAttrsAttrName(state.name),
+      getResAttrsAttrName(state.name));
 }
 
 void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
@@ -321,7 +322,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
       StateMutabilityAttr::get(builder.getContext(), stateMutability));
 }
 
-void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
+void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<StringAttr, Attribute> newAttrMap;
   for (const auto &attr : dest->getAttrs())
@@ -339,7 +340,7 @@ void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
   getBody().cloneInto(&dest.getBody(), mapper);
 }
 
-FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
+FuncOp FuncOp::clone(IRMapping &mapper) {
   // Create the new function.
   FuncOp newFunc = cast<FuncOp>(getOperation()->cloneWithoutRegions());
 
@@ -378,7 +379,7 @@ FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
   return newFunc;
 }
 FuncOp FuncOp::clone() {
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   return clone(mapper);
 }
 
@@ -389,11 +390,15 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
          std::string &) { return builder.getFunctionType(argTypes, results); };
 
   return function_interface_impl::parseFunctionOp(
-      parser, result, /*allowVariadic=*/false, buildFuncType);
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
 void FuncOp::print(OpAsmPrinter &p) {
-  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -447,7 +452,7 @@ static ParseResult parseAllocationOp(OpAsmParser &parser,
                                      OperationState &result) {
   OpAsmParser::UnresolvedOperand sizeOperand;
   auto parseRes = parser.parseOptionalOperand(sizeOperand);
-  if (parseRes.hasValue() && succeeded(parseRes.getValue())) {
+  if (parseRes.has_value() && succeeded(parseRes.value())) {
     if (parser.resolveOperand(sizeOperand,
                               parser.getBuilder().getIntegerType(256),
                               result.operands))

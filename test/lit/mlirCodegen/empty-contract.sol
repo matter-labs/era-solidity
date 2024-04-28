@@ -11,8 +11,8 @@ contract D {
 // CHECK-NEXT:   } {interface_fns = [], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT:   sol.contract @D_2 {
 // CHECK-NEXT:   } {interface_fns = [], kind = #sol<ContractKind Contract>} loc(#loc2)
-// CHECK-NEXT: } loc(#loc0)
-// CHECK-NEXT: #loc0 = loc(unknown)
+// CHECK-NEXT: } loc(#loc)
+// CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)
 // CHECK-NEXT: #loc2 = loc({{.*}}:4:0)
 // CHECK-EMPTY:

@@ -27,7 +27,7 @@ object "Test" {
 // CHECK-NEXT:     sol.object @Test_deployed {
 // CHECK-NEXT:       %c0_i256_1 = arith.constant 0 : i256 loc(#loc4)
 // CHECK-NEXT:       %0 = sol.mload %c0_i256_1 loc(#loc5)
-// CHECK-NEXT:       "scf.int_switch"(%0) ({
+// CHECK-NEXT:       "scf.int_switch"(%0) <{cases = dense<[0, 1]> : tensor<2xi256>}> ({
 // CHECK-NEXT:         scf.yield loc(#loc6)
 // CHECK-NEXT:       }, {
 // CHECK-NEXT:         %c0_i256_4 = arith.constant 0 : i256 loc(#loc7)
@@ -39,14 +39,14 @@ object "Test" {
 // CHECK-NEXT:         %c1_i256 = arith.constant 1 : i256 loc(#loc11)
 // CHECK-NEXT:         sol.mstore %c0_i256_4, %c1_i256 loc(#loc12)
 // CHECK-NEXT:         scf.yield loc(#loc6)
-// CHECK-NEXT:       }) {cases = dense<[0, 1]> : tensor<2xi256>} : (i256) -> () loc(#loc6)
+// CHECK-NEXT:       }) : (i256) -> () loc(#loc6)
 // CHECK-NEXT:       %c0_i256_2 = arith.constant 0 : i256 loc(#loc13)
 // CHECK-NEXT:       %c0_i256_3 = arith.constant 0 : i256 loc(#loc14)
 // CHECK-NEXT:       sol.builtin_ret %c0_i256_2, %c0_i256_3 loc(#loc15)
-// CHECK-NEXT:     } loc(#loc0)
-// CHECK-NEXT:   } loc(#loc0)
-// CHECK-NEXT: } loc(#loc0)
-// CHECK-NEXT: #loc0 = loc(unknown)
+// CHECK-NEXT:     } loc(#loc)
+// CHECK-NEXT:   } loc(#loc)
+// CHECK-NEXT: } loc(#loc)
+// CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:4:11)
 // CHECK-NEXT: #loc2 = loc({{.*}}:4:14)
 // CHECK-NEXT: #loc3 = loc({{.*}}:4:4)

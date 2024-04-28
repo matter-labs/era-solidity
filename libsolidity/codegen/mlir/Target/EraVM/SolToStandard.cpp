@@ -26,13 +26,13 @@
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/ErrorCodes.h"
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -242,10 +242,8 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
         /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
         callDataPtr, ValueRange{srcOffset});
 
-    // Generate the memcpy
-    Value isVolatile = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
-    rewriter.create<LLVM::MemcpyOp>(loc, dst, src, size, isVolatile);
+    // Generate the memcpy.
+    rewriter.create<LLVM::MemcpyOp>(loc, dst, src, size, /*isVolatile=*/false);
 
     rewriter.eraseOp(op);
     return success();
@@ -349,10 +347,8 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
         /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
         callDataPtr, ValueRange{srcOffset});
 
-    // Generate the memcpy
-    Value isVolatile = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
-    rewriter.create<LLVM::MemcpyOp>(loc, dst, src, size, isVolatile);
+    // Generate the memcpy.
+    rewriter.create<LLVM::MemcpyOp>(loc, dst, src, size, /*isVolatile=*/false);
 
     rewriter.eraseOp(op);
     return success();
@@ -405,10 +401,9 @@ struct MCopyOpLowering : public OpRewritePattern<sol::MCopyOp> {
     Value size = op.getInp2();
 
     // Generate the memmove.
-    Value isVolatile = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
     // FIXME: Add align 1 param attribute.
-    rewriter.create<LLVM::MemmoveOp>(loc, dstAddr, srcAddr, size, isVolatile);
+    rewriter.create<LLVM::MemmoveOp>(loc, dstAddr, srcAddr, size,
+                                     /*isVolatile=*/false);
 
     rewriter.eraseOp(op);
     return success();
@@ -705,7 +700,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
           r.create<scf::ForOp>(
               loc, /*lowerBound=*/h.genIdxConst(0),
               /*upperBound=*/h.genCastToIdx(sizeInBytes),
-              /*step=*/h.genIdxConst(32), llvm::None,
+              /*step=*/h.genIdxConst(32), /*iterArgs=*/std::nullopt,
               /*builder=*/
               [&](OpBuilder &b, Location loc, Value indVar,
                   ValueRange iterArgs) {
@@ -1149,8 +1144,9 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     auto retDataABIInitializer = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
-        LLVM::LLVMPointerType::get(mod.getContext(),
-                                   callDataPtrAddr.getGlobal().getAddrSpace()),
+        LLVM::LLVMPointerType::get(
+            mod.getContext(),
+            h.getGlobalOp(callDataPtrAddr.getGlobalName(), mod).getAddrSpace()),
         /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
         entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataSz.getResult());
@@ -1401,7 +1397,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 
       // Generate the switch op.
       auto switchOp = r.create<mlir::scf::IntSwitchOp>(
-          loc, /*resultTypes=*/llvm::None, callDataLd, selectorsAttr,
+          loc, /*resultTypes=*/std::nullopt, callDataLd, selectorsAttr,
           selectors.size());
 
       // Generate the default block.
@@ -1493,7 +1489,7 @@ struct ConvertSolToStandard
       : PassWrapper(other) {}
 
   void getDependentDialects(DialectRegistry &reg) const override {
-    reg.insert<func::FuncDialect, scf::SCFDialect, arith::ArithmeticDialect,
+    reg.insert<func::FuncDialect, scf::SCFDialect, arith::ArithDialect,
                LLVM::LLVMDialect>();
   }
 
@@ -1579,9 +1575,8 @@ struct ConvertSolToStandard
     // conversion targets
     ConversionTarget initialConvTgt(getContext());
     initialConvTgt.addLegalOp<mlir::ModuleOp>();
-    initialConvTgt
-        .addLegalDialect<func::FuncDialect, scf::SCFDialect,
-                         arith::ArithmeticDialect, LLVM::LLVMDialect>();
+    initialConvTgt.addLegalDialect<func::FuncDialect, scf::SCFDialect,
+                                   arith::ArithDialect, LLVM::LLVMDialect>();
     initialConvTgt.addIllegalDialect<sol::SolDialect>();
     ConversionTarget finalConvTgt = initialConvTgt;
     initialConvTgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp>();

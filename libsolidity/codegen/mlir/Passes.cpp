@@ -17,11 +17,12 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Interface.h"
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -35,8 +36,8 @@ void solidity::mlirgen::addConversionPasses(mlir::PassManager &passMgr,
   passMgr.addPass(mlir::sol::createConvertSolToStandardPass(tgt));
   passMgr.addPass(mlir::createConvertFuncToLLVMPass());
   passMgr.addPass(mlir::createConvertSCFToCFPass());
-  passMgr.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
-  passMgr.addPass(mlir::arith::createConvertArithmeticToLLVMPass());
+  passMgr.addPass(mlir::createConvertControlFlowToLLVMPass());
+  passMgr.addPass(mlir::createArithToLLVMConversionPass());
 }
 
 std::unique_ptr<llvm::TargetMachine>
@@ -64,7 +65,7 @@ solidity::mlirgen::createTargetMachine(Target tgt) {
     llvm::TargetOptions options;
     return std::unique_ptr<llvm::TargetMachine>(
         llvmTgt->createTargetMachine("eravm", /*CPU=*/"", /*Features=*/"",
-                                     options, /*Reloc::Model=*/llvm::None));
+                                     options, /*Reloc::Model=*/std::nullopt));
 
     // TODO: Set code-model?
     // tgtMach->setCodeModel(?);
@@ -112,6 +113,7 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     if (mlir::failed(passMgr.run(mod)))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);
+    mlir::registerBuiltinDialectTranslation(ctx);
     std::unique_ptr<llvm::Module> llvmMod =
         mlir::translateModuleToLLVMIR(mod, llvmCtx);
     assert(llvmMod);
@@ -125,6 +127,7 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     if (mlir::failed(passMgr.run(mod)))
       return false;
     mlir::registerLLVMDialectTranslation(ctx);
+    mlir::registerBuiltinDialectTranslation(ctx);
     std::unique_ptr<llvm::Module> llvmMod =
         mlir::translateModuleToLLVMIR(mod, llvmCtx);
     assert(llvmMod);

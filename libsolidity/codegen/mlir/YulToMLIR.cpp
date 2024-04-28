@@ -29,7 +29,7 @@
 #include "libyul/Dialect.h"
 #include "libyul/Object.h"
 #include "libyul/optimiser/ASTWalker.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -453,7 +453,7 @@ void YulToMLIRPass::operator()(Switch const &switchStmt) {
   // Lower the switch argument and generate the switch op
   mlir::Value arg = genExpr(*switchStmt.expression);
   auto switchOp = b.create<mlir::scf::IntSwitchOp>(
-      loc, /*resultTypes=*/llvm::None, arg, caseValsAttr, caseVals.size());
+      loc, /*resultTypes=*/std::nullopt, arg, caseValsAttr, caseVals.size());
 
   mlir::OpBuilder::InsertionGuard insertGuard(b);
 
@@ -579,7 +579,7 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
                                          JobSpec const &job) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolDialect>();
-  ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+  ctx.getOrLoadDialect<mlir::arith::ArithDialect>();
   ctx.getOrLoadDialect<mlir::scf::SCFDialect>();
   ctx.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   solidity::mlirgen::YulToMLIRPass yulToMLIR(ctx, stream, yulDialect);

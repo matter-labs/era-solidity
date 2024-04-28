@@ -95,6 +95,8 @@ def Sol_FuncOp : Sol_Op<"func", [AutomaticAllocationScope, CallableOpInterface,
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttrOf<FunctionType>:$function_type,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
                        UnitAttr:$runtime,
                        OptionalAttr<Sol_StateMutabilityAttr>:$state_mutability,
                        OptionalAttr<StrAttr>:$sym_visibility);
@@ -112,9 +114,9 @@ def Sol_FuncOp : Sol_Op<"func", [AutomaticAllocationScope, CallableOpInterface,
 
   let extraClassDeclaration = [{
     // Copied from func.func.
-    FuncOp clone(BlockAndValueMapping &mapper);
+    FuncOp clone(IRMapping &mapper);
     FuncOp clone();
-    void cloneInto(FuncOp dest, BlockAndValueMapping &mapper);
+    void cloneInto(FuncOp dest, IRMapping &mapper);
 
     //===------------------------------------------------------------------===//
     // CallableOpInterface
@@ -128,6 +130,18 @@ def Sol_FuncOp : Sol_Op<"func", [AutomaticAllocationScope, CallableOpInterface,
     /// Returns the results types that the callable region produces when
     /// executed.
     ArrayRef<Type> getCallableResults() { return getFunctionType().getResults(); }
+
+    /// Returns the argument attributes for all callable region arguments or
+    /// null if there are none.
+    ::mlir::ArrayAttr getCallableArgAttrs() {
+      return getArgAttrs().value_or(nullptr);
+    }
+
+    /// Returns the result attributes for all callable region results or
+    /// null if there are none.
+    ::mlir::ArrayAttr getCallableResAttrs() {
+      return getResAttrs().value_or(nullptr);
+    }
 
     //===------------------------------------------------------------------===//
     // FunctionOpInterface Methods
@@ -199,6 +213,11 @@ def CallOp : Sol_Op<"call", [CallOpInterface,
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
     }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+    }
   }];
 
   let assemblyFormat = [{
@@ -206,7 +225,7 @@ def CallOp : Sol_Op<"call", [CallOpInterface,
   }];
 }
 
-def Sol_ReturnOp : Sol_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+def Sol_ReturnOp : Sol_Op<"return", [Pure, HasParent<"FuncOp">,
                                      ReturnLike, Terminator]> {
   let summary = "ReturnOp for sol.func";
   let description = [{
@@ -226,7 +245,7 @@ def Sol_ReturnOp : Sol_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [OpBuilder<(ins), [{
-    build($_builder, $_state, llvm::None);
+    build($_builder, $_state, std::nullopt);
   }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
@@ -383,14 +402,14 @@ def Sol_MCopyOp : Sol_Op<"mcopy"> {
   let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
 }
 
-def Sol_MSizeOp : Sol_Op<"msize", [NoSideEffect]> {
+def Sol_MSizeOp : Sol_Op<"msize", [Pure]> {
   let summary = "Represents the `msize` call in yul";
   let arguments = (ins);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
 
-def Sol_CallValOp : Sol_Op<"callvalue", [NoSideEffect]> {
+def Sol_CallValOp : Sol_Op<"callvalue", [Pure]> {
   let summary = "Represents the `callvalue` call in yul";
   let arguments = (ins);
   let results = (outs I256:$out);
@@ -404,14 +423,14 @@ def Sol_CallDataLoadOp : Sol_Op<"calldataload"> {
   let assemblyFormat = "$inp attr-dict";
 }
 
-def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [NoSideEffect]> {
+def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [Pure]> {
   let summary = "Represents the `calldatasize` call in yul";
   let arguments = (ins);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
 
-def Sol_CallDataCopyOp : Sol_Op<"calldatacopy", [NoSideEffect]> {
+def Sol_CallDataCopyOp : Sol_Op<"calldatacopy", [Pure]> {
   let summary = "Represents the `calldatacopy` call in yul";
   let arguments = (ins I256:$inp0, I256:$inp1, I256:$inp2);
   let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
@@ -434,14 +453,14 @@ def Sol_SStoreOp : Sol_Op<"sstore"> {
 // (including ones outside the translation unit) using SymbolRefAttr instead of
 // FlatSymbolRefAttr
 
-def Sol_DataOffsetOp : Sol_Op<"dataoffset", [NoSideEffect]> {
+def Sol_DataOffsetOp : Sol_Op<"dataoffset", [Pure]> {
   let summary = "Represents the `dataoffset` call in yul";
   let arguments = (ins FlatSymbolRefAttr:$sym);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
 
-def Sol_DataSizeOp : Sol_Op<"datasize", [NoSideEffect]> {
+def Sol_DataSizeOp : Sol_Op<"datasize", [Pure]> {
   let summary = "Represents the `datasize` call in yul";
   let arguments = (ins FlatSymbolRefAttr:$sym);
   let results = (outs I256:$out);
@@ -456,8 +475,7 @@ def Sol_CodeCopyOp : Sol_Op<"codecopy"> {
 
 // TODO: Is this `ConstantLike`? Adding it causes "expected ConstantLike op to
 // be foldable" assert fail (probably due to the missing let hasFolder = 1)
-def Sol_MemGuardOp : Sol_Op<"memoryguard", [NoSideEffect,
-                                            AllTypesMatch<["inp", "out"]>]> {
+def Sol_MemGuardOp : Sol_Op<"memoryguard", [Pure]> {
   let summary = "Represents the `memoryguard` call in yul";
   let arguments = (ins I256Attr:$inp);
   let results = (outs I256:$out);

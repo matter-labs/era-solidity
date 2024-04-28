@@ -21,7 +21,7 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -36,7 +36,7 @@ using namespace mlir;
 int main(int argc, char **argv) {
   DialectRegistry registry;
   registry.insert<BuiltinDialect, sol::SolDialect, func::FuncDialect,
-                  arith::ArithmeticDialect, LLVM::LLVMDialect>();
+                  arith::ArithDialect, LLVM::LLVMDialect>();
 
   registerPass([](void) -> std::unique_ptr<Pass> {
     return sol::createConvertSolToStandardPass();

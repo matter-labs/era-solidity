@@ -43,8 +43,6 @@ def Sol_Dialect : Dialect {
   let cppNamespace = "::mlir::sol";
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//

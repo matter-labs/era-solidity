@@ -30,7 +30,7 @@
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/CommonIO.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -422,7 +422,7 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
     CharStream const &stream, solidity::mlirgen::JobSpec const &job) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolDialect>();
-  ctx.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+  ctx.getOrLoadDialect<mlir::arith::ArithDialect>();
 
   SolidityToMLIRPass gen(ctx, stream);
   for (auto *contract : contracts) {
