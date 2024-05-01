@@ -293,6 +293,13 @@ llvm_map_components_to_libnames(llvm_libs
 	MC
 )
 
+# FIXME: Can we have a separate library for the mlir codegen + its dependencies
+# and not let libsolidity depend on it? libsolidity is a dependency for multiple
+# executables and we're likely going to experience an OOM event in debug static
+# builds if mlir and llvm dependency is part of it. We only need the mlir
+# codegen for the solc and sol-opt executables. CompilerStack.cpp's reference to
+# the mlir codegen is the problem here.
+
 add_library(solidity ${sources} ${mlir_sources})
 target_link_libraries(solidity PUBLIC yul evmasm langutil smtutil solutil Boost::boost fmt::fmt-header-only Threads::Threads
 	${mlir_libs} ${llvm_libs})
