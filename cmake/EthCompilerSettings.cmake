@@ -286,3 +286,15 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 		endif ()
 	endif ()
 endif ()
+
+# Parallel link jobs (Copied from llvm-17)
+set(SOLC_PARALLEL_LINK_JOBS "" CACHE STRING
+	"Define the maximum number of concurrent link jobs (Ninja only).")
+if(CMAKE_GENERATOR MATCHES "Ninja")
+	if(SOLC_PARALLEL_LINK_JOBS)
+		set_property(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=${SOLC_PARALLEL_LINK_JOBS})
+		set(CMAKE_JOB_POOL_LINK link_job_pool)
+	endif()
+elseif(SOLC_PARALLEL_LINK_JOBS)
+	message(WARNING "Job pooling is only available with Ninja generators.")
+endif()
