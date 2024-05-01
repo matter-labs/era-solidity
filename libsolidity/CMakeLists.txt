@@ -231,7 +231,7 @@ include_directories(${PROJECT_BINARY_DIR}/libsolidity/codegen/mlir)
 
 add_subdirectory(codegen/mlir/Sol)
 
-add_mlir_dialect_library(MLIRSol
+add_mlir_dialect_library(MLIRSolDialect
 	${mlir_sol_dialect_sources}
 
 	DEPENDS
@@ -241,13 +241,39 @@ add_mlir_dialect_library(MLIRSol
 	LINK_LIBS PUBLIC
 )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-get_property(translation_libs GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
+# FIXME: Remove this once we're good with the fine-grained library dependencies.
+# get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+# get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+# get_property(translation_libs GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
+# set(mlir_libs
+# 	${dialect_libs}
+# 	${conversion_libs}
+# 	${translation_libs}
+# 	MLIRSupport
+# 	MLIRPass
+# 	MLIRTransforms
+# 	MLIRTransformUtils
+# 	MLIRRewrite
+# 	MLIRIR
+# 	MLIRDialect
+# )
+
 set(mlir_libs
-	${dialect_libs}
-	${conversion_libs}
-	${translation_libs}
+	MLIRSolDialect
+	MLIRFuncDialect
+	MLIRSCFDialect
+	MLIRArithDialect
+	MLIRLLVMDialect
+
+	MLIRFuncToLLVM
+	MLIRSCFToControlFlow
+	MLIRControlFlowToLLVM
+	MLIRArithAttrToLLVMConversion
+	MLIRArithToLLVM
+
+	MLIRBuiltinToLLVMIRTranslation
+	MLIRLLVMToLLVMIRTranslation
+
 	MLIRSupport
 	MLIRPass
 	MLIRTransforms
