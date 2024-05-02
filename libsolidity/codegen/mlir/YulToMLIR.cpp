@@ -192,7 +192,7 @@ mlir::Value YulToMLIRPass::convToBool(mlir::Value val) {
   mlir::Location loc = val.getLoc();
   BuilderHelper h(b, loc);
 
-  auto ty = val.getType().cast<mlir::IntegerType>();
+  auto ty = mlir::cast<mlir::IntegerType>(val.getType());
   if (ty.getWidth() == 1)
     return val;
   if (ty == getDefIntTy())
@@ -368,7 +368,7 @@ mlir::Value YulToMLIRPass::genExpr(Expression const &expr,
 
   if (resTy) {
     assert(gen);
-    auto genTy = gen.getType().cast<mlir::IntegerType>();
+    auto genTy = mlir::cast<mlir::IntegerType>(gen.getType());
     if (*resTy != genTy) {
       assert(resTy->getWidth() > genTy.getWidth());
       // Zero-extend the result to `resTy`

@@ -47,12 +47,12 @@ unsigned eravm::getAlignment(AddrSpace addrSpace) {
 }
 
 unsigned eravm::getAlignment(Value ptr) {
-  auto ty = ptr.getType().cast<LLVM::LLVMPointerType>();
+  auto ty = cast<LLVM::LLVMPointerType>(ptr.getType());
   return getAlignment(static_cast<AddrSpace>(ty.getAddressSpace()));
 }
 
 unsigned eravm::getCallDataHeadSize(Type ty) {
-  if (auto intTy = ty.dyn_cast<IntegerType>()) {
+  if (auto intTy = dyn_cast<IntegerType>(ty)) {
     return 32;
   }
   if (sol::hasDynamicallySizedElt(ty))
@@ -62,7 +62,7 @@ unsigned eravm::getCallDataHeadSize(Type ty) {
 }
 
 unsigned eravm::getStorageByteCount(Type ty) {
-  if (auto intTy = ty.dyn_cast<IntegerType>())
+  if (auto intTy = dyn_cast<IntegerType>(ty))
     return intTy.getWidth() / 8;
   llvm_unreachable("NYI: Other types");
 }
@@ -146,7 +146,7 @@ Value eravm::BuilderHelper::genABITupleEncoding(
                                            h.genI256Const(totCallDataHeadSz));
 
     // String type.
-    if (auto stringTy = ty.dyn_cast<sol::StringType>()) {
+    if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       b.create<sol::MStoreOp>(
           loc, currHeadAddr,
           b.create<arith::SubIOp>(loc, currTailAddr, headStart));
@@ -169,7 +169,7 @@ Value eravm::BuilderHelper::genABITupleEncoding(
       currTailAddr = b.create<arith::AddIOp>(loc, tailDataAddr,
                                              h.genRoundUpToMultiple<32>(size));
       // Integer type.
-    } else if (ty.isa<IntegerType>()) {
+    } else if (isa<IntegerType>(ty)) {
       b.create<sol::MStoreOp>(loc, currHeadAddr, val);
 
     } else {

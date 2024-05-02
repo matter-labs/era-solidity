@@ -180,7 +180,7 @@ SolidityToMLIRPass::getInterfaceFnsAttr(ContractDefinition const &cont) {
     auto fnSymAttr = mlir::SymbolRefAttr::get(
         b.getContext(), getMangledName(i.second->declaration()));
 
-    mlir::FunctionType fnTy = getType(i.second).cast<mlir::FunctionType>();
+    mlir::FunctionType fnTy = mlir::cast<mlir::FunctionType>(getType(i.second));
     auto fnTyAttr = mlir::TypeAttr::get(fnTy);
 
     std::string selector = i.first.hex();

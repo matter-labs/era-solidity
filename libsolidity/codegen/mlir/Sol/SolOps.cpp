@@ -52,13 +52,13 @@ void SolDialect::initialize() {
 }
 
 static Type getEltType(Type ty, Index index = 0) {
-  if (auto ptrTy = ty.dyn_cast<sol::PointerType>()) {
+  if (auto ptrTy = dyn_cast<sol::PointerType>(ty)) {
     return ptrTy.getPointeeType();
   }
-  if (auto arrTy = ty.dyn_cast<sol::ArrayType>()) {
+  if (auto arrTy = dyn_cast<sol::ArrayType>(ty)) {
     return arrTy.getEltType();
   }
-  if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+  if (auto structTy = dyn_cast<sol::StructType>(ty)) {
     return structTy.getMemTypes()[index];
   }
   llvm_unreachable("Invalid type");
@@ -74,19 +74,19 @@ DataLocation mlir::sol::getDataLocation(Type ty) {
 }
 
 bool mlir::sol::isLeftAligned(Type ty) {
-  if (ty.isa<IntegerType>())
+  if (isa<IntegerType>(ty))
     return false;
   llvm_unreachable("NYI: isLeftAligned of other types");
 }
 
 bool mlir::sol::hasDynamicallySizedElt(Type ty) {
-  if (ty.isa<StringType>())
+  if (isa<StringType>(ty))
     return true;
 
-  if (auto arrTy = ty.dyn_cast<ArrayType>())
+  if (auto arrTy = dyn_cast<ArrayType>(ty))
     return arrTy.isDynSized() || hasDynamicallySizedElt(arrTy.getEltType());
 
-  if (auto structTy = ty.dyn_cast<StructType>())
+  if (auto structTy = dyn_cast<StructType>(ty))
     return llvm::any_of(structTy.getMemTypes(),
                         [](Type ty) { return hasDynamicallySizedElt(ty); });
 
@@ -269,10 +269,10 @@ DictionaryAttr ContractOp::getInterfaceFnAttr(sol::FuncOp fn) {
   TypeAttr fnTy = fn.getFunctionTypeAttr();
 
   for (Attribute interfaceFnAttr : interfaceFnsAttr) {
-    auto attr = interfaceFnAttr.cast<DictionaryAttr>();
+    auto attr = cast<DictionaryAttr>(interfaceFnAttr);
     assert(attr.contains("sym"));
-    if (fnSym == attr.get("sym").cast<SymbolRefAttr>() &&
-        fnTy == attr.get("type").cast<TypeAttr>())
+    if (fnSym == cast<SymbolRefAttr>(attr.get("sym")) &&
+        fnTy == cast<TypeAttr>(attr.get("type")))
       return attr;
   }
 

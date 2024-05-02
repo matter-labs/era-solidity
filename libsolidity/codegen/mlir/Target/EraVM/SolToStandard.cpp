@@ -164,7 +164,7 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
       LLVM::LoadOp callDataPtr =
           eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
       unsigned callDataPtrAddrSpace =
-          callDataPtr.getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+          cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
       auto callDataOffset = rewriter.create<LLVM::GEPOp>(
           loc,
           /*resultType=*/
@@ -234,7 +234,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
     LLVM::LoadOp callDataPtr =
         eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
-        callDataPtr.getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+        cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
@@ -339,7 +339,7 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
     LLVM::LoadOp callDataPtr =
         eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
-        callDataPtr.getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+        cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
@@ -537,11 +537,11 @@ struct AllocaOpLowering : public OpConversionPattern<sol::AllocaOp> {
   template <AllocSize ValSize>
   AllocSize getTotalSize(Type ty) const {
     // Array type.
-    if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+    if (auto arrayTy = dyn_cast<sol::ArrayType>(ty)) {
       return arrayTy.getSize() * getTotalSize<ValSize>(arrayTy.getEltType());
     }
     // Struct type.
-    if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+    if (auto structTy = dyn_cast<sol::StructType>(ty)) {
       assert(false && "NYI: Struct type");
     }
 
@@ -569,14 +569,14 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   /// the element type size.
   AllocSize getSize(Type ty) const {
     // String type is dynamic.
-    assert(!ty.isa<sol::StringType>());
+    assert(!isa<sol::StringType>(ty));
     // Array type.
-    if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+    if (auto arrayTy = dyn_cast<sol::ArrayType>(ty)) {
       assert(!arrayTy.isDynSized());
       return arrayTy.getSize() * 32;
     }
     // Struct type.
-    if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+    if (auto structTy = dyn_cast<sol::StructType>(ty)) {
       // FIXME: Is the memoryHeadSize 32 for all the types (assuming padding is
       // enabled by default) in StructType::memoryDataSize?
       return structTy.getMemTypes().size() * 32;
@@ -639,7 +639,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     solidity::mlirgen::BuilderHelper h(r, loc);
 
     // Array type.
-    if (auto arrayTy = ty.dyn_cast<sol::ArrayType>()) {
+    if (auto arrayTy = dyn_cast<sol::ArrayType>(ty)) {
       assert(arrayTy.getDataLocation() == sol::DataLocation::Memory);
 
       Value sizeInBytes, dataPtr;
@@ -665,7 +665,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       Type eltTy = arrayTy.getEltType();
 
       // Multi-dimensional array / array of structs.
-      if (eltTy.isa<sol::StructType>() || eltTy.isa<sol::ArrayType>()) {
+      if (isa<sol::StructType>(eltTy) || isa<sol::ArrayType>(eltTy)) {
         //
         // Store the offsets to the "inner" allocations.
         //
@@ -719,7 +719,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       }
 
       // String type.
-    } else if (auto stringTy = ty.dyn_cast<sol::StringType>()) {
+    } else if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       if (sizeVar)
         memPtr = genMemAllocForDynArray(
             sizeVar, h.genRoundUpToMultiple<32>(sizeVar), r, loc);
@@ -727,13 +727,13 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         return h.genI256Const(solidity::frontend::CompilerUtils::zeroPointer);
 
       // Struct type.
-    } else if (auto structTy = ty.dyn_cast<sol::StructType>()) {
+    } else if (auto structTy = dyn_cast<sol::StructType>(ty)) {
       memPtr = genMemAlloc(getSize(ty), r, loc);
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
 
       for (auto memTy : structTy.getMemTypes()) {
         Value initVal;
-        if (memTy.isa<sol::StructType>() || memTy.isa<sol::ArrayType>())
+        if (isa<sol::StructType>(memTy) || isa<sol::ArrayType>(memTy))
           initVal = genZeroedMemAlloc(memTy, sizeVar, recDepth, r, loc);
         else
           initVal = h.genI256Const(0);
@@ -791,7 +791,7 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
     Value idx = op.getIndices()[0];
     Value addrAtIdx;
 
-    if (auto arrayTy = baseAddrTy.dyn_cast<sol::ArrayType>()) {
+    if (auto arrayTy = dyn_cast<sol::ArrayType>(baseAddrTy)) {
       auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
       if (constIdx && !arrayTy.isDynSized()) {
         // FIXME: Should this be done by the verifier?
@@ -828,7 +828,7 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
           addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
         }
       }
-    } else if (auto structTy = baseAddrTy.dyn_cast<sol::StructType>()) {
+    } else if (auto structTy = dyn_cast<sol::StructType>(baseAddrTy)) {
       auto constIdx = cast<arith::ConstantIntOp>(idx.getDefiningOp());
       (void)constIdx;
       assert(constIdx.value() <
@@ -896,7 +896,7 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
     solidity::mlirgen::BuilderHelper h(r, loc);
 
     Type effTy = op.getEffectiveType();
-    assert(effTy.isa<IntegerType>() &&
+    assert(isa<IntegerType>(effTy) &&
            "NYI: Storage types other than int types");
 
     // Genrate the slot load.
@@ -925,7 +925,7 @@ struct StorageLoadOpLowering : public OpRewritePattern<sol::StorageLoadOp> {
     if (eravm::getStorageByteCount(effTy) == 32) {
       extractedVal = partiallyExtractedVal;
     } else {
-      if (auto intTy = effTy.dyn_cast<IntegerType>()) {
+      if (auto intTy = dyn_cast<IntegerType>(effTy)) {
         if (intTy.isSigned()) {
           llvm_unreachable("NYI: signextend builtin");
         } else {
@@ -1201,7 +1201,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
     for (auto const &op : *objOp.getBody()) {
-      if (auto runtimeObj = llvm::dyn_cast<sol::ObjectOp>(&op)) {
+      if (auto runtimeObj = dyn_cast<sol::ObjectOp>(&op)) {
         assert(runtimeObj.getSymName().endswith("_deployed"));
         assert(runtimeFuncRegion.empty());
         rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
@@ -1387,7 +1387,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       for (auto const &interfaceFn : interfaceFnInfos) {
         DictionaryAttr attr = interfaceFn.second;
         llvm::StringRef selectorStr =
-            attr.get("selector").cast<StringAttr>().getValue();
+            cast<StringAttr>(attr.get("selector")).getValue();
         selectors.emplace_back(256, selectorStr, 16);
       }
       auto selectorsAttr = mlir::DenseIntElementsAttr::get(
