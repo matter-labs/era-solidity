@@ -45,6 +45,7 @@
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -792,13 +793,16 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
     Value addrAtIdx;
 
     if (auto arrayTy = dyn_cast<sol::ArrayType>(baseAddrTy)) {
-      auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
-      if (constIdx && !arrayTy.isDynSized()) {
-        // FIXME: Should this be done by the verifier?
-        assert(constIdx.value() < arrayTy.getSize());
-        addrAtIdx = r.create<arith::AddIOp>(
-            loc, remappedBaseAddr, h.genI256Const(constIdx.value() * 32));
-      } else {
+      if (!isa<BlockArgument>(idx)) {
+        auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
+        if (constIdx && !arrayTy.isDynSized()) {
+          // FIXME: Should this be done by the verifier?
+          assert(constIdx.value() < arrayTy.getSize());
+          addrAtIdx = r.create<arith::AddIOp>(
+              loc, remappedBaseAddr, h.genI256Const(constIdx.value() * 32));
+        }
+      }
+      if (!addrAtIdx) {
         //
         // Generate PanicCode::ArrayOutOfBounds check.
         //
