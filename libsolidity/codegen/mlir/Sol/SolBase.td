@@ -154,11 +154,11 @@ def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
     Example:
 
     ```mlir
-    !sol.ptr<i256>
+    !sol.ptr<i256, Storage>
     ```
   }];
-  let parameters = (ins "Type":$pointeeType);
-  let assemblyFormat = [{ `<` $pointeeType `>` }];
+  let parameters = (ins "Type":$pointeeType, Sol_DataLocation:$dataLocation);
+  let hasCustomAssemblyFormat = 1;
 }
 
 def Sol_AggType : AnyTypeOf<[Sol_StringType, Sol_ArrayType, Sol_StructType],

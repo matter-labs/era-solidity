@@ -9,7 +9,7 @@ module {
     sol.return
   }
 
-  sol.func @ptr(%a: !sol.ptr<i256>) -> () {
+  sol.func @ptr(%a: !sol.ptr<i256, Stack>) -> () {
     sol.return
   }
 }
@@ -21,7 +21,7 @@ module {
 // CHECK-NEXT:   sol.func @struct(%arg0: !sol.struct<(i256, !sol.array<2 x i256, Memory>), Memory>) {
 // CHECK-NEXT:     sol.return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   sol.func @ptr(%arg0: !sol.ptr<i256>) {
+// CHECK-NEXT:   sol.func @ptr(%arg0: !sol.ptr<i256, Stack>) {
 // CHECK-NEXT:     sol.return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

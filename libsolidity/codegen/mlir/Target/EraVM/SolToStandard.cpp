@@ -1530,8 +1530,26 @@ struct ConvertSolToStandard
     tyConv.addConversion([&](IntegerType type) -> Type { return type; });
 
     tyConv.addConversion([&](sol::PointerType ty) -> Type {
-      Type eltTy = tyConv.convertType(ty.getPointeeType());
-      return LLVM::LLVMPointerType::get(eltTy);
+      switch (ty.getDataLocation()) {
+      case sol::DataLocation::Stack: {
+        Type eltTy = tyConv.convertType(ty.getPointeeType());
+        return LLVM::LLVMPointerType::get(eltTy);
+      }
+
+      // Represents the 256 bit slot offset.
+      //
+      // TODO: Can we get all storage types to be 32 byte aligned? If so, we can
+      // avoid the byte offset. Otherwise we should consider the
+      // OneToNTypeConversion to map the pointer to the slot + byte offset pair.
+      case sol::DataLocation::Storage:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+
+      default:
+        break;
+      }
+
+      llvm_unreachable("Unimplemented type conversion");
     });
 
     tyConv.addConversion([&](sol::ArrayType ty) -> Type {
@@ -1540,6 +1558,8 @@ struct ConvertSolToStandard
         Type eltTy = tyConv.convertType(ty.getEltType());
         return LLVM::LLVMArrayType::get(eltTy, ty.getSize());
       }
+
+      // Represents the 256 bit address in memory.
       case sol::DataLocation::Memory:
         return IntegerType::get(ty.getContext(), 256,
                                 IntegerType::SignednessSemantics::Signless);

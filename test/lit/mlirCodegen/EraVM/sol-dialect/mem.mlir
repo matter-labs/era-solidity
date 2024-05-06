@@ -2,9 +2,9 @@
 
 module {
   sol.func @stk(%st : i256) {
-    %stk = sol.alloca : !sol.ptr<i256>
-    sol.store %st : i256, %stk : !sol.ptr<i256>
-    %ld = sol.load %stk : !sol.ptr<i256>, i256
+    %stk = sol.alloca : !sol.ptr<i256, Stack>
+    sol.store %st : i256, %stk : !sol.ptr<i256, Stack>
+    %ld = sol.load %stk : !sol.ptr<i256, Stack>, i256
     sol.return
   }
 

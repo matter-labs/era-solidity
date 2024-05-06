@@ -372,7 +372,8 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
     mlir::Value arg = entryBlk->addArgument(inpTy, inpLoc);
     // TODO: Support non-scalars.
     auto addr = b.create<mlir::sol::AllocaOp>(
-        inpLoc, mlir::sol::PointerType::get(b.getContext(), inpTy));
+        inpLoc, mlir::sol::PointerType::get(b.getContext(), inpTy,
+                                            mlir::sol::DataLocation::Stack));
     setMemRef(param.get(), addr);
     b.create<mlir::sol::StoreOp>(inpLoc, arg, addr);
   }

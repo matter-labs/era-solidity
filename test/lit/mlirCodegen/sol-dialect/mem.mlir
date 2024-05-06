@@ -1,8 +1,8 @@
 // RUN: sol-opt %s | sol-opt | FileCheck %s
 
 module {
-  sol.func @ld_scalar(%a: !sol.ptr<i256>) -> i256 {
-    %ld = sol.load %a : !sol.ptr<i256>, i256
+  sol.func @ld_scalar(%a: !sol.ptr<i256, Stack>) -> i256 {
+    %ld = sol.load %a : !sol.ptr<i256, Stack>, i256
     sol.return %ld : i256
   }
 
@@ -18,9 +18,9 @@ module {
     sol.return
   }
 
-  sol.func @alloca() -> !sol.ptr<i256> {
-    %stk = sol.alloca : !sol.ptr<i256>
-    sol.return %stk : !sol.ptr<i256>
+  sol.func @alloca() -> !sol.ptr<i256, Stack> {
+    %stk = sol.alloca : !sol.ptr<i256, Stack>
+    sol.return %stk : !sol.ptr<i256, Stack>
   }
 
   sol.func @malloc() -> !sol.array<2 x i256, Memory> {
@@ -36,8 +36,8 @@ module {
 }
 
 // CHECK: module {
-// CHECK-NEXT:   sol.func @ld_scalar(%arg0: !sol.ptr<i256>) -> i256 {
-// CHECK-NEXT:     %0 = sol.load %arg0 : !sol.ptr<i256>, i256
+// CHECK-NEXT:   sol.func @ld_scalar(%arg0: !sol.ptr<i256, Stack>) -> i256 {
+// CHECK-NEXT:     %0 = sol.load %arg0 : !sol.ptr<i256, Stack>, i256
 // CHECK-NEXT:     sol.return %0 : i256
 // CHECK-NEXT:   }
 // CHECK-NEXT:   sol.func @ld_array(%arg0: !sol.array<2 x i256, Memory>) -> i256 {
@@ -50,9 +50,9 @@ module {
 // CHECK-NEXT:     sol.store %arg1 : i256, %arg0[%c0_i256] : !sol.array<2 x i256, Memory>
 // CHECK-NEXT:     sol.return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   sol.func @alloca() -> !sol.ptr<i256> {
-// CHECK-NEXT:     %0 = sol.alloca : !sol.ptr<i256>
-// CHECK-NEXT:     sol.return %0 : !sol.ptr<i256>
+// CHECK-NEXT:   sol.func @alloca() -> !sol.ptr<i256, Stack> {
+// CHECK-NEXT:     %0 = sol.alloca : !sol.ptr<i256, Stack>
+// CHECK-NEXT:     sol.return %0 : !sol.ptr<i256, Stack>
 // CHECK-NEXT:   }
 // CHECK-NEXT:   sol.func @malloc() -> !sol.array<2 x i256, Memory> {
 // CHECK-NEXT:     %0 = sol.malloc : !sol.array<2 x i256, Memory>

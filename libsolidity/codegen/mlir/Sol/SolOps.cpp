@@ -263,6 +263,45 @@ void OpqPointerType::print(AsmPrinter &printer) const {
   printer << "<" << stringifyDataLocation(getDataLocation()) << ">";
 }
 
+//===----------------------------------------------------------------------===//
+// PointerType
+//===----------------------------------------------------------------------===//
+
+/// Parses a sol.ptr type.
+///
+///   ptr-type ::= `<` pointee-ty, data-location `>`
+///
+Type PointerType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  Type pointeeTy;
+  if (parser.parseType(pointeeTy))
+    return {};
+
+  if (parser.parseComma())
+    return {};
+
+  DataLocation dataLocation = DataLocation::Memory;
+  if (parseDataLocation(parser, dataLocation))
+    return {};
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(parser.getContext(), pointeeTy, dataLocation);
+}
+
+/// Prints a sol.ptr type.
+void PointerType::print(AsmPrinter &printer) const {
+  printer << "<" << getPointeeType() << ", "
+          << stringifyDataLocation(getDataLocation()) << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// ContractOp
+//===----------------------------------------------------------------------===//
+
 DictionaryAttr ContractOp::getInterfaceFnAttr(sol::FuncOp fn) {
   ArrayAttr interfaceFnsAttr = getInterfaceFnsAttr();
   auto fnSym = SymbolRefAttr::get(fn.getSymNameAttr());
