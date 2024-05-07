@@ -329,8 +329,7 @@ def Sol_GetSlotOp : Sol_Op<"get_slot"> {
   let assemblyFormat = "$inpSlot `,` $key attr-dict";
 }
 
-// TODO: Can we let the target decided the layout in the storage? This can, for
-// instance, enable targets to align storage allocations.
+// TODO: Remove this.
 def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
   let summary = "Storage load op";
   let description = [{

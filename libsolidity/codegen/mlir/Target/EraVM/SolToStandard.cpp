@@ -843,11 +843,15 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
 
     return addrAtIdx;
   }
+  case sol::DataLocation::Storage: {
+    assert(op.getIndices().empty() && "NYI");
+    return remappedBaseAddr;
+  }
   default:
     break;
   };
 
-  llvm_unreachable("NYI: Storage and calldata data-locations");
+  llvm_unreachable("NYI: Calldata data-location");
 }
 
 struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
@@ -865,10 +869,13 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
     case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MLoadOp>(op, addrAtIdx);
       return success();
+    case sol::DataLocation::Storage:
+      r.replaceOpWithNewOp<sol::SLoadOp>(op, addrAtIdx);
+      return success();
     default:
       break;
     };
-    llvm_unreachable("NYI: Storage and calldata data-locations");
+    llvm_unreachable("NYI: Calldata data-location");
   }
 };
 
