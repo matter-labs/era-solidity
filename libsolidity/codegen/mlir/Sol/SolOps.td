@@ -298,6 +298,24 @@ def Sol_MallocOp : Sol_Op<"malloc"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def Sol_StateVarOp : Sol_Op<"state_var", [Symbol]> {
+  let summary = "Represents a state variable in a contract";
+  // TODO: Add desc.
+
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type);
+  let assemblyFormat = "$sym_name attr-dict `:` $type";
+}
+
+def Sol_AddrOfOp : Sol_Op<"addr_of"> {
+  let summary = "Generates address of a sol.state_var";
+  // TODO: Add desc.
+
+  let arguments = (ins FlatSymbolRefAttr:$var);
+  let results = (outs Sol_PtrType:$addr);
+
+  let assemblyFormat = "$var attr-dict `:` type($addr)";
+}
+
 def Sol_GetSlotOp : Sol_Op<"get_slot"> {
   let summary = "Maps slot+key to slot";
   let description = [{

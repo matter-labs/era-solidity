@@ -872,6 +872,24 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
   }
 };
 
+struct AddrOfOpLowering : public OpRewritePattern<sol::AddrOfOp> {
+  using OpRewritePattern<sol::AddrOfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::AddrOfOp op,
+                                PatternRewriter &r) const override {
+    solidity::mlirgen::BuilderHelper h(r, op.getLoc());
+
+    auto parentContract = op->getParentOfType<sol::ContractOp>();
+    auto stateVarSym = parentContract.lookupSymbol(op.getVar());
+    assert(stateVarSym);
+    auto stateVarOp = cast<sol::StateVarOp>(stateVarSym);
+    assert(stateVarOp->hasAttr("slot"));
+    IntegerAttr slot = cast<IntegerAttr>(stateVarOp->getAttr("slot"));
+    r.replaceOp(op, h.genI256Const(slot.getValue()));
+    return success();
+  }
+};
+
 struct GetSlotOpLowering : public OpRewritePattern<sol::GetSlotOp> {
   using OpRewritePattern<sol::GetSlotOp>::OpRewritePattern;
 
