@@ -1522,23 +1522,75 @@ struct ConvertSolToStandard
                LLVM::LLVMDialect>();
   }
 
-  void populateInitialSolToStdConvPatterns(RewritePatternSet &pats,
-                                           TypeConverter &tyConv) {
-    pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
-        tyConv, pats.getContext());
-    pats.add<ContractOpLowering, ObjectOpLowering, MallocOpLowering,
-             GetSlotOpLowering, StorageLoadOpLowering, BuiltinRetOpLowering,
+  // TODO: Generalize this comment.
+  //
+  // FIXME: Some of the conversion patterns depends on the ancestor/descendant
+  // sol.func ops (e.g.: checking the runtime/creation context). Also APIs
+  // like getOrInsert*FuncOp that are used in the conversion pass works with
+  // sol.func. sol.func conversion in the same conversion pass will require
+  // other conversion to be able to work with sol.func and func.func. To keep
+  // things simple for now, the sol.func and related ops lowering is scheduled
+  // in a separate conversion pass after the main one.
+  //
+  // How can we do the conversion cleanly with one pass? Generally speaking,
+  // how should we work with conversion patterns that depends on other
+  // operations?
+
+  // FIXME: Separate yul specific sol ops to a "yul" dialect? This could
+  // simplify the implementation of this multi-staged lowering.
+
+  /// Converts sol dialect ops except sol.contract and sol.func + related ops.
+  void runStage1Conversion(ModuleOp mod, TypeConverter &tyConv) {
+    ConversionTarget tgt(getContext());
+    tgt.addLegalOp<mlir::ModuleOp>();
+    tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
+                        arith::ArithDialect, LLVM::LLVMDialect>();
+    tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::LoadOp, sol::StoreOp>();
+
+    RewritePatternSet pats(&getContext());
+    pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(tyConv,
+                                                                &getContext());
+    pats.add<MallocOpLowering>(&getContext());
+
+    if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
+      signalPassFailure();
+  }
+
+  /// Converts sol.contract and all yul dialect ops.
+  void runStage2Conversion(ModuleOp mod) {
+    ConversionTarget tgt(getContext());
+    tgt.addLegalOp<mlir::ModuleOp>();
+    tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
+                        arith::ArithDialect, LLVM::LLVMDialect>();
+    tgt.addIllegalDialect<sol::SolDialect>();
+    tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp>();
+
+    RewritePatternSet pats(&getContext());
+    pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
              RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
              MCopyOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
              CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
              CallDataLoadOpLowering, CallDataSizeOpLowering,
              CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
-             Keccak256OpLowering>(pats.getContext());
+             Keccak256OpLowering>(&getContext());
+
+    if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
+      signalPassFailure();
   }
 
-  void populateFinalSolToStdConvPatterns(RewritePatternSet &pats) {
-    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(
-        pats.getContext());
+  /// Converts sol.func and related ops.
+  void runStage3Conversion(ModuleOp mod) {
+    ConversionTarget tgt(getContext());
+    tgt.addLegalOp<mlir::ModuleOp>();
+    tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
+                        arith::ArithDialect, LLVM::LLVMDialect>();
+    tgt.addIllegalDialect<sol::SolDialect>();
+
+    RewritePatternSet pats(&getContext());
+    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(&getContext());
+
+    if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
+      signalPassFailure();
   }
 
   void runOnOperation() override {
@@ -1607,44 +1659,10 @@ struct ConvertSolToStandard
       llvm_unreachable("Unimplemented type conversion");
     });
 
-    // FIXME: Some of the conversion patterns depends on the ancestor/descendant
-    // sol.func ops (e.g.: checking the runtime/creation context). Also APIs
-    // like getOrInsert*FuncOp that are used in the conversion pass works with
-    // sol.func. sol.func conversion in the same conversion pass will require
-    // other conversion to be able to work with sol.func and func.func. To keep
-    // things simple for now, the sol.func and related ops lowering is scheduled
-    // in a separate conversion pass after the main one.
-    //
-    // How can we do the conversion cleanly with one pass? Generally speaking,
-    // how should we work with conversion patterns that depends on other
-    // operations?
-
-    // Create the initial (sol ops excluding sol.func, sol.call and sol.return
-    // registered as illegal) and final (all sol ops registered as illegal)
-    // conversion targets
-    ConversionTarget initialConvTgt(getContext());
-    initialConvTgt.addLegalOp<mlir::ModuleOp>();
-    initialConvTgt.addLegalDialect<func::FuncDialect, scf::SCFDialect,
-                                   arith::ArithDialect, LLVM::LLVMDialect>();
-    initialConvTgt.addIllegalDialect<sol::SolDialect>();
-    ConversionTarget finalConvTgt = initialConvTgt;
-    initialConvTgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp>();
-
-    // Run the initial conversion pass.
     ModuleOp mod = getOperation();
-    RewritePatternSet initialPats(&getContext());
-    // TODO: Add the framework for adding patterns specific to the target.
-    assert(tgt == solidity::mlirgen::Target::EraVM);
-    populateInitialSolToStdConvPatterns(initialPats, tyConv);
-    if (failed(applyPartialConversion(mod, initialConvTgt,
-                                      std::move(initialPats))))
-      signalPassFailure();
-
-    // Run the final conversion pass.
-    RewritePatternSet finalPats(&getContext());
-    populateFinalSolToStdConvPatterns(finalPats);
-    if (failed(applyPartialConversion(mod, finalConvTgt, std::move(finalPats))))
-      signalPassFailure();
+    runStage1Conversion(mod, tyConv);
+    runStage2Conversion(mod);
+    runStage3Conversion(mod);
   }
 
   StringRef getArgument() const override { return "convert-sol-to-std"; }
