@@ -1545,15 +1545,30 @@ struct ConvertSolToStandard
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
-    tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::LoadOp, sol::StoreOp>();
+    tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::LoadOp,
+                     sol::StoreOp>();
 
     RewritePatternSet pats(&getContext());
     pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(tyConv,
                                                                 &getContext());
-    pats.add<MallocOpLowering>(&getContext());
+    pats.add<MallocOpLowering, AddrOfOpLowering>(&getContext());
+
+    // Assign slots to state variables.
+    mod.walk([&](sol::ContractOp contr) {
+      APInt slot(256, 0);
+      contr.walk([&](sol::StateVarOp stateVar) {
+        assert(eravm::getStorageByteCount(stateVar.getType()) == 32);
+        stateVar->setAttr(
+            "slot",
+            IntegerAttr::get(IntegerType::get(&getContext(), 256), slot++));
+      });
+    });
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();
+
+    // Remove all state variables.
+    mod.walk([](sol::StateVarOp op) { op.erase(); });
   }
 
   /// Converts sol.contract and all yul dialect ops.
