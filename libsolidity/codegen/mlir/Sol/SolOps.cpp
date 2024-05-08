@@ -66,6 +66,8 @@ static Type getEltType(Type ty, Index index = 0) {
 
 DataLocation mlir::sol::getDataLocation(Type ty) {
   return TypeSwitch<Type, DataLocation>(ty)
+      .Case<sol::PointerType>(
+          [&](sol::PointerType ptrTy) { return ptrTy.getDataLocation(); })
       .Case<sol::ArrayType>(
           [&](sol::ArrayType arrTy) { return arrTy.getDataLocation(); })
       .Case<sol::StructType>(
