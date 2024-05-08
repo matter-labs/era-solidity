@@ -62,8 +62,8 @@ unsigned eravm::getCallDataHeadSize(Type ty) {
 }
 
 unsigned eravm::getStorageByteCount(Type ty) {
-  if (auto intTy = dyn_cast<IntegerType>(ty))
-    return intTy.getWidth() / 8;
+  if (isa<IntegerType>(ty))
+    return 32;
   llvm_unreachable("NYI: Other types");
 }
 
