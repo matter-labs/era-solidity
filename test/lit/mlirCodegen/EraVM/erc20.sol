@@ -5,8 +5,14 @@
 pragma solidity >=0.8.0;
 
 contract ERC20 {
+  uint256 private _totalSupply;
+
   function decimals() public view returns (uint8) {
     return 18;
+  }
+
+  function totalSupply() public view returns (uint256) {
+    return _totalSupply;
   }
 }
 
@@ -77,7 +83,7 @@ contract ERC20 {
 // CHECK-NEXT:       %5 = llvm.load %4 {alignment = 32 : i64} : !llvm.ptr<ptr<3>> loc(#loc1)
 // CHECK-NEXT:       %6 = llvm.getelementptr %5[%c0_i256_2] : (!llvm.ptr<3>, i256) -> !llvm.ptr<3>, i8 loc(#loc1)
 // CHECK-NEXT:       %7 = llvm.load %6 {alignment = 1 : i64} : !llvm.ptr<3> -> i256 loc(#loc1)
-// CHECK-NEXT:       "scf.int_switch"(%7) <{cases = dense<826074471> : tensor<1xi256>}> ({
+// CHECK-NEXT:       "scf.int_switch"(%7) <{cases = dense<[826074471, 404098525]> : tensor<2xi256>}> ({
 // CHECK-NEXT:         scf.yield loc(#loc1)
 // CHECK-NEXT:       }, {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
@@ -90,7 +96,7 @@ contract ERC20 {
 // CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_8, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         } loc(#loc1)
-// CHECK-NEXT:         %10 = func.call @decimals_9() : () -> i8 loc(#loc1)
+// CHECK-NEXT:         %10 = func.call @decimals_11() : () -> i8 loc(#loc1)
 // CHECK-NEXT:         %c64_i256_4 = arith.constant 64 : i256 loc(#loc1)
 // CHECK-NEXT:         %11 = llvm.inttoptr %c64_i256_4 : i256 to !llvm.ptr<1> loc(#loc1)
 // CHECK-NEXT:         %12 = llvm.load %11 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc1)
@@ -100,6 +106,32 @@ contract ERC20 {
 // CHECK-NEXT:         %14 = arith.addi %12, %c32_i256 : i256 loc(#loc1)
 // CHECK-NEXT:         %15 = llvm.inttoptr %13 : i256 to !llvm.ptr<1> loc(#loc1)
 // CHECK-NEXT:         llvm.store %10, %15 {alignment = 1 : i64} : i8, !llvm.ptr<1> loc(#loc1)
+// CHECK-NEXT:         %16 = arith.subi %14, %12 : i256 loc(#loc1)
+// CHECK-NEXT:         %c0_i256_6 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:         func.call @__return(%12, %16, %c0_i256_6) : (i256, i256, i256) -> () loc(#loc1)
+// CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc1)
+// CHECK-NEXT:         scf.yield loc(#loc1)
+// CHECK-NEXT:       }, {
+// CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc1)
+// CHECK-NEXT:         scf.if %9 {
+// CHECK-NEXT:           %c0_i256_7 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:           %c0_i256_8 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:           %c0_i256_9 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_8, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc1)
+// CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
+// CHECK-NEXT:         } loc(#loc1)
+// CHECK-NEXT:         %10 = func.call @totalSupply_19() : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %c64_i256_4 = arith.constant 64 : i256 loc(#loc1)
+// CHECK-NEXT:         %11 = llvm.inttoptr %c64_i256_4 : i256 to !llvm.ptr<1> loc(#loc1)
+// CHECK-NEXT:         %12 = llvm.load %11 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc1)
+// CHECK-NEXT:         %c0_i256_5 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:         %13 = arith.addi %12, %c0_i256_5 : i256 loc(#loc1)
+// CHECK-NEXT:         %c32_i256 = arith.constant 32 : i256 loc(#loc1)
+// CHECK-NEXT:         %14 = arith.addi %12, %c32_i256 : i256 loc(#loc1)
+// CHECK-NEXT:         %15 = llvm.inttoptr %13 : i256 to !llvm.ptr<1> loc(#loc1)
+// CHECK-NEXT:         llvm.store %10, %15 {alignment = 1 : i64} : i256, !llvm.ptr<1> loc(#loc1)
 // CHECK-NEXT:         %16 = arith.subi %14, %12 : i256 loc(#loc1)
 // CHECK-NEXT:         %c0_i256_6 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:         func.call @__return(%12, %16, %c0_i256_6) : (i256, i256, i256) -> () loc(#loc1)
@@ -207,17 +239,33 @@ contract ERC20 {
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     llvm.unreachable loc(#loc1)
 // CHECK-NEXT:   } loc(#loc)
-// CHECK-NEXT:   func.func @decimals_9.0() -> i8 attributes {llvm.linkage = #llvm.linkage<private>, state_mutability = #sol<StateMutability View>} {
-// CHECK-NEXT:     %c18_i8 = arith.constant 18 : i8 loc(#loc3)
-// CHECK-NEXT:     return %c18_i8 : i8 loc(#loc4)
+// CHECK-NEXT:   func.func @totalSupply_19.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc3)
+// CHECK-NEXT:     %0 = llvm.inttoptr %c0_i256 : i256 to !llvm.ptr<5> loc(#loc4)
+// CHECK-NEXT:     %1 = llvm.load %0 {alignment = 1 : i64} : !llvm.ptr<5> -> i256 loc(#loc4)
+// CHECK-NEXT:     return %1 : i256 loc(#loc5)
 // CHECK-NEXT:   } loc(#loc2)
-// CHECK-NEXT:   func.func @decimals_9() -> i8 attributes {llvm.linkage = #llvm.linkage<private>, runtime, state_mutability = #sol<StateMutability View>} {
-// CHECK-NEXT:     %c18_i8 = arith.constant 18 : i8 loc(#loc3)
-// CHECK-NEXT:     return %c18_i8 : i8 loc(#loc4)
+// CHECK-NEXT:   func.func @decimals_11.0() -> i8 attributes {llvm.linkage = #llvm.linkage<private>, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %c18_i8 = arith.constant 18 : i8 loc(#loc7)
+// CHECK-NEXT:     return %c18_i8 : i8 loc(#loc8)
+// CHECK-NEXT:   } loc(#loc6)
+// CHECK-NEXT:   func.func @decimals_11() -> i8 attributes {llvm.linkage = #llvm.linkage<private>, runtime, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %c18_i8 = arith.constant 18 : i8 loc(#loc7)
+// CHECK-NEXT:     return %c18_i8 : i8 loc(#loc8)
+// CHECK-NEXT:   } loc(#loc6)
+// CHECK-NEXT:   func.func @totalSupply_19() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, runtime, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc3)
+// CHECK-NEXT:     %0 = llvm.inttoptr %c0_i256 : i256 to !llvm.ptr<5> loc(#loc4)
+// CHECK-NEXT:     %1 = llvm.load %0 {alignment = 1 : i64} : !llvm.ptr<5> -> i256 loc(#loc4)
+// CHECK-NEXT:     return %1 : i256 loc(#loc5)
 // CHECK-NEXT:   } loc(#loc2)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
-// CHECK-NEXT: #loc2 = loc({{.*}}:7:2)
-// CHECK-NEXT: #loc3 = loc({{.*}}:8:11)
-// CHECK-NEXT: #loc4 = loc({{.*}}:8:4)
+// CHECK-NEXT: #loc2 = loc({{.*}}:13:2)
+// CHECK-NEXT: #loc3 = loc({{.*}}:7:2)
+// CHECK-NEXT: #loc4 = loc({{.*}}:14:11)
+// CHECK-NEXT: #loc5 = loc({{.*}}:14:4)
+// CHECK-NEXT: #loc6 = loc({{.*}}:9:2)
+// CHECK-NEXT: #loc7 = loc({{.*}}:10:11)
+// CHECK-NEXT: #loc8 = loc({{.*}}:10:4)
 // CHECK-EMPTY:
