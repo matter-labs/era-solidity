@@ -13,7 +13,7 @@ contract C {
 // CHECK-NEXT:   sol.contract @C_12 {
 // CHECK-NEXT:     sol.state_var @m : i256 loc(#loc2)
 // CHECK-NEXT:     sol.func @f_11() -> i256 attributes {state_mutability = #sol<StateMutability NonPayable>} {
-// CHECK-NEXT:       %0 = sol.addr_of @m : <i256, Storage> loc(#loc2)
+// CHECK-NEXT:       %0 = sol.addr_of @m : !sol.ptr<i256, Storage> loc(#loc2)
 // CHECK-NEXT:       %1 = sol.load %0 : !sol.ptr<i256, Storage>, i256 loc(#loc4)
 // CHECK-NEXT:       sol.return %1 : i256 loc(#loc5)
 // CHECK-NEXT:     } loc(#loc3)

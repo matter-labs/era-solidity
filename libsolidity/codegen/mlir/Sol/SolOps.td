@@ -311,7 +311,8 @@ def Sol_AddrOfOp : Sol_Op<"addr_of"> {
   // TODO: Add desc.
 
   let arguments = (ins FlatSymbolRefAttr:$var);
-  let results = (outs Sol_PtrType:$addr);
+  // FIXME: AnyType -> Sol_PtrTy causes the asm printer to miss the prefix!
+  let results = (outs AnyType:$addr);
 
   let assemblyFormat = "$var attr-dict `:` type($addr)";
 }
