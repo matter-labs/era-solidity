@@ -161,6 +161,23 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
 }
 
 mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
+  if (auto *var = dynamic_cast<VariableDeclaration const *>(decl)) {
+    if (var->isStateVariable()) {
+      auto currContr =
+          b.getBlock()->getParentOp()->getParentOfType<mlir::sol::ContractOp>();
+      assert(currContr);
+      auto stateVarOp =
+          currContr.lookupSymbol<mlir::sol::StateVarOp>(var->name());
+      assert(stateVarOp);
+      auto resTy =
+          mlir::sol::PointerType::get(b.getContext(), stateVarOp.getType(),
+                                      mlir::sol::DataLocation::Storage);
+      // TODO: Should we use the state variable's location here?
+      return b.create<mlir::sol::AddrOfOp>(stateVarOp.getLoc(), resTy,
+                                           stateVarOp.getSymName());
+    }
+  }
+
   auto it = memRefMap.find(decl);
   if (it == memRefMap.end())
     return {};
@@ -410,6 +427,12 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
       getContractKind(cont), getInterfaceFnsAttr(cont), ctor, fallbackFn,
       receiveFn);
   b.setInsertionPointToStart(&op.getBodyRegion().emplaceBlock());
+
+  for (VariableDeclaration const *stateVar : cont.stateVariables()) {
+    b.create<mlir::sol::StateVarOp>(getLoc(stateVar->location()),
+                                    stateVar->name(),
+                                    getType(stateVar->type()));
+  }
 
   // Lower functions.
   for (auto *f : cont.definedFunctions()) {
