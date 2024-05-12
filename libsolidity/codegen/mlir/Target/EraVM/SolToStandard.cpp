@@ -897,6 +897,27 @@ struct AddrOfOpLowering : public OpRewritePattern<sol::AddrOfOp> {
   }
 };
 
+struct MapOpLowering : public OpConversionPattern<sol::MapOp> {
+  using OpConversionPattern<sol::MapOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::MapOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r, loc);
+
+    // Assert that the mapping is a slot (result of sol.addr_of or sol.map).
+    assert(cast<IntegerType>(adaptor.getMapping().getType()).getWidth() == 256);
+
+    // Setup arguments to keccak256.
+    auto zero = h.genI256Const(0);
+    r.create<sol::MStoreOp>(loc, zero, op.getKey());
+    r.create<sol::MStoreOp>(loc, h.genI256Const(0x20), adaptor.getMapping());
+
+    r.replaceOpWithNewOp<sol::Keccak256Op>(op, zero, h.genI256Const(0x40));
+    return success();
+  }
+};
+
 struct GetSlotOpLowering : public OpRewritePattern<sol::GetSlotOp> {
   using OpRewritePattern<sol::GetSlotOp>::OpRewritePattern;
 
@@ -1545,12 +1566,12 @@ struct ConvertSolToStandard
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
-    tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::LoadOp,
-                     sol::StoreOp>();
+    tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
+                     sol::LoadOp, sol::StoreOp>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<AllocaOpLowering, LoadOpLowering, StoreOpLowering>(tyConv,
-                                                                &getContext());
+    pats.add<AllocaOpLowering, MapOpLowering, LoadOpLowering, StoreOpLowering>(
+        tyConv, &getContext());
     pats.add<MallocOpLowering, AddrOfOpLowering>(&getContext());
 
     // Assign slots to state variables.
@@ -1620,6 +1641,11 @@ struct ConvertSolToStandard
     TypeConverter tyConv;
 
     tyConv.addConversion([&](IntegerType type) -> Type { return type; });
+
+    tyConv.addConversion([&](sol::MappingType ty) -> Type {
+      return IntegerType::get(ty.getContext(), 256,
+                              IntegerType::SignednessSemantics::Signless);
+    });
 
     tyConv.addConversion([&](sol::PointerType ty) -> Type {
       switch (ty.getDataLocation()) {

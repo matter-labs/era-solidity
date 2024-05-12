@@ -62,7 +62,7 @@ unsigned eravm::getCallDataHeadSize(Type ty) {
 }
 
 unsigned eravm::getStorageByteCount(Type ty) {
-  if (isa<IntegerType>(ty))
+  if (isa<IntegerType>(ty) || isa<sol::MappingType>(ty))
     return 32;
   llvm_unreachable("NYI: Other types");
 }

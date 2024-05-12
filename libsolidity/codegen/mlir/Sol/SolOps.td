@@ -317,6 +317,20 @@ def Sol_AddrOfOp : Sol_Op<"addr_of"> {
   let assemblyFormat = "$var attr-dict `:` type($addr)";
 }
 
+def Sol_MapOp : Sol_Op<"map"> {
+  let summary = "Maps a key of a mapping to the address of its value";
+  // TODO: Add desc.
+
+  // TODO: I256 -> AnyType.
+  let arguments = (ins AnyType:$mapping, I256:$key);
+  let results = (outs AnyType:$addr);
+
+  let assemblyFormat = [{
+    $mapping `,` $key attr-dict `:` type($mapping) `,` type($addr)
+  }];
+}
+
+// TODO: Remove this.
 def Sol_GetSlotOp : Sol_Op<"get_slot"> {
   let summary = "Maps slot+key to slot";
   let description = [{

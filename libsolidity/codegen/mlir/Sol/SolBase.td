@@ -126,6 +126,23 @@ def Sol_StructType : Sol_Type<"Struct", "struct"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def Sol_MappingType : Sol_Type<"Mapping", "mapping"> {
+  let summary = "Sol mapping type";
+  let description = [{
+    `sol.mapping` represents the solidity mapping type.
+
+    Example:
+
+    ```mlir
+    !sol.mapping<i160, i256>
+    ```
+  }];
+
+  let parameters = (ins "Type":$keyType, "Type":$valType);
+
+  let assemblyFormat = [{ `<` $keyType `,` $valType `>` }];
+}
+
 def Sol_OpqPtrType : Sol_Type<"OpqPointer", "opqptr"> {
   let summary = "Sol pointer type";
   let description = [{
