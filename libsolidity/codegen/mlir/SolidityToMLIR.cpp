@@ -26,6 +26,7 @@
 #include "libsolidity/ast/AST.h"
 #include "libsolidity/ast/ASTEnums.h"
 #include "libsolidity/ast/ASTVisitor.h"
+#include "libsolidity/ast/Types.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Util.h"
@@ -130,9 +131,10 @@ private:
 
 mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
   // Integer type
-  if (const auto *i = dynamic_cast<IntegerType const *>(ty)) {
-    return b.getIntegerType(i->numBits());
+  if (const auto *intTy = dynamic_cast<IntegerType const *>(ty)) {
+    return b.getIntegerType(intTy->numBits());
   }
+
   // Rational number type
   if (const auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
     if (ratNumTy->isFractional())
@@ -142,6 +144,19 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
     const IntegerType *intTy = ratNumTy->integerType();
     return b.getIntegerType(intTy->numBits());
   }
+
+  // Address type
+  if (const auto *addrTy = dynamic_cast<AddressType const *>(ty)) {
+    return b.getIntegerType(160);
+  }
+
+  // Mapping type
+  if (const auto *mappingTy = dynamic_cast<MappingType const *>(ty)) {
+    return mlir::sol::MappingType::get(b.getContext(),
+                                       getType(mappingTy->keyType()),
+                                       getType(mappingTy->valueType()));
+  }
+
   // Function type
   if (const auto *fnTy = dynamic_cast<FunctionType const *>(ty)) {
     std::vector<mlir::Type> inTys, outTys;
