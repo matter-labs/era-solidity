@@ -273,24 +273,24 @@ contract C {
 // ASM-EMPTY:
 // ASM-NEXT: 	.p2align	5, 0x0
 // ASM-NEXT: call_flags:
-// ASM-NEXT: 	.cell 0
+// ASM-NEXT: 	.cell	0
 // ASM-EMPTY:
 // ASM-NEXT: 	.p2align	5, 0x0
 // ASM-NEXT: returndatasize:
-// ASM-NEXT: 	.cell 0
+// ASM-NEXT: 	.cell	0
 // ASM-EMPTY:
 // ASM-NEXT: 	.p2align	5, 0x0
 // ASM-NEXT: calldatasize:
-// ASM-NEXT: 	.cell 0
+// ASM-NEXT: 	.cell	0
 // ASM-EMPTY:
 // ASM-NEXT: 	.p2align	5, 0x0
 // ASM-NEXT: memory_pointer:
-// ASM-NEXT: 	.cell 0
+// ASM-NEXT: 	.cell	0
 // ASM-EMPTY:
 // ASM-NEXT: 	.note.GNU-stack
 // ASM-NEXT: 	.rodata
 // ASM-NEXT: CPI2_0:
-// ASM-NEXT: 	.cell 638722032
+// ASM-NEXT: 	.cell	638722032
 // ASM-NEXT: CPI3_0:
-// ASM-NEXT: 	.cell 4294967295
+// ASM-NEXT: 	.cell	4294967295
 // ASM-EMPTY:
