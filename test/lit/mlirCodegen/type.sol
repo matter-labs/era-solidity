@@ -14,9 +14,9 @@ contract C {
 // CHECK: module {
 // CHECK-NEXT:   sol.contract @C_16 {
 // CHECK-NEXT:     sol.state_var @ui256 : i256 loc(#loc2)
-// CHECK-NEXT:     sol.state_var @addr : i160 loc(#loc3)
-// CHECK-NEXT:     sol.state_var @simpleMapping : !sol.mapping<i160, i256> loc(#loc4)
-// CHECK-NEXT:     sol.state_var @nestedMapping : !sol.mapping<i160, !sol.mapping<i160, i256>> loc(#loc5)
+// CHECK-NEXT:     sol.state_var @addr : i256 loc(#loc3)
+// CHECK-NEXT:     sol.state_var @simpleMapping : !sol.mapping<i256, i256> loc(#loc4)
+// CHECK-NEXT:     sol.state_var @nestedMapping : !sol.mapping<i256, !sol.mapping<i256, i256>> loc(#loc5)
 // CHECK-NEXT:   } {interface_fns = [], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)

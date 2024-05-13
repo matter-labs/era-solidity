@@ -56,5 +56,9 @@ bool isLeftAligned(Type ty);
 /// dynamically sized.
 bool hasDynamicallySizedElt(Type ty);
 
+/// Returns true if the type is a reference type (not exactly solidity's
+/// reference types).
+bool isRefType(Type ty);
+
 } // namespace sol
 } // namespace mlir

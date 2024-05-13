@@ -91,7 +91,9 @@ private:
 
   /// Returns the memory reference of the variable.
   mlir::Value getMemRef(Declaration const *decl);
-  mlir::Value getMemRef(Identifier const *ident);
+  mlir::Value getMemRef(Identifier const *ident) {
+    return getMemRef(ident->annotation().referencedDeclaration);
+  }
 
   /// Sets the memory reference of the variable.
   void setMemRef(Declaration const *decl, mlir::Value addr) {
@@ -112,16 +114,28 @@ private:
   /// `srcTy` to a value having the corresponding mlir type of `dstTy`
   mlir::Value genCast(mlir::Value val, Type const *srcTy, Type const *dstTy);
 
-  /// Returns the mlir expression for the literal `lit`
+  /// Returns the mlir expression for the literal.
   mlir::Value genExpr(Literal const *lit);
 
-  /// Returns the mlir expression for the binary operation `binOp`
+  /// Returns the mlir expression for the binary operation.
   mlir::Value genExpr(BinaryOperation const *binOp);
 
-  /// Returns the mlir expression from `expr` and optionally casts it to the
-  /// corresponding mlir type of `resTy`
-  mlir::Value genExpr(Expression const *expr,
-                      std::optional<Type const *> resTy = std::nullopt);
+  /// Returns the mlir expression for the index access in the l-value context.
+  mlir::Value genLValExpr(IndexAccess const *idxAcc);
+
+  /// Returns the mlir expression for the index access in the r-value context.
+  mlir::Value genRValExpr(IndexAccess const *idxAcc) {
+    mlir::Value addr = genLValExpr(idxAcc);
+    return b.create<mlir::sol::LoadOp>(getLoc(idxAcc->location()), addr);
+  }
+
+  /// Returns the mlir expression in the r-value context and optionally casts it
+  /// to the corresponding mlir type of `resTy`.
+  mlir::Value genRValExpr(Expression const *expr,
+                          std::optional<Type const *> resTy = std::nullopt);
+
+  /// Returns the mlir expression in the l-value context.
+  mlir::Value genLValExpr(Expression const *expr);
 
   bool visit(Return const &) override;
   void run(FunctionDefinition const &);
@@ -147,7 +161,8 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
 
   // Address type
   if (const auto *addrTy = dynamic_cast<AddressType const *>(ty)) {
-    return b.getIntegerType(160);
+    // FIXME: 256 -> 160
+    return b.getIntegerType(256);
   }
 
   // Mapping type
@@ -184,11 +199,15 @@ mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
       auto stateVarOp =
           currContr.lookupSymbol<mlir::sol::StateVarOp>(var->name());
       assert(stateVarOp);
-      auto resTy =
-          mlir::sol::PointerType::get(b.getContext(), stateVarOp.getType(),
-                                      mlir::sol::DataLocation::Storage);
+      mlir::Type addrTy;
+      if (mlir::sol::isRefType(stateVarOp.getType()))
+        addrTy = stateVarOp.getType();
+      else
+        addrTy =
+            mlir::sol::PointerType::get(b.getContext(), stateVarOp.getType(),
+                                        mlir::sol::DataLocation::Storage);
       // TODO: Should we use the state variable's location here?
-      return b.create<mlir::sol::AddrOfOp>(stateVarOp.getLoc(), resTy,
+      return b.create<mlir::sol::AddrOfOp>(stateVarOp.getLoc(), addrTy,
                                            stateVarOp.getSymName());
     }
   }
@@ -197,10 +216,6 @@ mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
   if (it == memRefMap.end())
     return {};
   return it->second;
-}
-
-mlir::Value SolidityToMLIRPass::getMemRef(Identifier const *ident) {
-  return getMemRef(ident->annotation().referencedDeclaration);
 }
 
 mlir::ArrayAttr
@@ -271,51 +286,6 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
   llvm_unreachable("NYI: Unknown cast");
 }
 
-mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
-  const auto *resTy = binOp->annotation().type;
-  auto lc = getLoc(binOp->location());
-
-  mlir::Value lhs = genExpr(&binOp->leftExpression(), resTy);
-  mlir::Value rhs = genExpr(&binOp->rightExpression(), resTy);
-
-  switch (binOp->getOperator()) {
-  case Token::Add:
-    return b.create<mlir::arith::AddIOp>(lc, lhs, rhs)->getResult(0);
-  case Token::Mul:
-    return b.create<mlir::arith::MulIOp>(lc, lhs, rhs)->getResult(0);
-  default:
-    break;
-  }
-  llvm_unreachable("NYI: Binary operator");
-}
-
-mlir::Value SolidityToMLIRPass::genExpr(Expression const *expr,
-                                        std::optional<Type const *> resTy) {
-  mlir::Value val;
-
-  // Generate literals
-  if (auto *lit = dynamic_cast<Literal const *>(expr)) {
-    val = genExpr(lit);
-  }
-  // Generate variable access
-  else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
-    auto addr = getMemRef(ident);
-    assert(addr);
-    val = b.create<mlir::sol::LoadOp>(getLoc(expr->location()), addr);
-  }
-  // Generate binary operation
-  else if (auto *binOp = dynamic_cast<BinaryOperation const *>(expr)) {
-    val = genExpr(binOp);
-  }
-
-  // Generate cast (Optional)
-  if (resTy) {
-    return genCast(val, expr->annotation().type, *resTy);
-  }
-
-  return val;
-}
-
 mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
   mlir::Location lc = getLoc(lit->location());
   Type const *ty = lit->annotation().type;
@@ -337,6 +307,95 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
   llvm_unreachable("NYI: Literal");
 }
 
+mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
+  const auto *resTy = binOp->annotation().type;
+  auto lc = getLoc(binOp->location());
+
+  mlir::Value lhs = genRValExpr(&binOp->leftExpression(), resTy);
+  mlir::Value rhs = genRValExpr(&binOp->rightExpression(), resTy);
+
+  switch (binOp->getOperator()) {
+  case Token::Add:
+    return b.create<mlir::arith::AddIOp>(lc, lhs, rhs)->getResult(0);
+  case Token::Mul:
+    return b.create<mlir::arith::MulIOp>(lc, lhs, rhs)->getResult(0);
+  default:
+    break;
+  }
+  llvm_unreachable("NYI: Binary operator");
+}
+
+mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
+  mlir::Value baseExpr = genLValExpr(&idxAcc->baseExpression());
+  if (auto mappingTy =
+          mlir::dyn_cast<mlir::sol::MappingType>(baseExpr.getType())) {
+    mlir::Type addrTy;
+    if (mlir::sol::isRefType(mappingTy.getValType()))
+      addrTy = mappingTy.getValType();
+    else
+      addrTy =
+          mlir::sol::PointerType::get(b.getContext(), mappingTy.getValType(),
+                                      mlir::sol::DataLocation::Storage);
+    mlir::Value idxExpr = genRValExpr(idxAcc->indexExpression());
+    return b.create<mlir::sol::MapOp>(getLoc(idxAcc->location()), addrTy,
+                                      baseExpr, idxExpr);
+  }
+
+  llvm_unreachable("NYI");
+}
+
+mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
+  // Generate variable access.
+  if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
+    auto addr = getMemRef(ident);
+    assert(addr);
+    return addr;
+  }
+
+  if (auto *idxAcc = dynamic_cast<IndexAccess const *>(expr)) {
+    return genLValExpr(idxAcc);
+  }
+
+  return genRValExpr(expr);
+}
+
+mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
+                                            std::optional<Type const *> resTy) {
+  mlir::Value val;
+
+  // Generate literals.
+  if (auto *lit = dynamic_cast<Literal const *>(expr)) {
+    val = genExpr(lit);
+  }
+
+  // Generate binary operation.
+  else if (auto *binOp = dynamic_cast<BinaryOperation const *>(expr)) {
+    val = genExpr(binOp);
+  }
+
+  // Generate variable access.
+  else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
+    auto addr = getMemRef(ident);
+    assert(addr);
+    val = b.create<mlir::sol::LoadOp>(getLoc(expr->location()), addr);
+  }
+
+  else if (auto *idxAcc = dynamic_cast<IndexAccess const *>(expr)) {
+    return genRValExpr(idxAcc);
+  }
+
+  else {
+    llvm_unreachable("NYI");
+  }
+
+  // Generate cast (Optional).
+  if (resTy) {
+    return genCast(val, expr->annotation().type, *resTy);
+  }
+
+  return val;
+}
+
 bool SolidityToMLIRPass::visit(Return const &ret) {
   auto currFuncResTys =
       currFunc->functionType(/*FIXME*/ true)->returnParameterTypes();
@@ -349,7 +408,7 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
 
   Expression const *astExpr = ret.expression();
   if (astExpr) {
-    mlir::Value expr = genExpr(ret.expression(), currFuncResTys[0]);
+    mlir::Value expr = genRValExpr(ret.expression(), currFuncResTys[0]);
     b.create<mlir::sol::ReturnOp>(getLoc(ret.location()), expr);
   } else {
     llvm_unreachable("NYI: Empty return");

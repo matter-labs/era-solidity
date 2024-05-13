@@ -75,6 +75,13 @@ DataLocation mlir::sol::getDataLocation(Type ty) {
       .Default([&](Type) { return DataLocation::Stack; });
 }
 
+bool mlir::sol::isRefType(Type ty) {
+  if (isa<ArrayType>(ty) || isa<StructType>(ty) || isa<PointerType>(ty) ||
+      isa<MappingType>(ty))
+    return true;
+  return false;
+}
+
 bool mlir::sol::isLeftAligned(Type ty) {
   if (isa<IntegerType>(ty))
     return false;
