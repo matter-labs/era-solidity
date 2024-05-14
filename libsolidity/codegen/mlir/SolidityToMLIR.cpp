@@ -143,6 +143,18 @@ private:
 
 } // namespace solidity::frontend
 
+/// Returns the mlir::sol::StateMutability of the function
+static mlir::sol::DataLocation getDataLocation(ReferenceType const *ty) {
+  switch (ty->location()) {
+  case DataLocation::CallData:
+    return mlir::sol::DataLocation::CallData;
+  case DataLocation::Storage:
+    return mlir::sol::DataLocation::Storage;
+  case DataLocation::Memory:
+    return mlir::sol::DataLocation::Memory;
+  }
+}
+
 mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
   // Integer type
   if (const auto *intTy = dynamic_cast<IntegerType const *>(ty)) {
@@ -170,6 +182,13 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
     return mlir::sol::MappingType::get(b.getContext(),
                                        getType(mappingTy->keyType()),
                                        getType(mappingTy->valueType()));
+  }
+
+  // Array or string type
+  if (const auto *arrTy = dynamic_cast<ArrayType const *>(ty)) {
+    if (arrTy->isString()) {
+      return mlir::sol::StringType::get(b.getContext(), getDataLocation(arrTy));
+    }
   }
 
   // Function type
