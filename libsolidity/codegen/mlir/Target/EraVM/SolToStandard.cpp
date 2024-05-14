@@ -1482,11 +1482,14 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
           genCallValChk();
         }
 
+        // Decode the input parameters.
+        std::vector<Value> params;
+        eravmHelper.genABITupleDecoding(func.getFunctionType().getInputs(),
+                                        /*headStart*/ h.genI256Const(4),
+                                        params);
+
         // Generate the actual call.
-        assert(func.getNumArguments() == 0 &&
-               "NYI: Interface function arguments");
-        // TODO: libyul's ABIFunctions::tupleDecoder().
-        auto callOp = r.create<sol::CallOp>(loc, func, ValueRange{});
+        auto callOp = r.create<sol::CallOp>(loc, func, params);
 
         // Encode the result using the ABI's tuple encoder.
         auto headStart = r.create<sol::MLoadOp>(loc, h.genI256Const(64));

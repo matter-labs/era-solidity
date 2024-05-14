@@ -41,6 +41,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
+#include <vector>
 
 namespace eravm {
 
@@ -141,6 +142,11 @@ public:
   genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
                       mlir::Value headStart,
                       std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates the tuple decoder as per ABI and populates the results.
+  void genABITupleDecoding(mlir::TypeRange tys, mlir::Value headStart,
+                           std::vector<mlir::Value> &results,
+                           std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Returns an existing or a new (if not found) creation function.
   mlir::sol::FuncOp getOrInsertCreationFuncOp(mlir::StringRef name,

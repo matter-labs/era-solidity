@@ -181,6 +181,31 @@ Value eravm::BuilderHelper::genABITupleEncoding(
   return currTailAddr;
 }
 
+void eravm::BuilderHelper::genABITupleDecoding(
+    TypeRange tys, Value headStart, std::vector<Value> &results,
+    std::optional<mlir::Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+
+  // TODO? {en|de}codingType() for sol dialect types.
+
+  // TODO: Generate "ABI decoding: tuple data too short" revert check.
+
+  size_t headPos = 0;
+  for (auto ty : tys) {
+    if (!isa<IntegerType>(ty))
+      llvm_unreachable("NYI");
+
+    Value offset = h.genI256Const(headPos);
+
+    auto headStartPlusOffset = b.create<arith::AddIOp>(loc, headStart, offset);
+    results.push_back(b.create<sol::CallDataLoadOp>(loc, headStartPlusOffset));
+    // TODO: Generate "Validator".
+
+    headPos += getCallDataHeadSize(ty);
+  }
+}
+
 sol::FuncOp eravm::BuilderHelper::getOrInsertCreationFuncOp(
     llvm::StringRef name, FunctionType fnTy, ModuleOp mod) {
   solidity::mlirgen::BuilderHelper h(b);
