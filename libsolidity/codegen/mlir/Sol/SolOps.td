@@ -388,8 +388,8 @@ def Sol_StoreOp : Sol_Op<"store"> {
   let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
                        Variadic<I256>:$indices);
   let assemblyFormat = [{
-    $val `:` type($val) `,`
-      $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr)
+    $val `,` $baseAddr (`[` $indices^ `]`)? attr-dict
+      `:` type($val) `,` type($baseAddr)
   }];
 
   let builders = [

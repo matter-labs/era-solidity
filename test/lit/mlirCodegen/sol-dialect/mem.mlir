@@ -14,7 +14,7 @@ module {
 
   sol.func @st_array(%a: !sol.array<2 x i256, Memory>, %b: i256) {
     %zero = arith.constant 0 : i256
-    sol.store %b : i256, %a[%zero] : !sol.array<2 x i256, Memory>
+    sol.store %b, %a[%zero] : i256, !sol.array<2 x i256, Memory>
     sol.return
   }
 
@@ -47,7 +47,7 @@ module {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   sol.func @st_array(%arg0: !sol.array<2 x i256, Memory>, %arg1: i256) {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256
-// CHECK-NEXT:     sol.store %arg1 : i256, %arg0[%c0_i256] : !sol.array<2 x i256, Memory>
+// CHECK-NEXT:     sol.store %arg1, %arg0[%c0_i256] : i256, !sol.array<2 x i256, Memory>
 // CHECK-NEXT:     sol.return
 // CHECK-NEXT:   }
 // CHECK-NEXT:   sol.func @alloca() -> !sol.ptr<i256, Stack> {

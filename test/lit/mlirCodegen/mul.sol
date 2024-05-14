@@ -10,7 +10,7 @@ contract C {
 // CHECK-NEXT:   sol.contract @C_13 {
 // CHECK-NEXT:     sol.func @f_12(%arg0: i256 loc({{.*}}:3:12)) -> i256 attributes {state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:       %0 = sol.alloca : !sol.ptr<i256, Stack> loc(#loc3)
-// CHECK-NEXT:       sol.store %arg0 : i256, %0 : !sol.ptr<i256, Stack> loc(#loc3)
+// CHECK-NEXT:       sol.store %arg0, %0 : i256, !sol.ptr<i256, Stack> loc(#loc3)
 // CHECK-NEXT:       %1 = sol.load %0 : !sol.ptr<i256, Stack>, i256 loc(#loc4)
 // CHECK-NEXT:       %c7_i8 = arith.constant 7 : i8 loc(#loc5)
 // CHECK-NEXT:       %2 = arith.extui %c7_i8 : i8 to i256 loc(#loc5)

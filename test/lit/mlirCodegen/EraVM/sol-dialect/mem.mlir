@@ -3,7 +3,7 @@
 module {
   sol.func @stk(%st : i256) {
     %stk = sol.alloca : !sol.ptr<i256, Stack>
-    sol.store %st : i256, %stk : !sol.ptr<i256, Stack>
+    sol.store %st, %stk : i256, !sol.ptr<i256, Stack>
     %ld = sol.load %stk : !sol.ptr<i256, Stack>, i256
     sol.return
   }
@@ -11,7 +11,7 @@ module {
   sol.func @mem(%st : i256) {
     %c0 = arith.constant 0 : i256
     %mem = sol.malloc : !sol.array<3 x i256, Memory>
-    sol.store %st : i256, %mem[%c0] : !sol.array<3 x i256, Memory>
+    sol.store %st, %mem[%c0] : i256, !sol.array<3 x i256, Memory>
     %ld = sol.load %mem[%c0] : !sol.array<3 x i256, Memory>, i256
     sol.return
   }
@@ -44,7 +44,7 @@ module {
   sol.func @mem_struct(%st : i256) {
     %mem = sol.malloc : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>
     %c0 = arith.constant 0 : i256
-    sol.store %st : i256, %mem[%c0] : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>
+    sol.store %st, %mem[%c0] : i256, !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>
     %ld.0 = sol.load %mem[%c0] : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>, i256
     %c1 = arith.constant 1 : i256
     %ld.1 = sol.load %mem[%c1] : !sol.struct<(i256, !sol.array<3 x i256, Memory>), Memory>, !sol.array<3 x i256, Memory>

@@ -40,7 +40,7 @@ contract ERC20 {
 // CHECK-NEXT:     } loc(#loc8)
 // CHECK-NEXT:     sol.func @balanceOf_41(%arg0: i256 loc({{.*}}:19:21)) -> i256 attributes {state_mutability = #sol<StateMutability View>} {
 // CHECK-NEXT:       %0 = sol.alloca : !sol.ptr<i256, Stack> loc(#loc12)
-// CHECK-NEXT:       sol.store %arg0 : i256, %0 : !sol.ptr<i256, Stack> loc(#loc12)
+// CHECK-NEXT:       sol.store %arg0, %0 : i256, !sol.ptr<i256, Stack> loc(#loc12)
 // CHECK-NEXT:       %1 = sol.addr_of @_balances : !sol.mapping<i256, i256> loc(#loc2)
 // CHECK-NEXT:       %2 = sol.load %0 : !sol.ptr<i256, Stack>, i256 loc(#loc13)
 // CHECK-NEXT:       %3 = sol.map %1, %2 : !sol.mapping<i256, i256>, !sol.ptr<i256, Storage> loc(#loc14)
