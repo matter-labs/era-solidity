@@ -248,33 +248,6 @@ void StructType::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
-// OpqPointerType
-//===----------------------------------------------------------------------===//
-
-/// Parses a sol.opqptr type.
-///
-///   ptr-type ::= `<` data-location `>`
-///
-Type OpqPointerType::parse(AsmParser &parser) {
-  if (parser.parseLess())
-    return {};
-
-  DataLocation dataLocation = DataLocation::Memory;
-  if (parseDataLocation(parser, dataLocation))
-    return {};
-
-  if (parser.parseGreater())
-    return {};
-
-  return get(parser.getContext(), dataLocation);
-}
-
-/// Prints a sol.opqptr type.
-void OpqPointerType::print(AsmPrinter &printer) const {
-  printer << "<" << stringifyDataLocation(getDataLocation()) << ">";
-}
-
-//===----------------------------------------------------------------------===//
 // PointerType
 //===----------------------------------------------------------------------===//
 

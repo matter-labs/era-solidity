@@ -143,25 +143,6 @@ def Sol_MappingType : Sol_Type<"Mapping", "mapping"> {
   let assemblyFormat = [{ `<` $keyType `,` $valType `>` }];
 }
 
-def Sol_OpqPtrType : Sol_Type<"OpqPointer", "opqptr"> {
-  let summary = "Sol pointer type";
-  let description = [{
-    `sol.opqptr` represents an opaque pointer type that tracks the solidity
-    data-location.
-
-    Example:
-
-    ```mlir
-    !sol.opqptr<Memory>
-    !sol.opqptr<Storage>
-    ```
-  }];
-
-  let parameters = (ins Sol_DataLocation:$dataLocation);
-  let hasCustomAssemblyFormat = 1;
-}
-
-// FIXME: Rename this! Is ScalarPtrType correct?
 def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
   let summary = "Sol pointer type";
   let description = [{
