@@ -887,7 +887,7 @@ struct AddrOfOpLowering : public OpRewritePattern<sol::AddrOfOp> {
     solidity::mlirgen::BuilderHelper h(r, op.getLoc());
 
     auto parentContract = op->getParentOfType<sol::ContractOp>();
-    auto stateVarSym = parentContract.lookupSymbol(op.getVar());
+    auto *stateVarSym = parentContract.lookupSymbol(op.getVar());
     assert(stateVarSym);
     auto stateVarOp = cast<sol::StateVarOp>(stateVarSym);
     assert(stateVarOp->hasAttr("slot"));
