@@ -367,6 +367,8 @@ def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
 // conforms to that of solidity.
 
 def Sol_LoadOp : Sol_Op<"load"> {
+  // TODO: Add summary and desc.
+
   let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
                        Variadic<I256>:$indices);
   let results = (outs AnyType:$out);
@@ -385,6 +387,8 @@ def Sol_LoadOp : Sol_Op<"load"> {
 }
 
 def Sol_StoreOp : Sol_Op<"store"> {
+  // TODO: Add summary and desc.
+
   let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
                        Variadic<I256>:$indices);
   let assemblyFormat = [{
@@ -397,6 +401,14 @@ def Sol_StoreOp : Sol_Op<"store"> {
       build($_builder, $_state, val, baseAddr, /*indices=*/{});
     }]>
   ];
+}
+
+def Sol_DataLocCastOp : Sol_Op<"data_loc_cast"> {
+  // TODO: Add summary and desc.
+
+  let arguments = (ins AnyType:$inp);
+  let results = (outs AnyType:$out);
+  let assemblyFormat = [{ $inp attr-dict `:` type($inp) `,` type($out) }];
 }
 
 // TODO: The op definitions of yul builtins should be auto-generated from

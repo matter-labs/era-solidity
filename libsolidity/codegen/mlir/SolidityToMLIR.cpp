@@ -280,7 +280,7 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
   // We generate signless integral mlir::Types, so we must track the solidity
   // type to perform "sign aware lowering".
   //
-  // Casting between integers
+  // Casting between integers.
   const auto *srcIntTy = getAsIntTy(srcTy);
   const auto *dstIntTy = getAsIntTy(dstTy);
 
@@ -300,6 +300,16 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
     if (dstIntTy->numBits() == srcIntTy->numBits()) {
       return val;
     }
+  }
+
+  // Casting between arrays/strings with different data-location.
+  const auto *srcArrTy = dynamic_cast<ArrayType const *>(srcTy);
+  const auto *dstArrTy = dynamic_cast<ArrayType const *>(dstTy);
+  if (srcArrTy) {
+    assert(dstArrTy);
+    assert(srcArrTy->location() != dstArrTy->location());
+    return b.create<mlir::sol::DataLocCastOp>(val.getLoc(), getType(dstArrTy),
+                                              val);
   }
 
   llvm_unreachable("NYI: Unknown cast");
@@ -396,7 +406,13 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
   else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
     auto addr = getMemRef(ident);
     assert(addr);
-    val = b.create<mlir::sol::LoadOp>(getLoc(expr->location()), addr);
+
+    // Don't load non pointer ref types.
+    if (mlir::sol::isRefType(addr.getType()) &&
+        !mlir::isa<mlir::sol::PointerType>(addr.getType()))
+      val = addr;
+    else
+      val = b.create<mlir::sol::LoadOp>(getLoc(expr->location()), addr);
   }
 
   else if (auto *idxAcc = dynamic_cast<IndexAccess const *>(expr)) {

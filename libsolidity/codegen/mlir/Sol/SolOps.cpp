@@ -78,8 +78,8 @@ DataLocation mlir::sol::getDataLocation(Type ty) {
 }
 
 bool mlir::sol::isRefType(Type ty) {
-  return isa<ArrayType>(ty) || isa<StructType>(ty) || isa<PointerType>(ty) ||
-         isa<MappingType>(ty);
+  return isa<ArrayType>(ty) || isa<StringType>(ty) || isa<StructType>(ty) ||
+         isa<PointerType>(ty) || isa<MappingType>(ty);
 }
 
 bool mlir::sol::isLeftAligned(Type ty) {
