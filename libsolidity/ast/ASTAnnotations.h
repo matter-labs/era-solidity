@@ -326,6 +326,13 @@ struct FunctionCallAnnotation: ExpressionAnnotation
 	util::SetOnce<FunctionCallKind> kind;
 	/// If true, this is the external call of a try statement.
 	bool tryCall = false;
+
+	// HACK!
+	// We track the success tag here for the `TryStatement` lowering. This is to avoid the redundant status check and
+	// the conditional jump. Such patterns can confuse the zksolc translator.
+	//
+	// uint32_t since Assembly::new[Push]Tag() asserts that the tag is 32 bits.
+	std::optional<uint32_t> tryCallSuccessTag;
 };
 
 }
