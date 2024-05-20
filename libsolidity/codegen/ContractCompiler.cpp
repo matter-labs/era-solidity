@@ -1020,7 +1020,7 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	CompilerContext::LocationSetter locationSetter(m_context, _tryStatement);
 
 	auto* externalCall = dynamic_cast<FunctionCall const*>(&_tryStatement.externalCall());
-	solAssert(externalCall && externalCall->annotation().tryCall);
+	solAssert(externalCall && externalCall->annotation().tryCall, "");
 	compileExpression(*externalCall);
 
 	int const returnSize = static_cast<int>(_tryStatement.externalCall().annotation().type->sizeOnStack());
@@ -1036,7 +1036,7 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	evmasm::AssemblyItem endTag = m_context.appendJumpToNew();
 
 	auto& tryCallSuccessTag = externalCall->annotation().tryCallSuccessTag;
-	solAssert(tryCallSuccessTag);
+	solAssert(tryCallSuccessTag, "");
 	m_context << AssemblyItem(AssemblyItemType::Tag, *tryCallSuccessTag);
 	tryCallSuccessTag.reset();
 

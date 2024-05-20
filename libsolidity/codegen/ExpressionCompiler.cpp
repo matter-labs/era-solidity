@@ -2994,7 +2994,7 @@ void ExpressionCompiler::appendExternalFunctionCall(
 
 	if (_tryCall)
 	{
-		solAssert(_annotation);
+		solAssert(_annotation, "");
 		// Success branch will reach this, failure branch will directly jump to endTag.
 		_annotation->tryCallSuccessTag = m_context.appendJumpToNew().data().convert_to<uint32_t>();
 		m_context.adjustStackOffset(1);
