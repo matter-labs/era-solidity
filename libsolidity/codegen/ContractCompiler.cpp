@@ -1035,10 +1035,10 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 
 	evmasm::AssemblyItem endTag = m_context.appendJumpToNew();
 
-	auto& tryCallSuccessTag = externalCall->annotation().tryCallSuccessTag;
-	solAssert(tryCallSuccessTag, "");
-	m_context << AssemblyItem(AssemblyItemType::Tag, *tryCallSuccessTag);
-	tryCallSuccessTag.reset();
+	auto& successTag = externalCall->annotation().tryCallSuccessTag;
+	solAssert(successTag, "");
+	m_context << AssemblyItem(AssemblyItemType::Tag, *successTag);
+	successTag.reset();
 
 	m_context.adjustStackOffset(returnSize);
 	{
