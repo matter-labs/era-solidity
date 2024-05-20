@@ -1,3 +1,9 @@
+### solc v0.8.25-legacy for zkVM - revision 1.0.1 - Legacy edition
+
+Bugfixes:
+* Fix nested try-catch lowering.
+
+
 ### solc v0.8.25-legacy for zkVM - revision 1.0.0 - Legacy edition
 
 This release has changes in the lowering of EVM assembly in order to get the zkSync's translator (targeting LLVM IR) to work correctly.
