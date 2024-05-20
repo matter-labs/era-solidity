@@ -77,7 +77,7 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 
 
 		eth_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
-		eth_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
+		# eth_add_cxx_compiler_flag_if_supported(-Wnewline-eof) # llvm-17 build cfg
 		eth_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
 		eth_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
 		eth_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
