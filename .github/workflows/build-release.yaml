@@ -18,20 +18,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "MacOS x86"
-            runner: macos-12-large
-            release-suffix: macosx-amd64
-          - name: "MacOS arm64"
-            runner: [self-hosted, macOS, ARM64]
-            release-suffix: macosx-arm64
-          - name: "Linux x86"
-            runner: matterlabs-ci-runner
-            image: matterlabs/llvm_runner:ubuntu22-llvm17-latest
-            release-suffix: linux-amd64
-          - name: "Linux ARM64"
-            runner: matterlabs-ci-runner-arm
-            image: matterlabs/llvm_runner:ubuntu22-llvm17-latest
-            release-suffix: linux-arm64
+          # - name: "MacOS x86"
+          #   runner: macos-12-large
+          #   release-suffix: macosx-amd64
+          # - name: "MacOS arm64"
+          #   runner: [self-hosted, macOS, ARM64]
+          #   release-suffix: macosx-arm64
+          # - name: "Linux x86"
+          #   runner: matterlabs-ci-runner
+          #   image: matterlabs/llvm_runner:ubuntu22-llvm17-latest
+          #   release-suffix: linux-amd64
+          # - name: "Linux ARM64"
+          #   runner: matterlabs-ci-runner-arm
+          #   image: matterlabs/llvm_runner:ubuntu22-llvm17-latest
+          #   release-suffix: linux-arm64
           - name: "Windows"
             runner: windows-2022-github-hosted-16core
             release-suffix: windows-amd64
