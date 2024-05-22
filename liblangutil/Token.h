@@ -44,6 +44,7 @@
 
 #include <iosfwd>
 #include <string>
+#include <cstdint>
 #include <tuple>
 
 namespace solidity::langutil

@@ -16,12 +16,12 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
-#include <libyul/backends/evm/ZKEVMIntrinsics.h>
+#include <libyul/backends/evm/EraVMIntrinsics.h>
 #include <array>
-using namespace solidity::zkevm;
+using namespace solidity::eravm;
 
 // clang-format off
-const std::array<IntrInfo, 34> solidity::zkevm::intrInfos{{
+const std::array<IntrInfo, 34> solidity::eravm::intrInfos{{
 //	 Name											Args	Rets	SideEffect	Literals
 	{"$zk_to_l1",									3,		0,		true},
 	{"$zk_code_source",								0,		1,		false},

@@ -64,8 +64,8 @@ add_library(yul
 	backends/evm/StackLayoutGenerator.h
 	backends/evm/VariableReferenceCounter.h
 	backends/evm/VariableReferenceCounter.cpp
-	backends/evm/ZKEVMIntrinsics.cpp
-	backends/evm/ZKEVMIntrinsics.h
+	backends/evm/EraVMIntrinsics.cpp
+	backends/evm/EraVMIntrinsics.h
 	optimiser/ASTCopier.cpp
 	optimiser/ASTCopier.h
 	optimiser/ASTWalker.cpp
