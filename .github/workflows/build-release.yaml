@@ -35,7 +35,7 @@ jobs:
           - name: "Windows"
             runner: windows-2022-github-hosted-16core
             release-suffix: windows-amd64
-            extra-args: "-DPEDANTIC=OFF -DCMAKE_C_COMPILER='clang' -DCMAKE_CXX_COMPILER='clang++' -DCMAKE_EXE_LINKER_FLAGS='-fuse-ld=lld -lwsock32 -lbcrypt'"
+            extra-args: "-DPEDANTIC=OFF -DCMAKE_C_COMPILER='clang' -DCMAKE_CXX_COMPILER='clang++' -DCMAKE_EXE_LINKER_FLAGS='-fuse-ld=lld -fPIC -static -lwsock32 -lbcrypt'"
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.image || '' }}
