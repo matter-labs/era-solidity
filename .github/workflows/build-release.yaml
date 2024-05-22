@@ -1,0 +1,96 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    tags:
+      - "**"
+
+concurrency:
+  group: ${{ github.repository_id }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "MacOS x86"
+            runner: macos-12-large
+            release-suffix: macosx-amd64
+          - name: "MacOS arm64"
+            runner: [self-hosted, macOS, ARM64]
+            release-suffix: macosx-arm64
+          - name: "Linux x86"
+            runner: matterlabs-ci-runner
+            image: matterlabs/llvm_runner:ubuntu22-llvm17-latest
+            release-suffix: linux-amd64
+          - name: "Linux ARM64"
+            runner: matterlabs-ci-runner-arm
+            image: matterlabs/llvm_runner:ubuntu22-llvm17-latest
+            release-suffix: linux-arm64
+          - name: "Windows"
+            runner: windows-2022-github-hosted-16core
+            release-suffix: windows-amd64
+            extra-args: "-DPEDANTIC=OFF -DCMAKE_C_COMPILER='clang' -DCMAKE_CXX_COMPILER='clang++' -DCMAKE_EXE_LINKER_FLAGS='-fuse-ld=lld -lwsock32 -lbcrypt'"
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ${{ matrix.image || '' }}
+    name: ${{ matrix.name }}
+    steps:
+
+      - name: Define release version
+        shell: bash
+        id: set
+        run: |
+          if [[ ${{ github.event_name }} != 'pull_request' ]]; then
+            echo "version=$(cut -d "-" -f2 <<< ${GITHUB_REF#refs/*/})" | tee -a "${GITHUB_OUTPUT}"
+          else
+            echo "version=1.0.${{ github.run_id }}" | tee -a "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Windows env
+        if: runner.os == 'Windows'
+        uses: matter-labs/era-compiler-ci/.github/actions/prepare-msys@main
+
+      - name: Building the Solidity compiler
+        uses: ./.github/actions/build
+        with:
+          release-suffix: ${{ matrix.release-suffix }}
+          release-version: ${{ steps.set.outputs.version }}
+          extra-args: ${{ matrix.extra-args || '' }}
+
+  release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release*
+          path: releases
+
+      - name: Generate changelog
+        shell: bash
+        run: awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > release-changelog.txt
+
+      - name: Prepare release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: false
+          name: ZKsync solc ${{ github.ref_name }}
+          body_path: release-changelog.txt
+          tag_name: ${{ github.ref_name }}
+          files: releases/**/**
+          prerelease: true

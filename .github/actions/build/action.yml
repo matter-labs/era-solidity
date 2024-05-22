@@ -1,0 +1,70 @@
+name: 'Build'
+description: 'Builds solc executable.'
+inputs:
+  release-suffix:
+    description: 'Release suffix.'
+    required: false
+    default: ''
+  release-version:
+    description: 'Release version.'
+    required: true
+  extra-args:
+    description: 'Extra arguments for cmake.'
+    required: false
+    default: ''
+runs:
+  using: "composite"
+  steps:
+
+    - name: Install boost
+      if: runner.os == 'macOS'
+      shell: zsh {0}
+      run: brew install boost
+
+    - name: Install Boost
+      if: runner.os == 'Windows'
+      shell: 'msys2 {0}'
+      env:
+        MSYS_BOOST_PACKAGE: 'mingw-w64-x86_64-boost-1.79.0-4-any.pkg.tar.zst'
+      run: |
+        pacman -Sy
+        curl -LO "https://repo.msys2.org/mingw/mingw64/${MSYS_BOOST_PACKAGE}"
+        pacman --noconfirm -U "${MSYS_BOOST_PACKAGE}"
+
+    - name: Build solc
+      shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      run: |
+        mkdir -p ./build
+        cd ./build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE="Release" \
+          -DSOLC_VERSION_ZKSYNC="${{ inputs.release-version }}" \
+          -DUSE_Z3=OFF \
+          -DUSE_CVC4=OFF ${{ inputs.extra-args}}
+        cmake --build . --config Release -j 10
+        [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
+        cp ./solc/solc${WIN_SUFFIX} ./solc/solc-${{ github.base_ref }}${WIN_SUFFIX}
+
+    - name: Upload binary for testing
+      if: inputs.release-suffix == ''
+      uses: actions/upload-artifact@v4
+      with:
+        path: ./build/solc/solc-${{ github.base_ref }}
+
+    - name: Prepare binary
+      if: inputs.release-suffix != ''
+      shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      run: |
+        [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
+        SOLC_BIN="./build/solc/solc${WIN_SUFFIX}"
+        mkdir -p ./releases/${{ inputs.release-suffix }}
+        strip "${SOLC_BIN}"
+        ${SOLC_BIN} --version
+        mv ${SOLC_BIN} ./releases/${{ inputs.release-suffix }}/solc-${{ inputs.release-suffix }}-${{ inputs.release-version }}${WIN_SUFFIX}
+
+    - name: Upload binary for release
+      if: inputs.release-suffix != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ inputs.release-suffix }}
+        path: releases
