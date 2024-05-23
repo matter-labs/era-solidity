@@ -1649,9 +1649,6 @@ public:
       switch (ty.getDataLocation()) {
       // Map to the 256 bit address in memory.
       case sol::DataLocation::Memory:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-
       // Map to the 256 bit slot offset.
       case sol::DataLocation::Storage:
         return IntegerType::get(ty.getContext(), 256,
