@@ -8,6 +8,9 @@ inputs:
   release-version:
     description: 'Release version.'
     required: true
+  solc-version:
+    description: 'Solidity version.'
+    required: true
   extra-args:
     description: 'Extra arguments for cmake.'
     required: false
@@ -51,24 +54,22 @@ runs:
 
     - name: Build solc
       shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
-      env:
-        CXXFLAGS: '-Wno-error'
       run: |
         mkdir -p ./build
         cd ./build
+        string1="set(JSONCCP_EXTRA_FLAGS \"\")"
+        string2='set(JSONCCP_EXTRA_FLAGS \"-v -Wno-error\")'
+        sed -i -e "s/$string1/$string2/" ../deps/jsoncpp.cmake
+        cat ../deps/jsoncpp.cmake
         cmake .. \
           -DCMAKE_BUILD_TYPE="Release" \
           -DSOLC_VERSION_ZKSYNC="${{ inputs.release-version }}" \
-          -DUSE_Z3=OFF \
+          -DUSE_Z3=OFF -DCMAKE_CXX_FLAGS="-v -Wno-all" \
           -DPEDANTIC=OFF ${{ inputs.extra-args}}
-        if [ "${RUNNER_OS}" = "Windows" ]; then
-          cmake --build . --target jsoncpp-project --config Release --parallel 12
-          cmake --build . --target range-v3-project --config Release --parallel 12
-          cmake --build . --config Release --parallel 12
-        else
-          make jsoncpp-project range-v3-project
-          make -j 12
-        fi
+
+        cmake --build . --target jsoncpp-project --config Release --parallel $(nproc)
+        cmake --build . --target range-v3-project --config Release --parallel $(nproc)
+        cmake --build . --config Release --parallel $(nproc)
         [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
         cp ./solc/solc${WIN_SUFFIX} ./solc/solc-${{ github.base_ref }}${WIN_SUFFIX}
 

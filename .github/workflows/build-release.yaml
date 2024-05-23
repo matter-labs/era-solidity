@@ -46,10 +46,19 @@ jobs:
         shell: bash
         id: set
         run: |
+          set -x
           if [[ ${{ github.event_name }} != 'pull_request' ]]; then
-            echo "version=$(cut -d "-" -f2 <<< ${GITHUB_REF#refs/*/})" | tee -a "${GITHUB_OUTPUT}"
+            echo "zksync_version=$(cut -d "-" -f2 <<< ${GITHUB_REF#refs/*/})" | tee -a "${GITHUB_OUTPUT}"
+            solc_version=$(cut -d "-" -f1 <<< ${GITHUB_REF#refs/*/})"
           else
-            echo "version=1.0.${{ github.run_id }}" | tee -a "${GITHUB_OUTPUT}"
+            echo "zksync_version=1.0.${{ github.run_id }}" | tee -a "${GITHUB_OUTPUT}"
+            solc_version=${GITHUB_BASE_REF}"
+          fi
+          SOLC_WINDOWS_SUPPORT_MIN_VERSION=0.6.0
+          if [  "${solc_version}" = "`echo -e "${solc_version}\n${SOLC_WINDOWS_SUPPORT_MIN_VERSION}" | sort -V | head -n1`" ]; then
+            echo "build_windows=false" | tee -a "${GITHUB_OUTPUT}"
+          else
+            echo "build_windows=true" | tee -a "${GITHUB_OUTPUT}"
           fi
 
       - name: Checkout
@@ -65,7 +74,7 @@ jobs:
         uses: ./.github/actions/build-solc
         with:
           release-suffix: ${{ matrix.release-suffix }}
-          release-version: ${{ steps.set.outputs.version }}
+          release-version: ${{ steps.set.outputs.zksync_version }}
           extra-args: ${{ matrix.extra-args || '' }}
 
   release:
