@@ -1620,6 +1620,106 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   }
 };
 
+/// The type converter for the ConvertSolToStandard pass.
+class SolTypeConverter : public TypeConverter {
+public:
+  SolTypeConverter() {
+    addConversion([&](IntegerType type) -> Type { return type; });
+
+    addConversion([&](sol::ArrayType ty) -> Type {
+      switch (ty.getDataLocation()) {
+      case sol::DataLocation::Stack: {
+        Type eltTy = convertType(ty.getEltType());
+        return LLVM::LLVMArrayType::get(eltTy, ty.getSize());
+      }
+
+      // Map to the 256 bit address in memory.
+      case sol::DataLocation::Memory:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+
+      default:
+        break;
+      }
+
+      llvm_unreachable("Unimplemented type conversion");
+    });
+
+    addConversion([&](sol::StringType ty) -> Type {
+      switch (ty.getDataLocation()) {
+      // Map to the 256 bit address in memory.
+      case sol::DataLocation::Memory:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+
+      // Map to the 256 bit slot offset.
+      case sol::DataLocation::Storage:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+
+      default:
+        break;
+      }
+
+      llvm_unreachable("Unimplemented type conversion");
+    });
+
+    addConversion([&](sol::MappingType ty) -> Type {
+      // Map to the 256 bit slot offset.
+      return IntegerType::get(ty.getContext(), 256,
+                              IntegerType::SignednessSemantics::Signless);
+    });
+
+    addConversion([&](sol::StructType ty) -> Type {
+      switch (ty.getDataLocation()) {
+      case sol::DataLocation::Memory:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+      default:
+        break;
+      }
+
+      llvm_unreachable("Unimplemented type conversion");
+    });
+
+    addConversion([&](sol::PointerType ty) -> Type {
+      switch (ty.getDataLocation()) {
+      case sol::DataLocation::Stack: {
+        Type eltTy = convertType(ty.getPointeeType());
+        return LLVM::LLVMPointerType::get(eltTy);
+      }
+
+      // Map to the 256 bit slot offset.
+      //
+      // TODO: Can we get all storage types to be 32 byte aligned? If so, we can
+      // avoid the byte offset. Otherwise we should consider the
+      // OneToNTypeConversion to map the pointer to the slot + byte offset pair.
+      case sol::DataLocation::Storage:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+
+      default:
+        break;
+      }
+
+      llvm_unreachable("Unimplemented type conversion");
+    });
+
+    addSourceMaterialization([](OpBuilder &b, Type resTy, ValueRange ins,
+                                Location loc) -> Value {
+      // Generate sol.ref_to_offset for reference types in memory/storage.
+      assert(ins.size() == 1);
+      Value inp = ins[0];
+      assert(sol::isRefType(inp.getType()) && resTy == b.getIntegerType(256));
+      auto dataLoc = sol::getDataLocation(inp.getType());
+      (void)dataLoc;
+      assert(dataLoc == sol::DataLocation::Memory ||
+             dataLoc == sol::DataLocation::Storage);
+      return b.create<sol::RefToOffsetOp>(loc, resTy, ins);
+    });
+  }
+};
+
 /// Pass for lowering the sol dialect to the standard dialects.
 /// TODO:
 /// - Generate this using mlir-tblgen.
@@ -1659,7 +1759,7 @@ struct ConvertSolToStandard
   // simplify the implementation of this multi-staged lowering.
 
   /// Converts sol dialect ops except sol.contract and sol.func + related ops.
-  void runStage1Conversion(ModuleOp mod, TypeConverter &tyConv) {
+  void runStage1Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
@@ -1737,101 +1837,8 @@ struct ConvertSolToStandard
       tgt = clTgt;
     }
 
-    // Create the TypeConverter.
-    TypeConverter tyConv;
-
-    tyConv.addConversion([&](IntegerType type) -> Type { return type; });
-
-    tyConv.addConversion([&](sol::MappingType ty) -> Type {
-      return IntegerType::get(ty.getContext(), 256,
-                              IntegerType::SignednessSemantics::Signless);
-    });
-
-    tyConv.addConversion([&](sol::PointerType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      case sol::DataLocation::Stack: {
-        Type eltTy = tyConv.convertType(ty.getPointeeType());
-        return LLVM::LLVMPointerType::get(eltTy);
-      }
-
-      // Represents the 256 bit slot offset.
-      //
-      // TODO: Can we get all storage types to be 32 byte aligned? If so, we can
-      // avoid the byte offset. Otherwise we should consider the
-      // OneToNTypeConversion to map the pointer to the slot + byte offset pair.
-      case sol::DataLocation::Storage:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    tyConv.addConversion([&](sol::StringType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      // Represents the 256 bit address in memory.
-      case sol::DataLocation::Memory:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-
-      // Represents the 256 bit slot offset.
-      case sol::DataLocation::Storage:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    tyConv.addConversion([&](sol::ArrayType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      case sol::DataLocation::Stack: {
-        Type eltTy = tyConv.convertType(ty.getEltType());
-        return LLVM::LLVMArrayType::get(eltTy, ty.getSize());
-      }
-
-      // Represents the 256 bit address in memory.
-      case sol::DataLocation::Memory:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    tyConv.addConversion([&](sol::StructType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      case sol::DataLocation::Memory:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    tyConv.addSourceMaterialization([](OpBuilder &b, Type resTy, ValueRange ins,
-                                       Location loc) -> Value {
-      assert(ins.size() == 1);
-      Value inp = ins[0];
-      assert(sol::isRefType(inp.getType()) && resTy == b.getIntegerType(256));
-      auto dataLoc = sol::getDataLocation(inp.getType());
-      (void)dataLoc;
-      assert(dataLoc == sol::DataLocation::Memory ||
-             dataLoc == sol::DataLocation::Storage);
-      return b.create<sol::RefToOffsetOp>(loc, resTy, ins);
-    });
-
     ModuleOp mod = getOperation();
+    SolTypeConverter tyConv;
     runStage1Conversion(mod, tyConv);
     runStage2Conversion(mod);
     runStage3Conversion(mod);
