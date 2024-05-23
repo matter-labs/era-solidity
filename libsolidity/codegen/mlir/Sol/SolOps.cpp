@@ -70,6 +70,8 @@ DataLocation mlir::sol::getDataLocation(Type ty) {
           [](sol::PointerType ptrTy) { return ptrTy.getDataLocation(); })
       .Case<ArrayType>(
           [](sol::ArrayType arrTy) { return arrTy.getDataLocation(); })
+      .Case<StringType>(
+          [](sol::StringType strTy) { return strTy.getDataLocation(); })
       .Case<StructType>(
           [](sol::StructType structTy) { return structTy.getDataLocation(); })
       .Case<MappingType>(

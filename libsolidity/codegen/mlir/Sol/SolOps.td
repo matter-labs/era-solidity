@@ -30,6 +30,12 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+def Sol_RefToOffsetOp : Sol_Op<"ref_to_offset"> {
+  let summary = "This casts a reference type to its i256 offset";
+  let arguments = (ins AnyType:$inpType);
+  let results = (outs AnyType:$outType);
+}
+
 def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
                                          NoTerminator]> {
   let summary = "An operation that represents a contract";

@@ -88,6 +88,12 @@ namespace {
 // etc. It would be nice if they could be member variables. Do we need to create
 // helper classes for such lowering?
 
+// TODO: Document differences in the memory and storage layout like:
+// - 32 byte alignment for all types in storage (excluding the data of
+// string/bytes).
+//
+// - The simpler string layout in storage.
+
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
   assert(!isa<sol::FuncOp>(op) && !isa<sol::ObjectOp>(op));
@@ -105,6 +111,17 @@ static bool inRuntimeContext(Operation *op) {
 
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
+
+struct RefToOffsetOpLowering : public OpConversionPattern<sol::RefToOffsetOp> {
+  using OpConversionPattern<sol::RefToOffsetOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::RefToOffsetOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    assert(adaptor.getOperands().size() == 1);
+    r.replaceOp(op, adaptor.getOperands()[0]);
+    return success();
+  }
+};
 
 // TODO? Move simple builtin lowering to tblgen (`Pat` records)?
 
@@ -1023,6 +1040,84 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
   }
 };
 
+struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
+  using OpConversionPattern<sol::DataLocCastOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::DataLocCastOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r, loc);
+    Type srcTy = op.getInp().getType();
+    Type dstTy = op.getType();
+
+    mlir::Value resPtr;
+    // From storage to memory.
+    if (sol::getDataLocation(srcTy) == sol::DataLocation::Storage &&
+        sol::getDataLocation(dstTy) == sol::DataLocation::Memory) {
+      // String type
+      if (auto srcStrTy = dyn_cast<sol::StringType>(srcTy)) {
+        assert(isa<sol::StringType>(dstTy));
+        Value slot = adaptor.getInp();
+        assert(cast<IntegerType>(slot.getType()).getWidth() == 256);
+
+        // Generate keccak256(slot) to get the slot having the data.
+        auto zero = h.genI256Const(0);
+        r.create<sol::MStoreOp>(loc, zero, slot);
+        auto dataSlot =
+            r.create<sol::Keccak256Op>(loc, zero, h.genI256Const(32));
+
+        // Generate the memory allocation.
+        auto sizeInBytes = r.create<sol::SLoadOp>(loc, slot);
+        auto memPtrTy =
+            sol::StringType::get(r.getContext(), sol::DataLocation::Memory);
+        // TODO: Define custom builder (or remove the type-attr arg?) in
+        // sol.malloc.
+        Value mallocRes =
+            r.create<sol::MallocOp>(loc, memPtrTy, memPtrTy, sizeInBytes);
+        Type i256Ty = r.getIntegerType(256);
+        assert(getTypeConverter()->convertType(mallocRes.getType()) == i256Ty);
+        auto memPtr = getTypeConverter()->materializeSourceConversion(
+            r, loc, i256Ty, mallocRes);
+        resPtr = memPtr;
+        auto sizeInWords = h.genRoundUpToMultiple<32>(sizeInBytes);
+
+        // FIXME: Don't overwrite the size field!
+        // Generate the loop to copy the data (sol.malloc lowering will generate
+        // the store of the size field).
+        r.create<scf::ForOp>(
+            loc, /*lowerBound=*/h.genIdxConst(0),
+            /*upperBound=*/h.genCastToIdx(sizeInWords),
+            /*step=*/h.genIdxConst(1), /*iterArgs=*/std::nullopt,
+            /*builder=*/
+            [&](OpBuilder &b, Location loc, Value indVar, ValueRange iterArgs) {
+              Value i256IndVar = h.genCastToI256(indVar);
+
+              Value slotIdx =
+                  r.create<arith::AddIOp>(loc, dataSlot, i256IndVar);
+              Value slotVal = r.create<sol::SLoadOp>(loc, slotIdx);
+
+              Value memIdx =
+                  r.create<arith::MulIOp>(loc, i256IndVar, h.genI256Const(32));
+              Value memPtrAtIdx = r.create<arith::AddIOp>(loc, memPtr, memIdx);
+
+              r.create<sol::MStoreOp>(loc, memPtrAtIdx, slotVal);
+              b.create<scf::YieldOp>(loc);
+            });
+      } else {
+        llvm_unreachable("NYI");
+      }
+
+    } else {
+      llvm_unreachable("NYI");
+    }
+
+    assert(resPtr);
+
+    r.replaceOp(op, resPtr);
+    return success();
+  }
+};
+
 struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
   using OpRewritePattern<sol::ReturnOp>::OpRewritePattern;
 
@@ -1570,10 +1665,12 @@ struct ConvertSolToStandard
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
-                     sol::LoadOp, sol::StoreOp>();
+                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp,
+                     sol::RefToOffsetOp>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<AllocaOpLowering, MapOpLowering, LoadOpLowering, StoreOpLowering>(
+    pats.add<AllocaOpLowering, MapOpLowering, DataLocCastOpLowering,
+             LoadOpLowering, StoreOpLowering, RefToOffsetOpLowering>(
         tyConv, &getContext());
     pats.add<MallocOpLowering, AddrOfOpLowering>(&getContext());
 
@@ -1673,6 +1770,25 @@ struct ConvertSolToStandard
       llvm_unreachable("Unimplemented type conversion");
     });
 
+    tyConv.addConversion([&](sol::StringType ty) -> Type {
+      switch (ty.getDataLocation()) {
+      // Represents the 256 bit address in memory.
+      case sol::DataLocation::Memory:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+
+      // Represents the 256 bit slot offset.
+      case sol::DataLocation::Storage:
+        return IntegerType::get(ty.getContext(), 256,
+                                IntegerType::SignednessSemantics::Signless);
+
+      default:
+        break;
+      }
+
+      llvm_unreachable("Unimplemented type conversion");
+    });
+
     tyConv.addConversion([&](sol::ArrayType ty) -> Type {
       switch (ty.getDataLocation()) {
       case sol::DataLocation::Stack: {
@@ -1701,6 +1817,18 @@ struct ConvertSolToStandard
       }
 
       llvm_unreachable("Unimplemented type conversion");
+    });
+
+    tyConv.addSourceMaterialization([](OpBuilder &b, Type resTy, ValueRange ins,
+                                       Location loc) -> Value {
+      assert(ins.size() == 1);
+      Value inp = ins[0];
+      assert(sol::isRefType(inp.getType()) && resTy == b.getIntegerType(256));
+      auto dataLoc = sol::getDataLocation(inp.getType());
+      (void)dataLoc;
+      assert(dataLoc == sol::DataLocation::Memory ||
+             dataLoc == sol::DataLocation::Storage);
+      return b.create<sol::RefToOffsetOp>(loc, resTy, ins);
     });
 
     ModuleOp mod = getOperation();
