@@ -1,0 +1,70 @@
+name: Tests and benchmarks
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      compiler_tester_reference_branch:
+        description: "compiler-tester branch to use as a benchmark reference"
+        required: false
+        default: "main"
+      compiler_tester_candidate_branch:
+        description: "compiler-tester branch to use as a benchmark candidate"
+        required: false
+        default: "main"
+
+concurrency:
+  group: ${{ github.repository_id }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ci-runner-compiler
+    container:
+      image: matterlabs/llvm_runner:ubuntu22-llvm17-latest
+    steps:
+
+      - name: Checking out the Solidity repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Building the Solidity compiler
+        uses: ./.github/actions/build-solc
+        with:
+          release-version: ${{ github.base_ref }}-1.0.${{ github.run_id }}
+
+  # Check for secrets leak in the repository
+  secrets-scanner:
+    uses: matter-labs/era-compiler-ci/.github/workflows/secrets-scanner.yaml@main
+    secrets: inherit
+
+  # Integration tests workflow call from the era-compiler-ci repository
+  # This is a common part of the integration tests workflow for all repositories
+  # If you would like to make a change to the integration tests workflow, please do it in the era-compiler-ci repository
+  integration-tests:
+    needs: build
+    uses: matter-labs/era-compiler-ci/.github/workflows/integration-tests.yaml@main
+    secrets: inherit
+    with:
+      compiler-tester-ref: 'main'
+      llvm-ref: 'main'
+      path: 'tests/solidity/'
+      custom-solc-run-id: ${{ github.run_id }}
+      extra-args: --mode "${{ github.base_ref }}"
+
+  # Benchmarks workflow call from the era-compiler-ci repository
+  # This is a common part of the benchmarks workflow for all repositories
+  # If you would like to make a change to the benchmarks workflow, please do it in the era-compiler-ci repository
+  benchmarks:
+    needs: build
+    uses: matter-labs/era-compiler-ci/.github/workflows/benchmarks.yml@main
+    secrets: inherit
+    with:
+      compiler_tester_reference_branch: ${{ inputs.compiler_tester_reference_branch || 'main' }}
+      compiler_tester_candidate_branch: ${{ inputs.compiler_tester_reference_branch || 'main' }}
+      compiler_llvm_reference_branch: 'main'
+      compiler_llvm_candidate_branch: 'main'
+      compiler_llvm_benchmark_mode: '+M^B3 ${{ github.base_ref}}'
+      compiler_llvm_benchmark_path: 'tests/solidity/'
+      custom-solc-run-id: ${{ github.run_id }}
