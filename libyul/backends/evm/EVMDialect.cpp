@@ -32,7 +32,7 @@
 #include <libyul/Object.h>
 #include <libyul/Utilities.h>
 #include <libyul/backends/evm/AbstractAssembly.h>
-#include <libyul/backends/evm/ZKEVMIntrinsics.h>
+#include <libyul/backends/evm/EraVMIntrinsics.h>
 
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/view/tail.hpp>
@@ -173,7 +173,7 @@ std::set<YulString> createReservedIdentifiers(langutil::EVMVersion _evmVersion)
 		)
 			reserved.emplace(name);
 	}
-	for (auto const& intr: solidity::zkevm::intrInfos)
+	for (auto const& intr: solidity::eravm::intrInfos)
 	{
 		reserved.emplace(intr.name);
 	}
@@ -266,7 +266,7 @@ std::map<YulString, BuiltinFunctionForEVM> createBuiltins(langutil::EVMVersion _
 			builtins.emplace(createEVMFunction(_evmVersion, name, opcode));
 	}
 
-	for (auto const& intr: solidity::zkevm::intrInfos)
+	for (auto const& intr: solidity::eravm::intrInfos)
 	{
 		builtins.emplace(createVerbatimWrapper(intr.name, intr.args, intr.ret, intr.sideEffects, intr.literalKinds));
 	}

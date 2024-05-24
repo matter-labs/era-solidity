@@ -20,7 +20,7 @@
 
 #include <libyul/AST.h>
 
-namespace solidity::zkevm
+namespace solidity::eravm
 {
 
 struct IntrInfo
