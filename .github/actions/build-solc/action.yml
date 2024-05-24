@@ -42,15 +42,26 @@ runs:
         ./b2 -j$(sysctl -n hw.ncpu)
         ./b2 install -j$(sysctl -n hw.ncpu)
 
-    - name: Install Boost
+    - name: Install BOOST
       if: runner.os == 'Windows'
-      shell: 'msys2 {0}'
-      env:
-        MSYS_BOOST_PACKAGE: 'mingw-w64-x86_64-boost-1.79.0-4-any.pkg.tar.zst'
+      shell: msys2 {0}
       run: |
-        pacman -Sy
-        curl -LO "https://repo.msys2.org/mingw/mingw64/${MSYS_BOOST_PACKAGE}"
-        pacman --noconfirm -U "${MSYS_BOOST_PACKAGE}"
+        curl -L -o boost_1_71_0.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz
+        tar xzf ./boost_1_71_0.tar.gz
+        cd ./boost_1_71_0
+        ./bootstrap.sh --with-toolset=clang
+        ./b2 -j$(sysctl -n hw.ncpu)
+        ./b2 install -j$(sysctl -n hw.ncpu)
+
+    # - name: Install Boost
+    #   if: runner.os == 'Windows'
+    #   shell: 'msys2 {0}'
+    #   env:
+    #     MSYS_BOOST_PACKAGE: 'mingw-w64-x86_64-boost-1.79.0-4-any.pkg.tar.zst'
+    #   run: |
+    #     pacman -Sy
+    #     curl -LO "https://repo.msys2.org/mingw/mingw64/${MSYS_BOOST_PACKAGE}"
+    #     pacman --noconfirm -U "${MSYS_BOOST_PACKAGE}"
 
     - name: Build solc
       shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
