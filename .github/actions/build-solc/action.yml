@@ -57,18 +57,11 @@ runs:
       run: |
         mkdir -p ./build
         cd ./build
-        string1="set(JSONCCP_EXTRA_FLAGS \"\")"
-        string2='set(JSONCCP_EXTRA_FLAGS \"-v -Wno-error\")'
-        sed -i -e "s/$string1/$string2/" ../deps/jsoncpp.cmake
-        cat ../deps/jsoncpp.cmake
         cmake .. \
           -DCMAKE_BUILD_TYPE="Release" \
           -DSOLC_VERSION_ZKSYNC="${{ inputs.release-version }}" \
           -DUSE_Z3=OFF -DCMAKE_CXX_FLAGS="-v -Wno-all" \
           -DPEDANTIC=OFF ${{ inputs.extra-args}}
-
-        cmake --build . --target jsoncpp-project --config Release --parallel $(nproc)
-        cmake --build . --target range-v3-project --config Release --parallel $(nproc)
         cmake --build . --config Release --parallel $(nproc)
         [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
         cp ./solc/solc${WIN_SUFFIX} ./solc/solc-${{ github.base_ref }}${WIN_SUFFIX}
