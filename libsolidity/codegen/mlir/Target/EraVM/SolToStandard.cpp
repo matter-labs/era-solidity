@@ -1743,7 +1743,9 @@ public:
             assert(dataLoc == sol::DataLocation::Memory ||
                    dataLoc == sol::DataLocation::Storage);
             return b.create<sol::RefToOffsetOp>(loc, resTy, ins);
-          } else if (inp.getType() == i256Ty && sol::isRefType(resTy)) {
+          }
+
+          if (inp.getType() == i256Ty && sol::isRefType(resTy)) {
             auto dataLoc = sol::getDataLocation(resTy);
             (void)dataLoc;
             assert(dataLoc == sol::DataLocation::Memory ||
@@ -1794,19 +1796,20 @@ struct ConvertSolToStandard
   // simplify the implementation of this multi-staged lowering.
 
   /// Converts sol dialect ops except sol.contract and sol.func + related ops.
-  // FIXME: Since sol.func and related ops lowered in a different stage, we have
-  // to generate materializations like:
+  // FIXME: Since sol.func and related ops lowered in a different stage, we
+  // have to generate materializations like:
   //
   // sol.return <orig-val>
   // to
   // <mat> = <cast-op> <remap-val> -> <orig-ty>
   // sol.return <mat>
   //
-  // The <cast-op>s can only be lowered when sol.func + related ops are lowered.
+  // The <cast-op>s can only be lowered when sol.func + related ops are
+  // lowered.
   //
   // Is there a better way to handle this? I feel we should prioritize getting
-  // the sol.func + related ops lowering to be part of stage 1 due to the use of
-  // the type-converter.
+  // the sol.func + related ops lowering to be part of stage 1 due to the use
+  // of the type-converter.
   void runStage1Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
