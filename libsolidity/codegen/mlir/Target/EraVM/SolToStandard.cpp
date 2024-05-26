@@ -112,23 +112,11 @@ static bool inRuntimeContext(Operation *op) {
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
 
-struct OffsetToRefOpLowering : public OpRewritePattern<sol::OffsetToRefOp> {
-  using OpRewritePattern<sol::OffsetToRefOp>::OpRewritePattern;
+struct ConvCastOpLowering : public OpConversionPattern<sol::ConvCastOp> {
+  using OpConversionPattern<sol::ConvCastOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(sol::OffsetToRefOp op,
-                                PatternRewriter &r) const override {
-    assert(op->getOperands().size() == 1);
-    r.replaceOp(op, op.getOperand());
-    return success();
-  }
-};
-
-struct RefToOffsetOpLowering : public OpConversionPattern<sol::RefToOffsetOp> {
-  using OpConversionPattern<sol::RefToOffsetOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(sol::RefToOffsetOp op, OpAdaptor adaptor,
+  LogicalResult matchAndRewrite(sol::ConvCastOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    assert(adaptor.getOperands().size() == 1);
     r.replaceOp(op, adaptor.getOperands()[0]);
     return success();
   }
@@ -1733,26 +1721,14 @@ public:
 
     addSourceMaterialization(
         [](OpBuilder &b, Type resTy, ValueRange ins, Location loc) -> Value {
-          // Generate sol.ref_to_offset for reference types in memory/storage.
-          assert(ins.size() == 1);
-          Value inp = ins[0];
           Type i256Ty = b.getIntegerType(256);
-          if (sol::isRefType(inp.getType()) && resTy == i256Ty) {
-            auto dataLoc = sol::getDataLocation(inp.getType());
-            (void)dataLoc;
-            assert(dataLoc == sol::DataLocation::Memory ||
-                   dataLoc == sol::DataLocation::Storage);
-            return b.create<sol::RefToOffsetOp>(loc, resTy, ins);
-          }
 
-          if (inp.getType() == i256Ty && sol::isRefType(resTy)) {
-            auto dataLoc = sol::getDataLocation(resTy);
-            (void)dataLoc;
-            assert(dataLoc == sol::DataLocation::Memory ||
-                   dataLoc == sol::DataLocation::Storage);
-            return b.create<sol::OffsetToRefOp>(loc, resTy, ins);
-          }
-          llvm_unreachable("Unimplemented materialization");
+          assert(ins.size() == 1);
+          Type inpTy = ins[0].getType();
+
+          assert((sol::isRefType(inpTy) && resTy == i256Ty) ||
+                 (inpTy == i256Ty && sol::isRefType(resTy)));
+          return b.create<sol::ConvCastOp>(loc, resTy, ins);
         });
   }
 };
@@ -1816,12 +1792,21 @@ struct ConvertSolToStandard
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
-                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp,
-                     sol::RefToOffsetOp>();
+                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp>();
+    tgt.addDynamicallyLegalOp<sol::ConvCastOp>([&](sol::ConvCastOp op) -> bool {
+      Operation *inp = op.getOperand().getDefiningOp();
+      std::vector<Operation *> users(op.getResult().getUsers().begin(),
+                                     op.getResult().getUsers().end());
+      // FIXME:
+      assert(users.size() == 1);
+
+      Operation *user = users[0];
+      return isa<sol::CallOp>(inp) || isa<sol::ReturnOp>(user);
+    });
 
     RewritePatternSet pats(&getContext());
     pats.add<AllocaOpLowering, MapOpLowering, DataLocCastOpLowering,
-             LoadOpLowering, StoreOpLowering, RefToOffsetOpLowering>(
+             LoadOpLowering, StoreOpLowering, ConvCastOpLowering>(
         tyConv, &getContext());
     pats.add<MallocOpLowering, AddrOfOpLowering>(&getContext());
 
@@ -1850,8 +1835,7 @@ struct ConvertSolToStandard
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalDialect<sol::SolDialect>();
-    tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp,
-                   sol::OffsetToRefOp>();
+    tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp, sol::ConvCastOp>();
 
     RewritePatternSet pats(&getContext());
     pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
@@ -1875,9 +1859,8 @@ struct ConvertSolToStandard
     tgt.addIllegalDialect<sol::SolDialect>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(tyConv,
-                                                               &getContext());
-    pats.add<OffsetToRefOpLowering>(&getContext());
+    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering,
+             ConvCastOpLowering>(tyConv, &getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();
