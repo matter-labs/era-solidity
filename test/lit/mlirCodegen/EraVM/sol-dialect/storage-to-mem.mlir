@@ -4,10 +4,10 @@ module {
   sol.contract @C {
     sol.state_var @s : !sol.string<Storage>
 
-    sol.func @f() {
+    sol.func @f() -> !sol.string<Memory> {
       %0 = sol.addr_of @s : !sol.string<Storage>
       %1 = sol.data_loc_cast %0 : !sol.string<Storage>, !sol.string<Memory>
-      sol.return
+      sol.return %1 : !sol.string<Memory>
     }
   } {interface_fns = [], kind = #sol<ContractKind Contract>}
 }
@@ -169,7 +169,7 @@ module {
 // CHECK-NEXT:     }
 // CHECK-NEXT:     llvm.unreachable
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @f.0() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @f.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>} {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256
 // CHECK-NEXT:     %0 = llvm.inttoptr %c0_i256_0 : i256 to !llvm.ptr<1>
@@ -232,9 +232,9 @@ module {
 // CHECK-NEXT:       %25 = llvm.inttoptr %24 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:       llvm.store %22, %25 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:     }
-// CHECK-NEXT:     return
+// CHECK-NEXT:     return %9 : i256
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @f() attributes {llvm.linkage = #llvm.linkage<private>, runtime} {
+// CHECK-NEXT:   func.func @f() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, runtime} {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256
 // CHECK-NEXT:     %0 = llvm.inttoptr %c0_i256_0 : i256 to !llvm.ptr<1>
@@ -297,7 +297,7 @@ module {
 // CHECK-NEXT:       %25 = llvm.inttoptr %24 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:       llvm.store %22, %25 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:     }
-// CHECK-NEXT:     return
+// CHECK-NEXT:     return %9 : i256
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-EMPTY:

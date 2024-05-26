@@ -1129,32 +1129,36 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
   }
 };
 
-struct ReturnOpLowering : public OpRewritePattern<sol::ReturnOp> {
-  using OpRewritePattern<sol::ReturnOp>::OpRewritePattern;
+struct ReturnOpLowering : public OpConversionPattern<sol::ReturnOp> {
+  using OpConversionPattern<sol::ReturnOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(sol::ReturnOp op,
-                                PatternRewriter &r) const override {
-    r.replaceOpWithNewOp<func::ReturnOp>(op, op.getOperands());
+  LogicalResult matchAndRewrite(sol::ReturnOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    r.replaceOpWithNewOp<func::ReturnOp>(op, adaptor.getOperands());
     return success();
   }
 };
 
-struct CallOpLowering : public OpRewritePattern<sol::CallOp> {
-  using OpRewritePattern<sol::CallOp>::OpRewritePattern;
+struct CallOpLowering : public OpConversionPattern<sol::CallOp> {
+  using OpConversionPattern<sol::CallOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(sol::CallOp op,
-                                PatternRewriter &r) const override {
-    r.replaceOpWithNewOp<func::CallOp>(op, op.getCallee(), op.getResultTypes(),
-                                       op.getOperands());
+  LogicalResult matchAndRewrite(sol::CallOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    SmallVector<Type> convertedResTys;
+    if (failed(getTypeConverter()->convertTypes(op.getResultTypes(),
+                                                convertedResTys)))
+      return failure();
+    r.replaceOpWithNewOp<func::CallOp>(op, op.getCallee(), convertedResTys,
+                                       adaptor.getOperands());
     return success();
   }
 };
 
-struct FuncOpLowering : public OpRewritePattern<sol::FuncOp> {
-  using OpRewritePattern<sol::FuncOp>::OpRewritePattern;
+struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
+  using OpConversionPattern<sol::FuncOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(sol::FuncOp op,
-                                PatternRewriter &r) const override {
+  LogicalResult matchAndRewrite(sol::FuncOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
     // Collect non-core attributes.
     std::vector<NamedAttribute> attrs;
     bool hasLinkageAttr = false;
@@ -1174,8 +1178,10 @@ struct FuncOpLowering : public OpRewritePattern<sol::FuncOp> {
           "llvm.linkage", mlir::LLVM::LinkageAttr::get(
                               r.getContext(), mlir::LLVM::Linkage::Private)));
 
+    auto convertedFuncTy = cast<FunctionType>(
+        getTypeConverter()->convertType(op.getFunctionType()));
     auto newOp = r.create<func::FuncOp>(op.getLoc(), op.getName(),
-                                        op.getFunctionType(), attrs);
+                                        convertedFuncTy, attrs);
     r.inlineRegionBefore(op.getBody(), newOp.getBody(), newOp.end());
     r.eraseOp(op);
     return success();
@@ -1635,7 +1641,19 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 class SolTypeConverter : public TypeConverter {
 public:
   SolTypeConverter() {
-    addConversion([&](IntegerType type) -> Type { return type; });
+    addConversion([&](IntegerType ty) -> Type { return ty; });
+    addConversion([&](LLVM::LLVMPointerType ty) -> Type { return ty; });
+
+    addConversion([&](FunctionType ty) -> Type {
+      SmallVector<Type> convertedInpTys, convertedResTys;
+      if (failed(convertTypes(ty.getInputs(), convertedInpTys)))
+        llvm_unreachable("Invalid type");
+      if (failed(convertTypes(ty.getResults(), convertedResTys)))
+        llvm_unreachable("Invalid type");
+
+      return FunctionType::get(ty.getContext(), convertedInpTys,
+                               convertedResTys);
+    });
 
     addConversion([&](sol::ArrayType ty) -> Type {
       switch (ty.getDataLocation()) {
@@ -1846,7 +1864,7 @@ struct ConvertSolToStandard
   }
 
   /// Converts sol.func and related ops.
-  void runStage3Conversion(ModuleOp mod) {
+  void runStage3Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
@@ -1854,8 +1872,9 @@ struct ConvertSolToStandard
     tgt.addIllegalDialect<sol::SolDialect>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering,
-             OffsetToRefOpLowering>(&getContext());
+    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(tyConv,
+                                                               &getContext());
+    pats.add<OffsetToRefOpLowering>(&getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();
@@ -1873,7 +1892,7 @@ struct ConvertSolToStandard
     SolTypeConverter tyConv;
     runStage1Conversion(mod, tyConv);
     runStage2Conversion(mod);
-    runStage3Conversion(mod);
+    runStage3Conversion(mod, tyConv);
   }
 
   StringRef getArgument() const override { return "convert-sol-to-std"; }
