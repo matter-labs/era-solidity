@@ -30,6 +30,12 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+def Sol_OffsetToRefOp : Sol_Op<"offset_to_ref"> {
+  let summary = "This casts an i256 offset to a reference type";
+  let arguments = (ins AnyType:$inpType);
+  let results = (outs AnyType:$outType);
+}
+
 def Sol_RefToOffsetOp : Sol_Op<"ref_to_offset"> {
   let summary = "This casts a reference type to its i256 offset";
   let arguments = (ins AnyType:$inpType);

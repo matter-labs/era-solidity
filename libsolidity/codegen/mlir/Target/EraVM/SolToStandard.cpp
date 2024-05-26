@@ -112,6 +112,17 @@ static bool inRuntimeContext(Operation *op) {
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
 
+struct OffsetToRefOpLowering : public OpRewritePattern<sol::OffsetToRefOp> {
+  using OpRewritePattern<sol::OffsetToRefOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::OffsetToRefOp op,
+                                PatternRewriter &r) const override {
+    assert(op->getOperands().size() == 1);
+    r.replaceOp(op, op.getOperand());
+    return success();
+  }
+};
+
 struct RefToOffsetOpLowering : public OpConversionPattern<sol::RefToOffsetOp> {
   using OpConversionPattern<sol::RefToOffsetOp>::OpConversionPattern;
 
@@ -1702,18 +1713,27 @@ public:
       llvm_unreachable("Unimplemented type conversion");
     });
 
-    addSourceMaterialization([](OpBuilder &b, Type resTy, ValueRange ins,
-                                Location loc) -> Value {
-      // Generate sol.ref_to_offset for reference types in memory/storage.
-      assert(ins.size() == 1);
-      Value inp = ins[0];
-      assert(sol::isRefType(inp.getType()) && resTy == b.getIntegerType(256));
-      auto dataLoc = sol::getDataLocation(inp.getType());
-      (void)dataLoc;
-      assert(dataLoc == sol::DataLocation::Memory ||
-             dataLoc == sol::DataLocation::Storage);
-      return b.create<sol::RefToOffsetOp>(loc, resTy, ins);
-    });
+    addSourceMaterialization(
+        [](OpBuilder &b, Type resTy, ValueRange ins, Location loc) -> Value {
+          // Generate sol.ref_to_offset for reference types in memory/storage.
+          assert(ins.size() == 1);
+          Value inp = ins[0];
+          Type i256Ty = b.getIntegerType(256);
+          if (sol::isRefType(inp.getType()) && resTy == i256Ty) {
+            auto dataLoc = sol::getDataLocation(inp.getType());
+            (void)dataLoc;
+            assert(dataLoc == sol::DataLocation::Memory ||
+                   dataLoc == sol::DataLocation::Storage);
+            return b.create<sol::RefToOffsetOp>(loc, resTy, ins);
+          } else if (inp.getType() == i256Ty && sol::isRefType(resTy)) {
+            auto dataLoc = sol::getDataLocation(resTy);
+            (void)dataLoc;
+            assert(dataLoc == sol::DataLocation::Memory ||
+                   dataLoc == sol::DataLocation::Storage);
+            return b.create<sol::OffsetToRefOp>(loc, resTy, ins);
+          }
+          llvm_unreachable("Unimplemented materialization");
+        });
   }
 };
 
@@ -1756,6 +1776,19 @@ struct ConvertSolToStandard
   // simplify the implementation of this multi-staged lowering.
 
   /// Converts sol dialect ops except sol.contract and sol.func + related ops.
+  // FIXME: Since sol.func and related ops lowered in a different stage, we have
+  // to generate materializations like:
+  //
+  // sol.return <orig-val>
+  // to
+  // <mat> = <cast-op> <remap-val> -> <orig-ty>
+  // sol.return <mat>
+  //
+  // The <cast-op>s can only be lowered when sol.func + related ops are lowered.
+  //
+  // Is there a better way to handle this? I feel we should prioritize getting
+  // the sol.func + related ops lowering to be part of stage 1 due to the use of
+  // the type-converter.
   void runStage1Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
@@ -1796,7 +1829,8 @@ struct ConvertSolToStandard
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalDialect<sol::SolDialect>();
-    tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp>();
+    tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp,
+                   sol::OffsetToRefOp>();
 
     RewritePatternSet pats(&getContext());
     pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
@@ -1820,7 +1854,8 @@ struct ConvertSolToStandard
     tgt.addIllegalDialect<sol::SolDialect>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(&getContext());
+    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering,
+             OffsetToRefOpLowering>(&getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();
