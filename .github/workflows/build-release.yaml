@@ -20,6 +20,12 @@ jobs:
       zksync-version: ${{ steps.set.outputs.zksync-version }}
       skip-windows: ${{ steps.check-version.outputs.result }}
     steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
       - name: Define release version
         shell: bash
         id: set
@@ -84,7 +90,7 @@ jobs:
           submodules: recursive
 
       - name: Building the Solidity compiler
-        uses: ./.github/actions/solc-build
+        uses: matter-labs/era-solidity/.github/actions/solc-build@aba-update-ci-0.4.12
         with:
           release-suffix: ${{ matrix.release-suffix }}
           zksync-version: ${{ needs.setup.outputs.zksync-version }}

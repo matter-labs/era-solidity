@@ -50,7 +50,7 @@ jobs:
           echo "solc-version=${SOLC_VERSION}" | tee -a "${GITHUB_OUTPUT}"
 
       - name: Building the Solidity compiler
-        uses: ./.github/actions/solc-build
+        uses: matter-labs/era-solidity/.github/actions/solc-build@aba-update-ci-0.4.12
         with:
           solc-version: ${{ steps.project_version.outputs.solc-version }}-${{ matrix.type }}
           zksync-version: 1.0.${{ github.run_id }}
