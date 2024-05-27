@@ -57,18 +57,16 @@ runs:
         if [[ ${{ inputs.solc-version}} == "0.4"* ]]; then
           cmake --build . --config Release --parallel ${PARALLEL} --target jsoncpp-project
           cmake --build . --config Release --parallel ${PARALLEL} --target range-v3-project
-        else
-          cmake --build . --config Release --parallel ${PARALLEL} --target solc
         fi
-        cmake --build . --config Release --parallel ${PARALLEL}
+        cmake --build . --config Release --parallel ${PARALLEL} --target solc
         [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
-        cp ./solc/solc${WIN_SUFFIX} ./solc/solc-${{ github.base_ref }}${WIN_SUFFIX}
+        cp ./solc/solc${WIN_SUFFIX} ./solc/solc-${{ inputs.solc-version }}${WIN_SUFFIX}
 
     - name: Upload binary for testing
       if: inputs.release-suffix == ''
       uses: actions/upload-artifact@v4
       with:
-        path: ./build/solc/solc-${{ github.base_ref }}
+        path: ./build/solc/solc-${{ inputs.solc-version }}
 
     - name: Prepare binary
       if: inputs.release-suffix != ''

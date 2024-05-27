@@ -25,12 +25,12 @@ jobs:
         id: set
         run: |
           if [[ ${{ github.event_name }} != 'pull_request' ]]; then
-            echo "solc-version=$(cut -d "-" -f1 <<< ${GITHUB_REF#refs/*/})" | tee -a "${GITHUB_OUTPUT}"
             echo "zksync-version=$(cut -d "-" -f2 <<< ${GITHUB_REF#refs/*/})" | tee -a "${GITHUB_OUTPUT}"
           else
-            echo "solc-version=${{ github.base_ref }}" | tee -a "${GITHUB_OUTPUT}"
             echo "zksync-version=1.0.${{ github.run_id }}" | tee -a "${GITHUB_OUTPUT}"
           fi
+          SOLC_VERSION=$(grep 'PROJECT_VERSION' CMakeLists.txt | grep -oP '(\d+\.\d+\.\d+)')
+          echo "solc-version=${SOLC_VERSION}" | tee -a "${GITHUB_OUTPUT}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
