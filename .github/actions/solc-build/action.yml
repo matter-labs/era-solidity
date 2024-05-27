@@ -50,7 +50,7 @@ runs:
           -DUSE_Z3=OFF \
           -DUSE_CVC4=OFF \
           -DTESTS=0 \
-          -DSOLC_LINK_STATIC=1 -DCMAKE_EXE_LINKER_FLAGS=-static -DSTATIC_LINKING=1 \
+          -DBoost_NO_BOOST_CMAKE=TRUE -DSOLC_LINK_STATIC=1 -DCMAKE_EXE_LINKER_FLAGS=-static -DSTATIC_LINKING=1 \
           -DPEDANTIC=OFF ${{ inputs.extra-args}}
         cmake --build . --config Release --parallel ${PARALLEL}
         [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
