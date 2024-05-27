@@ -1401,11 +1401,11 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 // TODO: Move the lambda function to separate helper class.
 // TODO: This lowering is copied from libyul's IRGenerator. Move it to the
 // generic solidity dialect lowering.
-struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
-  using OpRewritePattern<sol::ContractOp>::OpRewritePattern;
+struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
+  using OpConversionPattern<sol::ContractOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(sol::ContractOp op,
-                                PatternRewriter &r) const override {
+  LogicalResult matchAndRewrite(sol::ContractOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r, loc);
     eravm::BuilderHelper eravmHelper(r, loc);
@@ -1591,10 +1591,21 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
         // Generate the actual call.
         auto callOp = r.create<sol::CallOp>(loc, func, params);
 
+        // Collect the remapped results for generating the tuple encoder.
+        std::vector<Value> remappedResults;
+        for (auto res : callOp.getResults()) {
+          auto remappedTy = getTypeConverter()->convertType(res.getType());
+          Value remappedRes = res;
+          if (remappedTy != res.getType())
+            remappedRes = getTypeConverter()->materializeSourceConversion(
+                r, loc, remappedTy, res);
+          remappedResults.push_back(remappedRes);
+        }
+
         // Encode the result using the ABI's tuple encoder.
         auto headStart = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
-        auto tail = eravmHelper.genABITupleEncoding(
-            callOp.getResultTypes(), callOp.getResults(), headStart);
+        auto tail = eravmHelper.genABITupleEncoding(callOp.getResultTypes(),
+                                                    remappedResults, headStart);
         auto tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
 
         // Generate the return.
@@ -1829,7 +1840,7 @@ struct ConvertSolToStandard
   }
 
   /// Converts sol.contract and all yul dialect ops.
-  void runStage2Conversion(ModuleOp mod) {
+  void runStage2Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
@@ -1838,13 +1849,13 @@ struct ConvertSolToStandard
     tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp, sol::ConvCastOp>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
-             RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
-             MCopyOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
-             CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
-             CallDataLoadOpLowering, CallDataSizeOpLowering,
-             CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
-             Keccak256OpLowering>(&getContext());
+    pats.add<ContractOpLowering>(tyConv, &getContext());
+    pats.add<ObjectOpLowering, BuiltinRetOpLowering, RevertOpLowering,
+             MLoadOpLowering, MStoreOpLowering, MCopyOpLowering,
+             DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
+             MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
+             CallDataSizeOpLowering, CallDataCopyOpLowering, SLoadOpLowering,
+             SStoreOpLowering, Keccak256OpLowering>(&getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();
@@ -1877,7 +1888,7 @@ struct ConvertSolToStandard
     ModuleOp mod = getOperation();
     SolTypeConverter tyConv;
     runStage1Conversion(mod, tyConv);
-    runStage2Conversion(mod);
+    runStage2Conversion(mod, tyConv);
     runStage3Conversion(mod, tyConv);
   }
 
