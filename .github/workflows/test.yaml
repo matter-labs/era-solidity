@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          repository: matter-labs/era-compiler-tester
 
       - name: Define compiler tester ref
         id: compiler_tester_ref
