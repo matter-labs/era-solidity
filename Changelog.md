@@ -1,4 +1,10 @@
-### solc v0.8.25-legacy for zkVM - revision 1.0.0 - Legacy edition
+### 0.8.25 for ZKsync - revision 1.0.1 - Legacy edition (2024-05-20)
+
+Bugfixes:
+* Fix nested try-catch lowering.
+
+
+### 0.8.25 for ZKsync - revision 1.0.0 - Legacy edition (2024-01-16)
 
 This release has changes in the lowering of EVM assembly in order to get the ZKsync's translator (targeting LLVM IR) to work correctly.
 
@@ -11,7 +17,7 @@ Changed:
 * Minor changes in the control-flow when lowering a try-catch block
 
 
-### 0.8.25 (2023-03-14)
+### 0.8.25 (2024-03-14)
 
 Compiler Features:
  * Code Generator: Use ``MCOPY`` instead of ``MLOAD``/``MSTORE`` loop when copying byte arrays.
