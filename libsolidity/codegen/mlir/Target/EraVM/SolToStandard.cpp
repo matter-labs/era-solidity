@@ -1732,14 +1732,20 @@ public:
 
     addSourceMaterialization(
         [](OpBuilder &b, Type resTy, ValueRange ins, Location loc) -> Value {
+          if (ins.size() != 1)
+            return b.create<UnrealizedConversionCastOp>(loc, resTy, ins)
+                .getResult(0);
+
           Type i256Ty = b.getIntegerType(256);
 
-          assert(ins.size() == 1);
           Type inpTy = ins[0].getType();
 
-          assert((sol::isRefType(inpTy) && resTy == i256Ty) ||
-                 (inpTy == i256Ty && sol::isRefType(resTy)));
-          return b.create<sol::ConvCastOp>(loc, resTy, ins);
+          if ((sol::isRefType(inpTy) && resTy == i256Ty) ||
+              (inpTy == i256Ty && sol::isRefType(resTy)))
+            return b.create<sol::ConvCastOp>(loc, resTy, ins);
+          else
+            return b.create<UnrealizedConversionCastOp>(loc, resTy, ins)
+                .getResult(0);
         });
   }
 };
