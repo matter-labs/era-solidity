@@ -1,0 +1,200 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    tags:
+      - "**"
+
+concurrency:
+  group: ${{ github.repository_id }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      solc-version: ${{ steps.set.outputs.solc-version }}
+      zksync-version: ${{ steps.set.outputs.zksync-version }}
+      skip-windows: ${{ steps.check-version.outputs.result }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Define release version
+        shell: bash
+        id: set
+        run: |
+          if [[ ${{ github.event_name }} != 'pull_request' ]]; then
+            echo "zksync-version=$(cut -d "-" -f2 <<< ${GITHUB_REF#refs/*/})" | tee -a "${GITHUB_OUTPUT}"
+          else
+            echo "zksync-version=1.0.${{ github.run_id }}" | tee -a "${GITHUB_OUTPUT}"
+          fi
+          SOLC_VERSION=$(grep 'PROJECT_VERSION' CMakeLists.txt | grep -oP '(\d+\.\d+\.\d+)')
+          echo "solc-version=${SOLC_VERSION}" | tee -a "${GITHUB_OUTPUT}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install semver
+        run: npm install semver
+
+      - name: Check that version is >= 0.6.0
+        id: check-version
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const semver = require('semver');
+            const currentVersion = '${{ steps.set.outputs.solc-version }}';
+            const result = semver.lt(currentVersion, '0.6.0');
+            console.log(`Is the version < 0.6.0? ${result}`);
+            return result;
+          result-encoding: string
+
+  build:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "MacOS x86"
+            runner: macos-12-large
+            release-suffix: macosx-amd64
+          - name: "MacOS arm64"
+            runner: [self-hosted, macOS, ARM64]
+            release-suffix: macosx-arm64
+          - name: "Linux x86"
+            runner: matterlabs-ci-runner
+            image: matterlabs/llvm_runner:ubuntu20-llvm17-latest
+            release-suffix: linux-amd64
+          - name: "Linux ARM64"
+            runner: matterlabs-ci-runner-arm
+            image: matterlabs/llvm_runner:ubuntu20-llvm17-latest
+            release-suffix: linux-arm64
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ${{ matrix.image || '' }}
+    name: ${{ matrix.name }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Building the Solidity compiler
+        uses: ./.github/actions/solc-build
+        with:
+          release-suffix: ${{ matrix.release-suffix }}
+          zksync-version: ${{ needs.setup.outputs.zksync-version }}
+          solc-version: ${{ needs.setup.outputs.solc-version }}
+
+  build-windows:
+    name: Windows
+    needs: setup
+    if: needs.setup.outputs.skip-windows == 'false'
+    runs-on: windows-2019-github-hosted-16core
+    steps:
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "15.0.7"
+
+      - name: Prepare environment
+        run: |
+          git config --global user.email "runner@github.com"
+          git fetch --all
+          # try to apply win patch
+          git cherry-pick 860226e25dca397b5afd70680530963712aff050 || git cherry-pick --abort
+          # latest llvm for MSVC
+          git clone -q --depth=1 --branch=main https://github.com/zufuliu/llvm-utils.git c:\projects\llvm-utils
+          Invoke-Item "c:\projects\llvm-utils\VS2017\install.bat"
+          clang --version
+
+
+      - name: Install windows Deps
+        run: |
+          if ( -not (Test-Path "deps\boost") ) {
+            New-Item -ItemType Directory -Force -Path "deps"
+
+            Invoke-WebRequest -URI "https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-windows-x86_64.zip" -OutFile cmake.zip
+
+            tar -xf cmake.zip
+            mv cmake-3.27.1-windows-x86_64 "deps\cmake"
+
+            # and serving it a page that requires JavaScript.
+            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.zip" -OutFile boost.zip
+
+            tar -xf boost.zip
+            cd boost_1_77_0
+            .\bootstrap.bat --with-toolset=clang
+            .\b2 -j4 -d0 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" link=static runtime-link=static variant=release threading=multi address-model=64 --prefix="..\deps\boost" --with-filesystem --with-system --with-program_options --with-test --with-regex --with-thread install
+            if ( -not $? ) { throw "Error building boost." }
+            cd ..
+          }
+
+      - name: Building the Solidity compiler
+        run: |
+          $env:path += ";deps\cmake\bin\"
+          $env:CXXFLAGS="-Wno-narrowing -Qunused-arguments -Wno-everything -DBOOST_REGEX_NO_LIB -D_REGEX_MAX_STACK_COUNT=200000L -DJSON_USE_INT64_DOUBLE_CONVERSION -std=c++17 -stdlib=libc++"
+          mkdir build
+          cd build
+          $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
+          cmake .. -D SOLC_VERSION_ZKSYNC="${{ needs.setup.outputs.zksync-version }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang15 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake --build . -j 10 --target install --config Release
+
+      - name: Prepare binary file name
+        run: |
+          mkdir -p releases\windows-amd64
+          ls .\build\solc\Release\
+          .\build\solc\Release\solc.exe --version
+          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ needs.setup.outputs.solc-version }}-${{ needs.setup.outputs.zksync-version }}.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-amd64
+          path: releases
+
+  release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, build-windows]
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release*
+          path: releases
+
+      - name: Generate changelog
+        shell: bash
+        run: awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > release-changelog.txt
+
+      - name: Prepare release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: false
+          name: ZKsync solc ${{ github.ref_name }}
+          body_path: release-changelog.txt
+          tag_name: ${{ github.ref_name }}
+          files: releases/**/**
+          prerelease: true
