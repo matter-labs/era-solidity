@@ -197,4 +197,3 @@ jobs:
           body_path: release-changelog.txt
           tag_name: ${{ github.ref_name }}
           files: releases/**/**
-          prerelease: true
