@@ -7,7 +7,7 @@ on:
       compiler_tester_reference_branch:
         description: "compiler-tester branch to use as a benchmark reference"
         required: false
-        default: "era-solidity-test"
+        default: "main"
       compiler_tester_candidate_branch:
         description: "compiler-tester branch to use as a benchmark candidate"
         required: false
@@ -39,7 +39,7 @@ jobs:
         id: compiler_tester_ref
         shell: bash
         run: |
-          REFERENCE_REF=${{ inputs.compiler_tester_reference_branch || env.ERA_SOLIDITY_TEST_TAG }}
+          REFERENCE_REF=${{ inputs.compiler_tester_reference_branch || env.ERA_SOLIDITY_REF_DEFAULT }}
           if [ -n "$(git ls-remote --tags --heads --refs origin ${REFERENCE_REF})" ]; then
             echo "reference-ref=${REFERENCE_REF}" | tee -a "${GITHUB_OUTPUT}"
           else
