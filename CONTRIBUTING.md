@@ -33,7 +33,7 @@ license.
 We aim to make it as easy as possible to contribute to the mission. This is still WIP, and we're happy for contributions
 and suggestions here too. Some resources to help:
 
-1. [zkSync Era docs!](https://era.zksync.io/docs/)
+1. [ZKsync Era docs!](https://era.zksync.io/docs/)
 2. Company links can be found in the [repo's readme](README.md)
 
 ## Code of Conduct
