@@ -1,6 +1,6 @@
 ### solc v0.7.4-legacy for zkVM - revision 1.0.0 - Legacy edition
 
-This release has changes in the lowering of EVM assembly in order to get the zkSync's translator (targeting LLVM IR) to work correctly.
+This release has changes in the lowering of EVM assembly in order to get the ZKsync's translator (targeting LLVM IR) to work correctly.
 
 Added:
 * A new metadata output field called "extraMetadata" in standard-json that stores information of recursive functions
