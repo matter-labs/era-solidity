@@ -231,12 +231,12 @@ static set<string> const g_yulDialectArgs
 static void version()
 {
 	sout() <<
-		"solc, the zkEVM Solidity compiler commandline interface" <<
+		"solc, the ZKsync Solidity compiler commandline interface" <<
 		endl <<
 		"Version: " <<
 		dev::solidity::VersionString <<
 		endl <<
-		"zkEVM: " << dev::solidity::ZKEVMVersionString << endl;
+		"ZKsync: " << dev::solidity::ZKsyncVersionString << endl;
 	exit(0);
 }
 
