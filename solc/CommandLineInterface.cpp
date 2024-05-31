@@ -288,12 +288,12 @@ static set<string> const g_metadataHashArgs
 static void version()
 {
 	sout() <<
-		"solc, the zkEVM Solidity compiler commandline interface" <<
+		"solc, the ZKsync Solidity compiler commandline interface" <<
 		endl <<
 		"Version: " <<
 		solidity::frontend::VersionString <<
 		endl <<
-		"zkEVM: " << solidity::frontend::ZKEVMVersionString << endl;
+		"ZKsync: " << solidity::frontend::ZKsyncVersionString << endl;
 	exit(0);
 }
 
