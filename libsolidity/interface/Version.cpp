@@ -26,7 +26,7 @@
 #include <solidity/BuildInfo.h>
 
 char const* solidity::frontend::VersionNumber = ETH_PROJECT_VERSION;
-char const* solidity::frontend::ZKEVMVersionString = SOL_VERSION_ZKEVM;
+char const* solidity::frontend::ZKsyncVersionString = SOL_VERSION_ZKSYNC;
 
 std::string const solidity::frontend::VersionString =
 	std::string(solidity::frontend::VersionNumber) +
