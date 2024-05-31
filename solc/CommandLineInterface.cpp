@@ -650,9 +650,9 @@ void CommandLineInterface::processInput()
 
 void CommandLineInterface::printVersion()
 {
-	sout() << "solc, the zkEVM Solidity compiler commandline interface" << endl;
+	sout() << "solc, the ZKsync Solidity compiler commandline interface" << endl;
 	sout() << "Version: " << solidity::frontend::VersionString << endl;
-	sout() << "zkEVM: " << solidity::frontend::ZKEVMVersionString << endl;
+	sout() << "ZKsync: " << solidity::frontend::ZKsyncVersionString << endl;
 }
 
 void CommandLineInterface::printLicense()
