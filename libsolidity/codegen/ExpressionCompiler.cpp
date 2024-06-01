@@ -705,7 +705,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 		case FunctionType::Kind::External:
 		case FunctionType::Kind::DelegateCall:
 			_functionCall.expression().accept(*this);
-			appendExternalFunctionCall(function, arguments, _functionCall.annotation().tryCall);
+			appendExternalFunctionCall(
+				function, arguments, _functionCall.annotation().tryCall, &_functionCall.annotation());
 			break;
 		case FunctionType::Kind::BareCallCode:
 			solAssert(false, "Callcode has been removed.");
@@ -765,7 +766,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// If this is a try call, return "<address> 1" in the success case and
 				// "0" in the error case.
 				AssemblyItem errorCase = m_context.appendConditionalJump();
-				m_context.currTryCallSuccessTag = m_context.appendJumpToNew();
+				_functionCall.annotation().tryCallSuccessTag
+					= m_context.appendJumpToNew().data().convert_to<uint32_t>();
 				m_context.adjustStackOffset(1);
 				m_context << errorCase;
 			}
@@ -2271,7 +2273,8 @@ void ExpressionCompiler::appendShiftOperatorCode(Token _operator, Type const& _v
 void ExpressionCompiler::appendExternalFunctionCall(
 	FunctionType const& _functionType,
 	vector<ASTPointer<Expression const>> const& _arguments,
-	bool _tryCall
+	bool _tryCall,
+	FunctionCallAnnotation* _annotation
 )
 {
 	solAssert(
@@ -2549,8 +2552,9 @@ void ExpressionCompiler::appendExternalFunctionCall(
 
 	if (_tryCall)
 	{
+		solAssert(_annotation, "");
 		// Success branch will reach this, failure branch will directly jump to endTag.
-		m_context.currTryCallSuccessTag = m_context.appendJumpToNew();
+		_annotation->tryCallSuccessTag = m_context.appendJumpToNew().data().convert_to<uint32_t>();
 		m_context.adjustStackOffset(1);
 		m_context << endTag;
 	}
