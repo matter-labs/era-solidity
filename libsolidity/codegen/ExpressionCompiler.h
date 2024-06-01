@@ -108,7 +108,8 @@ private:
 	void appendExternalFunctionCall(
 		FunctionType const& _functionType,
 		std::vector<ASTPointer<Expression const>> const& _arguments,
-		bool _tryCall
+		bool _tryCall,
+		FunctionCallAnnotation* _annotation = nullptr
 	);
 	/// Appends code that evaluates a single expression and moves the result to memory. The memory offset is
 	/// expected to be on the stack and is updated by this call.
