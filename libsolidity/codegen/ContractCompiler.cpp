@@ -932,7 +932,10 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	StackHeightChecker checker(m_context);
 	CompilerContext::LocationSetter locationSetter(m_context, _tryStatement);
 
-	compileExpression(_tryStatement.externalCall());
+	auto* externalCall = dynamic_cast<FunctionCall const*>(&_tryStatement.externalCall());
+	solAssert(externalCall && externalCall->annotation().tryCall, "");
+	compileExpression(*externalCall);
+
 	int const returnSize = static_cast<int>(_tryStatement.externalCall().annotation().type->sizeOnStack());
 
 	// Stack: [ return values] <success flag>
@@ -945,8 +948,11 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 
 	evmasm::AssemblyItem endTag = m_context.appendJumpToNew();
 
-	solAssert(m_context.currTryCallSuccessTag.type() == AssemblyItemType::Tag, "");
-	m_context << m_context.currTryCallSuccessTag;
+	auto& successTag = externalCall->annotation().tryCallSuccessTag;
+	solAssert(successTag, "");
+	m_context << AssemblyItem(AssemblyItemType::Tag, *successTag);
+	successTag.reset();
+
 	m_context.adjustStackOffset(returnSize);
 	{
 		// Success case.
