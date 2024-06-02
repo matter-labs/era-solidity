@@ -1179,7 +1179,7 @@ std::string const& CompilerStack::metadata(Contract const& _contract) const
 	return _contract.metadata.init([&]{ return createMetadata(_contract, m_viaIR); });
 }
 
-Json::Value const& CompilerStack::extraMetadata(std::string const& _contractName) const
+Json const& CompilerStack::extraMetadata(std::string const& _contractName) const
 {
 	Contract const& contr = contract(_contractName);
 	if (m_stackState < AnalysisSuccessful)
