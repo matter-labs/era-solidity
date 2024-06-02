@@ -361,7 +361,7 @@ public:
 	std::string const& metadata(std::string const& _contractName) const { return metadata(contract(_contractName)); }
 
 	/// @returns the contract metadata containing miscellaneous information
-	Json::Value const& extraMetadata(std::string const& _contractName) const;
+	Json const& extraMetadata(std::string const& _contractName) const;
 
 	/// @returns the CBOR-encoded metadata matching the pipeline selected using the viaIR setting.
 	bytes cborMetadata(std::string const& _contractName) const { return cborMetadata(_contractName, m_viaIR); }
@@ -417,7 +417,7 @@ private:
 		Json yulIRAst; ///< JSON AST of Yul IR code.
 		Json yulIROptimizedAst; ///< JSON AST of optimized Yul IR code.
 		Json yulCFGJson; ///< JSON CFG of Yul IR code.
-		Json::Value extraMetadata; ///< Misc metadata
+		Json extraMetadata; ///< Misc metadata
 		util::LazyInit<std::string const> metadata; ///< The metadata json that will be hashed into the chain.
 		util::LazyInit<Json const> abi;
 		util::LazyInit<Json const> storageLayout;

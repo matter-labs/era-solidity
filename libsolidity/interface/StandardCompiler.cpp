@@ -1502,7 +1502,7 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 		if (compilationSuccess && isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "evm.gasEstimates", wildcardMatchesExperimental))
 			evmData["gasEstimates"] = compilerStack.gasEstimates(contractName);
 
-		Json::Value extraMetadata = compilerStack.extraMetadata(contractName);
+		Json extraMetadata = compilerStack.extraMetadata(contractName);
 		if (compilationSuccess && !extraMetadata.empty())
 			evmData["extraMetadata"] = extraMetadata;
 
