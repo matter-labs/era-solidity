@@ -22,7 +22,7 @@
 #include <libsolidity/ast/ASTForward.h>
 #include <libsolidity/codegen/CompilerContext.h>
 
-#include <json/value.h>
+#include <libsolutil/JSON.h>
 
 #include <memory>
 
@@ -38,7 +38,7 @@ class ExtraMetadataRecorder
 	/// The root JSON value of the metadata
 	/// Current mappings:
 	/// - "recursiveFunctions": array of functions involved in recursion
-	Json::Value m_metadata;
+	Json m_metadata;
 
 public:
 	ExtraMetadataRecorder(CompilerContext const& _context, CompilerContext const& _runtimeContext)
@@ -47,7 +47,7 @@ public:
 	}
 
 	/// Stores the extra metadata of @a _contract in `metadata`
-	Json::Value run(ContractDefinition const& _contract);
+	Json run(ContractDefinition const& _contract);
 };
 
 }

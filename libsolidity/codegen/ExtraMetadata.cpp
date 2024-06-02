@@ -36,7 +36,7 @@ public:
 		CallableDeclaration const& _func,
 		CompilerContext const& _context,
 		CompilerContext const& _runtimeContext,
-		Json::Value& _recFuncs)
+		Json& _recFuncs)
 		: m_func(_func), m_context(_context), m_runtimeContext(_runtimeContext), m_recFuncs(_recFuncs)
 	{
 	}
@@ -45,7 +45,7 @@ private:
 	CallableDeclaration const& m_func;
 	CompilerContext const& m_context;
 	CompilerContext const& m_runtimeContext;
-	Json::Value& m_recFuncs;
+	Json& m_recFuncs;
 
 	// Record recursions in @_asm for the extra metadata
 	void record(InlineAssembly const& _p_asm, CompilerContext const& _context)
@@ -72,15 +72,16 @@ private:
 				continue;
 			for (auto& func: findIt->second)
 			{
-				Json::Value record(Json::objectValue);
+				Json record = Json::object();
 				record["name"] = recFunc.str();
 				if (_context.runtimeContext())
-					record["creationTag"] = Json::Value(Json::LargestUInt(func.label));
+					record["creationTag"] = Json(static_cast<Json::number_integer_t>(func.label));
 				else
-					record["runtimeTag"] = Json::Value(Json::LargestUInt(func.label));
-				record["totalParamSize"] = Json::Value(Json::LargestUInt(func.ast->parameters.size()));
-				record["totalRetParamSize"] = Json::Value(Json::LargestUInt(func.ast->returnVariables.size()));
-				m_recFuncs.append(record);
+					record["runtimeTag"] = Json(static_cast<Json::number_integer_t>(func.label));
+				record["totalParamSize"] = Json(static_cast<Json::number_integer_t>(func.ast->parameters.size()));
+				record["totalRetParamSize"]
+					= Json(static_cast<Json::number_integer_t>(func.ast->returnVariables.size()));
+				m_recFuncs.push_back(record);
 			}
 		}
 	}
@@ -92,17 +93,17 @@ private:
 	}
 };
 
-Json::Value ExtraMetadataRecorder::run(ContractDefinition const& _contract)
+Json ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 {
 	// Set "recursiveFunctions"
-	Json::Value recFuncs(Json::arrayValue);
+	Json recFuncs = Json::array();
 
 	// Record recursions in low level calls
 	auto recordRecursiveLowLevelFuncs = [&](CompilerContext const& _context)
 	{
 		for (auto fn: _context.recursiveLowLevelFuncs())
 		{
-			Json::Value func(Json::objectValue);
+			Json func = Json::object();
 			func["name"] = fn.name;
 			if (_context.runtimeContext())
 				func["creationTag"] = fn.tag;
@@ -110,7 +111,7 @@ Json::Value ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 				func["runtimeTag"] = fn.tag;
 			func["totalParamSize"] = fn.ins;
 			func["totalRetParamSize"] = fn.outs;
-			recFuncs.append(func);
+			recFuncs.push_back(func);
 		}
 	};
 	recordRecursiveLowLevelFuncs(m_context);
@@ -152,7 +153,7 @@ Json::Value ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 			if (tag == evmasm::AssemblyItem(evmasm::UndefinedItem))
 				continue;
 
-			Json::Value func(Json::objectValue);
+			Json func = Json::object();
 			func["name"] = fn->name();
 
 			// Assembly::new[Push]Tag() asserts that the tag is 32 bits
@@ -170,7 +171,7 @@ Json::Value ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 				totalRetParamSize += param->type()->sizeOnStack();
 			func["totalRetParamSize"] = totalRetParamSize;
 
-			recFuncs.append(func);
+			recFuncs.push_back(func);
 		}
 	};
 	recordRecursiveSolFuncs(m_context);
