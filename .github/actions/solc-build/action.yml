@@ -1,0 +1,96 @@
+name: 'Build'
+description: 'Builds solc executable.'
+inputs:
+  release-suffix:
+    description: 'Release suffix.'
+    required: false
+    default: ''
+  zksync-version:
+    description: 'Release version.'
+    required: true
+  solc-version:
+    description: 'Solidity version.'
+    required: true
+  build-type:
+    description: 'Build type: candidate or reference'
+    required: false
+    default: 'candidate'
+  extra-args:
+    description: 'Extra arguments for cmake.'
+    required: false
+    default: ''
+runs:
+  using: "composite"
+  steps:
+
+    - name: Install Boost (MacOS ARM64)
+      if: runner.os == 'macOS'
+      shell: bash
+      env:
+        BOOST_DOWNLOAD_URL: "https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source"
+        BOOST_FILENAME: "boost_1_71_0"
+      run: |
+        curl -L -o ${BOOST_FILENAME}.tar.gz "${BOOST_DOWNLOAD_URL}/${BOOST_FILENAME}.tar.gz"
+        tar xzf "${BOOST_FILENAME}.tar.gz" && cd ${BOOST_FILENAME}
+        if [ ${RUNNER_ARCH} = ARM64 ]; then
+          ./bootstrap.sh --prefix=${PWD}/boost
+        else
+          ./bootstrap.sh --prefix=/usr/local --with-python-version=2.7
+        fi
+        ./b2 link=static runtime-link=static -j$(sysctl -n hw.ncpu)
+        ./b2 install -j$(sysctl -n hw.ncpu)
+
+    - name: Build solc
+      shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      env:
+        CXXFLAGS: "-Wno-narrowing"
+      run: |
+        mkdir -p ./build
+        cd ./build
+        [ ${RUNNER_OS} = macOS ] && PARALLEL=$(sysctl -n hw.ncpu) || PARALLEL=$(nproc)
+        [ ${RUNNER_OS} = Linux ] && COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+        cmake .. \
+          -DCMAKE_BUILD_TYPE="Release" ${COMPILER_FLAGS} \
+          -DCMAKE_CXX_FLAGS="-DJSON_USE_INT64_DOUBLE_CONVERSION" \
+          -DSOL_VERSION_ZKSYNC="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
+          -DSOLC_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
+          -DSOL_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
+          -DUSE_Z3=OFF \
+          -DUSE_CVC4=OFF \
+          -DTESTS=0 \
+          -DBoost_NO_BOOST_CMAKE=TRUE \
+          -DSOLC_LINK_STATIC=1 \
+          -DSTATIC_LINKING=1 \
+          -DPEDANTIC=OFF ${{ inputs.extra-args}}
+        if [[ ${{ inputs.solc-version}} == "0.4"* ]]; then
+          cmake --build . --config Release --parallel ${PARALLEL} --target jsoncpp-project
+          cmake --build . --config Release --parallel ${PARALLEL} --target range-v3-project
+        fi
+        cmake --build . --config Release --parallel ${PARALLEL} --target solc
+        [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
+        cp ./solc/solc${WIN_SUFFIX} ./solc/solc-${{ inputs.solc-version }}-${{ inputs.build-type }}${WIN_SUFFIX}
+
+    - name: Upload binary for testing
+      if: inputs.release-suffix == ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: solc-${{ inputs.solc-version }}-${{ inputs.build-type }}
+        path: ./build/solc/solc-${{ inputs.solc-version }}-${{ inputs.build-type }}
+
+    - name: Prepare binary
+      if: inputs.release-suffix != ''
+      shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      run: |
+        [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
+        SOLC_BIN="./build/solc/solc${WIN_SUFFIX}"
+        mkdir -p ./releases/${{ inputs.release-suffix }}
+        strip "${SOLC_BIN}"
+        ${SOLC_BIN} --version
+        mv ${SOLC_BIN} ./releases/${{ inputs.release-suffix }}/solc-${{ inputs.release-suffix }}-${{ inputs.solc-version}}-${{ inputs.zksync-version }}${WIN_SUFFIX}
+
+    - name: Upload binary for release
+      if: inputs.release-suffix != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ inputs.release-suffix }}
+        path: releases
