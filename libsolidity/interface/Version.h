@@ -35,7 +35,7 @@ extern std::string const VersionString;
 extern std::string const VersionStringStrict;
 extern bytes const VersionCompactBytes;
 extern bool const VersionIsRelease;
-extern char const* ZKEVMVersionString;
+extern char const* ZKsyncVersionString;
 
 }
 }
