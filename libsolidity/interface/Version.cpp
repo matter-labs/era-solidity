@@ -33,7 +33,7 @@ using namespace dev::solidity;
 using namespace std;
 
 char const* dev::solidity::VersionNumber = ETH_PROJECT_VERSION;
-char const* dev::solidity::ZKEVMVersionString = SOL_VERSION_ZKEVM;
+char const* dev::solidity::ZKsyncVersionString = SOL_VERSION_ZKSYNC;
 
 string const dev::solidity::VersionString =
 	string(dev::solidity::VersionNumber) +
