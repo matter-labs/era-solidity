@@ -1,6 +1,12 @@
-### solc v0.4.17-legacy for zkVM - revision 1.0.0 - Legacy edition
+### 1.0.1 - ZKsync Legacy Edition (2024-05-31)
 
-This release has changes in the lowering of EVM assembly in order to get the zkSync's translator (targeting LLVM IR) to work correctly.
+Bugfixes:
+* Fixed nested try-catch lowering in EVM assembly codegen (^0.6.0)
+
+
+### 1.0.0 - ZKsync Legacy Edition (2024-01-16)
+
+This release has changes in the lowering of EVM assembly in order to get the ZKsync's translator targeting LLVM IR to work correctly.
 
 Added:
 * A new metadata output field called "extraMetadata" in standard-json that stores information of recursive functions
@@ -8,6 +14,7 @@ Added:
 Changed:
 * Internal function pointers are lowered to static jump tables
 * Disabled evmasm optimizations to avoid any potential invalidation of the new metadata for recursive functions
+* Minor changes in the control-flow when lowering a try-catch block (^0.6.0)
 
 
 ### 0.4.17 (2017-09-21)
