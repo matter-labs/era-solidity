@@ -12,7 +12,7 @@ set(JSONCPP_LIBRARY "${prefix}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PR
 set(JSONCPP_INCLUDE_DIR "${prefix}/include")
 
 if(NOT MSVC)
-    set(JSONCPP_EXTRA_FLAGS "-std=c++11")
+    set(JSONCPP_EXTRA_FLAGS "-std=c++11 -DJSON_USE_INT64_DOUBLE_CONVERSION")
 endif()
 
 set(byproducts "")
