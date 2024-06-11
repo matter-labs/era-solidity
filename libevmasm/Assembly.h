@@ -91,6 +91,15 @@ public:
 	/// Adds a subroutine to the code (in the data section) and pushes its size (via a tag)
 	/// on the stack. @returns the pushsub assembly item.
 	AssemblyItem appendSubroutine(AssemblyPointer const& _assembly) { auto sub = newSub(_assembly); append(newPushSubSize(size_t(sub.data()))); return sub; }
+	/// zkevm version of appendSubroutine():
+	AssemblyItem zkevmAppendSubroutine(AssemblyPointer const& _assembly)
+	{
+		m_subs.push_back(_assembly);
+		auto sub = AssemblyItem(ZKEVMPushSub, m_subs.size() - 1);
+		append(AssemblyItem(ZKEVMPushSubSize, size_t(sub.data())));
+		return sub;
+	}
+
 	void pushSubroutineSize(size_t _subRoutine) { append(newPushSubSize(_subRoutine)); }
 	/// Pushes the offset of the subroutine.
 	void pushSubroutineOffset(size_t _subRoutine) { append(AssemblyItem(PushSub, _subRoutine)); }

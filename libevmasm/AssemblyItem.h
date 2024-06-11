@@ -43,6 +43,8 @@ enum AssemblyItemType
 	PushTag,
 	PushSub,
 	PushSubSize,
+	ZKEVMPushSub,
+	ZKEVMPushSubSize,
 	PushProgramSize,
 	Tag,
 	PushData,

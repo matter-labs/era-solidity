@@ -300,8 +300,9 @@ public:
 	/// Stack pre: Memory position
 	/// Stack post: Updated memory position
 	/// @param creation if true, copies creation code, if false copies runtime code.
+	/// @param _zkevem enables zkevm specific lowering
 	/// @note the contract has to be compiled already, so beware of cyclic dependencies!
-	void copyContractCodeToMemory(ContractDefinition const& contract, bool _creationCode);
+	void copyContractCodeToMemory(ContractDefinition const& contract, bool _creationCode, bool _zkevm = false);
 
 	/// Bytes we need to the start of call data.
 	///  - The size in bytes of the function (hash) identifier.

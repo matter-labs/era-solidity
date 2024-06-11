@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "liblangutil/Exceptions.h"
 #include <libyul/ASTForward.h>
 
 #include <libsolutil/Common.h>
@@ -117,6 +118,20 @@ public:
 
 	/// Mark this assembly as invalid. Any attempt to request bytecode from it should throw.
 	virtual void markAsInvalid() = 0;
+
+	/// zkevm version of appendDataOffset()
+	virtual void appendZKEVMDataOffset(std::vector<SubID> const& _subPath)
+	{
+		(void) _subPath;
+		solUnimplemented("ZKEVM dataoffset lowering not implemented");
+	}
+
+	/// zkevm version of appendDataSize()
+	virtual void appendZKEVMDataSize(std::vector<SubID> const& _subPath)
+	{
+		(void) _subPath;
+		solUnimplemented("ZKEVM datasize lowering not implemented");
+	}
 };
 
 enum class IdentifierContext { LValue, RValue, VariableDeclaration, NonExternal };

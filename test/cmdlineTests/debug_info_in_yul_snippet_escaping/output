@@ -315,12 +315,12 @@ object "D_27" {
 
                 /// @src 0:446:491  "new /// @src 0:149:156  \"new C()\"..."
                 let _2 := allocate_unbounded()
-                let _3 := add(_2, datasize("C_2"))
+                let _3 := add(_2, $zk_datasize("C_2"))
                 if or(gt(_3, 0xffffffffffffffff), lt(_3, _2)) { panic_error_0x41() }
-                datacopy(_2, dataoffset("C_2"), datasize("C_2"))
+                $zk_datacopy(_2, $zk_dataoffset("C_2"), $zk_datasize("C_2"))
                 _3 := abi_encode_tuple__to__fromStack(_3)
 
-                let expr_13_address := create(0, _2, sub(_3, _2))
+                let expr_13_address := $zk_create(0, _2, sub(_3, _2))
 
                 if iszero(expr_13_address) { revert_forward_1() }
 
@@ -440,7 +440,7 @@ object "D_27" {
                         if callvalue() { revert(_3, _3) }
                         if slt(add(calldatasize(), not(3)), _3) { revert(_3, _3) }
                         /// @src 0:446:491  "new /// @src 0:149:156  \"new C()\"..."
-                        let _4 := datasize("C_2")
+                        let _4 := $zk_datasize("C_2")
                         let _5 := add(_1, _4)
                         let _6 := 0xffffffffffffffff
                         if or(gt(_5, _6), lt(_5, _1))
@@ -451,13 +451,12 @@ object "D_27" {
                             revert(_3, 0x24)
                         }
                         /// @src 0:446:491  "new /// @src 0:149:156  \"new C()\"..."
-                        datacopy(_1, dataoffset("C_2"), _4)
-                        if iszero(create(/** @src 0:279:599  "contract D /** @src 0:96:165  \"contract D {...\" *\/ {..." */ _3, /** @src 0:446:491  "new /// @src 0:149:156  \"new C()\"..." */ _1, sub(_5, _1)))
+                        $zk_datacopy(_1, $zk_dataoffset("C_2"), _4)
+                        if iszero($zk_create(/** @src 0:279:599  "contract D /** @src 0:96:165  \"contract D {...\" *\/ {..." */ _3, /** @src 0:446:491  "new /// @src 0:149:156  \"new C()\"..." */ _1, sub(_5, _1)))
                         {
                             /// @src 0:279:599  "contract D /** @src 0:96:165  \"contract D {...\" *\/ {..."
-                            let pos := mload(_2)
-                            returndatacopy(pos, _3, returndatasize())
-                            revert(pos, returndatasize())
+                            returndatacopy(_1, _3, returndatasize())
+                            revert(_1, returndatasize())
                         }
                         let memPtr := mload(_2)
                         let newFreePtr := add(memPtr, _2)

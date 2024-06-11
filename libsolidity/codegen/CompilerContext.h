@@ -230,6 +230,11 @@ public:
 	/// Adds a subroutine to the code (in the data section) and pushes its size (via a tag)
 	/// on the stack. @returns the pushsub assembly item.
 	evmasm::AssemblyItem addSubroutine(evmasm::AssemblyPointer const& _assembly) { return m_asm->appendSubroutine(_assembly); }
+	/// zkevm version of addSubroutine():
+	evmasm::AssemblyItem zkevmAddSubroutine(evmasm::AssemblyPointer const& _assembly)
+	{
+		return m_asm->zkevmAppendSubroutine(_assembly);
+	}
 	/// Pushes the size of the subroutine.
 	void pushSubroutineSize(size_t _subRoutine) { m_asm->pushSubroutineSize(_subRoutine); }
 	/// Pushes the offset of the subroutine.
