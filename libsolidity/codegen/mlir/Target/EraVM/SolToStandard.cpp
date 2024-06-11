@@ -335,6 +335,26 @@ struct DataSizeOpLowering : public OpRewritePattern<sol::DataSizeOp> {
   }
 };
 
+struct CodeSizeOpLowering : public OpRewritePattern<sol::CodeSizeOp> {
+  using OpRewritePattern<sol::CodeSizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CodeSizeOp op,
+                                PatternRewriter &r) const override {
+    mlir::Location loc = op->getLoc();
+    auto mod = op->getParentOfType<ModuleOp>();
+
+    if (inRuntimeContext(op)) {
+      llvm_unreachable("NYI");
+    } else {
+      eravm::BuilderHelper eravmHelper(r, loc);
+      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, callDataSizeAddr,
+                                         eravm::getAlignment(callDataSizeAddr));
+    }
+    return success();
+  }
+};
+
 struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
   using OpRewritePattern<sol::CodeCopyOp>::OpRewritePattern;
 
@@ -1418,6 +1438,7 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
     // Copy contained function to creation and runtime ObjectOp.
     std::vector<sol::FuncOp> funcs;
+    sol::FuncOp ctor;
     for (Operation &i : op.getBody()->getOperations()) {
       if (auto func = dyn_cast<sol::FuncOp>(i))
         funcs.push_back(func);
@@ -1425,6 +1446,11 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
         llvm_unreachable("NYI: Non function entities in contract");
     }
     for (sol::FuncOp func : funcs) {
+      if (func.getCtor()) {
+        assert(!ctor);
+        ctor = func;
+        continue;
+      }
       // Duplicate the func in both the creation and runtime objects.
       r.clone(*func);
       func->moveBefore(runtimeObj.getBody(), runtimeObj.getBody()->begin());
@@ -1468,14 +1494,17 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       r.create<sol::RevertOp>(loc, h.genI256Const(0), h.genI256Const(0));
     };
 
-    assert(!op.getCtorAttr() && "NYI: Ctors");
+    assert(!ctor && "NYI: Ctors");
 
-    if (!op.getCtorAttr() /* TODO: || !op.ctor.isPayable() */) {
+    if (!ctor /* TODO: || !op.ctor.isPayable() */) {
       genCallValChk();
     }
 
-    // Generate the constructor.
-    if (op.getKind() == sol::ContractKind::Library) {
+    // Generate the call to constructor.
+    if (ctor && op.getKind() != sol::ContractKind::Library) {
+      auto progSize = r.create<sol::DataSizeOp>(loc, creationObj.getName());
+      auto codeSize = r.create<sol::CodeSizeOp>(loc);
+      auto argSize = r.create<arith::SubIOp>(loc, codeSize, progSize);
       // TODO: Ctor
     }
 

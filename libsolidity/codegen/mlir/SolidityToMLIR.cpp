@@ -488,6 +488,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
   auto op =
       b.create<mlir::sol::FuncOp>(getLoc(func.location()), getMangledName(func),
                                   funcType, getStateMutability(func));
+  op.setCtor(func.isConstructor());
 
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);

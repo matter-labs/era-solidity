@@ -104,6 +104,7 @@ def Sol_FuncOp : Sol_Op<"func", [AutomaticAllocationScope, CallableOpInterface,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        UnitAttr:$runtime,
+                       UnitAttr:$ctor,
                        OptionalAttr<Sol_StateMutabilityAttr>:$state_mutability,
                        OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region AnyRegion:$body);
@@ -513,6 +514,12 @@ def Sol_DataOffsetOp : Sol_Op<"dataoffset", [Pure]> {
 def Sol_DataSizeOp : Sol_Op<"datasize", [Pure]> {
   let summary = "Represents the `datasize` call in yul";
   let arguments = (ins FlatSymbolRefAttr:$sym);
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Sol_CodeSizeOp : Sol_Op<"codesize", [Pure]> {
+  let summary = "Represents the `codesize` call in yul";
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
