@@ -268,6 +268,14 @@ eravm::BuilderHelper::genCallDataSizeAddr(ModuleOp mod,
   return b.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
 }
 
+LLVM::LoadOp
+eravm::BuilderHelper::genCallDataSizeLoad(ModuleOp mod,
+                                          std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  LLVM::AddressOfOp addr = genCallDataSizeAddr(mod, loc);
+  return b.create<LLVM::LoadOp>(loc, addr, eravm::getAlignment(addr));
+}
+
 LLVM::AddressOfOp
 eravm::BuilderHelper::genCallDataPtrAddr(ModuleOp mod,
                                          std::optional<Location> locArg) {
@@ -283,7 +291,6 @@ LLVM::LoadOp
 eravm::BuilderHelper::genCallDataPtrLoad(ModuleOp mod,
                                          std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
 
   LLVM::AddressOfOp callDataPtrAddr = genCallDataPtrAddr(mod, loc);
   return b.create<LLVM::LoadOp>(loc, callDataPtrAddr,

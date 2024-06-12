@@ -212,9 +212,7 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
 
     if (inRuntimeContext(op)) {
       eravm::BuilderHelper eravmHelper(rewriter, loc);
-      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
-      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-          op, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
+      rewriter.replaceOp(op, eravmHelper.genCallDataSizeLoad(mod));
     } else {
       rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
                                                         /*width=*/256);
@@ -239,9 +237,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
       srcOffset = op.getInp1();
     } else {
       eravm::BuilderHelper eravmHelper(rewriter, loc);
-      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
-      srcOffset = rewriter.create<LLVM::LoadOp>(
-          loc, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
+      srcOffset = eravmHelper.genCallDataSizeLoad(mod);
     }
 
     mlir::Value dst = eravmHelper.genHeapPtr(op.getInp0());
@@ -347,9 +343,7 @@ struct CodeSizeOpLowering : public OpRewritePattern<sol::CodeSizeOp> {
       llvm_unreachable("NYI");
     } else {
       eravm::BuilderHelper eravmHelper(r, loc);
-      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
-      r.replaceOpWithNewOp<LLVM::LoadOp>(op, callDataSizeAddr,
-                                         eravm::getAlignment(callDataSizeAddr));
+      r.replaceOp(op, eravmHelper.genCallDataSizeAddr(mod));
     }
     return success();
   }

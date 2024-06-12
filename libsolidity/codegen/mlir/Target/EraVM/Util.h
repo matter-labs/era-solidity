@@ -173,6 +173,12 @@ public:
   genCallDataSizeAddr(mlir::ModuleOp mod,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
+  /// Generates a load of the calldatasize global variable (creates the variable
+  /// if it doesn't exist).
+  mlir::LLVM::LoadOp
+  genCallDataSizeLoad(mlir::ModuleOp mod,
+                      std::optional<mlir::Location> locArg = std::nullopt);
+
   /// Generates the address to the ptr_calldata global variable (creates the
   /// variable if it doesn't exist).
   mlir::LLVM::AddressOfOp
