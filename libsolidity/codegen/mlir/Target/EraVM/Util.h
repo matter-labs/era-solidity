@@ -129,12 +129,12 @@ public:
   mlir::Value genHeapPtr(mlir::Value addr,
                          std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Initialize global variables for EraVM.
-  void initGlobs(mlir::ModuleOp mod,
-                 std::optional<mlir::Location> locArg = std::nullopt);
+  /// Generates the initialization of global variables for EraVM.
+  void genGlobalVarsInit(mlir::ModuleOp mod,
+                         std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Generates and return the ABI length for the pointer `ptr`.
-  mlir::Value getABILen(mlir::Value ptr,
+  /// Generates the ABI length for the pointer `ptr`.
+  mlir::Value genABILen(mlir::Value ptr,
                         std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple encoding as per ABI and return the "tail" address.
@@ -167,23 +167,23 @@ public:
   /// Returns an existing or a new (if not found) sha3 function symbol.
   mlir::FlatSymbolRefAttr getOrInsertSha3(mlir::ModuleOp mod);
 
-  /// Returns the address to the calldatasize global variable (creates the
+  /// Generates the address to the calldatasize global variable (creates the
   /// variable if it doesn't exist).
   mlir::LLVM::AddressOfOp
-  getCallDataSizeAddr(mlir::ModuleOp mod,
+  genCallDataSizeAddr(mlir::ModuleOp mod,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Returns the address to the ptr_calldata global variable (creates the
+  /// Generates the address to the ptr_calldata global variable (creates the
   /// variable if it doesn't exist).
   mlir::LLVM::AddressOfOp
-  getCallDataPtrAddr(mlir::ModuleOp mod,
+  genCallDataPtrAddr(mlir::ModuleOp mod,
                      std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Loads the ptr_calldata global variable (creates the variable if it doesn't
-  /// exist).
+  /// Generates a load of the ptr_calldata global variable (creates the variable
+  /// if it doesn't exist).
   mlir::LLVM::LoadOp
-  loadCallDataPtr(mlir::ModuleOp mod,
-                  std::optional<mlir::Location> locArg = std::nullopt);
+  genCallDataPtrLoad(mlir::ModuleOp mod,
+                     std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the panic code.
   void genPanic(solidity::util::PanicCode code, mlir::Value cond,

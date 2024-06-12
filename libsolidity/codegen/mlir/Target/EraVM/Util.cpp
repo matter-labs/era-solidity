@@ -77,8 +77,8 @@ Value eravm::BuilderHelper::genHeapPtr(Value addr,
   return b.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, addr);
 }
 
-void eravm::BuilderHelper::initGlobs(ModuleOp mod,
-                                     std::optional<Location> locArg) {
+void eravm::BuilderHelper::genGlobalVarsInit(ModuleOp mod,
+                                             std::optional<Location> locArg) {
 
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderHelper h(b, loc);
@@ -112,7 +112,7 @@ void eravm::BuilderHelper::initGlobs(ModuleOp mod,
       extraABIDataAddr);
 }
 
-Value eravm::BuilderHelper::getABILen(Value ptr,
+Value eravm::BuilderHelper::genABILen(Value ptr,
                                       std::optional<Location> locArg) {
   auto i256Ty = b.getIntegerType(256);
   Location loc = locArg ? *locArg : defLoc;
@@ -258,7 +258,7 @@ FlatSymbolRefAttr eravm::BuilderHelper::getOrInsertSha3(ModuleOp mod) {
 }
 
 LLVM::AddressOfOp
-eravm::BuilderHelper::getCallDataSizeAddr(ModuleOp mod,
+eravm::BuilderHelper::genCallDataSizeAddr(ModuleOp mod,
                                           std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderHelper h(b, loc);
@@ -269,7 +269,7 @@ eravm::BuilderHelper::getCallDataSizeAddr(ModuleOp mod,
 }
 
 LLVM::AddressOfOp
-eravm::BuilderHelper::getCallDataPtrAddr(ModuleOp mod,
+eravm::BuilderHelper::genCallDataPtrAddr(ModuleOp mod,
                                          std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderHelper h(b, loc);
@@ -280,12 +280,12 @@ eravm::BuilderHelper::getCallDataPtrAddr(ModuleOp mod,
 }
 
 LLVM::LoadOp
-eravm::BuilderHelper::loadCallDataPtr(ModuleOp mod,
-                                      std::optional<Location> locArg) {
+eravm::BuilderHelper::genCallDataPtrLoad(ModuleOp mod,
+                                         std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderHelper h(b, loc);
 
-  LLVM::AddressOfOp callDataPtrAddr = getCallDataPtrAddr(mod, loc);
+  LLVM::AddressOfOp callDataPtrAddr = genCallDataPtrAddr(mod, loc);
   return b.create<LLVM::LoadOp>(loc, callDataPtrAddr,
                                 eravm::getAlignment(callDataPtrAddr));
 }

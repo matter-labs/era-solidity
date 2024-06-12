@@ -179,7 +179,7 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
     if (inRuntimeContext(op)) {
       // Generate the `GlobCallDataPtr` + `offset` load
       LLVM::LoadOp callDataPtr =
-          eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
+          eravmHelper.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
       unsigned callDataPtrAddrSpace =
           cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
       auto callDataOffset = rewriter.create<LLVM::GEPOp>(
@@ -212,7 +212,7 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
 
     if (inRuntimeContext(op)) {
       eravm::BuilderHelper eravmHelper(rewriter, loc);
-      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
       rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
           op, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     } else {
@@ -239,7 +239,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
       srcOffset = op.getInp1();
     } else {
       eravm::BuilderHelper eravmHelper(rewriter, loc);
-      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
       srcOffset = rewriter.create<LLVM::LoadOp>(
           loc, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
     }
@@ -249,7 +249,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
 
     // Generate the source pointer.
     LLVM::LoadOp callDataPtr =
-        eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
+        eravmHelper.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
@@ -347,7 +347,7 @@ struct CodeSizeOpLowering : public OpRewritePattern<sol::CodeSizeOp> {
       llvm_unreachable("NYI");
     } else {
       eravm::BuilderHelper eravmHelper(r, loc);
-      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+      LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
       r.replaceOpWithNewOp<LLVM::LoadOp>(op, callDataSizeAddr,
                                          eravm::getAlignment(callDataSizeAddr));
     }
@@ -374,7 +374,7 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
 
     // Generate the source pointer
     LLVM::LoadOp callDataPtr =
-        eravmHelper.loadCallDataPtr(op->getParentOfType<ModuleOp>());
+        eravmHelper.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
@@ -1293,17 +1293,17 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     rewriter.setInsertionPointToStart(entryBlk);
 
     // Initialize globals.
-    eravmHelper.initGlobs(mod);
+    eravmHelper.genGlobalVarsInit(mod);
 
     // Store the calldata ABI arg to the global calldata ptr.
-    LLVM::AddressOfOp callDataPtrAddr = eravmHelper.getCallDataPtrAddr(mod);
+    LLVM::AddressOfOp callDataPtrAddr = eravmHelper.genCallDataPtrAddr(mod);
     rewriter.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
 
     // Store the calldata ABI size to the global calldata size.
-    Value abiLen = eravmHelper.getABILen(callDataPtrAddr);
-    LLVM::AddressOfOp callDataSizeAddr = eravmHelper.getCallDataSizeAddr(mod);
+    Value abiLen = eravmHelper.genABILen(callDataPtrAddr);
+    LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
     rewriter.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
                                    eravm::getAlignment(callDataSizeAddr));
 
