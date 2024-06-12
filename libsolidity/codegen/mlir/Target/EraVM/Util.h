@@ -147,7 +147,7 @@ public:
 
   /// Generates the tuple decoder as per ABI and populates the results.
   void genABITupleDecoding(mlir::TypeRange tys, mlir::Value headStart,
-                           std::vector<mlir::Value> &results,
+                           std::vector<mlir::Value> &results, bool fromMem,
                            std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Returns an existing or a new (if not found) creation function.

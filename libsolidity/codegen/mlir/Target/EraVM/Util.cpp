@@ -183,7 +183,7 @@ Value eravm::BuilderHelper::genABITupleEncoding(
 }
 
 void eravm::BuilderHelper::genABITupleDecoding(
-    TypeRange tys, Value headStart, std::vector<Value> &results,
+    TypeRange tys, Value headStart, std::vector<Value> &results, bool fromMem,
     std::optional<mlir::Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderHelper h(b, loc);
@@ -200,7 +200,12 @@ void eravm::BuilderHelper::genABITupleDecoding(
     Value offset = h.genI256Const(headPos);
 
     auto headStartPlusOffset = b.create<arith::AddIOp>(loc, headStart, offset);
-    results.push_back(b.create<sol::CallDataLoadOp>(loc, headStartPlusOffset));
+    if (fromMem)
+      results.push_back(b.create<sol::MLoadOp>(loc, headStartPlusOffset));
+    else
+      results.push_back(
+          b.create<sol::CallDataLoadOp>(loc, headStartPlusOffset));
+
     // TODO: Generate "Validator".
 
     headPos += getCallDataHeadSize(ty);

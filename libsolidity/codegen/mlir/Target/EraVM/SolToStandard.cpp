@@ -1459,8 +1459,6 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       r.create<sol::RevertOp>(loc, h.genI256Const(0), h.genI256Const(0));
     };
 
-    assert(!ctor && "NYI: Ctors");
-
     if (!ctor /* TODO: || !op.ctor.isPayable() */) {
       genCallValChk();
     }
@@ -1470,7 +1468,12 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       auto progSize = r.create<sol::DataSizeOp>(loc, creationObj.getName());
       auto codeSize = r.create<sol::CodeSizeOp>(loc);
       auto argSize = r.create<arith::SubIOp>(loc, codeSize, progSize);
-      // TODO: Ctor
+      Value memPtr = eravmHelper.genMemAlloc(argSize);
+      r.create<sol::CodeCopyOp>(loc, memPtr, progSize, argSize);
+      std::vector<Value> decodedArgs;
+      eravmHelper.genABITupleDecoding(ctor.getFunctionType().getInputs(),
+                                      memPtr, decodedArgs, /*fromMem=*/true);
+      r.create<sol::CallOp>(loc, ctor, decodedArgs);
     }
 
     // Generate the codecopy of the runtime object to the free ptr.
@@ -1484,8 +1487,6 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
     // Generate the return for the creation context.
     r.create<sol::BuiltinRetOp>(loc, freePtr, runtimeObjOffset);
-
-    // TODO: Ctor
 
     //
     // Runtime context
@@ -1579,8 +1580,8 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
         // Decode the input parameters.
         std::vector<Value> params;
         eravmHelper.genABITupleDecoding(func.getFunctionType().getInputs(),
-                                        /*headStart*/ h.genI256Const(4),
-                                        params);
+                                        /*headStart=*/h.genI256Const(4), params,
+                                        /*fromMem=*/false);
 
         // Generate the actual call.
         auto callOp = r.create<sol::CallOp>(loc, func, params);
