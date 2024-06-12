@@ -297,8 +297,45 @@ eravm::BuilderHelper::genCallDataPtrLoad(ModuleOp mod,
                                 eravm::getAlignment(callDataPtrAddr));
 }
 
+Value eravm::BuilderHelper::genMemAlloc(Value size,
+                                        std::optional<Location> locArg) {
+  // TODO: Move this to the evm namespace.
+
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+
+  Value freePtr = b.create<sol::MLoadOp>(loc, h.genI256Const(64));
+
+  // FIXME: Shouldn't we check for overflow in the freePtr + size operation
+  // and generate PanicCode::ResourceError?
+  Value newFreePtr = b.create<arith::AddIOp>(loc, freePtr, size);
+
+  // Generate the PanicCode::ResourceError check.
+  auto newPtrGtMax =
+      b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, newFreePtr,
+                              h.genI256Const("0xffffffffffffffff"));
+  auto newPtrLtOrig = b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                              newFreePtr, freePtr);
+  auto panicCond = b.create<arith::OrIOp>(loc, newPtrGtMax, newPtrLtOrig);
+  genPanic(solidity::util::PanicCode::ResourceError, panicCond);
+
+  b.create<sol::MStoreOp>(loc, h.genI256Const(64), newFreePtr);
+
+  return freePtr;
+}
+
+Value eravm::BuilderHelper::genMemAlloc(AllocSize size,
+                                        std::optional<Location> locArg) {
+  assert(size % 32 == 0);
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+  return genMemAlloc(h.genI256Const(size), loc);
+}
+
 void eravm::BuilderHelper::genPanic(solidity::util::PanicCode code, Value cond,
                                     std::optional<Location> locArg) {
+  // TODO: Move this to the evm namespace.
+
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderHelper h(b, loc);
 

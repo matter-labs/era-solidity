@@ -45,6 +45,8 @@
 
 namespace eravm {
 
+using AllocSize = int64_t;
+
 //
 // FIXME: Is it possible to define enum classes whose members can implicitly
 // cast to unsigned? AddrSpace, {Byte, Bit}Len enums are mostly used as unsigned
@@ -194,6 +196,12 @@ public:
   /// Generates the panic code.
   void genPanic(solidity::util::PanicCode code, mlir::Value cond,
                 std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates the memory allocation code.
+  mlir::Value genMemAlloc(mlir::Value size,
+                          std::optional<mlir::Location> locArg = std::nullopt);
+  mlir::Value genMemAlloc(AllocSize size,
+                          std::optional<mlir::Location> locArg = std::nullopt);
 };
 
 } // namespace eravm

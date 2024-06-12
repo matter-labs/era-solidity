@@ -617,46 +617,16 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     return 32;
   }
 
-  /// Generates the memory allocation code.
-  Value genMemAlloc(Value size, PatternRewriter &r, Location loc) const {
-    solidity::mlirgen::BuilderHelper h(r, loc);
-    eravm::BuilderHelper eravmHelper(r, loc);
-
-    Value freePtr = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
-
-    // FIXME: Shouldn't we check for overflow in the freePtr + size operation
-    // and generate PanicCode::ResourceError?
-    Value newFreePtr = r.create<arith::AddIOp>(loc, freePtr, size);
-
-    // Generate the PanicCode::ResourceError check.
-    auto newPtrGtMax =
-        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, newFreePtr,
-                                h.genI256Const("0xffffffffffffffff"));
-    auto newPtrLtOrig = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
-                                                newFreePtr, freePtr);
-    auto panicCond = r.create<arith::OrIOp>(loc, newPtrGtMax, newPtrLtOrig);
-    eravmHelper.genPanic(solidity::util::PanicCode::ResourceError, panicCond);
-
-    r.create<sol::MStoreOp>(loc, h.genI256Const(64), newFreePtr);
-
-    return freePtr;
-  }
-
-  Value genMemAlloc(AllocSize size, PatternRewriter &r, Location loc) const {
-    assert(size % 32 == 0);
-    solidity::mlirgen::BuilderHelper h(r, loc);
-    return genMemAlloc(h.genI256Const(size), r, loc);
-  }
-
   /// Generates the memory allocation code for dynamic array.
   Value genMemAllocForDynArray(Value sizeVar, Value sizeInBytes,
                                PatternRewriter &r, Location loc) const {
     solidity::mlirgen::BuilderHelper h(r, loc);
+    eravm::BuilderHelper eravmHelper(r, loc);
 
     // dynSize is size + length-slot where length-slot's size is 32 bytes.
     auto dynSizeInBytes =
         r.create<arith::AddIOp>(loc, sizeInBytes, h.genI256Const(32));
-    auto memPtr = genMemAlloc(dynSizeInBytes, r, loc);
+    auto memPtr = eravmHelper.genMemAlloc(dynSizeInBytes, loc);
     r.create<sol::MStoreOp>(loc, memPtr, sizeVar);
     return memPtr;
   }
@@ -668,6 +638,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
     Value memPtr;
     solidity::mlirgen::BuilderHelper h(r, loc);
+    eravm::BuilderHelper eravmHelper(r, loc);
 
     // Array type.
     if (auto arrayTy = dyn_cast<sol::ArrayType>(ty)) {
@@ -688,7 +659,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         }
       } else {
         sizeInBytes = h.genI256Const(getSize(ty));
-        memPtr = genMemAlloc(sizeInBytes, r, loc);
+        memPtr = eravmHelper.genMemAlloc(sizeInBytes, loc);
         dataPtr = memPtr;
       }
       assert(sizeInBytes && dataPtr && memPtr);
@@ -759,7 +730,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       // Struct type.
     } else if (auto structTy = dyn_cast<sol::StructType>(ty)) {
-      memPtr = genMemAlloc(getSize(ty), r, loc);
+      memPtr = eravmHelper.genMemAlloc(getSize(ty), loc);
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
 
       for (auto memTy : structTy.getMemTypes()) {
