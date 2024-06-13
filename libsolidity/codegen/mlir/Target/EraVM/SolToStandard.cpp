@@ -1017,10 +1017,13 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
     case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MStoreOp>(op, addrAtIdx, op.getVal());
       return success();
+    case sol::DataLocation::Storage:
+      r.replaceOpWithNewOp<sol::SStoreOp>(op, addrAtIdx, op.getVal());
+      return success();
     default:
       break;
     };
-    llvm_unreachable("NYI: Storage and calldata data-locations");
+    llvm_unreachable("NYI: Calldata data-location");
   }
 };
 

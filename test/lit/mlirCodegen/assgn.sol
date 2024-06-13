@@ -2,7 +2,7 @@
 
 contract C {
   uint m;
-  function f(uint a) public {
+  function f(uint a) private {
     m = a;
   }
 }
@@ -20,7 +20,7 @@ contract C {
 // CHECK-NEXT:       sol.store %2, %1 : i256, !sol.ptr<i256, Storage> loc(#loc6)
 // CHECK-NEXT:       sol.return loc(#loc3)
 // CHECK-NEXT:     } loc(#loc3)
-// CHECK-NEXT:   } {interface_fns = [{selector = "b3de648b", sym = @f_12, type = (i256) -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)
