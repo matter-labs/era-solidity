@@ -137,6 +137,7 @@ private:
   /// Returns the mlir expression in the l-value context.
   mlir::Value genLValExpr(Expression const *expr);
 
+  bool visit(ExpressionStatement const &) override;
   bool visit(Return const &) override;
   void run(FunctionDefinition const &);
 };
@@ -385,6 +386,16 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
     return genLValExpr(idxAcc);
   }
 
+  if (auto *asgnStmt = dynamic_cast<Assignment const *>(expr)) {
+    auto *lhsId = dynamic_cast<Identifier const *>(&asgnStmt->leftHandSide());
+    assert(lhsId && "NYI");
+    mlir::Value lhs = getMemRef(lhsId);
+    mlir::Value rhs =
+        genRValExpr(&asgnStmt->rightHandSide(), lhsId->annotation().type);
+    b.create<mlir::sol::StoreOp>(getLoc(asgnStmt->location()), rhs, lhs);
+    return {};
+  }
+
   return genRValExpr(expr);
 }
 
@@ -429,6 +440,11 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
   }
 
   return val;
+}
+
+bool SolidityToMLIRPass::visit(ExpressionStatement const &exprStmt) {
+  genLValExpr(&exprStmt.expression());
+  return true;
 }
 
 bool SolidityToMLIRPass::visit(Return const &ret) {
