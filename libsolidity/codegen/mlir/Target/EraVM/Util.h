@@ -87,7 +87,7 @@ enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
 
 static const char *GlobHeapMemPtr = "memory_pointer";
 static const char *GlobCallDataSize = "calldatasize";
-static const char *GlobRetDataSz = "returndatasize";
+static const char *GlobRetDataSize = "returndatasize";
 static const char *GlobCallFlags = "call_flags";
 static const char *GlobExtraABIData = "extra_abi_data";
 static const char *GlobCallDataPtr = "ptr_calldata";

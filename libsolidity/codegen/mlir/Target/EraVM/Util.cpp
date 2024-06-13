@@ -96,7 +96,7 @@ void eravm::BuilderHelper::genGlobalVarsInit(ModuleOp mod,
   // Initialize the following global ints
   initInt(GlobHeapMemPtr);
   initInt(GlobCallDataSize);
-  initInt(GlobRetDataSz);
+  initInt(GlobRetDataSize);
   initInt(GlobCallFlags);
 
   // Initialize the GlobExtraABIData int array
