@@ -51,7 +51,6 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
   // - IRGenerationContext::reservedMemory
   let arguments = (ins SymbolNameAttr:$sym_name, Sol_ContractKindAttr:$kind,
                    ArrayAttr:$interface_fns,
-                   OptionalAttr<FlatSymbolRefAttr>:$ctor,
                    OptionalAttr<FlatSymbolRefAttr>:$fallbackFn,
                    OptionalAttr<FlatSymbolRefAttr>:$receiveFn);
   let regions = (region SizedRegion<1>:$bodyRegion);

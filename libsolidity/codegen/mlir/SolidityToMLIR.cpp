@@ -541,13 +541,12 @@ static mlir::sol::ContractKind getContractKind(ContractDefinition const &cont) {
 void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   // TODO: Set using ContractDefinition::receiveFunction and
   // ContractDefinition::fallbackFunction.
-  mlir::FlatSymbolRefAttr ctor, fallbackFn, receiveFn;
+  mlir::FlatSymbolRefAttr fallbackFn, receiveFn;
 
   // Create the contract op.
   auto op = b.create<mlir::sol::ContractOp>(
       getLoc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
-      getContractKind(cont), getInterfaceFnsAttr(cont), ctor, fallbackFn,
-      receiveFn);
+      getContractKind(cont), getInterfaceFnsAttr(cont), fallbackFn, receiveFn);
   b.setInsertionPointToStart(&op.getBodyRegion().emplaceBlock());
 
   for (VariableDeclaration const *stateVar : cont.stateVariables()) {
