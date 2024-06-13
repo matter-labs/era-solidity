@@ -73,10 +73,8 @@ private:
   FunctionDefinition const *currFunc;
 
   // TODO: Use VariableDeclaration instead?
-  // FIXME: Alignments are hardcoded.
-  // FIXME: Should we specify alignment for the memory operations at this stage?
-  /// Maps variables to its MemRef
-  std::map<Declaration const *, mlir::Value> memRefMap;
+  /// Maps local variables to its address in stack.
+  std::map<Declaration const *, mlir::Value> stkAddrMap;
 
   /// Returns the mlir location for the solidity source location `loc`
   mlir::Location getLoc(SourceLocation const &loc) {
@@ -89,15 +87,9 @@ private:
   /// Returns the corresponding mlir type for the solidity type `ty`.
   mlir::Type getType(Type const *ty);
 
-  /// Returns the memory reference of the variable.
-  mlir::Value getMemRef(Declaration const *decl);
-  mlir::Value getMemRef(Identifier const *ident) {
-    return getMemRef(ident->annotation().referencedDeclaration);
-  }
-
-  /// Sets the memory reference of the variable.
-  void setMemRef(Declaration const *decl, mlir::Value addr) {
-    memRefMap[decl] = addr;
+  /// Tracks the stack address of the variable.
+  void trackStkAddr(Declaration const *decl, mlir::Value addr) {
+    stkAddrMap[decl] = addr;
   }
 
   /// Returns the mangled name of the declaration composed of its name and its
@@ -116,6 +108,9 @@ private:
 
   /// Returns the mlir expression for the literal.
   mlir::Value genExpr(Literal const *lit);
+
+  /// Returns the mlir expression for the identifier.
+  mlir::Value genLValExpr(Identifier const *ident);
 
   /// Returns the mlir expression for the binary operation.
   mlir::Value genExpr(BinaryOperation const *binOp);
@@ -210,7 +205,8 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
   llvm_unreachable("NYI: Unknown type");
 }
 
-mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
+mlir::Value SolidityToMLIRPass::genLValExpr(Identifier const *id) {
+  Declaration const *decl = id->annotation().referencedDeclaration;
   if (auto *var = dynamic_cast<VariableDeclaration const *>(decl)) {
     if (var->isStateVariable()) {
       auto currContr =
@@ -232,8 +228,8 @@ mlir::Value SolidityToMLIRPass::getMemRef(Declaration const *decl) {
     }
   }
 
-  auto it = memRefMap.find(decl);
-  if (it == memRefMap.end())
+  auto it = stkAddrMap.find(decl);
+  if (it == stkAddrMap.end())
     return {};
   return it->second;
 }
@@ -377,7 +373,7 @@ mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
 mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
   // Generate variable access.
   if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
-    auto addr = getMemRef(ident);
+    auto addr = genLValExpr(ident);
     assert(addr);
     return addr;
   }
@@ -389,7 +385,7 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
   if (auto *asgnStmt = dynamic_cast<Assignment const *>(expr)) {
     auto *lhsId = dynamic_cast<Identifier const *>(&asgnStmt->leftHandSide());
     assert(lhsId && "NYI");
-    mlir::Value lhs = getMemRef(lhsId);
+    mlir::Value lhs = genLValExpr(lhsId);
     mlir::Value rhs =
         genRValExpr(&asgnStmt->rightHandSide(), lhsId->annotation().type);
     b.create<mlir::sol::StoreOp>(getLoc(asgnStmt->location()), rhs, lhs);
@@ -415,7 +411,7 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
 
   // Generate variable access.
   else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
-    auto addr = getMemRef(ident);
+    auto addr = genLValExpr(ident);
     assert(addr);
 
     // Don't load non pointer ref types.
@@ -517,7 +513,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
     auto addr = b.create<mlir::sol::AllocaOp>(
         inpLoc, mlir::sol::PointerType::get(b.getContext(), inpTy,
                                             mlir::sol::DataLocation::Stack));
-    setMemRef(param.get(), addr);
+    trackStkAddr(param.get(), addr);
     b.create<mlir::sol::StoreOp>(inpLoc, arg, addr);
   }
 
