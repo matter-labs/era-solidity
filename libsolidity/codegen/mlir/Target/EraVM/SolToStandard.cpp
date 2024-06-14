@@ -1856,10 +1856,11 @@ struct ConvertSolToStandard
     pats.add<ContractOpLowering>(tyConv, &getContext());
     pats.add<ObjectOpLowering, BuiltinRetOpLowering, RevertOpLowering,
              MLoadOpLowering, MStoreOpLowering, MCopyOpLowering,
-             DataOffsetOpLowering, DataSizeOpLowering, CodeCopyOpLowering,
-             MemGuardOpLowering, CallValOpLowering, CallDataLoadOpLowering,
-             CallDataSizeOpLowering, CallDataCopyOpLowering, SLoadOpLowering,
-             SStoreOpLowering, Keccak256OpLowering>(&getContext());
+             DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
+             CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
+             CallDataLoadOpLowering, CallDataSizeOpLowering,
+             CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
+             Keccak256OpLowering>(&getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();

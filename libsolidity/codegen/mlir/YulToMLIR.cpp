@@ -327,6 +327,9 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       return b.create<mlir::sol::DataSizeOp>(
           loc, mlir::FlatSymbolRefAttr::get(objectOp));
     }
+    if (builtin->name.str() == "codesize") {
+      return b.create<mlir::sol::CodeSizeOp>(loc);
+    }
     if (builtin->name.str() == "codecopy") {
       mlir::Value dst = genDefTyExpr(call.arguments[0]);
       mlir::Value offset = genDefTyExpr(call.arguments[1]);
