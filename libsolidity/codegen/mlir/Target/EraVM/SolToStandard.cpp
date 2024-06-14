@@ -343,7 +343,7 @@ struct CodeSizeOpLowering : public OpRewritePattern<sol::CodeSizeOp> {
       llvm_unreachable("NYI");
     } else {
       eravm::BuilderHelper eravmHelper(r, loc);
-      r.replaceOp(op, eravmHelper.genCallDataSizeAddr(mod));
+      r.replaceOp(op, eravmHelper.genCallDataSizeLoad(mod));
     }
     return success();
   }
