@@ -1417,9 +1417,10 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       if (func.getCtor()) {
         assert(!ctor);
         ctor = func;
+        ctor->moveBefore(creationObj.getBody(), creationObj.getBody()->begin());
         continue;
       }
-      // Duplicate the func in both the creation and runtime objects.
+      // Duplicate non-ctor func in both the creation and runtime objects.
       r.clone(*func);
       func->moveBefore(runtimeObj.getBody(), runtimeObj.getBody()->begin());
       func.setRuntimeAttr(r.getUnitAttr());
