@@ -224,21 +224,21 @@ contract C {
 // ASM-EMPTY:
 // ASM-NEXT: 	.globl	__entry
 // ASM-NEXT: __entry:
-// ASM-NEXT: 	add	stack[0], r0, r13
+// ASM-NEXT: 	add	stack[@ptr_calldata + r0], r0, r13
 // ASM-NEXT: 	shr.s	96, r13, r13
 // ASM-NEXT: 	and	@CPI3_0[0], r13, r14
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_return_data]
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active]
 // ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data]
-// ASM-NEXT: 	add	r4, r0, stack[@extra_abi_data+1]
-// ASM-NEXT: 	add	r5, r0, stack[@extra_abi_data+2]
-// ASM-NEXT: 	add	r6, r0, stack[@extra_abi_data+3]
-// ASM-NEXT: 	add	r7, r0, stack[@extra_abi_data+4]
-// ASM-NEXT: 	add	r8, r0, stack[@extra_abi_data+5]
-// ASM-NEXT: 	add	r9, r0, stack[@extra_abi_data+6]
-// ASM-NEXT: 	add	r10, r0, stack[@extra_abi_data+7]
-// ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data+8]
-// ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data+9]
+// ASM-NEXT: 	add	r4, r0, stack[@extra_abi_data + 1]
+// ASM-NEXT: 	add	r5, r0, stack[@extra_abi_data + 2]
+// ASM-NEXT: 	add	r6, r0, stack[@extra_abi_data + 3]
+// ASM-NEXT: 	add	r7, r0, stack[@extra_abi_data + 4]
+// ASM-NEXT: 	add	r8, r0, stack[@extra_abi_data + 5]
+// ASM-NEXT: 	add	r9, r0, stack[@extra_abi_data + 6]
+// ASM-NEXT: 	add	r10, r0, stack[@extra_abi_data + 7]
+// ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data + 8]
+// ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data + 9]
 // ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
 // ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
 // ASM-NEXT: 	add	r2, r0, stack[@call_flags]
