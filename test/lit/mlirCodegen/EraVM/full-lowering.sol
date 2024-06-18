@@ -212,27 +212,25 @@ contract C {
 // CHECK-NEXT:   store i256 %2, ptr addrspace(1) %13, align 1
 // CHECK-NEXT:   %14 = add i256 %2, 31
 // CHECK-NEXT:   %15 = and i256 %14, 4294967264
-// CHECK-NEXT:   %16 = trunc i256 %15 to i64
-// CHECK-NEXT:   br label %17
+// CHECK-NEXT:   br label %16
 // CHECK-EMPTY:
-// CHECK-NEXT: 17:                                               ; preds = %20, %12
-// CHECK-NEXT:   %18 = phi i64 [ 0, %12 ], [ %28, %20 ]
-// CHECK-NEXT:   %19 = icmp slt i64 %18, %16
-// CHECK-NEXT:   br i1 %19, label %20, label %29
+// CHECK-NEXT: 16:                                               ; preds = %19, %12
+// CHECK-NEXT:   %17 = phi i256 [ 0, %12 ], [ %26, %19 ]
+// CHECK-NEXT:   %18 = icmp slt i256 %17, %15
+// CHECK-NEXT:   br i1 %18, label %19, label %27
 // CHECK-EMPTY:
-// CHECK-NEXT: 20:                                               ; preds = %17
-// CHECK-NEXT:   %21 = zext i64 %18 to i256
-// CHECK-NEXT:   %22 = add i256 %1, %21
-// CHECK-NEXT:   %23 = inttoptr i256 %22 to ptr addrspace(5)
-// CHECK-NEXT:   %24 = load i256, ptr addrspace(5) %23, align 1
-// CHECK-NEXT:   %25 = mul i256 %21, 32
-// CHECK-NEXT:   %26 = add i256 %6, %25
-// CHECK-NEXT:   %27 = inttoptr i256 %26 to ptr addrspace(1)
-// CHECK-NEXT:   store i256 %24, ptr addrspace(1) %27, align 1
-// CHECK-NEXT:   %28 = add i64 %18, 1
-// CHECK-NEXT:   br label %17
+// CHECK-NEXT: 19:                                               ; preds = %16
+// CHECK-NEXT:   %20 = add i256 %1, %17
+// CHECK-NEXT:   %21 = inttoptr i256 %20 to ptr addrspace(5)
+// CHECK-NEXT:   %22 = load i256, ptr addrspace(5) %21, align 1
+// CHECK-NEXT:   %23 = mul i256 %17, 32
+// CHECK-NEXT:   %24 = add i256 %6, %23
+// CHECK-NEXT:   %25 = inttoptr i256 %24 to ptr addrspace(1)
+// CHECK-NEXT:   store i256 %22, ptr addrspace(1) %25, align 1
+// CHECK-NEXT:   %26 = add i256 %17, 1
+// CHECK-NEXT:   br label %16
 // CHECK-EMPTY:
-// CHECK-NEXT: 29:                                               ; preds = %17
+// CHECK-NEXT: 27:                                               ; preds = %16
 // CHECK-NEXT:   ret i256 %6
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -271,27 +269,25 @@ contract C {
 // CHECK-NEXT:   store i256 %2, ptr addrspace(1) %13, align 1
 // CHECK-NEXT:   %14 = add i256 %2, 31
 // CHECK-NEXT:   %15 = and i256 %14, 4294967264
-// CHECK-NEXT:   %16 = trunc i256 %15 to i64
-// CHECK-NEXT:   br label %17
+// CHECK-NEXT:   br label %16
 // CHECK-EMPTY:
-// CHECK-NEXT: 17:                                               ; preds = %20, %12
-// CHECK-NEXT:   %18 = phi i64 [ 0, %12 ], [ %28, %20 ]
-// CHECK-NEXT:   %19 = icmp slt i64 %18, %16
-// CHECK-NEXT:   br i1 %19, label %20, label %29
+// CHECK-NEXT: 16:                                               ; preds = %19, %12
+// CHECK-NEXT:   %17 = phi i256 [ 0, %12 ], [ %26, %19 ]
+// CHECK-NEXT:   %18 = icmp slt i256 %17, %15
+// CHECK-NEXT:   br i1 %18, label %19, label %27
 // CHECK-EMPTY:
-// CHECK-NEXT: 20:                                               ; preds = %17
-// CHECK-NEXT:   %21 = zext i64 %18 to i256
-// CHECK-NEXT:   %22 = add i256 %1, %21
-// CHECK-NEXT:   %23 = inttoptr i256 %22 to ptr addrspace(5)
-// CHECK-NEXT:   %24 = load i256, ptr addrspace(5) %23, align 1
-// CHECK-NEXT:   %25 = mul i256 %21, 32
-// CHECK-NEXT:   %26 = add i256 %6, %25
-// CHECK-NEXT:   %27 = inttoptr i256 %26 to ptr addrspace(1)
-// CHECK-NEXT:   store i256 %24, ptr addrspace(1) %27, align 1
-// CHECK-NEXT:   %28 = add i64 %18, 1
-// CHECK-NEXT:   br label %17
+// CHECK-NEXT: 19:                                               ; preds = %16
+// CHECK-NEXT:   %20 = add i256 %1, %17
+// CHECK-NEXT:   %21 = inttoptr i256 %20 to ptr addrspace(5)
+// CHECK-NEXT:   %22 = load i256, ptr addrspace(5) %21, align 1
+// CHECK-NEXT:   %23 = mul i256 %17, 32
+// CHECK-NEXT:   %24 = add i256 %6, %23
+// CHECK-NEXT:   %25 = inttoptr i256 %24 to ptr addrspace(1)
+// CHECK-NEXT:   store i256 %22, ptr addrspace(1) %25, align 1
+// CHECK-NEXT:   %26 = add i256 %17, 1
+// CHECK-NEXT:   br label %16
 // CHECK-EMPTY:
-// CHECK-NEXT: 29:                                               ; preds = %17
+// CHECK-NEXT: 27:                                               ; preds = %16
 // CHECK-NEXT:   ret i256 %6
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -489,14 +485,14 @@ contract C {
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__sha3, @DEFAULT_UNWIND
-// ASM-NEXT: 	add	r1, r0, r7
+// ASM-NEXT: 	add	r1, r0, r5
 // ASM-NEXT: 	sload	r0, r3
 // ASM-NEXT: 	add	31, r3, r1
-// ASM-NEXT: 	and	@CPI5_0[0], r1, r9
-// ASM-NEXT: 	ld.1	64, r8
-// ASM-NEXT: 	add	r9, r8, r1
+// ASM-NEXT: 	and	@CPI5_0[0], r1, r7
+// ASM-NEXT: 	ld.1	64, r6
+// ASM-NEXT: 	add	r7, r6, r1
 // ASM-NEXT: 	add	32, r1, r4
-// ASM-NEXT: 	sub!	r4, r8, r1
+// ASM-NEXT: 	sub!	r4, r6, r1
 // ASM-NEXT: 	add	0, r0, r1
 // ASM-NEXT: 	add.lt	1, r0, r1
 // ASM-NEXT: 	sub.s!	@CPI5_1[0], r4, r2
@@ -512,54 +508,42 @@ contract C {
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r3, r0, stack-[2]
 // ASM-NEXT: 	add	r0, r0, r3
-// ASM-NEXT: 	add	r7, r0, stack-[5]
-// ASM-NEXT: 	add	r8, r0, stack-[4]
-// ASM-NEXT: 	add	r9, r0, stack-[3]
+// ASM-NEXT: 	add	r5, r0, stack-[5]
+// ASM-NEXT: 	add	r6, r0, stack-[4]
+// ASM-NEXT: 	add	r7, r0, stack-[3]
 // ASM-NEXT: 	add	r4, r0, stack-[1]
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
 // ASM-NEXT: 	add	stack-[1], r0, r4
 // ASM-NEXT: 	add	stack-[2], r0, r3
-// ASM-NEXT: 	add	stack-[3], r0, r9
-// ASM-NEXT: 	add	stack-[4], r0, r8
-// ASM-NEXT: 	add	stack-[5], r0, r7
+// ASM-NEXT: 	add	stack-[3], r0, r7
+// ASM-NEXT: 	add	stack-[4], r0, r6
+// ASM-NEXT: 	add	stack-[5], r0, r5
 // ASM-NEXT: .BB5_3:
 // ASM-NEXT: 	st.1	64, r4
-// ASM-NEXT: 	st.1	r8, r3
-// ASM-NEXT: 	sub.s	1, r0, r1
-// ASM-NEXT: 	add	r0, r0, r3
+// ASM-NEXT: 	st.1	r6, r3
+// ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: .BB5_4:
-// ASM-NEXT: 	shl.s	192, r3, r4
-// ASM-NEXT: 	and	@CPI5_3[0], r4, r5
-// ASM-NEXT: 	sub.s!	@CPI5_3[0], r5, r5
-// ASM-NEXT: 	add	r0, r0, r5
-// ASM-NEXT: 	add.eq	r1, r0, r5
-// ASM-NEXT: 	shl.s	64, r5, r5
-// ASM-NEXT: 	and	@CPI5_1[0], r3, r6
-// ASM-NEXT: 	or	r6, r5, r5
-// ASM-NEXT: 	sub!	192, r0, r6
-// ASM-NEXT: 	add.ne	r5, r0, r4
-// ASM-NEXT: 	sub!	r4, r9, r5
-// ASM-NEXT: 	add	r0, r0, r5
-// ASM-NEXT: 	add.ge	@CPI5_3[0], r0, r5
-// ASM-NEXT: 	and	@CPI5_3[0], r4, r4
-// ASM-NEXT: 	sub!	r4, r0, r6
-// ASM-NEXT: 	add	r0, r0, r6
-// ASM-NEXT: 	add.lt	@CPI5_3[0], r0, r6
-// ASM-NEXT: 	sub.s!	@CPI5_3[0], r4, r4
-// ASM-NEXT: 	add.ne	r5, r0, r6
-// ASM-NEXT: 	sub!	r6, r0, r4
+// ASM-NEXT: 	sub!	r1, r7, r2
+// ASM-NEXT: 	add	r0, r0, r2
+// ASM-NEXT: 	add.ge	@CPI5_3[0], r0, r2
+// ASM-NEXT: 	and	@CPI5_3[0], r1, r3
+// ASM-NEXT: 	sub!	r3, r0, r4
+// ASM-NEXT: 	add	r0, r0, r4
+// ASM-NEXT: 	add.lt	@CPI5_3[0], r0, r4
+// ASM-NEXT: 	sub.s!	@CPI5_3[0], r3, r3
+// ASM-NEXT: 	add.ne	r2, r0, r4
+// ASM-NEXT: 	sub!	r4, r0, r2
 // ASM-NEXT: 	jump.ne	@.BB5_6
-// ASM-NEXT: 	and	@CPI5_1[0], r3, r4
-// ASM-NEXT: 	shl.s	5, r4, r5
-// ASM-NEXT: 	add	r8, r5, r5
-// ASM-NEXT: 	add	r7, r4, r4
-// ASM-NEXT: 	sload	r4, r4
-// ASM-NEXT: 	st.1	r5, r4
-// ASM-NEXT: 	add	1, r3, r3
+// ASM-NEXT: 	shl.s	5, r1, r2
+// ASM-NEXT: 	add	r6, r2, r2
+// ASM-NEXT: 	add	r5, r1, r3
+// ASM-NEXT: 	sload	r3, r3
+// ASM-NEXT: 	st.1	r2, r3
+// ASM-NEXT: 	add	1, r1, r1
 // ASM-NEXT: 	jump	@.BB5_4
 // ASM-NEXT: .BB5_6:
-// ASM-NEXT: 	add	r8, r0, r1
+// ASM-NEXT: 	add	r6, r0, r1
 // ASM-NEXT: 	ret
 // ASM-EMPTY:
 // ASM-NEXT: 	.data
