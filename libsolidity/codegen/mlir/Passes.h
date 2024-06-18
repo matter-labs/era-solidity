@@ -35,10 +35,14 @@ class Pass;
 
 namespace sol {
 
-/// Create a pass to lower sol dialect to standard dialects.
+/// Creates a pass to lower sol dialect to standard dialects.
 std::unique_ptr<Pass> createConvertSolToStandardPass();
 std::unique_ptr<Pass>
 createConvertSolToStandardPass(solidity::mlirgen::Target tgt);
+
+// TODO: Is mlir::sol the right namespace for this?
+/// Creates a pass to convert standard dialects to llvm dialect.
+std::unique_ptr<Pass> createConvertStandardToLLVMPass();
 
 } // namespace sol
 

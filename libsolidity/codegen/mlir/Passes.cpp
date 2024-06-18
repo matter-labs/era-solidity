@@ -17,10 +17,6 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Interface.h"
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
-#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -34,10 +30,10 @@
 void solidity::mlirgen::addConversionPasses(mlir::PassManager &passMgr,
                                             Target tgt) {
   passMgr.addPass(mlir::sol::createConvertSolToStandardPass(tgt));
-  passMgr.addPass(mlir::createConvertFuncToLLVMPass());
-  passMgr.addPass(mlir::createConvertSCFToCFPass());
-  passMgr.addPass(mlir::createConvertControlFlowToLLVMPass());
-  passMgr.addPass(mlir::createArithToLLVMConversionPass());
+
+  // FIXME: Adding individual conversion passes for each dialects causes
+  // unrealized_conversion_cast's with index types.
+  passMgr.addPass(mlir::sol::createConvertStandardToLLVMPass());
 }
 
 std::unique_ptr<llvm::TargetMachine>

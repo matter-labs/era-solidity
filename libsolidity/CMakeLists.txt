@@ -218,9 +218,10 @@ set(mlir_sources
 	codegen/mlir/Util.cpp
 	codegen/mlir/Passes.cpp
 	codegen/mlir/SolidityToMLIR.cpp
+	codegen/mlir/StandardToLLVM.cpp
 	codegen/mlir/YulToMLIR.cpp
 	codegen/mlir/Target/EraVM/Util.cpp
-  codegen/mlir/Target/EraVM/SolToStandard.cpp
+	codegen/mlir/Target/EraVM/SolToStandard.cpp
 )
 
 set(mlir_sol_dialect_sources
