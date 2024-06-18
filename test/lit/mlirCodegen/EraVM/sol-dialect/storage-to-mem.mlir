@@ -219,10 +219,10 @@ module {
 // CHECK-NEXT:     %c4294967264_i256_4 = arith.constant 4294967264 : i256
 // CHECK-NEXT:     %17 = arith.andi %16, %c4294967264_i256_4 : i256
 // CHECK-NEXT:     %c0 = arith.constant 0 : index
-// CHECK-NEXT:     %18 = arith.index_cast %17 : i256 to index
+// CHECK-NEXT:     %18 = arith.index_castui %17 : i256 to index
 // CHECK-NEXT:     %c1 = arith.constant 1 : index
 // CHECK-NEXT:     scf.for %arg0 = %c0 to %18 step %c1 {
-// CHECK-NEXT:       %19 = arith.index_cast %arg0 : index to i256
+// CHECK-NEXT:       %19 = arith.index_castui %arg0 : index to i256
 // CHECK-NEXT:       %20 = arith.addi %2, %19 : i256
 // CHECK-NEXT:       %21 = llvm.inttoptr %20 : i256 to !llvm.ptr<5>
 // CHECK-NEXT:       %22 = llvm.load %21 {alignment = 1 : i64} : !llvm.ptr<5> -> i256
@@ -284,10 +284,10 @@ module {
 // CHECK-NEXT:     %c4294967264_i256_4 = arith.constant 4294967264 : i256
 // CHECK-NEXT:     %17 = arith.andi %16, %c4294967264_i256_4 : i256
 // CHECK-NEXT:     %c0 = arith.constant 0 : index
-// CHECK-NEXT:     %18 = arith.index_cast %17 : i256 to index
+// CHECK-NEXT:     %18 = arith.index_castui %17 : i256 to index
 // CHECK-NEXT:     %c1 = arith.constant 1 : index
 // CHECK-NEXT:     scf.for %arg0 = %c0 to %18 step %c1 {
-// CHECK-NEXT:       %19 = arith.index_cast %arg0 : index to i256
+// CHECK-NEXT:       %19 = arith.index_castui %arg0 : index to i256
 // CHECK-NEXT:       %20 = arith.addi %2, %19 : i256
 // CHECK-NEXT:       %21 = llvm.inttoptr %20 : i256 to !llvm.ptr<5>
 // CHECK-NEXT:       %22 = llvm.load %21 {alignment = 1 : i64} : !llvm.ptr<5> -> i256

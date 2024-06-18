@@ -277,10 +277,10 @@ module {
 // CHECK-NEXT:     %c32_i256_2 = arith.constant 32 : i256
 // CHECK-NEXT:     %10 = arith.addi %3, %c32_i256_2 : i256
 // CHECK-NEXT:     %c0 = arith.constant 0 : index
-// CHECK-NEXT:     %11 = arith.index_cast %0 : i256 to index
+// CHECK-NEXT:     %11 = arith.index_castui %0 : i256 to index
 // CHECK-NEXT:     %c32 = arith.constant 32 : index
 // CHECK-NEXT:     scf.for %arg0 = %c0 to %11 step %c32 {
-// CHECK-NEXT:       %12 = arith.index_cast %arg0 : index to i256
+// CHECK-NEXT:       %12 = arith.index_castui %arg0 : index to i256
 // CHECK-NEXT:       %13 = arith.addi %10, %12 : i256
 // CHECK-NEXT:       %c128_i256 = arith.constant 128 : i256
 // CHECK-NEXT:       %c64_i256_3 = arith.constant 64 : i256

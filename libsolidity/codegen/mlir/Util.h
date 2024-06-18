@@ -106,8 +106,8 @@ public:
   genCastToIdx(mlir::Value val,
                std::optional<mlir::Location> locArg = std::nullopt) {
     assert(val.getType() == b.getIntegerType(256));
-    return b.create<mlir::arith::IndexCastOp>(locArg ? *locArg : defLoc,
-                                              b.getIndexType(), val);
+    return b.create<mlir::arith::IndexCastUIOp>(locArg ? *locArg : defLoc,
+                                                b.getIndexType(), val);
   }
 
   mlir::Value
@@ -115,8 +115,8 @@ public:
                 std::optional<mlir::Location> locArg = std::nullopt) {
     // TODO: Support other source types.
     assert(val.getType() == b.getIndexType());
-    return b.create<mlir::arith::IndexCastOp>(locArg ? *locArg : defLoc,
-                                              b.getIntegerType(256), val);
+    return b.create<mlir::arith::IndexCastUIOp>(locArg ? *locArg : defLoc,
+                                                b.getIntegerType(256), val);
   }
 
   mlir::Value genIdxConst(int64_t val,
