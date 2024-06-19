@@ -76,9 +76,8 @@ contract C {
 // CHECK-NEXT:       %5 = llvm.load %4 {alignment = 32 : i64} : !llvm.ptr<ptr<3>> loc(#loc1)
 // CHECK-NEXT:       %6 = llvm.getelementptr %5[%c0_i256_2] : (!llvm.ptr<3>, i256) -> !llvm.ptr<3>, i8 loc(#loc1)
 // CHECK-NEXT:       %7 = llvm.load %6 {alignment = 1 : i64} : !llvm.ptr<3> -> i256 loc(#loc1)
-// CHECK-NEXT:       "scf.int_switch"(%7) <{cases = dense<[2776958069, 2598106769]> : tensor<2xi256>}> ({
-// CHECK-NEXT:         scf.yield loc(#loc1)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       scf.int_switch %7 : i256
+// CHECK-NEXT:       case 2776958069 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc1)
@@ -105,7 +104,8 @@ contract C {
 // CHECK-NEXT:         func.call @__return(%12, %16, %c0_i256_7) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         scf.yield loc(#loc1)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       }
+// CHECK-NEXT:       case 2598106769 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc1)
@@ -138,7 +138,10 @@ contract C {
 // CHECK-NEXT:         func.call @__return(%17, %21, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         scf.yield loc(#loc1)
-// CHECK-NEXT:       }) : (i256) -> () loc(#loc1)
+// CHECK-NEXT:       }
+// CHECK-NEXT:       default {
+// CHECK-NEXT:         scf.yield loc(#loc1)
+// CHECK-NEXT:       } loc(#loc1)
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc1)

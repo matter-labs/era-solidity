@@ -107,9 +107,8 @@ contract ERC20 {
 // CHECK-NEXT:       %5 = llvm.load %4 {alignment = 32 : i64} : !llvm.ptr<ptr<3>> loc(#loc2)
 // CHECK-NEXT:       %6 = llvm.getelementptr %5[%c0_i256_2] : (!llvm.ptr<3>, i256) -> !llvm.ptr<3>, i8 loc(#loc2)
 // CHECK-NEXT:       %7 = llvm.load %6 {alignment = 1 : i64} : !llvm.ptr<3> -> i256 loc(#loc2)
-// CHECK-NEXT:       "scf.int_switch"(%7) <{cases = dense<[117300739, 2514000705, 826074471, 404098525, 1889567281, 3714247998]> : tensor<6xi256>}> ({
-// CHECK-NEXT:         scf.yield loc(#loc2)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       scf.int_switch %7 : i256
+// CHECK-NEXT:       case 117300739 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc2)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc2)
@@ -157,7 +156,8 @@ contract ERC20 {
 // CHECK-NEXT:         func.call @__return(%12, %29, %c0_i256_10) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         scf.yield loc(#loc2)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       }
+// CHECK-NEXT:       case 2514000705 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc2)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc2)
@@ -205,7 +205,8 @@ contract ERC20 {
 // CHECK-NEXT:         func.call @__return(%12, %29, %c0_i256_10) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         scf.yield loc(#loc2)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       }
+// CHECK-NEXT:       case 826074471 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc2)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc2)
@@ -232,7 +233,8 @@ contract ERC20 {
 // CHECK-NEXT:         func.call @__return(%12, %16, %c0_i256_7) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         scf.yield loc(#loc2)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       }
+// CHECK-NEXT:       case 404098525 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc2)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc2)
@@ -259,7 +261,8 @@ contract ERC20 {
 // CHECK-NEXT:         func.call @__return(%12, %16, %c0_i256_7) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         scf.yield loc(#loc2)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       }
+// CHECK-NEXT:       case 1889567281 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc2)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc2)
@@ -292,7 +295,8 @@ contract ERC20 {
 // CHECK-NEXT:         func.call @__return(%17, %21, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         scf.yield loc(#loc2)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       }
+// CHECK-NEXT:       case 3714247998 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc2)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc2)
@@ -331,7 +335,10 @@ contract ERC20 {
 // CHECK-NEXT:         func.call @__return(%22, %26, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         scf.yield loc(#loc2)
-// CHECK-NEXT:       }) : (i256) -> () loc(#loc2)
+// CHECK-NEXT:       }
+// CHECK-NEXT:       default {
+// CHECK-NEXT:         scf.yield loc(#loc2)
+// CHECK-NEXT:       } loc(#loc2)
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc2)

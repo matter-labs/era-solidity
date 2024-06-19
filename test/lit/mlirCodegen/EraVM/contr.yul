@@ -122,9 +122,8 @@ object "Test" {
 // CHECK-NEXT:       %11 = arith.shrui %10, %c224_i256 : i256 loc(#loc33)
 // CHECK-NEXT:       llvm.store %11, %6 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc28)
 // CHECK-NEXT:       %12 = llvm.load %6 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc34)
-// CHECK-NEXT:       "scf.int_switch"(%12) <{cases = dense<638722032> : tensor<1xi256>}> ({
-// CHECK-NEXT:         scf.yield loc(#loc35)
-// CHECK-NEXT:       }, {
+// CHECK-NEXT:       scf.int_switch %12 : i256
+// CHECK-NEXT:       case 638722032 {
 // CHECK-NEXT:         %13 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc36)
 // CHECK-NEXT:         %c0_i256_4 = arith.constant 0 : i256 loc(#loc36)
 // CHECK-NEXT:         %14 = arith.cmpi ne, %13, %c0_i256_4 : i256 loc(#loc36)
@@ -176,7 +175,10 @@ object "Test" {
 // CHECK-NEXT:         func.call @__return(%30, %33, %c0_i256_11) : (i256, i256, i256) -> () loc(#loc69)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc69)
 // CHECK-NEXT:         scf.yield loc(#loc35)
-// CHECK-NEXT:       }) : (i256) -> () loc(#loc35)
+// CHECK-NEXT:       }
+// CHECK-NEXT:       default {
+// CHECK-NEXT:         scf.yield loc(#loc35)
+// CHECK-NEXT:       } loc(#loc35)
 // CHECK-NEXT:     } loc(#loc27)
 // CHECK-NEXT:     %c0_i256_0 = arith.constant 0 : i256 loc(#loc70)
 // CHECK-NEXT:     %c0_i256_1 = arith.constant 0 : i256 loc(#loc71)
