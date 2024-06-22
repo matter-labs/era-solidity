@@ -133,6 +133,7 @@ private:
   mlir::Value genLValExpr(Expression const *expr);
 
   bool visit(ExpressionStatement const &) override;
+  bool visit(FunctionCall const &) override;
   bool visit(Return const &) override;
   void run(FunctionDefinition const &);
 };
@@ -440,6 +441,57 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
 
 bool SolidityToMLIRPass::visit(ExpressionStatement const &exprStmt) {
   genLValExpr(&exprStmt.expression());
+  return true;
+}
+
+bool SolidityToMLIRPass::visit(FunctionCall const &call) {
+  assert(*call.annotation().kind != FunctionCallKind::TypeConversion && "NYI");
+  assert(*call.annotation().kind != FunctionCallKind::StructConstructorCall &&
+         "NYI");
+
+  auto const &args = call.sortedArguments();
+  const auto *calleeTy =
+      dynamic_cast<FunctionType const *>(call.expression().annotation().type);
+  assert(calleeTy);
+  std::vector<Type const *> argTys = calleeTy->parameterTypes();
+
+  mlir::Location loc = getLoc(call.location());
+  switch (calleeTy->kind()) {
+  case FunctionType::Kind::Event: {
+    auto const &event =
+        dynamic_cast<EventDefinition const &>(calleeTy->declaration());
+
+    // Lower and track the indexed and non-indexed args.
+    mlirgen::BuilderHelper h(b, loc);
+    std::vector<mlir::Value> indexedArgs, nonIndexedArgs;
+    for (size_t i = 0; i < event.parameters().size(); ++i) {
+      assert(dynamic_cast<IntegerType const *>(argTys[i]) ||
+             dynamic_cast<AddressType const *>(argTys[i]));
+
+      // TODO? YulUtilFunctions::conversionFunction
+      mlir::Value arg = genRValExpr(args[i].get(), argTys[i]);
+
+      if (event.parameters()[i]->isIndexed()) {
+        indexedArgs.push_back(arg);
+      } else {
+        nonIndexedArgs.push_back(arg);
+      }
+    }
+
+    // Generate sol.emit (with signature for non-anonymous events).
+    if (event.isAnonymous()) {
+      b.create<mlir::sol::EmitOp>(loc, indexedArgs, nonIndexedArgs);
+    } else {
+      b.create<mlir::sol::EmitOp>(loc, indexedArgs, nonIndexedArgs,
+                                  calleeTy->externalSignature());
+    }
+
+    break;
+  }
+  default:
+    llvm_unreachable("NYI");
+  }
+
   return true;
 }
 

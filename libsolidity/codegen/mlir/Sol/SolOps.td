@@ -231,6 +231,37 @@ def CallOp : Sol_Op<"call", [CallOpInterface,
   }];
 }
 
+def Sol_EmitOp : Sol_Op<"emit"> {
+  // TODO: summary, description
+
+  let arguments = (ins Variadic<AnyType>:$args, I8Attr:$indexedArgsCount,
+                       OptionalAttr<StrAttr>:$signature);
+
+  let builders = [
+    OpBuilder<(ins "std::vector<Value>":$indexedArgs,
+                    CArg<"std::vector<Value>", "{}">:$nonIndexedArgs,
+                    CArg<"std::optional<std::string>",
+                         "std::nullopt">:$signature), [{
+      $_state.addOperands(indexedArgs);
+      $_state.addOperands(nonIndexedArgs);
+
+      IntegerAttr indexedArgsCountAttr =
+          $_builder.getIntegerAttr($_builder.getIntegerType(8),
+                                   indexedArgs.size());
+      $_state.addAttribute(getIndexedArgsCountAttrName($_state.name),
+                           indexedArgsCountAttr);
+
+      if (signature) {
+        $_state.addAttribute(getSignatureAttrName($_state.name),
+                             $_builder.getStringAttr(*signature));
+      }
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+
+  // TODO: verifier ($indexedArgsCount <= 3)
+}
+
 def Sol_ReturnOp : Sol_Op<"return", [Pure, HasParent<"FuncOp">,
                                      ReturnLike, Terminator]> {
   let summary = "ReturnOp for sol.func";
