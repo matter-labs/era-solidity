@@ -347,6 +347,42 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
                                               genDefTyExpr(call.arguments[0]),
                                               genDefTyExpr(call.arguments[1]));
     }
+    if (builtin->name.str() == "log0") {
+      b.create<mlir::sol::LogOp>(loc, genDefTyExpr(call.arguments[0]),
+                                 genDefTyExpr(call.arguments[1]),
+                                 mlir::ValueRange{});
+      return {};
+    }
+    if (builtin->name.str() == "log1") {
+      b.create<mlir::sol::LogOp>(loc, genDefTyExpr(call.arguments[0]),
+                                 genDefTyExpr(call.arguments[1]),
+                                 genDefTyExpr(call.arguments[2]));
+      return {};
+    }
+    if (builtin->name.str() == "log2") {
+      b.create<mlir::sol::LogOp>(
+          loc, genDefTyExpr(call.arguments[0]), genDefTyExpr(call.arguments[1]),
+          mlir::ValueRange{genDefTyExpr(call.arguments[2]),
+                           genDefTyExpr(call.arguments[3])});
+      return {};
+    }
+    if (builtin->name.str() == "log3") {
+      b.create<mlir::sol::LogOp>(
+          loc, genDefTyExpr(call.arguments[0]), genDefTyExpr(call.arguments[1]),
+          mlir::ValueRange{genDefTyExpr(call.arguments[2]),
+                           genDefTyExpr(call.arguments[3]),
+                           genDefTyExpr(call.arguments[4])});
+      return {};
+    }
+    if (builtin->name.str() == "log4") {
+      b.create<mlir::sol::LogOp>(
+          loc, genDefTyExpr(call.arguments[0]), genDefTyExpr(call.arguments[1]),
+          mlir::ValueRange{genDefTyExpr(call.arguments[2]),
+                           genDefTyExpr(call.arguments[3]),
+                           genDefTyExpr(call.arguments[4]),
+                           genDefTyExpr(call.arguments[5])});
+      return {};
+    }
 
     solUnimplementedAssert(false, "NYI: builtin " + builtin->name.str());
   }

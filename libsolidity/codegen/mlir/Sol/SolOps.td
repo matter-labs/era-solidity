@@ -577,4 +577,11 @@ def Sol_Keccak256Op : Sol_Op<"keccak256"> {
   let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
 }
 
+def Sol_LogOp : Sol_Op<"log"> {
+  let summary = "Represents the `log*` calls in yul";
+  let arguments = (ins I256:$addr, I256:$size, Variadic<I256>:$topics);
+  // FIXME: Trailing spaces with empty $topics.
+  let assemblyFormat = "$addr `,` $size oilist(`topics` `(` $topics `)` ) attr-dict";
+}
+
 #endif // MLIR_SOL_SOLOPS_TD
