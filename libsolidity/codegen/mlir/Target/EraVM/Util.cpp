@@ -80,13 +80,13 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
                                        std::optional<Location> locArg) {
 
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
   auto initInt = [&](const char *name) {
     LLVM::GlobalOp globOp =
-        h.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
+        bExt.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
     Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
-    b.create<LLVM::StoreOp>(loc, h.genI256Const(0, locArg), globAddr,
+    b.create<LLVM::StoreOp>(loc, bExt.genI256Const(0, locArg), globAddr,
                             getAlignment(globAddr));
   };
 
@@ -99,27 +99,27 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
   initInt(GlobCallFlags);
 
   // Initialize the GlobExtraABIData int array
-  auto extraABIData = h.getOrInsertGlobalOp(
+  auto extraABIData = bExt.getOrInsertGlobalOp(
       GlobExtraABIData, mod, LLVM::LLVMArrayType::get(i256Ty, 10),
       getAlignment(AddrSpace_Stack), AddrSpace_Stack, LLVM::Linkage::Private,
       b.getZeroAttr(RankedTensorType::get({10}, i256Ty)));
   Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
   b.create<LLVM::StoreOp>(
       loc,
-      h.genI256ConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)),
-                          locArg),
+      bExt.genI256ConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)),
+                             locArg),
       extraABIDataAddr);
 }
 
 Value eravm::Builder::genABILen(Value ptr, std::optional<Location> locArg) {
   auto i256Ty = b.getIntegerType(256);
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
   Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
   Value lShr = b.create<LLVM::LShrOp>(
-      loc, ptrToInt, h.genI256Const(eravm::BitLen_X32 * 3, locArg));
-  return b.create<LLVM::AndOp>(loc, lShr, h.genI256Const(UINT_MAX, locArg));
+      loc, ptrToInt, bExt.genI256Const(eravm::BitLen_X32 * 3, locArg));
+  return b.create<LLVM::AndOp>(loc, lShr, bExt.genI256Const(UINT_MAX, locArg));
 }
 
 Value eravm::Builder::genABITupleEncoding(
@@ -128,7 +128,7 @@ Value eravm::Builder::genABITupleEncoding(
   // TODO: Move this to the evm namespace.
 
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
   unsigned totCallDataHeadSz = 0;
   for (Type ty : tys)
@@ -140,9 +140,9 @@ Value eravm::Builder::genABITupleEncoding(
     Type ty = std::get<0>(it);
     Value val = std::get<1>(it);
     auto currHeadAddr =
-        b.create<arith::AddIOp>(loc, headStart, h.genI256Const(headOffset));
-    currTailAddr = b.create<arith::AddIOp>(loc, headStart,
-                                           h.genI256Const(totCallDataHeadSz));
+        b.create<arith::AddIOp>(loc, headStart, bExt.genI256Const(headOffset));
+    currTailAddr = b.create<arith::AddIOp>(
+        loc, headStart, bExt.genI256Const(totCallDataHeadSz));
 
     // String type.
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
@@ -155,18 +155,18 @@ Value eravm::Builder::genABITupleEncoding(
       b.create<sol::MStoreOp>(loc, currTailAddr, size);
 
       // Copy the data.
-      auto dataAddr = b.create<arith::AddIOp>(loc, val, h.genI256Const(32));
+      auto dataAddr = b.create<arith::AddIOp>(loc, val, bExt.genI256Const(32));
       auto tailDataAddr =
-          b.create<arith::AddIOp>(loc, currTailAddr, h.genI256Const(32));
+          b.create<arith::AddIOp>(loc, currTailAddr, bExt.genI256Const(32));
       b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr, size);
 
       // Write 0 at the end.
       b.create<sol::MStoreOp>(loc,
                               b.create<arith::AddIOp>(loc, tailDataAddr, size),
-                              h.genI256Const(0));
+                              bExt.genI256Const(0));
 
-      currTailAddr = b.create<arith::AddIOp>(loc, tailDataAddr,
-                                             h.genRoundUpToMultiple<32>(size));
+      currTailAddr = b.create<arith::AddIOp>(
+          loc, tailDataAddr, bExt.genRoundUpToMultiple<32>(size));
       // Integer type.
     } else if (isa<IntegerType>(ty)) {
       b.create<sol::MStoreOp>(loc, currHeadAddr, val);
@@ -185,7 +185,7 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
                                          bool fromMem,
                                          std::optional<mlir::Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
   // TODO? {en|de}codingType() for sol dialect types.
 
@@ -196,7 +196,7 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
     if (!isa<IntegerType>(ty))
       llvm_unreachable("NYI");
 
-    Value offset = h.genI256Const(headPos);
+    Value offset = bExt.genI256Const(headPos);
 
     auto headStartPlusOffset = b.create<arith::AddIOp>(loc, headStart, offset);
     if (fromMem)
@@ -214,50 +214,54 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
 sol::FuncOp eravm::Builder::getOrInsertCreationFuncOp(llvm::StringRef name,
                                                       FunctionType fnTy,
                                                       ModuleOp mod) {
-  solidity::mlirgen::BuilderHelper h(b);
-  return h.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
+  solidity::mlirgen::BuilderExt bExt(b);
+  return bExt.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
 }
 
 sol::FuncOp eravm::Builder::getOrInsertRuntimeFuncOp(llvm::StringRef name,
                                                      FunctionType fnTy,
                                                      ModuleOp mod) {
-  solidity::mlirgen::BuilderHelper h(b);
-  sol::FuncOp fn = h.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
+  solidity::mlirgen::BuilderExt bExt(b);
+  sol::FuncOp fn =
+      bExt.getOrInsertFuncOp(name, fnTy, LLVM::Linkage::Private, mod);
   fn.setRuntimeAttr(b.getUnitAttr());
   return fn;
 }
 
 FlatSymbolRefAttr eravm::Builder::getOrInsertReturn(ModuleOp mod) {
   auto *ctx = mod.getContext();
-  solidity::mlirgen::BuilderHelper h(b);
+  solidity::mlirgen::BuilderExt bExt(b);
   auto i256Ty = IntegerType::get(ctx, 256);
 
   auto fnTy = FunctionType::get(ctx, {i256Ty, i256Ty, i256Ty}, {});
-  auto fn = h.getOrInsertFuncOp("__return", fnTy, LLVM::Linkage::External, mod);
+  auto fn =
+      bExt.getOrInsertFuncOp("__return", fnTy, LLVM::Linkage::External, mod);
   fn.setPrivate();
   return FlatSymbolRefAttr::get(mod.getContext(), "__return");
 }
 
 FlatSymbolRefAttr eravm::Builder::getOrInsertRevert(ModuleOp mod) {
   auto *ctx = mod.getContext();
-  solidity::mlirgen::BuilderHelper h(b);
+  solidity::mlirgen::BuilderExt bExt(b);
   auto i256Ty = IntegerType::get(ctx, 256);
 
   auto fnTy = FunctionType::get(ctx, {i256Ty, i256Ty, i256Ty}, {});
-  auto fn = h.getOrInsertFuncOp("__revert", fnTy, LLVM::Linkage::External, mod);
+  auto fn =
+      bExt.getOrInsertFuncOp("__revert", fnTy, LLVM::Linkage::External, mod);
   fn.setPrivate();
   return FlatSymbolRefAttr::get(mod.getContext(), "__revert");
 }
 
 FlatSymbolRefAttr eravm::Builder::getOrInsertSha3(ModuleOp mod) {
   auto *ctx = mod.getContext();
-  solidity::mlirgen::BuilderHelper h(b);
+  solidity::mlirgen::BuilderExt bExt(b);
 
   auto i1Ty = IntegerType::get(ctx, 1);
   auto i256Ty = IntegerType::get(ctx, 256);
   auto heapPtrTy = LLVM::LLVMPointerType::get(ctx, AddrSpace_Heap);
   auto fnTy = FunctionType::get(ctx, {heapPtrTy, i256Ty, i1Ty}, {i256Ty});
-  auto fn = h.getOrInsertFuncOp("__sha3", fnTy, LLVM::Linkage::External, mod);
+  auto fn =
+      bExt.getOrInsertFuncOp("__sha3", fnTy, LLVM::Linkage::External, mod);
   fn.setPrivate();
   return FlatSymbolRefAttr::get(mod.getContext(), "__sha3");
 }
@@ -266,9 +270,9 @@ LLVM::AddressOfOp
 eravm::Builder::genCallDataSizeAddr(ModuleOp mod,
                                     std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
-  LLVM::GlobalOp globCallDataSzDef = h.getOrInsertIntGlobalOp(
+  LLVM::GlobalOp globCallDataSzDef = bExt.getOrInsertIntGlobalOp(
       eravm::GlobCallDataSize, mod, eravm::AddrSpace_Stack);
   return b.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
 }
@@ -285,9 +289,9 @@ LLVM::AddressOfOp
 eravm::Builder::genCallDataPtrAddr(ModuleOp mod,
                                    std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
-  LLVM::GlobalOp callDataPtrDef = h.getOrInsertPtrGlobalOp(
+  LLVM::GlobalOp callDataPtrDef = bExt.getOrInsertPtrGlobalOp(
       eravm::GlobCallDataPtr, mod, eravm::AddrSpace_Generic);
   return b.create<LLVM::AddressOfOp>(loc, callDataPtrDef);
 }
@@ -304,15 +308,15 @@ eravm::Builder::genCallDataPtrLoad(ModuleOp mod,
 
 Value eravm::Builder::genFreePtr(std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
-  return b.create<sol::MLoadOp>(loc, h.genI256Const(64));
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+  return b.create<sol::MLoadOp>(loc, bExt.genI256Const(64));
 }
 
 Value eravm::Builder::genMemAlloc(Value size, std::optional<Location> locArg) {
   // TODO: Move this to the evm namespace.
 
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
   Value freePtr = genFreePtr(locArg);
 
@@ -323,13 +327,13 @@ Value eravm::Builder::genMemAlloc(Value size, std::optional<Location> locArg) {
   // Generate the PanicCode::ResourceError check.
   auto newPtrGtMax =
       b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, newFreePtr,
-                              h.genI256Const("0xffffffffffffffff"));
+                              bExt.genI256Const("0xffffffffffffffff"));
   auto newPtrLtOrig = b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
                                               newFreePtr, freePtr);
   auto panicCond = b.create<arith::OrIOp>(loc, newPtrGtMax, newPtrLtOrig);
   genPanic(solidity::util::PanicCode::ResourceError, panicCond);
 
-  b.create<sol::MStoreOp>(loc, h.genI256Const(64), newFreePtr);
+  b.create<sol::MStoreOp>(loc, bExt.genI256Const(64), newFreePtr);
 
   return freePtr;
 }
@@ -338,8 +342,8 @@ Value eravm::Builder::genMemAlloc(AllocSize size,
                                   std::optional<Location> locArg) {
   assert(size % 32 == 0);
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
-  return genMemAlloc(h.genI256Const(size), loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+  return genMemAlloc(bExt.genI256Const(size), loc);
 }
 
 void eravm::Builder::genPanic(solidity::util::PanicCode code, Value cond,
@@ -347,20 +351,20 @@ void eravm::Builder::genPanic(solidity::util::PanicCode code, Value cond,
   // TODO: Move this to the evm namespace.
 
   Location loc = locArg ? *locArg : defLoc;
-  solidity::mlirgen::BuilderHelper h(b, loc);
+  solidity::mlirgen::BuilderExt bExt(b, loc);
 
   std::string selector =
       solidity::util::selectorFromSignatureU256("Panic(uint256)").str();
 
   b.create<scf::IfOp>(
       loc, cond, /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
-        b.create<sol::MStoreOp>(loc, h.genI256Const(0, locArg),
-                                h.genI256Const(selector, locArg));
+        b.create<sol::MStoreOp>(loc, bExt.genI256Const(0, locArg),
+                                bExt.genI256Const(selector, locArg));
         b.create<sol::MStoreOp>(
-            loc, h.genI256Const(4, locArg),
-            h.genI256Const(static_cast<int64_t>(code), locArg));
-        b.create<sol::RevertOp>(loc, h.genI256Const(0, locArg),
-                                h.genI256Const(24, locArg));
+            loc, bExt.genI256Const(4, locArg),
+            bExt.genI256Const(static_cast<int64_t>(code), locArg));
+        b.create<sol::RevertOp>(loc, bExt.genI256Const(0, locArg),
+                                bExt.genI256Const(24, locArg));
         b.create<scf::YieldOp>(loc);
       });
 }

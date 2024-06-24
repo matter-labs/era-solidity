@@ -28,16 +28,16 @@
 using namespace mlir;
 using namespace solidity::mlirgen;
 
-LLVM::GlobalOp BuilderHelper::getGlobalOp(llvm::StringRef name, ModuleOp mod) {
+LLVM::GlobalOp BuilderExt::getGlobalOp(llvm::StringRef name, ModuleOp mod) {
   LLVM::GlobalOp found = mod.lookupSymbol<LLVM::GlobalOp>(name);
   assert(found);
   return found;
 }
 
 LLVM::GlobalOp
-BuilderHelper::getOrInsertGlobalOp(llvm::StringRef name, ModuleOp mod, Type ty,
-                                   unsigned alignment, unsigned addrSpace,
-                                   LLVM::Linkage linkage, Attribute attr) {
+BuilderExt::getOrInsertGlobalOp(llvm::StringRef name, ModuleOp mod, Type ty,
+                                unsigned alignment, unsigned addrSpace,
+                                LLVM::Linkage linkage, Attribute attr) {
   if (LLVM::GlobalOp found = mod.lookupSymbol<LLVM::GlobalOp>(name))
     return found;
 
@@ -47,11 +47,11 @@ BuilderHelper::getOrInsertGlobalOp(llvm::StringRef name, ModuleOp mod, Type ty,
                                   linkage, name, attr, alignment, addrSpace);
 }
 
-LLVM::GlobalOp BuilderHelper::getOrInsertIntGlobalOp(llvm::StringRef name,
-                                                     ModuleOp mod,
-                                                     unsigned addrSpace,
-                                                     unsigned width,
-                                                     LLVM::Linkage linkage) {
+LLVM::GlobalOp BuilderExt::getOrInsertIntGlobalOp(llvm::StringRef name,
+                                                  ModuleOp mod,
+                                                  unsigned addrSpace,
+                                                  unsigned width,
+                                                  LLVM::Linkage linkage) {
   auto ty = b.getIntegerType(width);
   assert(width > 2 && width % 8 == 0);
   unsigned alignment = width / 8;
@@ -60,25 +60,24 @@ LLVM::GlobalOp BuilderHelper::getOrInsertIntGlobalOp(llvm::StringRef name,
                              b.getIntegerAttr(ty, 0));
 }
 
-LLVM::GlobalOp BuilderHelper::getOrInsertPtrGlobalOp(llvm::StringRef name,
-                                                     ModuleOp mod,
-                                                     unsigned ptrTyAddrSpace,
-                                                     LLVM::Linkage linkage) {
+LLVM::GlobalOp BuilderExt::getOrInsertPtrGlobalOp(llvm::StringRef name,
+                                                  ModuleOp mod,
+                                                  unsigned ptrTyAddrSpace,
+                                                  LLVM::Linkage linkage) {
   auto ty = LLVM::LLVMPointerType::get(mod.getContext(), ptrTyAddrSpace);
   // FIXME: What attribute corresponds to llvm's null?
   return getOrInsertGlobalOp(name, mod, ty, /*alignment=*/0, /*addrSpace=*/0,
                              linkage, {});
 }
 
-ArrayAttr BuilderHelper::getZeroInitialzedAttr(IntegerType ty, unsigned sz) {
+ArrayAttr BuilderExt::getZeroInitialzedAttr(IntegerType ty, unsigned sz) {
   std::vector<Attribute> attrs(sz, b.getIntegerAttr(ty, 0));
   return b.getArrayAttr(attrs);
 }
 
-sol::FuncOp
-BuilderHelper::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
-                                 LLVM::Linkage linkage, ModuleOp mod,
-                                 std::vector<NamedAttribute> attrs) {
+sol::FuncOp BuilderExt::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
+                                          LLVM::Linkage linkage, ModuleOp mod,
+                                          std::vector<NamedAttribute> attrs) {
   if (auto found = mod.lookupSymbol<sol::FuncOp>(name))
     return found;
 
@@ -96,7 +95,7 @@ BuilderHelper::getOrInsertFuncOp(StringRef name, FunctionType fnTy,
   return fn;
 }
 
-void BuilderHelper::createCallToUnreachableWrapper(
+void BuilderExt::createCallToUnreachableWrapper(
     ModuleOp mod, std::optional<Location> locArg) {
   auto fnTy = FunctionType::get(mod.getContext(), {}, {});
   sol::FuncOp fn =

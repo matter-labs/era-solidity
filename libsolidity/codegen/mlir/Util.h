@@ -40,15 +40,15 @@
 namespace solidity {
 namespace mlirgen {
 
-class BuilderHelper {
+/// Extension of mlir::OpBuilder with APIs helpful for codegen in solidity.
+class BuilderExt {
   mlir::OpBuilder &b;
   mlir::Location defLoc;
 
 public:
-  explicit BuilderHelper(mlir::OpBuilder &b)
-      : b(b), defLoc(b.getUnknownLoc()) {}
+  explicit BuilderExt(mlir::OpBuilder &b) : b(b), defLoc(b.getUnknownLoc()) {}
 
-  explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
+  explicit BuilderExt(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc) {}
 
   mlir::Value genBool(bool val,
