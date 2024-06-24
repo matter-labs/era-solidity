@@ -111,8 +111,8 @@ unsigned getCallDataHeadSize(mlir::Type ty);
 /// EraVM version of solidity ast's Type::storageBytes().
 unsigned getStorageByteCount(mlir::Type ty);
 
-/// Builder extension for EraVM.
-class BuilderHelper {
+/// IR Builder for EraVM specific lowering.
+class Builder {
   // It's possible to provide a mlirgen::BuilderHelper member with same default
   // location, but then it becomes tricky to keep the default location behaviour
   // consistent.
@@ -121,10 +121,9 @@ class BuilderHelper {
   mlir::Location defLoc;
 
 public:
-  explicit BuilderHelper(mlir::OpBuilder &b)
-      : b(b), defLoc(b.getUnknownLoc()) {}
+  explicit Builder(mlir::OpBuilder &b) : b(b), defLoc(b.getUnknownLoc()) {}
 
-  explicit BuilderHelper(mlir::OpBuilder &b, mlir::Location loc)
+  explicit Builder(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc) {}
 
   /// Generates a pointer to the heap address space.

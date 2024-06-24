@@ -132,10 +132,10 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r);
-    eravm::BuilderHelper eravmHelper(r, loc);
+    eravm::Builder eraB(r, loc);
 
     // Setup arguments for the call to sha3.
-    Value offset = eravmHelper.genHeapPtr(op.getInp0());
+    Value offset = eraB.genHeapPtr(op.getInp0());
     Value length = op.getInp1();
 
     // FIXME: When will this
@@ -146,7 +146,7 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
     // Generate the call to sha3.
     auto i256Ty = r.getIntegerType(256);
     FlatSymbolRefAttr sha3Func =
-        eravmHelper.getOrInsertSha3(op->getParentOfType<ModuleOp>());
+        eraB.getOrInsertSha3(op->getParentOfType<ModuleOp>());
     r.replaceOpWithNewOp<sol::CallOp>(op, sha3Func, TypeRange{i256Ty},
                                       ValueRange{offset, length, throwAtFail});
     return success();
@@ -173,14 +173,14 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter, loc);
+    eravm::Builder eraB(rewriter, loc);
 
     Value offset = op.getInp();
 
     if (inRuntimeContext(op)) {
       // Generate the `GlobCallDataPtr` + `offset` load
       LLVM::LoadOp callDataPtr =
-          eravmHelper.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
+          eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
       unsigned callDataPtrAddrSpace =
           cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
       auto callDataOffset = rewriter.create<LLVM::GEPOp>(
@@ -212,8 +212,8 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
     auto mod = op->getParentOfType<ModuleOp>();
 
     if (inRuntimeContext(op)) {
-      eravm::BuilderHelper eravmHelper(rewriter, loc);
-      rewriter.replaceOp(op, eravmHelper.genCallDataSizeLoad(mod));
+      eravm::Builder eraB(rewriter, loc);
+      rewriter.replaceOp(op, eraB.genCallDataSizeLoad(mod));
     } else {
       rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
                                                         /*width=*/256);
@@ -231,22 +231,22 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
     mlir::Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter, loc);
+    eravm::Builder eraB(rewriter, loc);
 
     mlir::Value srcOffset;
     if (inRuntimeContext(op)) {
       srcOffset = op.getInp1();
     } else {
-      eravm::BuilderHelper eravmHelper(rewriter, loc);
-      srcOffset = eravmHelper.genCallDataSizeLoad(mod);
+      eravm::Builder eraB(rewriter, loc);
+      srcOffset = eraB.genCallDataSizeLoad(mod);
     }
 
-    mlir::Value dst = eravmHelper.genHeapPtr(op.getInp0());
+    mlir::Value dst = eraB.genHeapPtr(op.getInp0());
     mlir::Value size = op.getInp2();
 
     // Generate the source pointer.
     LLVM::LoadOp callDataPtr =
-        eravmHelper.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
+        eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
@@ -343,8 +343,8 @@ struct CodeSizeOpLowering : public OpRewritePattern<sol::CodeSizeOp> {
     if (inRuntimeContext(op)) {
       llvm_unreachable("NYI");
     } else {
-      eravm::BuilderHelper eravmHelper(r, loc);
-      r.replaceOp(op, eravmHelper.genCallDataSizeLoad(mod));
+      eravm::Builder eraB(r, loc);
+      r.replaceOp(op, eraB.genCallDataSizeLoad(mod));
     }
     return success();
   }
@@ -358,18 +358,18 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
     mlir::Location loc = op->getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
     solidity::mlirgen::BuilderHelper h(rewriter);
-    eravm::BuilderHelper eravmHelper(rewriter, loc);
+    eravm::Builder eraB(rewriter, loc);
 
     assert(!inRuntimeContext(op) &&
            "codecopy is not supported in runtime context");
 
-    Value dst = eravmHelper.genHeapPtr(op.getInp0());
+    Value dst = eraB.genHeapPtr(op.getInp0());
     Value srcOffset = op.getInp1();
     Value size = op.getInp2();
 
     // Generate the source pointer
     LLVM::LoadOp callDataPtr =
-        eravmHelper.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
+        eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
     auto src = rewriter.create<LLVM::GEPOp>(
@@ -393,9 +393,9 @@ struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
   LogicalResult matchAndRewrite(sol::MLoadOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
-    eravm::BuilderHelper eravmHelper(rewriter, loc);
+    eravm::Builder eraB(rewriter, loc);
 
-    mlir::Value addr = eravmHelper.genHeapPtr(op.getInp());
+    mlir::Value addr = eraB.genHeapPtr(op.getInp());
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, rewriter.getIntegerType(256),
                                               addr, eravm::getAlignment(addr));
     return success();
@@ -408,9 +408,9 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
   LogicalResult matchAndRewrite(sol::MStoreOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
-    eravm::BuilderHelper eravmHelper(rewriter, loc);
+    eravm::Builder eraB(rewriter, loc);
 
-    mlir::Value offset = eravmHelper.genHeapPtr(op.getInp0());
+    mlir::Value offset = eraB.genHeapPtr(op.getInp0());
     mlir::Value val = op.getInp1();
     rewriter.create<LLVM::StoreOp>(loc, val, offset,
                                    eravm::getAlignment(offset));
@@ -426,10 +426,10 @@ struct MCopyOpLowering : public OpRewritePattern<sol::MCopyOp> {
   LogicalResult matchAndRewrite(sol::MCopyOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
-    eravm::BuilderHelper eravmHelper(rewriter, loc);
+    eravm::Builder eraB(rewriter, loc);
 
-    Value dstAddr = eravmHelper.genHeapPtr(op.getInp0());
-    Value srcAddr = eravmHelper.genHeapPtr(op.getInp1());
+    Value dstAddr = eraB.genHeapPtr(op.getInp0());
+    Value srcAddr = eraB.genHeapPtr(op.getInp1());
     Value size = op.getInp2();
 
     // Generate the memmove.
@@ -463,11 +463,11 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
     auto mod = op->getParentOfType<ModuleOp>();
 
     solidity::mlirgen::BuilderHelper h(rewriter, loc);
-    eravm::BuilderHelper eravmHelper(rewriter);
+    eravm::Builder eraB(rewriter);
 
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
     // the unreachable op
-    FlatSymbolRefAttr revertFunc = eravmHelper.getOrInsertRevert(mod);
+    FlatSymbolRefAttr revertFunc = eraB.getOrInsertRevert(mod);
     rewriter.create<sol::CallOp>(
         loc, revertFunc, TypeRange{},
         ValueRange{
@@ -491,9 +491,9 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     auto mod = op->getParentOfType<ModuleOp>();
 
     solidity::mlirgen::BuilderHelper h(rewriter, loc);
-    eravm::BuilderHelper eravmHelper(rewriter);
+    eravm::Builder eraB(rewriter);
     SymbolRefAttr returnFunc =
-        eravmHelper.getOrInsertReturn(op->getParentOfType<ModuleOp>());
+        eraB.getOrInsertReturn(op->getParentOfType<ModuleOp>());
 
     //
     // Lowering in the runtime context
@@ -622,12 +622,12 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
   Value genMemAllocForDynArray(Value sizeVar, Value sizeInBytes,
                                PatternRewriter &r, Location loc) const {
     solidity::mlirgen::BuilderHelper h(r, loc);
-    eravm::BuilderHelper eravmHelper(r, loc);
+    eravm::Builder eraB(r, loc);
 
     // dynSize is size + length-slot where length-slot's size is 32 bytes.
     auto dynSizeInBytes =
         r.create<arith::AddIOp>(loc, sizeInBytes, h.genI256Const(32));
-    auto memPtr = eravmHelper.genMemAlloc(dynSizeInBytes, loc);
+    auto memPtr = eraB.genMemAlloc(dynSizeInBytes, loc);
     r.create<sol::MStoreOp>(loc, memPtr, sizeVar);
     return memPtr;
   }
@@ -639,7 +639,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
     Value memPtr;
     solidity::mlirgen::BuilderHelper h(r, loc);
-    eravm::BuilderHelper eravmHelper(r, loc);
+    eravm::Builder eraB(r, loc);
 
     // Array type.
     if (auto arrayTy = dyn_cast<sol::ArrayType>(ty)) {
@@ -660,7 +660,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
         }
       } else {
         sizeInBytes = h.genI256Const(getSize(ty));
-        memPtr = eravmHelper.genMemAlloc(sizeInBytes, loc);
+        memPtr = eraB.genMemAlloc(sizeInBytes, loc);
         dataPtr = memPtr;
       }
       assert(sizeInBytes && dataPtr && memPtr);
@@ -731,7 +731,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
 
       // Struct type.
     } else if (auto structTy = dyn_cast<sol::StructType>(ty)) {
-      memPtr = eravmHelper.genMemAlloc(getSize(ty), loc);
+      memPtr = eraB.genMemAlloc(getSize(ty), loc);
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
 
       for (auto memTy : structTy.getMemTypes()) {
@@ -771,7 +771,7 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
                          ConversionPatternRewriter &r) {
   Location loc = op.getLoc();
   solidity::mlirgen::BuilderHelper h(r, loc);
-  eravm::BuilderHelper eravmHelper(r, loc);
+  eravm::Builder eraB(r, loc);
 
   Type baseAddrTy = op.getBaseAddr().getType();
   Value remappedBaseAddr = adaptor.getBaseAddr();
@@ -818,8 +818,7 @@ static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
         // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
         auto panicCond =
             r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge, idx, size);
-        eravmHelper.genPanic(solidity::util::PanicCode::ArrayOutOfBounds,
-                             panicCond);
+        eraB.genPanic(solidity::util::PanicCode::ArrayOutOfBounds, panicCond);
 
         //
         // Generate the address
@@ -1138,7 +1137,7 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r, loc);
-    eravm::BuilderHelper eravmHelper(r, loc);
+    eravm::Builder eraB(r, loc);
 
     // Generate the tuple encoding for the non-indexed args.
     std::vector<Value> nonIndexedArgs;
@@ -1151,9 +1150,9 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
       nonIndexedArgsType.push_back(arg.getType());
     }
     // TODO: Are we sure we need an unbounded allocation here?
-    Value headAddr = eravmHelper.genFreePtr();
-    Value tailAddr = eravmHelper.genABITupleEncoding(nonIndexedArgsType,
-                                                     nonIndexedArgs, headAddr);
+    Value headAddr = eraB.genFreePtr();
+    Value tailAddr =
+        eraB.genABITupleEncoding(nonIndexedArgsType, nonIndexedArgs, headAddr);
     Value tupleSize = r.create<arith::SubIOp>(loc, tailAddr, headAddr);
 
     // Collect indexed args.
@@ -1217,7 +1216,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     auto mod = objOp->getParentOfType<ModuleOp>();
     auto i256Ty = rewriter.getIntegerType(256);
     solidity::mlirgen::BuilderHelper h(rewriter, loc);
-    eravm::BuilderHelper eravmHelper(rewriter, loc);
+    eravm::Builder eraB(rewriter, loc);
 
     // Track the names of the existing function in the module.
     std::set<std::string> fnNamesInMod;
@@ -1269,7 +1268,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // FIXME: Is there a better way to check this?
     if (objOp.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
-      sol::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
+      sol::FuncOp runtimeFunc = eraB.getOrInsertRuntimeFuncOp(
           "__runtime", rewriter.getFunctionType({}, {}), mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
       assert(runtimeFuncRegion.empty());
@@ -1304,17 +1303,17 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     rewriter.setInsertionPointToStart(entryBlk);
 
     // Initialize globals.
-    eravmHelper.genGlobalVarsInit(mod);
+    eraB.genGlobalVarsInit(mod);
 
     // Store the calldata ABI arg to the global calldata ptr.
-    LLVM::AddressOfOp callDataPtrAddr = eravmHelper.genCallDataPtrAddr(mod);
+    LLVM::AddressOfOp callDataPtrAddr = eraB.genCallDataPtrAddr(mod);
     rewriter.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
 
     // Store the calldata ABI size to the global calldata size.
-    Value abiLen = eravmHelper.genABILen(callDataPtrAddr);
-    LLVM::AddressOfOp callDataSizeAddr = eravmHelper.genCallDataSizeAddr(mod);
+    Value abiLen = eraB.genABILen(callDataPtrAddr);
+    LLVM::AddressOfOp callDataSizeAddr = eraB.genCallDataSizeAddr(mod);
     rewriter.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
                                    eravm::getAlignment(callDataSizeAddr));
 
@@ -1377,7 +1376,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         h.genI256Const(1));
 
     // Create the __runtime function
-    sol::FuncOp runtimeFunc = eravmHelper.getOrInsertRuntimeFuncOp(
+    sol::FuncOp runtimeFunc = eraB.getOrInsertRuntimeFuncOp(
         "__runtime", rewriter.getFunctionType({}, {}), mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
@@ -1395,7 +1394,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     }
 
     // Create the __deploy function
-    sol::FuncOp deployFunc = eravmHelper.getOrInsertCreationFuncOp(
+    sol::FuncOp deployFunc = eraB.getOrInsertCreationFuncOp(
         "__deploy", rewriter.getFunctionType({}, {}), mod);
     Region &deployFuncRegion = deployFunc.getRegion();
     assert(deployFuncRegion.empty());
@@ -1439,7 +1438,7 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
                                 ConversionPatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
     solidity::mlirgen::BuilderHelper h(r, loc);
-    eravm::BuilderHelper eravmHelper(r, loc);
+    eravm::Builder eraB(r, loc);
 
     // Generate the creation and runtime ObjectOp.
     auto creationObj = r.create<sol::ObjectOp>(loc, op.getSymName());
@@ -1515,11 +1514,11 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       auto progSize = r.create<sol::DataSizeOp>(loc, creationObj.getName());
       auto codeSize = r.create<sol::CodeSizeOp>(loc);
       auto argSize = r.create<arith::SubIOp>(loc, codeSize, progSize);
-      Value memPtr = eravmHelper.genMemAlloc(argSize);
+      Value memPtr = eraB.genMemAlloc(argSize);
       r.create<sol::CodeCopyOp>(loc, memPtr, progSize, argSize);
       std::vector<Value> decodedArgs;
-      eravmHelper.genABITupleDecoding(ctor.getFunctionType().getInputs(),
-                                      memPtr, decodedArgs, /*fromMem=*/true);
+      eraB.genABITupleDecoding(ctor.getFunctionType().getInputs(), memPtr,
+                               decodedArgs, /*fromMem=*/true);
       r.create<sol::CallOp>(loc, ctor, decodedArgs);
     }
 
@@ -1626,9 +1625,9 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
         // Decode the input parameters.
         std::vector<Value> params;
-        eravmHelper.genABITupleDecoding(func.getFunctionType().getInputs(),
-                                        /*headStart=*/h.genI256Const(4), params,
-                                        /*fromMem=*/false);
+        eraB.genABITupleDecoding(func.getFunctionType().getInputs(),
+                                 /*headStart=*/h.genI256Const(4), params,
+                                 /*fromMem=*/false);
 
         // Generate the actual call.
         auto callOp = r.create<sol::CallOp>(loc, func, params);
@@ -1646,8 +1645,8 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
         // Encode the result using the ABI's tuple encoder.
         auto headStart = r.create<sol::MLoadOp>(loc, h.genI256Const(64));
-        auto tail = eravmHelper.genABITupleEncoding(callOp.getResultTypes(),
-                                                    remappedResults, headStart);
+        auto tail = eraB.genABITupleEncoding(callOp.getResultTypes(),
+                                             remappedResults, headStart);
         auto tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
 
         // Generate the return.
