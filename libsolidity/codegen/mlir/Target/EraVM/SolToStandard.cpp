@@ -26,6 +26,7 @@
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/ErrorCodes.h"
+#include "libsolutil/FixedHash.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -1130,6 +1131,48 @@ struct CallOpLowering : public OpConversionPattern<sol::CallOp> {
   }
 };
 
+struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
+  using OpConversionPattern<sol::EmitOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::EmitOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderHelper h(r, loc);
+    eravm::BuilderHelper eravmHelper(r, loc);
+
+    // Generate the tuple encoding for the non-indexed args.
+    std::vector<Value> nonIndexedArgs;
+    std::vector<Type> nonIndexedArgsType;
+    for (Value arg : op.getNonIndexedArgs()) {
+      // FIXME: The remapped non-indexed args should be pushed here. How do we
+      // get getNonIndexedArgs in the OpAdaptor?
+      nonIndexedArgs.push_back(arg);
+      assert(cast<IntegerType>(arg.getType()).getWidth() == 256);
+      nonIndexedArgsType.push_back(arg.getType());
+    }
+    // TODO: Are we sure we need an unbounded allocation here?
+    Value headAddr = eravmHelper.genFreePtr();
+    Value tailAddr = eravmHelper.genABITupleEncoding(nonIndexedArgsType,
+                                                     nonIndexedArgs, headAddr);
+    Value tupleSize = r.create<arith::SubIOp>(loc, tailAddr, headAddr);
+
+    // Collect indexed args.
+    std::vector<Value> indexedArgs;
+    if (op.getSignature()) {
+      auto signatureHash =
+          solidity::util::h256::Arith(*op.getSignature()).str();
+      indexedArgs.push_back(h.genI256Const(signatureHash));
+    }
+    for (Value arg : op.getIndexedArgs())
+      indexedArgs.push_back(arg);
+
+    // Generate sol.log and replace sol.emit with it.
+    r.replaceOpWithNewOp<sol::LogOp>(op, headAddr, tupleSize, indexedArgs);
+
+    return success();
+  }
+};
+
 struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
   using OpConversionPattern<sol::FuncOp>::OpConversionPattern;
 
@@ -1807,7 +1850,8 @@ struct ConvertSolToStandard
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
-                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp>();
+                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp,
+                     sol::EmitOp>();
     tgt.addDynamicallyLegalOp<sol::ConvCastOp>([&](sol::ConvCastOp op) -> bool {
       Operation *inp = op.getOperand().getDefiningOp();
       std::vector<Operation *> users(op.getResult().getUsers().begin(),
@@ -1821,8 +1865,8 @@ struct ConvertSolToStandard
 
     RewritePatternSet pats(&getContext());
     pats.add<AllocaOpLowering, MapOpLowering, DataLocCastOpLowering,
-             LoadOpLowering, StoreOpLowering, ConvCastOpLowering>(
-        tyConv, &getContext());
+             LoadOpLowering, StoreOpLowering, ConvCastOpLowering,
+             EmitOpLowering>(tyConv, &getContext());
     pats.add<MallocOpLowering, AddrOfOpLowering>(&getContext());
 
     // Assign slots to state variables.

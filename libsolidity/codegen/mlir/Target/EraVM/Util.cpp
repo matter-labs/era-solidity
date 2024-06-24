@@ -302,6 +302,12 @@ eravm::BuilderHelper::genCallDataPtrLoad(ModuleOp mod,
                                 eravm::getAlignment(callDataPtrAddr));
 }
 
+Value eravm::BuilderHelper::genFreePtr(std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderHelper h(b, loc);
+  return b.create<sol::MLoadOp>(loc, h.genI256Const(64));
+}
+
 Value eravm::BuilderHelper::genMemAlloc(Value size,
                                         std::optional<Location> locArg) {
   // TODO: Move this to the evm namespace.
@@ -309,7 +315,7 @@ Value eravm::BuilderHelper::genMemAlloc(Value size,
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderHelper h(b, loc);
 
-  Value freePtr = b.create<sol::MLoadOp>(loc, h.genI256Const(64));
+  Value freePtr = genFreePtr(locArg);
 
   // FIXME: Shouldn't we check for overflow in the freePtr + size operation
   // and generate PanicCode::ResourceError?

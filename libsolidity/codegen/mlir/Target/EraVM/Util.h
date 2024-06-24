@@ -197,6 +197,9 @@ public:
   void genPanic(solidity::util::PanicCode code, mlir::Value cond,
                 std::optional<mlir::Location> locArg = std::nullopt);
 
+  /// Generates the free pointer.
+  mlir::Value genFreePtr(std::optional<mlir::Location> locArg = std::nullopt);
+
   /// Generates the memory allocation code.
   mlir::Value genMemAlloc(mlir::Value size,
                           std::optional<mlir::Location> locArg = std::nullopt);

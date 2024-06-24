@@ -259,6 +259,18 @@ def Sol_EmitOp : Sol_Op<"emit"> {
   ];
   let skipDefaultBuilders = 1;
 
+  let extraClassDeclaration = [{
+    OperandRange getIndexedArgs() {
+      return OperandRange(getOperands().begin(), getOperands().begin() +
+                          getIndexedArgsCount());
+    }
+
+    OperandRange getNonIndexedArgs() {
+      return OperandRange(getOperands().begin() + getIndexedArgsCount(),
+                          getOperands().end());
+    }
+  }];
+
   // TODO: verifier ($indexedArgsCount <= 3)
 }
 
