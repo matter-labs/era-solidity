@@ -31,11 +31,13 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/IntrinsicsEraVM.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -177,6 +179,7 @@ Value eravm::Builder::genABITupleEncoding(
     headOffset += getCallDataHeadSize(ty);
   }
 
+  assert(currTailAddr);
   return currTailAddr;
 }
 
@@ -209,6 +212,77 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
 
     headPos += getCallDataHeadSize(ty);
   }
+}
+
+Value eravm::Builder::genABIData(Value addr, Value size,
+                                 eravm::AddrSpace addrSpace, bool isSysCall,
+                                 std::optional<Location> locArg) {
+  assert(cast<IntegerType>(addr.getType()).getWidth() == 256);
+  assert(cast<IntegerType>(size.getType()).getWidth() == 256);
+
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  // TODO? Move this to eravm::Builder?
+  auto genClamp = [&](mlir::Value val, uint64_t maxValLiteral) {
+    IntegerType valTy = cast<IntegerType>(val.getType());
+    assert(valTy.getWidth() > 64);
+
+    // Generate the clamped value allocation and set it to max.
+    auto maxVal = bExt.genConst(maxValLiteral, valTy.getWidth());
+    auto clampedValAddr = b.create<LLVM::AllocaOp>(
+        loc, LLVM::LLVMPointerType::get(valTy), bExt.genConst(1),
+        eravm::getAlignment(AddrSpace_Stack));
+    b.create<LLVM::StoreOp>(loc, maxVal, clampedValAddr,
+                            eravm::getAlignment(AddrSpace_Stack));
+
+    // Generate the check for value <= max and the store of value.
+    auto valLEMax =
+        b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ule, val, maxVal);
+    b.create<scf::IfOp>(loc, valLEMax,
+                        /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
+                          b.create<LLVM::StoreOp>(loc, val, clampedValAddr);
+                          b.create<scf::YieldOp>(loc);
+                        });
+
+    return b.create<LLVM::LoadOp>(loc, clampedValAddr,
+                                  eravm::getAlignment(AddrSpace_Stack));
+  };
+
+  // Generate the clamp of the address, length and gas.
+  mlir::Value clampedAddr = genClamp(addr, UINT32_MAX);
+  mlir::Value clampedSize = genClamp(size, UINT32_MAX);
+  auto gasLeft = b.create<LLVM::IntrCallOp>(
+      loc, /*resTy=*/b.getIntegerType(256),
+      b.getI32IntegerAttr(llvm::Intrinsic::eravm_gasleft),
+      b.getStringAttr("eravm.gasleft"));
+  mlir::Value clampedGas = genClamp(gasLeft, UINT32_MAX);
+
+  // Generate the abi data from the address, length and gas.
+  auto shiftedAddr = b.create<arith::ShLIOp>(
+      loc, clampedAddr, bExt.genI256Const(eravm::BitLen_X32 * 2));
+  auto shiftedLen = b.create<arith::ShLIOp>(
+      loc, clampedSize, bExt.genI256Const(eravm::BitLen_X32 * 3));
+  auto shiftedGas = b.create<arith::ShLIOp>(
+      loc, clampedGas, bExt.genI256Const(eravm::BitLen_X32 * 6));
+  auto abiData = b.create<arith::AddIOp>(loc, shiftedAddr, shiftedLen);
+  abiData = b.create<arith::AddIOp>(loc, abiData, shiftedGas);
+
+  if (addrSpace == eravm::AddrSpace_HeapAuxiliary) {
+    APInt shiftedAuxHeapMarker(/*numBits=*/256, RetForwardPageType::UseAuxHeap);
+    shiftedAuxHeapMarker <<= eravm::BitLen_X32 * 7;
+    abiData = b.create<arith::AddIOp>(loc, abiData,
+                                      bExt.genI256Const(shiftedAuxHeapMarker));
+  }
+
+  if (isSysCall) {
+    APInt shiftedAuxHeapMarker(/*numBits=*/256, RetForwardPageType::UseAuxHeap);
+    shiftedAuxHeapMarker <<= eravm::BitLen_X32 * 7 + BitLen_Byte * 3;
+    abiData = b.create<arith::AddIOp>(loc, abiData,
+                                      bExt.genI256Const(shiftedAuxHeapMarker));
+  }
+
+  return abiData;
 }
 
 sol::FuncOp eravm::Builder::getOrInsertCreationFuncOp(llvm::StringRef name,

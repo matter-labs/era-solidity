@@ -67,7 +67,15 @@ public:
     return op.getResult();
   }
 
-  mlir::Value genConst(int64_t val, unsigned width,
+  mlir::Value genConst(llvm::APInt const &val,
+                       std::optional<mlir::Location> locArg = std::nullopt) {
+    mlir::IntegerType ty = b.getIntegerType(val.getBitWidth());
+    auto op = b.create<mlir::arith::ConstantOp>(locArg ? *locArg : defLoc,
+                                                b.getIntegerAttr(ty, val));
+    return op.getResult();
+  }
+
+  mlir::Value genConst(int64_t val, unsigned width = 64,
                        std::optional<mlir::Location> locArg = std::nullopt) {
     return genConst(llvm::APInt(width, val, /*isSigned=*/true), width, locArg);
   }

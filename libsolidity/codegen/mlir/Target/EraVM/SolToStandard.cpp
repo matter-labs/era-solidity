@@ -153,6 +153,24 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
   }
 };
 
+struct LogOpLowering : public OpRewritePattern<sol::LogOp> {
+  using OpRewritePattern<sol::LogOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::LogOp op,
+                                PatternRewriter &r) const override {
+    llvm_unreachable("WIP");
+
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r);
+    eravm::Builder eraB(r, loc);
+    eraB.genABIData(op.getAddr(), op.getSize(), eravm::AddrSpace_Heap,
+                    /*isSysCall=*/true);
+
+    r.eraseOp(op);
+    return success();
+  }
+};
+
 struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   using OpRewritePattern<sol::CallValOp>::OpRewritePattern;
 
@@ -1909,7 +1927,7 @@ struct ConvertSolToStandard
              CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
              CallDataLoadOpLowering, CallDataSizeOpLowering,
              CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
-             Keccak256OpLowering>(&getContext());
+             Keccak256OpLowering, LogOpLowering>(&getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();

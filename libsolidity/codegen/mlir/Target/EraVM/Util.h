@@ -138,6 +138,9 @@ public:
   mlir::Value genABILen(mlir::Value ptr,
                         std::optional<mlir::Location> locArg = std::nullopt);
 
+  // FIXME: Refactor ABI APIs to distinguish solidity/evm ones with eravm
+  // specfic ones.
+
   /// Generates the tuple encoding as per ABI and return the "tail" address.
   mlir::Value
   genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
@@ -148,6 +151,11 @@ public:
   void genABITupleDecoding(mlir::TypeRange tys, mlir::Value headStart,
                            std::vector<mlir::Value> &results, bool fromMem,
                            std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates the ABI data for an external call.
+  mlir::Value genABIData(mlir::Value addr, mlir::Value size,
+                         eravm::AddrSpace addrSpace, bool isSysCall,
+                         std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Returns an existing or a new (if not found) creation function.
   mlir::sol::FuncOp getOrInsertCreationFuncOp(mlir::StringRef name,
