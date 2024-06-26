@@ -340,6 +340,24 @@ FlatSymbolRefAttr eravm::Builder::getOrInsertSha3(ModuleOp mod) {
   return FlatSymbolRefAttr::get(mod.getContext(), "__sha3");
 }
 
+sol::FuncOp eravm::Builder::getOrInsertFarCall(ModuleOp mod) {
+  auto *ctx = mod.getContext();
+  solidity::mlirgen::BuilderExt bExt(b);
+
+  auto i1Ty = IntegerType::get(ctx, 1);
+  auto i256Ty = IntegerType::get(ctx, 256);
+  auto genericPtrTy = LLVM::LLVMPointerType::get(ctx, AddrSpace_Generic);
+
+  std::vector<Type> inpTys(eravm::MandatoryArgCnt + eravm::ExtraABIDataSize,
+                           i256Ty);
+  auto fnTy = FunctionType::get(ctx, inpTys, {genericPtrTy, i1Ty});
+
+  auto fn =
+      bExt.getOrInsertFuncOp("__farcall", fnTy, LLVM::Linkage::External, mod);
+  fn.setPrivate();
+  return fn;
+}
+
 LLVM::AddressOfOp
 eravm::Builder::genCallDataSizeAddr(ModuleOp mod,
                                     std::optional<Location> locArg) {

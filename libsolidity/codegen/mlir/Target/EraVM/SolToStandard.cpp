@@ -158,13 +158,46 @@ struct LogOpLowering : public OpRewritePattern<sol::LogOp> {
 
   LogicalResult matchAndRewrite(sol::LogOp op,
                                 PatternRewriter &r) const override {
-    llvm_unreachable("WIP");
-
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
-    eraB.genABIData(op.getAddr(), op.getSize(), eravm::AddrSpace_Heap,
-                    /*isSysCall=*/true);
+
+    // Collect arguments for the far-call.
+    std::vector<Value> farCallArgs;
+    farCallArgs.push_back(eraB.genABIData(op.getAddr(), op.getSize(),
+                                          eravm::AddrSpace_Heap,
+                                          /*isSysCall=*/true));
+    farCallArgs.push_back(bExt.genI256Const(eravm::Address_EventWriter));
+    farCallArgs.push_back(bExt.genI256Const(op.getTopics().size()));
+    for (Value topic : op.getTopics()) {
+      farCallArgs.push_back(topic);
+    }
+
+    sol::FuncOp farCallOp =
+        eraB.getOrInsertFarCall(op->getParentOfType<ModuleOp>());
+
+    // Pad remaining args with undefs.
+    size_t farCallArgCnt = farCallOp.getFunctionType().getInputs().size();
+    assert(farCallArgCnt > farCallArgs.size());
+    size_t undefArgCnt = farCallArgCnt - farCallArgs.size();
+    for (size_t i = 0; i < undefArgCnt; ++i) {
+      farCallArgs.push_back(
+          r.create<LLVM::UndefOp>(loc, r.getIntegerType(256)));
+    }
+
+    // Generate the call to the far-call function.
+    auto farCall = r.create<sol::CallOp>(loc, farCallOp, farCallArgs);
+
+    // Generate the status check and revert.
+    auto farCallFailCond =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                farCall.getResult(1), bExt.genBool(false));
+    r.create<scf::IfOp>(loc, farCallFailCond,
+                        /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
+                          b.create<sol::RevertOp>(loc, bExt.genI256Const(0),
+                                                  bExt.genI256Const(0));
+                          b.create<scf::YieldOp>(loc);
+                        });
 
     r.eraseOp(op);
     return success();

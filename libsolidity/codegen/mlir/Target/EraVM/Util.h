@@ -85,6 +85,8 @@ enum : unsigned {
 };
 enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
 
+enum : uint16_t { Address_EventWriter = 0x800D };
+
 static const char *GlobHeapMemPtr = "memory_pointer";
 static const char *GlobCallDataSize = "calldatasize";
 static const char *GlobRetDataSize = "returndatasize";
@@ -175,6 +177,9 @@ public:
 
   /// Returns an existing or a new (if not found) sha3 function symbol.
   mlir::FlatSymbolRefAttr getOrInsertSha3(mlir::ModuleOp mod);
+
+  /// Returns an existing or a new (if not found) far-call function.
+  mlir::sol::FuncOp getOrInsertFarCall(mlir::ModuleOp mod);
 
   /// Generates the address to the calldatasize global variable (creates the
   /// variable if it doesn't exist).
