@@ -5,9 +5,8 @@ pragma solidity >=0.0;
 
 contract C {
   event E(address indexed a, address indexed b, uint256 c);
-  function f(address a, address b, uint256 c) public returns (uint256) {
+  function f(address a, address b, uint256 c) public {
     emit E(a, b, c);
-    return 0;
   }
 }
 
@@ -16,8 +15,8 @@ contract C {
 // CHECK-NEXT: #loc4 = loc({{.*}}:7:24)
 // CHECK-NEXT: #loc5 = loc({{.*}}:7:35)
 // CHECK-NEXT: module {
-// CHECK-NEXT:   sol.contract @C_30 {
-// CHECK-NEXT:     sol.func @f_29(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) -> i256 attributes {state_mutability = #sol<StateMutability NonPayable>} {
+// CHECK-NEXT:   sol.contract @C_26 {
+// CHECK-NEXT:     sol.func @f_25(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) attributes {state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:       %0 = sol.alloca : !sol.ptr<i256, Stack> loc(#loc3)
 // CHECK-NEXT:       sol.store %arg0, %0 : i256, !sol.ptr<i256, Stack> loc(#loc3)
 // CHECK-NEXT:       %1 = sol.alloca : !sol.ptr<i256, Stack> loc(#loc4)
@@ -28,11 +27,9 @@ contract C {
 // CHECK-NEXT:       %4 = sol.load %1 : !sol.ptr<i256, Stack>, i256 loc(#loc7)
 // CHECK-NEXT:       %5 = sol.load %2 : !sol.ptr<i256, Stack>, i256 loc(#loc8)
 // CHECK-NEXT:       "sol.emit"(%3, %4, %5) {indexedArgsCount = 2 : i8, signature = "E(address,address,uint256)"} : (i256, i256, i256) -> () loc(#loc9)
-// CHECK-NEXT:       %c0_i8 = arith.constant 0 : i8 loc(#loc10)
-// CHECK-NEXT:       %6 = arith.extui %c0_i8 : i8 to i256 loc(#loc10)
-// CHECK-NEXT:       sol.return %6 : i256 loc(#loc11)
+// CHECK-NEXT:       sol.return loc(#loc2)
 // CHECK-NEXT:     } loc(#loc2)
-// CHECK-NEXT:   } {interface_fns = [{selector = "9548dc8c", sym = @f_29, type = (i256, i256, i256) -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = "9548dc8c", sym = @f_25, type = (i256, i256, i256) -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:5:0)
@@ -41,6 +38,4 @@ contract C {
 // CHECK-NEXT: #loc7 = loc({{.*}}:8:14)
 // CHECK-NEXT: #loc8 = loc({{.*}}:8:17)
 // CHECK-NEXT: #loc9 = loc({{.*}}:8:9)
-// CHECK-NEXT: #loc10 = loc({{.*}}:9:11)
-// CHECK-NEXT: #loc11 = loc({{.*}}:9:4)
 // CHECK-EMPTY:

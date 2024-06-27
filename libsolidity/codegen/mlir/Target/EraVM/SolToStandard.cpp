@@ -1701,12 +1701,18 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
         }
 
         // Encode the result using the ABI's tuple encoder.
-        auto headStart = r.create<sol::MLoadOp>(loc, bExt.genI256Const(64));
-        auto tail = eraB.genABITupleEncoding(callOp.getResultTypes(),
-                                             remappedResults, headStart);
-        auto tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
+        auto headStart = eraB.genFreePtr();
+        mlir::Value tupleSize;
+        if (!callOp.getResultTypes().empty()) {
+          auto tail = eraB.genABITupleEncoding(callOp.getResultTypes(),
+                                               remappedResults, headStart);
+          tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
+        } else {
+          tupleSize = bExt.genI256Const(0);
+        }
 
         // Generate the return.
+        assert(tupleSize);
         r.create<sol::BuiltinRetOp>(loc, headStart, tupleSize);
 
         r.create<mlir::scf::YieldOp>(loc);

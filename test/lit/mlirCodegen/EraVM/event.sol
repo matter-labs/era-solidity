@@ -5,9 +5,8 @@ pragma solidity >=0.0;
 
 contract C {
   event E(address indexed a, address indexed b, uint256 c);
-  function f(address a, address b, uint256 c) public returns (uint256) {
+  function f(address a, address b, uint256 c) public {
     emit E(a, b, c);
-    return 0;
   }
 }
 
@@ -88,10 +87,10 @@ contract C {
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc2)
 // CHECK-NEXT:         scf.if %9 {
+// CHECK-NEXT:           %c0_i256_10 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:           %c0_i256_11 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:           %c0_i256_12 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           %c0_i256_13 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           func.call @__revert(%c0_i256_11, %c0_i256_12, %c0_i256_13) : (i256, i256, i256) -> () loc(#loc2)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_10, %c0_i256_11, %c0_i256_12) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         } loc(#loc2)
 // CHECK-NEXT:         %c4_i256_4 = arith.constant 4 : i256 loc(#loc2)
@@ -113,19 +112,13 @@ contract C {
 // CHECK-NEXT:         %22 = llvm.load %21 {alignment = 32 : i64} : !llvm.ptr<ptr<3>> loc(#loc2)
 // CHECK-NEXT:         %23 = llvm.getelementptr %22[%20] : (!llvm.ptr<3>, i256) -> !llvm.ptr<3>, i8 loc(#loc2)
 // CHECK-NEXT:         %24 = llvm.load %23 {alignment = 1 : i64} : !llvm.ptr<3> -> i256 loc(#loc2)
-// CHECK-NEXT:         %25 = func.call @f_29(%14, %19, %24) : (i256, i256, i256) -> i256 loc(#loc2)
+// CHECK-NEXT:         func.call @f_25(%14, %19, %24) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         %c64_i256_7 = arith.constant 64 : i256 loc(#loc2)
-// CHECK-NEXT:         %26 = llvm.inttoptr %c64_i256_7 : i256 to !llvm.ptr<1> loc(#loc2)
-// CHECK-NEXT:         %27 = llvm.load %26 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc2)
+// CHECK-NEXT:         %25 = llvm.inttoptr %c64_i256_7 : i256 to !llvm.ptr<1> loc(#loc2)
+// CHECK-NEXT:         %26 = llvm.load %25 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc2)
 // CHECK-NEXT:         %c0_i256_8 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:         %28 = arith.addi %27, %c0_i256_8 : i256 loc(#loc2)
-// CHECK-NEXT:         %c32_i256_9 = arith.constant 32 : i256 loc(#loc2)
-// CHECK-NEXT:         %29 = arith.addi %27, %c32_i256_9 : i256 loc(#loc2)
-// CHECK-NEXT:         %30 = llvm.inttoptr %28 : i256 to !llvm.ptr<1> loc(#loc2)
-// CHECK-NEXT:         llvm.store %25, %30 {alignment = 1 : i64} : i256, !llvm.ptr<1> loc(#loc2)
-// CHECK-NEXT:         %31 = arith.subi %29, %27 : i256 loc(#loc2)
-// CHECK-NEXT:         %c0_i256_10 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:         func.call @__return(%27, %31, %c0_i256_10) : (i256, i256, i256) -> () loc(#loc2)
+// CHECK-NEXT:         %c0_i256_9 = arith.constant 0 : i256 loc(#loc2)
+// CHECK-NEXT:         func.call @__return(%26, %c0_i256_8, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         scf.yield loc(#loc2)
 // CHECK-NEXT:       }
@@ -233,7 +226,7 @@ contract C {
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:     llvm.unreachable loc(#loc2)
 // CHECK-NEXT:   } loc(#loc)
-// CHECK-NEXT:   func.func @f_29.0(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) -> i256 attributes {llvm.linkage = #llvm.linkage<private>, state_mutability = #sol<StateMutability NonPayable>} {
+// CHECK-NEXT:   func.func @f_25.0(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) attributes {llvm.linkage = #llvm.linkage<private>, state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:     %c1_i256 = arith.constant 1 : i256 loc(#loc4)
 // CHECK-NEXT:     %0 = llvm.alloca %c1_i256 x i256 : (i256) -> !llvm.ptr<i256> loc(#loc4)
 // CHECK-NEXT:     llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc4)
@@ -313,11 +306,9 @@ contract C {
 // CHECK-NEXT:       func.call @__revert(%c0_i256_7, %c0_i256_8, %c2_i256) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:       func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:     } loc(#loc1)
-// CHECK-NEXT:     %c0_i8 = arith.constant 0 : i8 loc(#loc10)
-// CHECK-NEXT:     %36 = arith.extui %c0_i8 : i8 to i256 loc(#loc10)
-// CHECK-NEXT:     return %36 : i256 loc(#loc11)
+// CHECK-NEXT:     return loc(#loc3)
 // CHECK-NEXT:   } loc(#loc3)
-// CHECK-NEXT:   func.func @f_29(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) -> i256 attributes {llvm.linkage = #llvm.linkage<private>, runtime, state_mutability = #sol<StateMutability NonPayable>} {
+// CHECK-NEXT:   func.func @f_25(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) attributes {llvm.linkage = #llvm.linkage<private>, runtime, state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:     %c1_i256 = arith.constant 1 : i256 loc(#loc4)
 // CHECK-NEXT:     %0 = llvm.alloca %c1_i256 x i256 : (i256) -> !llvm.ptr<i256> loc(#loc4)
 // CHECK-NEXT:     llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc4)
@@ -397,9 +388,7 @@ contract C {
 // CHECK-NEXT:       func.call @__revert(%c0_i256_7, %c0_i256_8, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:       func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:     } loc(#loc1)
-// CHECK-NEXT:     %c0_i8 = arith.constant 0 : i8 loc(#loc10)
-// CHECK-NEXT:     %36 = arith.extui %c0_i8 : i8 to i256 loc(#loc10)
-// CHECK-NEXT:     return %36 : i256 loc(#loc11)
+// CHECK-NEXT:     return loc(#loc3)
 // CHECK-NEXT:   } loc(#loc3)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
@@ -408,6 +397,4 @@ contract C {
 // CHECK-NEXT: #loc7 = loc({{.*}}:8:11)
 // CHECK-NEXT: #loc8 = loc({{.*}}:8:14)
 // CHECK-NEXT: #loc9 = loc({{.*}}:8:17)
-// CHECK-NEXT: #loc10 = loc({{.*}}:9:11)
-// CHECK-NEXT: #loc11 = loc({{.*}}:9:4)
 // CHECK-EMPTY:
