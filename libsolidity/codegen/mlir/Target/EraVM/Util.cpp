@@ -302,6 +302,21 @@ sol::FuncOp eravm::Builder::getOrInsertRuntimeFuncOp(llvm::StringRef name,
   return fn;
 }
 
+FlatSymbolRefAttr eravm::Builder::getPersonality() {
+  return FlatSymbolRefAttr::get(b.getContext(), "__personality");
+}
+
+FlatSymbolRefAttr eravm::Builder::getOrInsertPersonality(ModuleOp mod) {
+  solidity::mlirgen::BuilderExt bExt(b);
+
+  auto fnTy = FunctionType::get(b.getContext(), {},
+                                {IntegerType::get(b.getContext(), 32)});
+  auto fn = bExt.getOrInsertFuncOp("__personality", fnTy,
+                                   LLVM::Linkage::External, mod);
+  fn.setPrivate();
+  return getPersonality();
+}
+
 FlatSymbolRefAttr eravm::Builder::getOrInsertReturn(ModuleOp mod) {
   auto *ctx = mod.getContext();
   solidity::mlirgen::BuilderExt bExt(b);

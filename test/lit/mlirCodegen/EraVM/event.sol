@@ -16,13 +16,13 @@ contract C {
 // CHECK-NEXT: #loc5 = loc({{.*}}:7:24)
 // CHECK-NEXT: #loc6 = loc({{.*}}:7:35)
 // CHECK-NEXT: module {
-// CHECK-NEXT:   func.func private @__return(i256, i256, i256) attributes {llvm.linkage = #llvm.linkage<external>} loc(#loc)
-// CHECK-NEXT:   func.func private @".unreachable"() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func private @__return(i256, i256, i256) attributes {llvm.linkage = #llvm.linkage<external>, personality = @__personality} loc(#loc)
+// CHECK-NEXT:   func.func private @".unreachable"() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     llvm.unreachable loc(#loc1)
 // CHECK-NEXT:   } loc(#loc)
-// CHECK-NEXT:   func.func private @__revert(i256, i256, i256) attributes {llvm.linkage = #llvm.linkage<external>} loc(#loc)
-// CHECK-NEXT:   func.func private @__farcall(i256, i256, i256, i256, i256, i256, i256, i256, i256, i256, i256, i256) -> (!llvm.ptr<3>, i1) attributes {llvm.linkage = #llvm.linkage<external>} loc(#loc)
-// CHECK-NEXT:   func.func private @__deploy() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func private @__revert(i256, i256, i256) attributes {llvm.linkage = #llvm.linkage<external>, personality = @__personality} loc(#loc)
+// CHECK-NEXT:   func.func private @__farcall(i256, i256, i256, i256, i256, i256, i256, i256, i256, i256, i256, i256) -> (!llvm.ptr<3>, i1) attributes {llvm.linkage = #llvm.linkage<external>, personality = @__personality} loc(#loc)
+// CHECK-NEXT:   func.func private @__deploy() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c128_i256 = arith.constant 128 : i256 loc(#loc2)
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256 loc(#loc2)
 // CHECK-NEXT:     %0 = llvm.inttoptr %c64_i256 : i256 to !llvm.ptr<1> loc(#loc2)
@@ -66,7 +66,7 @@ contract C {
 // CHECK-NEXT:     call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:     llvm.unreachable loc(#loc2)
 // CHECK-NEXT:   } loc(#loc)
-// CHECK-NEXT:   func.func private @__runtime() attributes {llvm.linkage = #llvm.linkage<private>, runtime} {
+// CHECK-NEXT:   func.func private @__runtime() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality, runtime} {
 // CHECK-NEXT:     %c128_i256 = arith.constant 128 : i256 loc(#loc2)
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256 loc(#loc2)
 // CHECK-NEXT:     %0 = llvm.inttoptr %c64_i256 : i256 to !llvm.ptr<1> loc(#loc2)
@@ -141,7 +141,7 @@ contract C {
 // CHECK-NEXT:   llvm.mlir.global private @returndatasize(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256 loc(#loc)
 // CHECK-NEXT:   llvm.mlir.global private @calldatasize(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256 loc(#loc)
 // CHECK-NEXT:   llvm.mlir.global private @memory_pointer(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256 loc(#loc)
-// CHECK-NEXT:   func.func private @__entry(%arg0: !llvm.ptr<3> loc({{.*}}:5:0), %arg1: i256 loc({{.*}}:5:0), %arg2: i256 loc({{.*}}:5:0), %arg3: i256 loc({{.*}}:5:0), %arg4: i256 loc({{.*}}:5:0), %arg5: i256 loc({{.*}}:5:0), %arg6: i256 loc({{.*}}:5:0), %arg7: i256 loc({{.*}}:5:0), %arg8: i256 loc({{.*}}:5:0), %arg9: i256 loc({{.*}}:5:0), %arg10: i256 loc({{.*}}:5:0), %arg11: i256 loc({{.*}}:5:0)) -> i256 attributes {llvm.linkage = #llvm.linkage<external>} {
+// CHECK-NEXT:   func.func private @__entry(%arg0: !llvm.ptr<3> loc({{.*}}:5:0), %arg1: i256 loc({{.*}}:5:0), %arg2: i256 loc({{.*}}:5:0), %arg3: i256 loc({{.*}}:5:0), %arg4: i256 loc({{.*}}:5:0), %arg5: i256 loc({{.*}}:5:0), %arg6: i256 loc({{.*}}:5:0), %arg7: i256 loc({{.*}}:5:0), %arg8: i256 loc({{.*}}:5:0), %arg9: i256 loc({{.*}}:5:0), %arg10: i256 loc({{.*}}:5:0), %arg11: i256 loc({{.*}}:5:0)) -> i256 attributes {llvm.linkage = #llvm.linkage<external>, personality = @__personality} {
 // CHECK-NEXT:     %0 = llvm.mlir.addressof @memory_pointer : !llvm.ptr<i256> loc(#loc2)
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:     llvm.store %c0_i256, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc2)
@@ -226,7 +226,7 @@ contract C {
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:     llvm.unreachable loc(#loc2)
 // CHECK-NEXT:   } loc(#loc)
-// CHECK-NEXT:   func.func @f_25.0(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) attributes {llvm.linkage = #llvm.linkage<private>, state_mutability = #sol<StateMutability NonPayable>} {
+// CHECK-NEXT:   func.func @f_25.0(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality, state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:     %c1_i256 = arith.constant 1 : i256 loc(#loc4)
 // CHECK-NEXT:     %0 = llvm.alloca %c1_i256 x i256 : (i256) -> !llvm.ptr<i256> loc(#loc4)
 // CHECK-NEXT:     llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc4)
@@ -308,7 +308,7 @@ contract C {
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     return loc(#loc3)
 // CHECK-NEXT:   } loc(#loc3)
-// CHECK-NEXT:   func.func @f_25(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) attributes {llvm.linkage = #llvm.linkage<private>, runtime, state_mutability = #sol<StateMutability NonPayable>} {
+// CHECK-NEXT:   func.func @f_25(%arg0: i256 loc({{.*}}:7:13), %arg1: i256 loc({{.*}}:7:24), %arg2: i256 loc({{.*}}:7:35)) attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality, runtime, state_mutability = #sol<StateMutability NonPayable>} {
 // CHECK-NEXT:     %c1_i256 = arith.constant 1 : i256 loc(#loc4)
 // CHECK-NEXT:     %0 = llvm.alloca %c1_i256 x i256 : (i256) -> !llvm.ptr<i256> loc(#loc4)
 // CHECK-NEXT:     llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256> loc(#loc4)
@@ -390,6 +390,7 @@ contract C {
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     return loc(#loc3)
 // CHECK-NEXT:   } loc(#loc3)
+// CHECK-NEXT:   func.func private @__personality() -> i32 attributes {llvm.linkage = #llvm.linkage<external>, personality = @__personality} loc(#loc)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:8:9)

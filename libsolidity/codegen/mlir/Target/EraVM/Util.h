@@ -169,6 +169,12 @@ public:
                                              mlir::FunctionType fnTy,
                                              mlir::ModuleOp mod);
 
+  /// Returns an existing personality function symbol.
+  mlir::FlatSymbolRefAttr getPersonality();
+
+  /// Returns an existing or a new (if not found) personality function symbol.
+  mlir::FlatSymbolRefAttr getOrInsertPersonality(mlir::ModuleOp mod);
+
   /// Returns an existing or a new (if not found) return function symbol.
   mlir::FlatSymbolRefAttr getOrInsertReturn(mlir::ModuleOp mod);
 

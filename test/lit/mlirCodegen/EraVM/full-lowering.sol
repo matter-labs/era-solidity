@@ -31,7 +31,7 @@ contract C {
 // CHECK-EMPTY:
 // CHECK-NEXT: declare void @__return(i256, i256, i256)
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @.unreachable() {
+// CHECK-NEXT: define private void @.unreachable() personality ptr @__personality {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
@@ -39,7 +39,7 @@ contract C {
 // CHECK-EMPTY:
 // CHECK-NEXT: declare i256 @__sha3(ptr addrspace(1), i256, i1)
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @__deploy() {
+// CHECK-NEXT: define private void @__deploy() personality ptr @__personality {
 // CHECK-NEXT:   store i256 128, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %1 = call i256 @llvm.eravm.getu128()
 // CHECK-NEXT:   %2 = icmp ne i256 %1, 0
@@ -63,7 +63,7 @@ contract C {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @__runtime() {
+// CHECK-NEXT: define private void @__runtime() personality ptr @__personality {
 // CHECK-NEXT:   store i256 128, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %1 = load i256, ptr @calldatasize, align 32
 // CHECK-NEXT:   %2 = icmp uge i256 %1, 4
@@ -146,7 +146,7 @@ contract C {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) {
+// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr @memory_pointer, align 32
 // CHECK-NEXT:   store i256 0, ptr @calldatasize, align 32
 // CHECK-NEXT:   store i256 0, ptr @returndatasize, align 32
@@ -185,7 +185,7 @@ contract C {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f1_19.0() {
+// CHECK-NEXT: define private i256 @f1_19.0() personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr addrspace(1) null, align 1
 // CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
 // CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
@@ -234,15 +234,15 @@ contract C {
 // CHECK-NEXT:   ret i256 %6
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f0_11.0() {
+// CHECK-NEXT: define private i256 @f0_11.0() personality ptr @__personality {
 // CHECK-NEXT:   ret i256 42
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f0_11() {
+// CHECK-NEXT: define private i256 @f0_11() personality ptr @__personality {
 // CHECK-NEXT:   ret i256 42
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f1_19() {
+// CHECK-NEXT: define private i256 @f1_19() personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr addrspace(1) null, align 1
 // CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
 // CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
@@ -291,6 +291,8 @@ contract C {
 // CHECK-NEXT:   ret i256 %6
 // CHECK-NEXT: }
 // CHECK-EMPTY:
+// CHECK-NEXT: declare i32 @__personality()
+// CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nounwind willreturn memory(none)
 // CHECK-NEXT: declare i256 @llvm.eravm.getu128() #0
 // CHECK-EMPTY:
@@ -310,8 +312,11 @@ contract C {
 // ASM: 	.text
 // ASM-NEXT: 	.file	{{.*}}
 // ASM-NEXT: .unreachable:
+// ASM-NEXT: .func_begin0:
+// ASM-NEXT: .func_end0:
 // ASM-EMPTY:
 // ASM-NEXT: __deploy:
+// ASM-NEXT: .func_begin1:
 // ASM-NEXT: 	add	128, r0, r1
 // ASM-NEXT: 	st.1	64, r1
 // ASM-NEXT: 	context.get_context_u128	r1
@@ -331,8 +336,10 @@ contract C {
 // ASM-NEXT: 	add	2, r0, r3
 // ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: .func_end1:
 // ASM-EMPTY:
 // ASM-NEXT: __runtime:
+// ASM-NEXT: .func_begin2:
 // ASM-NEXT: 	add	128, r0, r1
 // ASM-NEXT: 	st.1	64, r1
 // ASM-NEXT: 	add	stack[@calldatasize], r0, r1
@@ -445,9 +452,11 @@ contract C {
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: .func_end2:
 // ASM-EMPTY:
 // ASM-NEXT: 	.globl	__entry
 // ASM-NEXT: __entry:
+// ASM-NEXT: .func_begin3:
 // ASM-NEXT: 	add	stack[@ptr_calldata + r0], r0, r13
 // ASM-NEXT: 	shr.s	96, r13, r13
 // ASM-NEXT: 	and	@CPI3_0[0], r13, r14
@@ -473,12 +482,16 @@ contract C {
 // ASM-NEXT: 	near_call	r0, @__deploy, @DEFAULT_UNWIND
 // ASM-NEXT: .BB3_2:
 // ASM-NEXT: 	near_call	r0, @__runtime, @DEFAULT_UNWIND
+// ASM-NEXT: .func_end3:
 // ASM-EMPTY:
 // ASM-NEXT: f0_11:
+// ASM-NEXT: .func_begin4:
 // ASM-NEXT: 	add	42, r0, r1
 // ASM-NEXT: 	ret
+// ASM-NEXT: .func_end4:
 // ASM-EMPTY:
 // ASM-NEXT: f1_19:
+// ASM-NEXT: .func_begin5:
 // ASM-NEXT: 	nop	stack+=[5 + r0]
 // ASM-NEXT: 	st.1	0, r0
 // ASM-NEXT: 	add	32, r0, r2
@@ -545,6 +558,7 @@ contract C {
 // ASM-NEXT: .BB5_6:
 // ASM-NEXT: 	add	r6, r0, r1
 // ASM-NEXT: 	ret
+// ASM-NEXT: .func_end5:
 // ASM-EMPTY:
 // ASM-NEXT: 	.data
 // ASM-NEXT: 	.p2align	5, 0x0

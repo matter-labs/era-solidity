@@ -76,18 +76,19 @@ module {
 // CHECK: module {
 // CHECK-NEXT:   llvm.mlir.global private @ptr_calldata() {addr_space = 0 : i32} : !llvm.ptr<3>
 // CHECK-NEXT:   llvm.mlir.global private @calldatasize(0 : i256) {addr_space = 0 : i32, alignment = 32 : i64} : i256
-// CHECK-NEXT:   func.func private @".unreachable"() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func private @".unreachable"() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     llvm.unreachable
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func private @__revert(i256, i256, i256) attributes {llvm.linkage = #llvm.linkage<external>}
-// CHECK-NEXT:   func.func @stk(%arg0: i256) attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func private @__revert(i256, i256, i256) attributes {llvm.linkage = #llvm.linkage<external>, personality = @__personality}
+// CHECK-NEXT:   func.func private @__personality() -> i32 attributes {llvm.linkage = #llvm.linkage<external>, personality = @__personality}
+// CHECK-NEXT:   func.func @stk(%arg0: i256) attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c1_i256 = arith.constant 1 : i256
 // CHECK-NEXT:     %0 = llvm.alloca %c1_i256 x i256 : (i256) -> !llvm.ptr<i256>
 // CHECK-NEXT:     llvm.store %arg0, %0 {alignment = 32 : i64} : !llvm.ptr<i256>
 // CHECK-NEXT:     %1 = llvm.load %0 {alignment = 32 : i64} : !llvm.ptr<i256>
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @mem(%arg0: i256) attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @mem(%arg0: i256) attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256
 // CHECK-NEXT:     %c96_i256 = arith.constant 96 : i256
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
@@ -134,7 +135,7 @@ module {
 // CHECK-NEXT:     %17 = llvm.load %16 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @mem_2d() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @mem_2d() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
 // CHECK-NEXT:     %c64_i256_0 = arith.constant 64 : i256
 // CHECK-NEXT:     %0 = llvm.inttoptr %c64_i256_0 : i256 to !llvm.ptr<1>
@@ -240,7 +241,7 @@ module {
 // CHECK-NEXT:     llvm.store %23, %35 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @mem_2d_dyn() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @mem_2d_dyn() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c3_i256 = arith.constant 3 : i256
 // CHECK-NEXT:     %c32_i256 = arith.constant 32 : i256
 // CHECK-NEXT:     %0 = arith.muli %c3_i256, %c32_i256 : i256
@@ -322,7 +323,7 @@ module {
 // CHECK-NEXT:     }
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @mem_1d_dyn(%arg0: i256, %arg1: i256) attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @mem_1d_dyn(%arg0: i256, %arg1: i256) attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c32_i256 = arith.constant 32 : i256
 // CHECK-NEXT:     %0 = arith.muli %arg0, %c32_i256 : i256
 // CHECK-NEXT:     %c32_i256_0 = arith.constant 32 : i256
@@ -392,7 +393,7 @@ module {
 // CHECK-NEXT:     %24 = llvm.load %23 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @mem_2d_inner_dyn(%arg0: i256, %arg1: i256) attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @mem_2d_inner_dyn(%arg0: i256, %arg1: i256) attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c0_i256 = arith.constant 0 : i256
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
 // CHECK-NEXT:     %c64_i256_0 = arith.constant 64 : i256
@@ -477,7 +478,7 @@ module {
 // CHECK-NEXT:     "llvm.intr.memcpy"(%26, %29, %13) <{isVolatile = false}> : (!llvm.ptr<1>, !llvm.ptr<3>, i256) -> ()
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @mem_struct(%arg0: i256) attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @mem_struct(%arg0: i256) attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
 // CHECK-NEXT:     %c64_i256_0 = arith.constant 64 : i256
 // CHECK-NEXT:     %0 = llvm.inttoptr %c64_i256_0 : i256 to !llvm.ptr<1>
@@ -568,7 +569,7 @@ module {
 // CHECK-NEXT:     %35 = llvm.load %34 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @mem_1d_struct() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @mem_1d_struct() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
 // CHECK-NEXT:     %c64_i256_0 = arith.constant 64 : i256
 // CHECK-NEXT:     %0 = llvm.inttoptr %c64_i256_0 : i256 to !llvm.ptr<1>
@@ -670,7 +671,7 @@ module {
 // CHECK-NEXT:     llvm.store %19, %27 {alignment = 1 : i64} : i256, !llvm.ptr<1>
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @dyn_arr() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @dyn_arr() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c10_i256 = arith.constant 10 : i256
 // CHECK-NEXT:     %c32_i256 = arith.constant 32 : i256
 // CHECK-NEXT:     %0 = arith.muli %c10_i256, %c32_i256 : i256
@@ -742,7 +743,7 @@ module {
 // CHECK-NEXT:     %24 = llvm.load %23 {alignment = 1 : i64} : !llvm.ptr<1> -> i256
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @string() attributes {llvm.linkage = #llvm.linkage<private>} {
+// CHECK-NEXT:   func.func @string() attributes {llvm.linkage = #llvm.linkage<private>, personality = @__personality} {
 // CHECK-NEXT:     %c5_i256 = arith.constant 5 : i256
 // CHECK-NEXT:     %c31_i256 = arith.constant 31 : i256
 // CHECK-NEXT:     %0 = arith.addi %c5_i256, %c31_i256 : i256
