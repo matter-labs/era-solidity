@@ -165,14 +165,15 @@ public:
   /// Returns an existing or a new (if not found) LLVM::GlobalOp
   mlir::LLVM::GlobalOp
   getOrInsertGlobalOp(llvm::StringRef name, mlir::ModuleOp mod, mlir::Type,
-                      unsigned alignment, unsigned addrSpace,
+                      unsigned addrSpace, unsigned alignment,
                       mlir::LLVM::Linkage, mlir::Attribute);
 
-  /// Returns an existing or a new (if not found) integral LLVM::GlobalOp
-  mlir::LLVM::GlobalOp getOrInsertIntGlobalOp(
-      llvm::StringRef name, mlir::ModuleOp mod, unsigned addrSpace = 0,
-      unsigned width = 256,
-      mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::Private);
+  /// Returns an existing or a new (if not found) i256 LLVM::GlobalOp.
+  mlir::LLVM::GlobalOp getOrInsertI256GlobalOp(llvm::StringRef name,
+                                               unsigned addrSpace,
+                                               unsigned alignment,
+                                               mlir::LLVM::Linkage linkage,
+                                               mlir::ModuleOp mod);
 
   mlir::LLVM::GlobalOp getOrInsertPtrGlobalOp(
       llvm::StringRef name, mlir::ModuleOp mod, unsigned ptrTyAddrSpace = 0,

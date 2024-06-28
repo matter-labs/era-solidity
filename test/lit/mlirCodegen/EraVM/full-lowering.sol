@@ -19,11 +19,11 @@ contract C {
 // CHECK-NEXT: @ptr_active = private global ptr addrspace(3) undef
 // CHECK-NEXT: @ptr_return_data = private global ptr addrspace(3) undef
 // CHECK-NEXT: @ptr_calldata = private global ptr addrspace(3) undef
-// CHECK-NEXT: @extra_abi_data = private global [10 x i256] zeroinitializer, align 32
-// CHECK-NEXT: @call_flags = private global i256 0, align 32
-// CHECK-NEXT: @returndatasize = private global i256 0, align 32
-// CHECK-NEXT: @calldatasize = private global i256 0, align 32
-// CHECK-NEXT: @memory_pointer = private global i256 0, align 32
+// CHECK-NEXT: @extra_abi_data = private global [10 x i256] zeroinitializer
+// CHECK-NEXT: @call_flags = private global i256 0
+// CHECK-NEXT: @returndatasize = private global i256 0
+// CHECK-NEXT: @calldatasize = private global i256 0
+// CHECK-NEXT: @memory_pointer = private global i256 0
 // CHECK-EMPTY:
 // CHECK-NEXT: declare ptr @malloc(i64)
 // CHECK-EMPTY:

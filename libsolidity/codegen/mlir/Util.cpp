@@ -47,15 +47,12 @@ BuilderExt::getOrInsertGlobalOp(llvm::StringRef name, ModuleOp mod, Type ty,
                                   linkage, name, attr, alignment, addrSpace);
 }
 
-LLVM::GlobalOp BuilderExt::getOrInsertIntGlobalOp(llvm::StringRef name,
-                                                  ModuleOp mod,
-                                                  unsigned addrSpace,
-                                                  unsigned width,
-                                                  LLVM::Linkage linkage) {
-  auto ty = b.getIntegerType(width);
-  assert(width > 2 && width % 8 == 0);
-  unsigned alignment = width / 8;
-
+LLVM::GlobalOp BuilderExt::getOrInsertI256GlobalOp(llvm::StringRef name,
+                                                   unsigned addrSpace,
+                                                   unsigned alignment,
+                                                   LLVM::Linkage linkage,
+                                                   ModuleOp mod) {
+  auto ty = b.getIntegerType(256);
   return getOrInsertGlobalOp(name, mod, ty, alignment, addrSpace, linkage,
                              b.getIntegerAttr(ty, 0));
 }

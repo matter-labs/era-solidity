@@ -85,8 +85,9 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
   auto initInt = [&](const char *name) {
-    LLVM::GlobalOp globOp =
-        bExt.getOrInsertIntGlobalOp(name, mod, AddrSpace_Stack);
+    LLVM::GlobalOp globOp = bExt.getOrInsertI256GlobalOp(
+        name, AddrSpace_Stack,
+        /*alignment=*/0, LLVM::Linkage::Private, mod);
     Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
     b.create<LLVM::StoreOp>(loc, bExt.genI256Const(0, locArg), globAddr,
                             getAlignment(globAddr));
@@ -103,7 +104,7 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
   // Initialize the GlobExtraABIData int array
   auto extraABIData = bExt.getOrInsertGlobalOp(
       GlobExtraABIData, mod, LLVM::LLVMArrayType::get(i256Ty, 10),
-      getAlignment(AddrSpace_Stack), AddrSpace_Stack, LLVM::Linkage::Private,
+      /*alignment=*/0, AddrSpace_Stack, LLVM::Linkage::Private,
       b.getZeroAttr(RankedTensorType::get({10}, i256Ty)));
   Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
   b.create<LLVM::StoreOp>(
@@ -379,8 +380,9 @@ eravm::Builder::genCallDataSizeAddr(ModuleOp mod,
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
-  LLVM::GlobalOp globCallDataSzDef = bExt.getOrInsertIntGlobalOp(
-      eravm::GlobCallDataSize, mod, eravm::AddrSpace_Stack);
+  LLVM::GlobalOp globCallDataSzDef = bExt.getOrInsertI256GlobalOp(
+      eravm::GlobCallDataSize, eravm::AddrSpace_Stack, /*alignment=*/0,
+      LLVM::Linkage::Private, mod);
   return b.create<LLVM::AddressOfOp>(loc, globCallDataSzDef);
 }
 
