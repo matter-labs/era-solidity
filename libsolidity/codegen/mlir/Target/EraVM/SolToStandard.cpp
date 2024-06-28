@@ -1393,8 +1393,8 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataSz.getResult());
     auto storeRetDataABIInitializer = [&](const char *name) {
-      LLVM::GlobalOp globDef =
-          bExt.getOrInsertPtrGlobalOp(name, mod, eravm::AddrSpace_Generic);
+      LLVM::GlobalOp globDef = bExt.getOrInsertPtrGlobalOp(
+          name, eravm::AddrSpace_Generic, LLVM::Linkage::Private, mod);
       Value globAddr = rewriter.create<LLVM::AddressOfOp>(loc, globDef);
       rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
                                      eravm::getAlignment(globAddr));

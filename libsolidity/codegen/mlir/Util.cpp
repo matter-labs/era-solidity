@@ -34,10 +34,11 @@ LLVM::GlobalOp BuilderExt::getGlobalOp(llvm::StringRef name, ModuleOp mod) {
   return found;
 }
 
-LLVM::GlobalOp
-BuilderExt::getOrInsertGlobalOp(llvm::StringRef name, ModuleOp mod, Type ty,
-                                unsigned alignment, unsigned addrSpace,
-                                LLVM::Linkage linkage, Attribute attr) {
+LLVM::GlobalOp BuilderExt::getOrInsertGlobalOp(llvm::StringRef name, Type ty,
+                                               unsigned addrSpace,
+                                               unsigned alignment,
+                                               LLVM::Linkage linkage,
+                                               Attribute attr, ModuleOp mod) {
   if (LLVM::GlobalOp found = mod.lookupSymbol<LLVM::GlobalOp>(name))
     return found;
 
@@ -53,18 +54,18 @@ LLVM::GlobalOp BuilderExt::getOrInsertI256GlobalOp(llvm::StringRef name,
                                                    LLVM::Linkage linkage,
                                                    ModuleOp mod) {
   auto ty = b.getIntegerType(256);
-  return getOrInsertGlobalOp(name, mod, ty, alignment, addrSpace, linkage,
-                             b.getIntegerAttr(ty, 0));
+  return getOrInsertGlobalOp(name, ty, addrSpace, alignment, linkage,
+                             b.getIntegerAttr(ty, 0), mod);
 }
 
 LLVM::GlobalOp BuilderExt::getOrInsertPtrGlobalOp(llvm::StringRef name,
-                                                  ModuleOp mod,
                                                   unsigned ptrTyAddrSpace,
-                                                  LLVM::Linkage linkage) {
+                                                  LLVM::Linkage linkage,
+                                                  ModuleOp mod) {
   auto ty = LLVM::LLVMPointerType::get(mod.getContext(), ptrTyAddrSpace);
   // FIXME: What attribute corresponds to llvm's null?
-  return getOrInsertGlobalOp(name, mod, ty, /*alignment=*/0, /*addrSpace=*/0,
-                             linkage, {});
+  return getOrInsertGlobalOp(name, ty, /*addrSpace=*/0, /*alignment=*/0,
+                             linkage, {}, mod);
 }
 
 ArrayAttr BuilderExt::getZeroInitialzedAttr(IntegerType ty, unsigned sz) {

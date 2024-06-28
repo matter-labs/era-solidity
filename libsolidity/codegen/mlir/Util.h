@@ -158,15 +158,14 @@ public:
                                          genI256Const(~(multiple - 1)));
   }
 
-  /// Returns an existing LLVM::GlobalOp with the name `name`; Assert fails if
-  /// not found
+  /// Returns an existing LLVM::GlobalOp; Assert fails if not found.
   mlir::LLVM::GlobalOp getGlobalOp(llvm::StringRef name, mlir::ModuleOp mod);
 
-  /// Returns an existing or a new (if not found) LLVM::GlobalOp
+  /// Returns an existing or a new (if not found) LLVM::GlobalOp.
   mlir::LLVM::GlobalOp
-  getOrInsertGlobalOp(llvm::StringRef name, mlir::ModuleOp mod, mlir::Type,
-                      unsigned addrSpace, unsigned alignment,
-                      mlir::LLVM::Linkage, mlir::Attribute);
+  getOrInsertGlobalOp(llvm::StringRef name, mlir::Type, unsigned addrSpace,
+                      unsigned alignment, mlir::LLVM::Linkage linkage,
+                      mlir::Attribute attr, mlir::ModuleOp mod);
 
   /// Returns an existing or a new (if not found) i256 LLVM::GlobalOp.
   mlir::LLVM::GlobalOp getOrInsertI256GlobalOp(llvm::StringRef name,
@@ -175,9 +174,11 @@ public:
                                                mlir::LLVM::Linkage linkage,
                                                mlir::ModuleOp mod);
 
-  mlir::LLVM::GlobalOp getOrInsertPtrGlobalOp(
-      llvm::StringRef name, mlir::ModuleOp mod, unsigned ptrTyAddrSpace = 0,
-      mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::Private);
+  /// Returns an existing or a new (if not found) ptr LLVM::GlobalOp.
+  mlir::LLVM::GlobalOp getOrInsertPtrGlobalOp(llvm::StringRef name,
+                                              unsigned ptrTyAddrSpace,
+                                              mlir::LLVM::Linkage linkage,
+                                              mlir::ModuleOp mod);
 
   mlir::ArrayAttr getZeroInitialzedAttr(mlir::IntegerType ty, unsigned sz);
 
