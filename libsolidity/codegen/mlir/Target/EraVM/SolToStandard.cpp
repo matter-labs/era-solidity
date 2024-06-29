@@ -1254,8 +1254,18 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
           "llvm.linkage",
           LLVM::LinkageAttr::get(r.getContext(), LLVM::Linkage::Private)));
 
-    // Set the personality attribute (llvm).
+    // Set the personality attribute of llvm.
     attrs.push_back(r.getNamedAttr("personality", eraB.getPersonality()));
+
+    // Add the nofree and null_pointer_is_valid attributes of llvm via the
+    // passthrough attribute.
+    std::vector<Attribute> passthroughAttrs;
+    passthroughAttrs.push_back(r.getStringAttr("nofree"));
+    passthroughAttrs.push_back(r.getStringAttr("null_pointer_is_valid"));
+    attrs.push_back(r.getNamedAttr(
+        "passthrough", ArrayAttr::get(r.getContext(), passthroughAttrs)));
+
+    // TODO: Add additional attribute for -O0 and -Oz
 
     auto convertedFuncTy = cast<FunctionType>(
         getTypeConverter()->convertType(op.getFunctionType()));

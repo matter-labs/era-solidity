@@ -29,17 +29,22 @@ contract C {
 // CHECK-EMPTY:
 // CHECK-NEXT: declare void @free(ptr)
 // CHECK-EMPTY:
-// CHECK-NEXT: declare void @__return(i256, i256, i256)
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: declare void @__return(i256, i256, i256) #0
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @.unreachable() personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define private void @.unreachable() #0 personality ptr @__personality {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: declare void @__revert(i256, i256, i256)
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: declare void @__revert(i256, i256, i256) #0
 // CHECK-EMPTY:
-// CHECK-NEXT: declare i256 @__sha3(ptr addrspace(1), i256, i1)
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: declare i256 @__sha3(ptr addrspace(1), i256, i1) #0
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @__deploy() personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define private void @__deploy() #0 personality ptr @__personality {
 // CHECK-NEXT:   store i256 128, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %1 = call i256 @llvm.eravm.getu128()
 // CHECK-NEXT:   %2 = icmp ne i256 %1, 0
@@ -63,7 +68,8 @@ contract C {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private void @__runtime() personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define private void @__runtime() #0 personality ptr @__personality {
 // CHECK-NEXT:   store i256 128, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %1 = load i256, ptr @calldatasize, align 32
 // CHECK-NEXT:   %2 = icmp uge i256 %1, 4
@@ -146,7 +152,8 @@ contract C {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define i256 @__entry(ptr addrspace(3) %0, i256 %1, i256 %2, i256 %3, i256 %4, i256 %5, i256 %6, i256 %7, i256 %8, i256 %9, i256 %10, i256 %11) #0 personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr @memory_pointer, align 32
 // CHECK-NEXT:   store i256 0, ptr @calldatasize, align 32
 // CHECK-NEXT:   store i256 0, ptr @returndatasize, align 32
@@ -185,7 +192,8 @@ contract C {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f1_19.0() personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define private i256 @f1_19.0() #0 personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr addrspace(1) null, align 1
 // CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
 // CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
@@ -234,15 +242,18 @@ contract C {
 // CHECK-NEXT:   ret i256 %6
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f0_11.0() personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define private i256 @f0_11.0() #0 personality ptr @__personality {
 // CHECK-NEXT:   ret i256 42
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f0_11() personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define private i256 @f0_11() #0 personality ptr @__personality {
 // CHECK-NEXT:   ret i256 42
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: define private i256 @f1_19() personality ptr @__personality {
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: define private i256 @f1_19() #0 personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr addrspace(1) null, align 1
 // CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
 // CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
@@ -291,19 +302,21 @@ contract C {
 // CHECK-NEXT:   ret i256 %6
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: declare i32 @__personality()
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
+// CHECK-NEXT: declare i32 @__personality() #0
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nounwind willreturn memory(none)
-// CHECK-NEXT: declare i256 @llvm.eravm.getu128() #0
+// CHECK-NEXT: declare i256 @llvm.eravm.getu128() #1
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
-// CHECK-NEXT: declare void @llvm.memcpy.p1.p3.i256(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i256, i1 immarg) #1
+// CHECK-NEXT: declare void @llvm.memcpy.p1.p3.i256(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i256, i1 immarg) #2
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
-// CHECK-NEXT: declare void @llvm.memmove.p1.p1.i256(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i256, i1 immarg) #1
+// CHECK-NEXT: declare void @llvm.memmove.p1.p1.i256(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i256, i1 immarg) #2
 // CHECK-EMPTY:
-// CHECK-NEXT: attributes #0 = { nounwind willreturn memory(none) }
-// CHECK-NEXT: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// CHECK-NEXT: attributes #0 = { nofree null_pointer_is_valid }
+// CHECK-NEXT: attributes #1 = { nounwind willreturn memory(none) }
+// CHECK-NEXT: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 // CHECK-EMPTY:
 // CHECK-NEXT: !llvm.module.flags = !{!0}
 // CHECK-EMPTY:
