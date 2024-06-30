@@ -72,9 +72,8 @@ private:
   /// The function being lowered
   FunctionDefinition const *currFunc;
 
-  // TODO: Use VariableDeclaration instead?
-  /// Maps local variables to its address in stack.
-  std::map<Declaration const *, mlir::Value> stkAddrMap;
+  /// Maps a local variable to its address.
+  std::map<VariableDeclaration const *, mlir::Value> localVarAddrMap;
 
   /// Returns the mlir location for the solidity source location `loc`
   mlir::Location getLoc(SourceLocation const &loc) {
@@ -87,9 +86,9 @@ private:
   /// Returns the corresponding mlir type for the solidity type `ty`.
   mlir::Type getType(Type const *ty);
 
-  /// Tracks the stack address of the variable.
-  void trackStkAddr(Declaration const *decl, mlir::Value addr) {
-    stkAddrMap[decl] = addr;
+  /// Tracks the address of a local variable.
+  void trackLocalVarAddr(VariableDeclaration const *decl, mlir::Value addr) {
+    localVarAddrMap[decl] = addr;
   }
 
   /// Returns the mangled name of the declaration composed of its name and its
@@ -113,8 +112,11 @@ private:
   /// Returns the mlir expression for the literal.
   mlir::Value genExpr(Literal const *lit);
 
-  /// Returns the mlir expression for the identifier.
+  /// Returns the mlir expression for the identifier in the l-value context.
   mlir::Value genLValExpr(Identifier const *ident);
+
+  /// Returns the mlir expression for the identifier in the r-value context.
+  mlir::Value genRValExpr(Identifier const *ident);
 
   /// Returns the mlir expression for the binary operation.
   mlir::Value genExpr(BinaryOperation const *binOp);
@@ -212,7 +214,9 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
 
 mlir::Value SolidityToMLIRPass::genLValExpr(Identifier const *id) {
   Declaration const *decl = id->annotation().referencedDeclaration;
+
   if (auto *var = dynamic_cast<VariableDeclaration const *>(decl)) {
+    // State variable.
     if (var->isStateVariable()) {
       auto currContr =
           b.getBlock()->getParentOp()->getParentOfType<mlir::sol::ContractOp>();
@@ -231,12 +235,25 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Identifier const *id) {
       return b.create<mlir::sol::AddrOfOp>(stateVarOp.getLoc(), addrTy,
                                            stateVarOp.getSymName());
     }
+
+    // Local variable.
+    auto it = localVarAddrMap.find(var);
+    assert(it != localVarAddrMap.end());
+    return it->second;
   }
 
-  auto it = stkAddrMap.find(decl);
-  if (it == stkAddrMap.end())
-    return {};
-  return it->second;
+  llvm_unreachable("NYI");
+}
+
+mlir::Value SolidityToMLIRPass::genRValExpr(Identifier const *id) {
+  auto addr = genLValExpr(id);
+
+  // Don't load non pointer ref types.
+  if (mlir::sol::isRefType(addr.getType()) &&
+      !mlir::isa<mlir::sol::PointerType>(addr.getType()))
+    return addr;
+
+  return b.create<mlir::sol::LoadOp>(getLoc(id->location()), addr);
 }
 
 mlir::ArrayAttr
@@ -379,7 +396,6 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
   // Generate variable access.
   if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
     auto addr = genLValExpr(ident);
-    assert(addr);
     return addr;
   }
 
@@ -415,18 +431,12 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
   }
 
   // Generate variable access.
-  else if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
-    auto addr = genLValExpr(ident);
-    assert(addr);
+  else if (auto *id = dynamic_cast<Identifier const *>(expr)) {
+    val = genRValExpr(id);
 
-    // Don't load non pointer ref types.
-    if (mlir::sol::isRefType(addr.getType()) &&
-        !mlir::isa<mlir::sol::PointerType>(addr.getType()))
-      val = addr;
-    else
-      val = b.create<mlir::sol::LoadOp>(getLoc(expr->location()), addr);
   }
 
+  // Generate index access.
   else if (auto *idxAcc = dynamic_cast<IndexAccess const *>(expr)) {
     return genRValExpr(idxAcc);
   }
@@ -569,7 +579,7 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
     auto addr = b.create<mlir::sol::AllocaOp>(
         inpLoc, mlir::sol::PointerType::get(b.getContext(), inpTy,
                                             mlir::sol::DataLocation::Stack));
-    trackStkAddr(param.get(), addr);
+    trackLocalVarAddr(param.get(), addr);
     b.create<mlir::sol::StoreOp>(inpLoc, arg, addr);
   }
 
