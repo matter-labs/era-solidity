@@ -130,13 +130,13 @@ private:
     return b.create<mlir::sol::LoadOp>(getLoc(idxAcc->location()), addr);
   }
 
+  /// Returns the mlir expression in the l-value context.
+  mlir::Value genLValExpr(Expression const *expr);
+
   /// Returns the mlir expression in the r-value context and optionally casts it
   /// to the corresponding mlir type of `resTy`.
   mlir::Value genRValExpr(Expression const *expr,
                           std::optional<Type const *> resTy = std::nullopt);
-
-  /// Returns the mlir expression in the l-value context.
-  mlir::Value genLValExpr(Expression const *expr);
 
   bool visit(ExpressionStatement const &) override;
   bool visit(FunctionCall const &) override;
@@ -393,22 +393,21 @@ mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
 }
 
 mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
-  // Generate variable access.
+  // Variable access
   if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
     auto addr = genLValExpr(ident);
     return addr;
   }
 
+  // Index access
   if (auto *idxAcc = dynamic_cast<IndexAccess const *>(expr)) {
     return genLValExpr(idxAcc);
   }
 
+  // Assignment statement
   if (auto *asgnStmt = dynamic_cast<Assignment const *>(expr)) {
-    auto *lhsId = dynamic_cast<Identifier const *>(&asgnStmt->leftHandSide());
-    assert(lhsId && "NYI");
-    mlir::Value lhs = genLValExpr(lhsId);
-    mlir::Value rhs =
-        genRValExpr(&asgnStmt->rightHandSide(), lhsId->annotation().type);
+    mlir::Value lhs = genLValExpr(&asgnStmt->leftHandSide());
+    mlir::Value rhs = genRValExpr(&asgnStmt->rightHandSide());
     b.create<mlir::sol::StoreOp>(getLoc(asgnStmt->location()), rhs, lhs);
     return {};
   }
