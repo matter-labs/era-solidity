@@ -463,6 +463,12 @@ def Sol_DataLocCastOp : Sol_Op<"data_loc_cast"> {
 // TODO: The op definitions of yul builtins should be auto-generated from
 // evmasm::InstructionInfo
 
+def Sol_CallerOp : Sol_Op<"caller", [Pure]> {
+  let summary = "Represents the `caller` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
 def Sol_BuiltinRetOp : Sol_Op<"builtin_ret"> {
   let summary = "Represents the `return` call in yul";
   let arguments = (ins I256:$inp0, I256:$inp1);

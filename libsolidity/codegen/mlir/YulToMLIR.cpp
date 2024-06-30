@@ -383,6 +383,9 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
                            genDefTyExpr(call.arguments[5])});
       return {};
     }
+    if (builtin->name.str() == "caller") {
+      return b.create<mlir::sol::CallerOp>(loc);
+    }
 
     solUnimplementedAssert(false, "NYI: builtin " + builtin->name.str());
   }

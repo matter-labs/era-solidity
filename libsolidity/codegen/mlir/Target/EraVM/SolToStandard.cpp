@@ -204,6 +204,20 @@ struct LogOpLowering : public OpRewritePattern<sol::LogOp> {
   }
 };
 
+struct CallerOpLowering : public OpRewritePattern<sol::CallerOp> {
+  using OpRewritePattern<sol::CallerOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallerOp op,
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, /*resTy=*/r.getIntegerType(256),
+        r.getI32IntegerAttr(llvm::Intrinsic::eravm_caller),
+        r.getStringAttr("eravm.caller"));
+
+    return success();
+  }
+};
+
 struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   using OpRewritePattern<sol::CallValOp>::OpRewritePattern;
 
@@ -1991,7 +2005,8 @@ struct ConvertSolToStandard
              CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
              CallDataLoadOpLowering, CallDataSizeOpLowering,
              CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
-             Keccak256OpLowering, LogOpLowering>(&getContext());
+             Keccak256OpLowering, LogOpLowering, CallerOpLowering>(
+        &getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();

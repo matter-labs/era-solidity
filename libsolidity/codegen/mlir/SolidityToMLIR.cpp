@@ -112,28 +112,31 @@ private:
   /// Returns the mlir expression for the literal.
   mlir::Value genExpr(Literal const *lit);
 
-  /// Returns the mlir expression for the identifier in the l-value context.
+  /// Returns the mlir expression for the identifier in an l-value context.
   mlir::Value genLValExpr(Identifier const *ident);
 
-  /// Returns the mlir expression for the identifier in the r-value context.
+  /// Returns the mlir expression for the identifier in an r-value context.
   mlir::Value genRValExpr(Identifier const *ident);
 
   /// Returns the mlir expression for the binary operation.
   mlir::Value genExpr(BinaryOperation const *binOp);
 
-  /// Returns the mlir expression for the index access in the l-value context.
+  /// Returns the mlir expression for the index access in an l-value context.
   mlir::Value genLValExpr(IndexAccess const *idxAcc);
 
-  /// Returns the mlir expression for the index access in the r-value context.
+  /// Returns the mlir expression for the member access in an r-value context.
+  mlir::Value genRValExpr(MemberAccess const *memAcc);
+
+  /// Returns the mlir expression for the index access in an r-value context.
   mlir::Value genRValExpr(IndexAccess const *idxAcc) {
     mlir::Value addr = genLValExpr(idxAcc);
     return b.create<mlir::sol::LoadOp>(getLoc(idxAcc->location()), addr);
   }
 
-  /// Returns the mlir expression in the l-value context.
+  /// Returns the mlir expression in an l-value context.
   mlir::Value genLValExpr(Expression const *expr);
 
-  /// Returns the mlir expression in the r-value context and optionally casts it
+  /// Returns the mlir expression in an r-value context and optionally casts it
   /// to the corresponding mlir type of `resTy`.
   mlir::Value genRValExpr(Expression const *expr,
                           std::optional<Type const *> resTy = std::nullopt);
@@ -392,6 +395,21 @@ mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
   llvm_unreachable("NYI");
 }
 
+mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memAcc) {
+  switch (memAcc->expression().annotation().type->category()) {
+  case Type::Category::Magic:
+    if (memAcc->memberName() == "sender") {
+      // FIXME: sol.caller yields an i256 instead of an address.
+      return b.create<mlir::sol::CallerOp>(getLoc(memAcc->location()));
+    }
+    break;
+  default:
+    break;
+  }
+
+  llvm_unreachable("NYI");
+}
+
 mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
   // Variable access
   if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
@@ -438,6 +456,11 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
   // Generate index access.
   else if (auto *idxAcc = dynamic_cast<IndexAccess const *>(expr)) {
     return genRValExpr(idxAcc);
+  }
+
+  // Member access
+  else if (auto *memAcc = dynamic_cast<MemberAccess const *>(expr)) {
+    val = genRValExpr(memAcc);
   }
 
   else {
