@@ -106,6 +106,10 @@ private:
   /// `srcTy` to a value having the corresponding mlir type of `dstTy`
   mlir::Value genCast(mlir::Value val, Type const *srcTy, Type const *dstTy);
 
+  // We can't completely rely on ExpressionAnnotation::isLValue here since the
+  // TypeChecker doesn't, for instance, tag RHS expression of an assignment as
+  // an r-value.
+
   /// Returns the mlir expression for the literal.
   mlir::Value genExpr(Literal const *lit);
 
