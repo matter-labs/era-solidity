@@ -437,25 +437,25 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
                                             std::optional<Type const *> resTy) {
   mlir::Value val;
 
-  // Generate literals.
+  // Literal
   if (auto *lit = dynamic_cast<Literal const *>(expr)) {
     val = genExpr(lit);
   }
 
-  // Generate binary operation.
+  // Binary operation
   else if (auto *binOp = dynamic_cast<BinaryOperation const *>(expr)) {
     val = genExpr(binOp);
   }
 
-  // Generate variable access.
+  // Variable access
   else if (auto *id = dynamic_cast<Identifier const *>(expr)) {
     val = genRValExpr(id);
 
   }
 
-  // Generate index access.
+  // Index access
   else if (auto *idxAcc = dynamic_cast<IndexAccess const *>(expr)) {
-    return genRValExpr(idxAcc);
+    val = genRValExpr(idxAcc);
   }
 
   // Member access
@@ -467,7 +467,7 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
     llvm_unreachable("NYI");
   }
 
-  // Generate cast (Optional).
+  // Generate cast (optional).
   if (resTy) {
     return genCast(val, expr->annotation().type, *resTy);
   }
