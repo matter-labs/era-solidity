@@ -503,14 +503,12 @@ def Sol_MCopyOp : Sol_Op<"mcopy"> {
 
 def Sol_MSizeOp : Sol_Op<"msize", [Pure]> {
   let summary = "Represents the `msize` call in yul";
-  let arguments = (ins);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
 
 def Sol_CallValOp : Sol_Op<"callvalue", [Pure]> {
   let summary = "Represents the `callvalue` call in yul";
-  let arguments = (ins);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
@@ -524,7 +522,6 @@ def Sol_CallDataLoadOp : Sol_Op<"calldataload"> {
 
 def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [Pure]> {
   let summary = "Represents the `calldatasize` call in yul";
-  let arguments = (ins);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
