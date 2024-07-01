@@ -1,9 +1,6 @@
 // RUN: solc --mlir-action=print-llvm-ir --mlir-target=eravm %s | FileCheck %s
 // RUN: solc --mlir-action=print-asm --mlir-target=eravm %s | FileCheck --check-prefix=ASM %s
 
-// SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.0;
-
 contract C {
   string m;
   function f0() public pure returns (uint) { return 42; }
@@ -95,7 +92,7 @@ contract C {
 // CHECK-NEXT:   br label %11
 // CHECK-EMPTY:
 // CHECK-NEXT: 11:                                               ; preds = %10, %7
-// CHECK-NEXT:   %12 = call i256 @f0_11()
+// CHECK-NEXT:   %12 = call i256 @f0_10()
 // CHECK-NEXT:   %13 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %14 = add i256 %13, 32
 // CHECK-NEXT:   %15 = inttoptr i256 %13 to ptr addrspace(1)
@@ -115,7 +112,7 @@ contract C {
 // CHECK-NEXT:   br label %20
 // CHECK-EMPTY:
 // CHECK-NEXT: 20:                                               ; preds = %19, %16
-// CHECK-NEXT:   %21 = call i256 @f1_19()
+// CHECK-NEXT:   %21 = call i256 @f1_18()
 // CHECK-NEXT:   %22 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %23 = add i256 %22, 32
 // CHECK-NEXT:   %24 = inttoptr i256 %22 to ptr addrspace(1)
@@ -193,7 +190,7 @@ contract C {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: define private i256 @f1_19.0() #0 personality ptr @__personality {
+// CHECK-NEXT: define private i256 @f1_18.0() #0 personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr addrspace(1) null, align 1
 // CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
 // CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
@@ -243,17 +240,17 @@ contract C {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: define private i256 @f0_11.0() #0 personality ptr @__personality {
+// CHECK-NEXT: define private i256 @f0_10.0() #0 personality ptr @__personality {
 // CHECK-NEXT:   ret i256 42
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: define private i256 @f0_11() #0 personality ptr @__personality {
+// CHECK-NEXT: define private i256 @f0_10() #0 personality ptr @__personality {
 // CHECK-NEXT:   ret i256 42
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: define private i256 @f1_19() #0 personality ptr @__personality {
+// CHECK-NEXT: define private i256 @f1_18() #0 personality ptr @__personality {
 // CHECK-NEXT:   store i256 0, ptr addrspace(1) null, align 1
 // CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
 // CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
@@ -373,7 +370,7 @@ contract C {
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
 // ASM-NEXT: .BB2_5:
-// ASM-NEXT: 	near_call	r0, @f0_11, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @f0_10, @DEFAULT_UNWIND
 // ASM-NEXT: 	ld.1	64, r3
 // ASM-NEXT: 	st.1	r3, r1
 // ASM-NEXT: 	add	32, r0, r2
@@ -388,7 +385,7 @@ contract C {
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
 // ASM-NEXT: .BB2_8:
-// ASM-NEXT: 	near_call	r0, @f1_19, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @f1_18, @DEFAULT_UNWIND
 // ASM-NEXT: 	add	32, r0, r2
 // ASM-NEXT: 	ld.1	64, r3
 // ASM-NEXT: 	st.1.inc	r3, r2, r2
@@ -497,13 +494,13 @@ contract C {
 // ASM-NEXT: 	near_call	r0, @__runtime, @DEFAULT_UNWIND
 // ASM-NEXT: .func_end3:
 // ASM-EMPTY:
-// ASM-NEXT: f0_11:
+// ASM-NEXT: f0_10:
 // ASM-NEXT: .func_begin4:
 // ASM-NEXT: 	add	42, r0, r1
 // ASM-NEXT: 	ret
 // ASM-NEXT: .func_end4:
 // ASM-EMPTY:
-// ASM-NEXT: f1_19:
+// ASM-NEXT: f1_18:
 // ASM-NEXT: .func_begin5:
 // ASM-NEXT: 	nop	stack+=[5 + r0]
 // ASM-NEXT: 	st.1	0, r0

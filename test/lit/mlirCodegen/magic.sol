@@ -1,7 +1,5 @@
 // RUN: solc --mlir-action=print-init --mmlir --mlir-print-debuginfo %s | FileCheck %s
 
-// SPDX-License-Identifier: GPL-3.0
-
 contract C {
   function f() public view returns (address) {
     return msg.sender;
@@ -18,8 +16,8 @@ contract C {
 // CHECK-NEXT:   } {interface_fns = [{selector = "26121ff0", sym = @f_9, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
-// CHECK-NEXT: #loc1 = loc({{.*}}:4:0)
-// CHECK-NEXT: #loc2 = loc({{.*}}:5:2)
-// CHECK-NEXT: #loc3 = loc({{.*}}:6:11)
-// CHECK-NEXT: #loc4 = loc({{.*}}:6:4)
+// CHECK-NEXT: #loc1 = loc({{.*}}:2:0)
+// CHECK-NEXT: #loc2 = loc({{.*}}:3:2)
+// CHECK-NEXT: #loc3 = loc({{.*}}:4:11)
+// CHECK-NEXT: #loc4 = loc({{.*}}:4:4)
 // CHECK-EMPTY:
