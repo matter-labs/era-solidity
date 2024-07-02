@@ -54,9 +54,9 @@ unsigned eravm::getAlignment(Value ptr) {
 }
 
 unsigned eravm::getCallDataHeadSize(Type ty) {
-  if (auto intTy = dyn_cast<IntegerType>(ty)) {
+  if (auto intTy = dyn_cast<IntegerType>(ty))
     return 32;
-  }
+
   if (sol::hasDynamicallySizedElt(ty))
     return 32;
 
@@ -147,7 +147,7 @@ Value eravm::Builder::genABITupleEncoding(
     currTailAddr = b.create<arith::AddIOp>(
         loc, headStart, bExt.genI256Const(totCallDataHeadSz));
 
-    // String type.
+    // String type
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       b.create<sol::MStoreOp>(
           loc, currHeadAddr,
@@ -170,8 +170,15 @@ Value eravm::Builder::genABITupleEncoding(
 
       currTailAddr = b.create<arith::AddIOp>(
           loc, tailDataAddr, bExt.genRoundUpToMultiple<32>(size));
-      // Integer type.
-    } else if (isa<IntegerType>(ty)) {
+
+      // Integer type
+    } else if (auto intTy = dyn_cast<IntegerType>(ty)) {
+      if (intTy.getWidth() == 1)
+        val = b.create<arith::ExtUIOp>(loc, b.getIntegerType(256), val);
+      else
+        // FIXME: We might need to track the sign in integral types for
+        // generating the correct extension.
+        assert(intTy.getWidth() == 256 && "NYI");
       b.create<sol::MStoreOp>(loc, currHeadAddr, val);
 
     } else {

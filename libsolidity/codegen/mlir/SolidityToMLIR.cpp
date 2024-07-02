@@ -162,6 +162,11 @@ static mlir::sol::DataLocation getDataLocation(ReferenceType const *ty) {
 }
 
 mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
+  // Bool type
+  if (const auto *boolTy = dynamic_cast<BoolType const *>(ty)) {
+    return b.getIntegerType(/*width=*/1);
+  }
+
   // Integer type
   if (const auto *intTy = dynamic_cast<IntegerType const *>(ty)) {
     return b.getIntegerType(intTy->numBits());
@@ -287,6 +292,14 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
   if (srcTy == dstTy)
     return val;
 
+  // Casting from bool to integer type.
+  const auto *srcBoolTy = dynamic_cast<BoolType const *>(srcTy);
+  if (srcBoolTy) {
+    const auto *dstIntTy = dynamic_cast<IntegerType const *>(dstTy);
+    assert(dstIntTy);
+    return b.create<mlir::arith::ExtUIOp>(val.getLoc(), getType(dstIntTy), val);
+  }
+
   auto getAsIntTy = [](Type const *ty) -> IntegerType const * {
     const auto *intTy = dynamic_cast<IntegerType const *>(ty);
     if (!intTy) {
@@ -338,8 +351,14 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
-  mlir::Location lc = getLoc(lit->location());
+  mlir::Location loc = getLoc(lit->location());
   Type const *ty = lit->annotation().type;
+
+  // Bool literal
+  if (auto *boolTy = dynamic_cast<BoolType const *>(ty)) {
+    return b.create<mlir::arith::ConstantOp>(
+        loc, b.getBoolAttr(lit->token() == Token::TrueLiteral ? true : false));
+  }
 
   // Rational number literal
   if (auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
@@ -351,10 +370,11 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
     // TODO: Is there a faster way to convert boost::multiprecision::number to
     // llvm::APInt?
     return b.create<mlir::arith::ConstantOp>(
-        lc,
+        loc,
         b.getIntegerAttr(getType(ty), llvm::APInt(intTy->numBits(), val.str(),
                                                   /*radix=*/10)));
   }
+
   llvm_unreachable("NYI: Literal");
 }
 
