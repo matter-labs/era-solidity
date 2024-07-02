@@ -69,8 +69,11 @@ private:
   CharStream const &stream;
   mlir::ModuleOp mod;
 
-  /// The function being lowered
+  /// The function being lowered.
   FunctionDefinition const *currFunc;
+
+  /// The contract being lowered.
+  ContractDefinition const *currContract;
 
   /// Maps a local variable to its address.
   std::map<VariableDeclaration const *, mlir::Value> localVarAddrMap;
@@ -126,6 +129,9 @@ private:
 
   /// Returns the mlir expression for the member access in an r-value context.
   mlir::Value genRValExpr(MemberAccess const *memAcc);
+
+  /// Returns the mlir expression for the call.
+  mlir::Value genExpr(FunctionCall const *call);
 
   /// Returns the mlir expression for the index access in an r-value context.
   mlir::Value genRValExpr(IndexAccess const *idxAcc) {
@@ -430,6 +436,49 @@ mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memAcc) {
   llvm_unreachable("NYI");
 }
 
+mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
+  auto const *calleeTy =
+      dynamic_cast<FunctionType const *>(call->expression().annotation().type);
+  assert(calleeTy);
+
+  switch (calleeTy->kind()) {
+  case FunctionType::Kind::Internal: {
+    // Get callee.
+    assert(currContract);
+    FunctionDefinition const *callee =
+        ASTNode::resolveFunctionCall(*call, currContract);
+    assert(callee && "NYI: Internal function dispatch");
+
+    // Lower args.
+    std::vector<mlir::Value> args;
+    for (auto [arg, dstTy] :
+         llvm::zip(call->sortedArguments(), calleeTy->parameterTypes())) {
+      args.push_back(genRValExpr(arg.get(), dstTy));
+    }
+
+    // Collect return types.
+    std::vector<mlir::Type> resTys;
+    for (Type const *ty : calleeTy->returnParameterTypes()) {
+      resTys.push_back(getType(ty));
+    }
+
+    // FIXME: To support multi-valued return args, genExpr should return
+    // ValueRange.
+    // Generate the call op.
+    return b
+        .create<mlir::sol::CallOp>(getLoc(call->location()),
+                                   getMangledName(*callee), resTys, args)
+        .getResult(0);
+    break;
+  }
+
+  default:
+    break;
+  }
+
+  llvm_unreachable("NYI");
+}
+
 mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
   // Variable access
   if (auto *ident = dynamic_cast<Identifier const *>(expr)) {
@@ -481,6 +530,11 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
   // Member access
   else if (auto *memAcc = dynamic_cast<MemberAccess const *>(expr)) {
     val = genRValExpr(memAcc);
+  }
+
+  // Function call
+  else if (auto *call = dynamic_cast<FunctionCall const *>(expr)) {
+    val = genExpr(call);
   }
 
   else {
@@ -544,6 +598,7 @@ bool SolidityToMLIRPass::visit(FunctionCall const &call) {
 
     break;
   }
+
   default:
     llvm_unreachable("NYI");
   }
@@ -647,6 +702,8 @@ static mlir::sol::ContractKind getContractKind(ContractDefinition const &cont) {
 }
 
 void SolidityToMLIRPass::run(ContractDefinition const &cont) {
+  currContract = &cont;
+
   // TODO: Set using ContractDefinition::receiveFunction and
   // ContractDefinition::fallbackFunction.
   mlir::FlatSymbolRefAttr fallbackFn, receiveFn;
