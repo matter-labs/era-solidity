@@ -363,7 +363,7 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
   // Bool literal
   if (auto *boolTy = dynamic_cast<BoolType const *>(ty)) {
     return b.create<mlir::arith::ConstantOp>(
-        loc, b.getBoolAttr(lit->token() == Token::TrueLiteral ? true : false));
+        loc, b.getBoolAttr(lit->token() == Token::TrueLiteral));
   }
 
   // Rational number literal
