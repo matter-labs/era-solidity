@@ -148,7 +148,7 @@ private:
                           std::optional<Type const *> resTy = std::nullopt);
 
   bool visit(ExpressionStatement const &) override;
-  bool visit(FunctionCall const &) override;
+  bool visit(EmitStatement const &) override;
   bool visit(Return const &) override;
   void run(FunctionDefinition const &);
 };
@@ -437,10 +437,17 @@ mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memAcc) {
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
+  assert(*call->annotation().kind != FunctionCallKind::TypeConversion && "NYI");
+  assert(*call->annotation().kind != FunctionCallKind::StructConstructorCall &&
+         "NYI");
+
   auto const *calleeTy =
       dynamic_cast<FunctionType const *>(call->expression().annotation().type);
   assert(calleeTy);
 
+  std::vector<Type const *> argTys = calleeTy->parameterTypes();
+
+  mlir::Location loc = getLoc(call->location());
   switch (calleeTy->kind()) {
   case FunctionType::Kind::Internal: {
     // Get callee.
@@ -469,7 +476,39 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
         .create<mlir::sol::CallOp>(getLoc(call->location()),
                                    getMangledName(*callee), resTys, args)
         .getResult(0);
-    break;
+  }
+
+  case FunctionType::Kind::Event: {
+    auto const &event =
+        dynamic_cast<EventDefinition const &>(calleeTy->declaration());
+
+    // Lower and track the indexed and non-indexed args.
+    mlirgen::BuilderExt bExt(b, loc);
+    std::vector<mlir::Value> indexedArgs, nonIndexedArgs;
+    for (size_t i = 0; i < event.parameters().size(); ++i) {
+      assert(dynamic_cast<IntegerType const *>(calleeTy->parameterTypes()[i]) ||
+             dynamic_cast<AddressType const *>(calleeTy->parameterTypes()[i]));
+
+      // TODO? YulUtilFunctions::conversionFunction
+      mlir::Value arg = genRValExpr(call->sortedArguments()[i].get(),
+                                    calleeTy->parameterTypes()[i]);
+
+      if (event.parameters()[i]->isIndexed()) {
+        indexedArgs.push_back(arg);
+      } else {
+        nonIndexedArgs.push_back(arg);
+      }
+    }
+
+    // Generate sol.emit (with signature for non-anonymous events).
+    if (event.isAnonymous()) {
+      b.create<mlir::sol::EmitOp>(loc, indexedArgs, nonIndexedArgs);
+    } else {
+      b.create<mlir::sol::EmitOp>(loc, indexedArgs, nonIndexedArgs,
+                                  calleeTy->externalSignature());
+    }
+
+    return {};
   }
 
   default:
@@ -554,55 +593,8 @@ bool SolidityToMLIRPass::visit(ExpressionStatement const &exprStmt) {
   return true;
 }
 
-bool SolidityToMLIRPass::visit(FunctionCall const &call) {
-  assert(*call.annotation().kind != FunctionCallKind::TypeConversion && "NYI");
-  assert(*call.annotation().kind != FunctionCallKind::StructConstructorCall &&
-         "NYI");
-
-  auto const &args = call.sortedArguments();
-  const auto *calleeTy =
-      dynamic_cast<FunctionType const *>(call.expression().annotation().type);
-  assert(calleeTy);
-  std::vector<Type const *> argTys = calleeTy->parameterTypes();
-
-  mlir::Location loc = getLoc(call.location());
-  switch (calleeTy->kind()) {
-  case FunctionType::Kind::Event: {
-    auto const &event =
-        dynamic_cast<EventDefinition const &>(calleeTy->declaration());
-
-    // Lower and track the indexed and non-indexed args.
-    mlirgen::BuilderExt bExt(b, loc);
-    std::vector<mlir::Value> indexedArgs, nonIndexedArgs;
-    for (size_t i = 0; i < event.parameters().size(); ++i) {
-      assert(dynamic_cast<IntegerType const *>(argTys[i]) ||
-             dynamic_cast<AddressType const *>(argTys[i]));
-
-      // TODO? YulUtilFunctions::conversionFunction
-      mlir::Value arg = genRValExpr(args[i].get(), argTys[i]);
-
-      if (event.parameters()[i]->isIndexed()) {
-        indexedArgs.push_back(arg);
-      } else {
-        nonIndexedArgs.push_back(arg);
-      }
-    }
-
-    // Generate sol.emit (with signature for non-anonymous events).
-    if (event.isAnonymous()) {
-      b.create<mlir::sol::EmitOp>(loc, indexedArgs, nonIndexedArgs);
-    } else {
-      b.create<mlir::sol::EmitOp>(loc, indexedArgs, nonIndexedArgs,
-                                  calleeTy->externalSignature());
-    }
-
-    break;
-  }
-
-  default:
-    llvm_unreachable("NYI");
-  }
-
+bool SolidityToMLIRPass::visit(EmitStatement const &emit) {
+  genExpr(&emit.eventCall());
   return true;
 }
 
