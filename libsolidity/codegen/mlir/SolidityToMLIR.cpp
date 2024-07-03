@@ -104,6 +104,9 @@ private:
   /// and selector) in the contract.
   mlir::ArrayAttr getInterfaceFnsAttr(ContractDefinition const &cont);
 
+  /// Generates the ir to zero the allocation at `addr`.
+  void genZeroedVal(mlir::Value addr);
+
   /// Returns the cast from `val` having the corresponding mlir type of
   /// `srcTy` to a value having the corresponding mlir type of `dstTy`
   mlir::Value genCast(mlir::Value val, Type const *srcTy, Type const *dstTy);
@@ -148,6 +151,7 @@ private:
                           std::optional<Type const *> resTy = std::nullopt);
 
   bool visit(ExpressionStatement const &) override;
+  bool visit(VariableDeclarationStatement const &) override;
   bool visit(EmitStatement const &) override;
   bool visit(Return const &) override;
   void run(FunctionDefinition const &);
@@ -290,6 +294,18 @@ SolidityToMLIRPass::getInterfaceFnsAttr(ContractDefinition const &cont) {
          b.getNamedAttr("selector", selectorAttr)}));
   }
   return b.getArrayAttr(interfaceFnAttrs);
+}
+
+void SolidityToMLIRPass::genZeroedVal(mlir::Value addr) {
+  assert(mlir::isa<mlir::sol::PointerType>(addr.getType()) &&
+         "NYI: Other ref types");
+
+  auto addrTy = mlir::cast<mlir::sol::PointerType>(addr.getType());
+
+  auto pointeeTy = mlir::cast<mlir::IntegerType>(addrTy.getPointeeType());
+  auto zeroVal = b.create<mlir::arith::ConstantIntOp>(addr.getLoc(), 0,
+                                                      pointeeTy.getWidth());
+  b.create<mlir::sol::StoreOp>(addr.getLoc(), zeroVal, addr);
 }
 
 mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
@@ -590,6 +606,32 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
 
 bool SolidityToMLIRPass::visit(ExpressionStatement const &exprStmt) {
   genLValExpr(&exprStmt.expression());
+  return true;
+}
+
+bool SolidityToMLIRPass::visit(
+    VariableDeclarationStatement const &varDeclStmt) {
+  assert(varDeclStmt.declarations().size() == 1 && "NYI");
+  VariableDeclaration const *varDecl = varDeclStmt.declarations()[0].get();
+
+  mlir::Location loc = getLoc(varDeclStmt.location());
+
+  mlir::Type varTy = getType(varDecl->type());
+  mlir::Type allocTy = varTy;
+  if (!mlir::sol::isRefType(varTy))
+    allocTy = mlir::sol::PointerType::get(b.getContext(), varTy,
+                                          mlir::sol::DataLocation::Stack);
+
+  auto addr = b.create<mlir::sol::AllocaOp>(loc, allocTy);
+  trackLocalVarAddr(varDecl, addr);
+
+  if (Expression const *initExpr = varDeclStmt.initialValue()) {
+    b.create<mlir::sol::StoreOp>(loc, genRValExpr(initExpr, varDecl->type()),
+                                 addr);
+  } else {
+    genZeroedVal(addr);
+  }
+
   return true;
 }
 
