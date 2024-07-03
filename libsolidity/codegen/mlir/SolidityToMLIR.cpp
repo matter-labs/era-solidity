@@ -69,6 +69,9 @@ private:
   CharStream const &stream;
   mlir::ModuleOp mod;
 
+  /// The block being lowered.
+  Block const *currBlk;
+
   /// The function being lowered.
   FunctionDefinition const *currFunc;
 
@@ -77,6 +80,12 @@ private:
 
   /// Maps a local variable to its address.
   std::map<VariableDeclaration const *, mlir::Value> localVarAddrMap;
+
+  /// Returns true if the current block is unchecked.
+  bool inUncheckedBlk() {
+    assert(currBlk);
+    return currBlk->unchecked();
+  }
 
   /// Returns the mlir location for the solidity source location `loc`
   mlir::Location getLoc(SourceLocation const &loc) {
@@ -154,6 +163,7 @@ private:
   bool visit(VariableDeclarationStatement const &) override;
   bool visit(EmitStatement const &) override;
   bool visit(Return const &) override;
+  bool visit(Block const &) override;
   void run(FunctionDefinition const &);
 };
 
@@ -401,17 +411,21 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
+  assert(inUncheckedBlk() && "NYI");
+
   const auto *resTy = binOp->annotation().type;
-  auto lc = getLoc(binOp->location());
+  auto loc = getLoc(binOp->location());
 
   mlir::Value lhs = genRValExpr(&binOp->leftExpression(), resTy);
   mlir::Value rhs = genRValExpr(&binOp->rightExpression(), resTy);
 
   switch (binOp->getOperator()) {
   case Token::Add:
-    return b.create<mlir::arith::AddIOp>(lc, lhs, rhs)->getResult(0);
+    return b.create<mlir::arith::AddIOp>(loc, lhs, rhs)->getResult(0);
+  case Token::Sub:
+    return b.create<mlir::arith::SubIOp>(loc, lhs, rhs)->getResult(0);
   case Token::Mul:
-    return b.create<mlir::arith::MulIOp>(lc, lhs, rhs)->getResult(0);
+    return b.create<mlir::arith::MulIOp>(loc, lhs, rhs)->getResult(0);
   default:
     break;
   }
@@ -658,6 +672,11 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
     llvm_unreachable("NYI: Empty return");
   }
 
+  return true;
+}
+
+bool SolidityToMLIRPass::visit(Block const &blk) {
+  currBlk = &blk;
   return true;
 }
 
