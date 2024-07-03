@@ -471,11 +471,11 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
 
     // FIXME: To support multi-valued return args, genExpr should return
     // ValueRange.
+    assert(resTys.size() <= 1);
     // Generate the call op.
-    return b
-        .create<mlir::sol::CallOp>(getLoc(call->location()),
-                                   getMangledName(*callee), resTys, args)
-        .getResult(0);
+    auto callOp = b.create<mlir::sol::CallOp>(
+        getLoc(call->location()), getMangledName(*callee), resTys, args);
+    return resTys.empty() ? mlir::Value{} : callOp.getResult(0);
   }
 
   case FunctionType::Kind::Event: {
