@@ -134,6 +134,10 @@ private:
   mlir::Value genRValExpr(Identifier const *ident);
 
   /// Returns the mlir expression for the binary operation.
+  mlir::Value genBinExpr(Token op, mlir::Value lhs, mlir::Value rhs,
+                         mlir::Location loc);
+
+  /// Returns the mlir expression for the binary operation.
   mlir::Value genExpr(BinaryOperation const *binOp);
 
   /// Returns the mlir expression for the index access in an l-value context.
@@ -410,16 +414,11 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
   llvm_unreachable("NYI: Literal");
 }
 
-mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
+mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
+                                           mlir::Value rhs,
+                                           mlir::Location loc) {
   assert(inUncheckedBlk() && "NYI");
-
-  const auto *resTy = binOp->annotation().type;
-  auto loc = getLoc(binOp->location());
-
-  mlir::Value lhs = genRValExpr(&binOp->leftExpression(), resTy);
-  mlir::Value rhs = genRValExpr(&binOp->rightExpression(), resTy);
-
-  switch (binOp->getOperator()) {
+  switch (op) {
   case Token::Add:
     return b.create<mlir::arith::AddIOp>(loc, lhs, rhs)->getResult(0);
   case Token::Sub:
@@ -430,6 +429,16 @@ mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
     break;
   }
   llvm_unreachable("NYI: Binary operator");
+}
+
+mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
+  const auto *resTy = binOp->annotation().type;
+  auto loc = getLoc(binOp->location());
+
+  mlir::Value lhs = genRValExpr(&binOp->leftExpression(), resTy);
+  mlir::Value rhs = genRValExpr(&binOp->rightExpression(), resTy);
+
+  return genBinExpr(binOp->getOperator(), lhs, rhs, loc);
 }
 
 mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
@@ -560,11 +569,25 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
     return genLValExpr(idxAcc);
   }
 
-  // Assignment statement
+  // (Compound) Assignment statement
   if (auto *asgnStmt = dynamic_cast<Assignment const *>(expr)) {
+    mlir::Location loc = getLoc(asgnStmt->location());
+
     mlir::Value lhs = genLValExpr(&asgnStmt->leftHandSide());
     mlir::Value rhs = genRValExpr(&asgnStmt->rightHandSide());
-    b.create<mlir::sol::StoreOp>(getLoc(asgnStmt->location()), rhs, lhs);
+
+    if (asgnStmt->assignmentOperator() == Token::Assign) {
+      b.create<mlir::sol::StoreOp>(loc, rhs, lhs);
+
+      // Compound assignment statement
+    } else {
+      mlir::Value lhsAsRVal = genRValExpr(&asgnStmt->leftHandSide());
+      Token binOp =
+          TokenTraits::AssignmentToBinaryOp(asgnStmt->assignmentOperator());
+      b.create<mlir::sol::StoreOp>(loc, genBinExpr(binOp, lhsAsRVal, rhs, loc),
+                                   lhs);
+    }
+
     return {};
   }
 
