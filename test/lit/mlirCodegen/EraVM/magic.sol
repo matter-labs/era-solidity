@@ -1,8 +1,11 @@
 // RUN: solc --mlir-action=print-std-mlir --mlir-target=eravm --mmlir --mlir-print-debuginfo %s | FileCheck %s
 
 contract C {
-  function f() public view returns (address) {
+  function msgSender() public view returns (address) {
     return msg.sender;
+  }
+  function addr() public view returns (address) {
+    return address(0);
   }
 }
 
@@ -74,7 +77,7 @@ contract C {
 // CHECK-NEXT:       %6 = llvm.getelementptr %5[%c0_i256_2] : (!llvm.ptr<3>, i256) -> !llvm.ptr<3>, i8 loc(#loc1)
 // CHECK-NEXT:       %7 = llvm.load %6 {alignment = 1 : i64} : !llvm.ptr<3> -> i256 loc(#loc1)
 // CHECK-NEXT:       scf.int_switch %7 : i256
-// CHECK-NEXT:       case 638722032 {
+// CHECK-NEXT:       case 3610759367 {
 // CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc1)
@@ -86,7 +89,35 @@ contract C {
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         } loc(#loc1)
 // CHECK-NEXT:         %c4_i256_4 = arith.constant 4 : i256 loc(#loc1)
-// CHECK-NEXT:         %10 = func.call @f_9() : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %10 = func.call @msgSender_9() : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %c64_i256_5 = arith.constant 64 : i256 loc(#loc1)
+// CHECK-NEXT:         %11 = llvm.inttoptr %c64_i256_5 : i256 to !llvm.ptr<1> loc(#loc1)
+// CHECK-NEXT:         %12 = llvm.load %11 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc1)
+// CHECK-NEXT:         %c0_i256_6 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:         %13 = arith.addi %12, %c0_i256_6 : i256 loc(#loc1)
+// CHECK-NEXT:         %c32_i256 = arith.constant 32 : i256 loc(#loc1)
+// CHECK-NEXT:         %14 = arith.addi %12, %c32_i256 : i256 loc(#loc1)
+// CHECK-NEXT:         %15 = llvm.inttoptr %13 : i256 to !llvm.ptr<1> loc(#loc1)
+// CHECK-NEXT:         llvm.store %10, %15 {alignment = 1 : i64} : i256, !llvm.ptr<1> loc(#loc1)
+// CHECK-NEXT:         %16 = arith.subi %14, %12 : i256 loc(#loc1)
+// CHECK-NEXT:         %c0_i256_7 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:         func.call @__return(%12, %16, %c0_i256_7) : (i256, i256, i256) -> () loc(#loc1)
+// CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc1)
+// CHECK-NEXT:         scf.yield loc(#loc1)
+// CHECK-NEXT:       }
+// CHECK-NEXT:       case 1987576030 {
+// CHECK-NEXT:         %8 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:         %9 = arith.cmpi ne, %8, %c0_i256_3 : i256 loc(#loc1)
+// CHECK-NEXT:         scf.if %9 {
+// CHECK-NEXT:           %c0_i256_8 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:           %c0_i256_9 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:           %c0_i256_10 = arith.constant 0 : i256 loc(#loc1)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_8, %c0_i256_9, %c0_i256_10) : (i256, i256, i256) -> () loc(#loc1)
+// CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
+// CHECK-NEXT:         } loc(#loc1)
+// CHECK-NEXT:         %c4_i256_4 = arith.constant 4 : i256 loc(#loc1)
+// CHECK-NEXT:         %10 = func.call @addr_20() : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c64_i256_5 = arith.constant 64 : i256 loc(#loc1)
 // CHECK-NEXT:         %11 = llvm.inttoptr %c64_i256_5 : i256 to !llvm.ptr<1> loc(#loc1)
 // CHECK-NEXT:         %12 = llvm.load %11 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc1)
@@ -206,18 +237,31 @@ contract C {
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     llvm.unreachable loc(#loc1)
 // CHECK-NEXT:   } loc(#loc)
-// CHECK-NEXT:   func.func @f_9.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality, state_mutability = #sol<StateMutability View>} {
-// CHECK-NEXT:     %0 = "llvm.intrcall"() <{id = 3170 : i32, name = "eravm.caller"}> : () -> i256 loc(#loc3)
+// CHECK-NEXT:   func.func @addr_20.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %c0_i8 = arith.constant 0 : i8 loc(#loc3)
+// CHECK-NEXT:     %0 = arith.extui %c0_i8 : i8 to i256 loc(#loc3)
 // CHECK-NEXT:     return %0 : i256 loc(#loc4)
 // CHECK-NEXT:   } loc(#loc2)
-// CHECK-NEXT:   func.func @f_9() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality, runtime, state_mutability = #sol<StateMutability View>} {
-// CHECK-NEXT:     %0 = "llvm.intrcall"() <{id = 3170 : i32, name = "eravm.caller"}> : () -> i256 loc(#loc3)
+// CHECK-NEXT:   func.func @msgSender_9.0() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %0 = "llvm.intrcall"() <{id = 3170 : i32, name = "eravm.caller"}> : () -> i256 loc(#loc6)
+// CHECK-NEXT:     return %0 : i256 loc(#loc7)
+// CHECK-NEXT:   } loc(#loc5)
+// CHECK-NEXT:   func.func @msgSender_9() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality, runtime, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %0 = "llvm.intrcall"() <{id = 3170 : i32, name = "eravm.caller"}> : () -> i256 loc(#loc6)
+// CHECK-NEXT:     return %0 : i256 loc(#loc7)
+// CHECK-NEXT:   } loc(#loc5)
+// CHECK-NEXT:   func.func @addr_20() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality, runtime, state_mutability = #sol<StateMutability View>} {
+// CHECK-NEXT:     %c0_i8 = arith.constant 0 : i8 loc(#loc3)
+// CHECK-NEXT:     %0 = arith.extui %c0_i8 : i8 to i256 loc(#loc3)
 // CHECK-NEXT:     return %0 : i256 loc(#loc4)
 // CHECK-NEXT:   } loc(#loc2)
 // CHECK-NEXT:   func.func private @__personality() -> i32 attributes {llvm.linkage = #llvm.linkage<external>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} loc(#loc)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
-// CHECK-NEXT: #loc2 = loc({{.*}}:3:2)
-// CHECK-NEXT: #loc3 = loc({{.*}}:4:11)
-// CHECK-NEXT: #loc4 = loc({{.*}}:4:4)
+// CHECK-NEXT: #loc2 = loc({{.*}}:6:2)
+// CHECK-NEXT: #loc3 = loc({{.*}}:7:19)
+// CHECK-NEXT: #loc4 = loc({{.*}}:7:4)
+// CHECK-NEXT: #loc5 = loc({{.*}}:3:2)
+// CHECK-NEXT: #loc6 = loc({{.*}}:4:11)
+// CHECK-NEXT: #loc7 = loc({{.*}}:4:4)
 // CHECK-EMPTY:

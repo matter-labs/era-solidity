@@ -336,12 +336,17 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
     return b.create<mlir::arith::ExtUIOp>(val.getLoc(), getType(dstIntTy), val);
   }
 
-  auto getAsIntTy = [](Type const *ty) -> IntegerType const * {
+  // FIXME:
+  auto addrAsIntTy = IntegerType(256);
+  auto getAsIntTy = [&](Type const *ty) -> IntegerType const * {
     const auto *intTy = dynamic_cast<IntegerType const *>(ty);
     if (!intTy) {
       if (auto *ratTy = dynamic_cast<RationalNumberType const *>(ty)) {
         if (auto *intRatTy = ratTy->integerType())
           return intRatTy;
+      }
+      if (auto *addrTy = dynamic_cast<AddressType const *>(ty)) {
+        return &addrAsIntTy;
       }
       return nullptr;
     }
@@ -476,9 +481,14 @@ mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memAcc) {
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
-  assert(*call->annotation().kind != FunctionCallKind::TypeConversion && "NYI");
   assert(*call->annotation().kind != FunctionCallKind::StructConstructorCall &&
          "NYI");
+
+  // Type conversion
+  if (*call->annotation().kind == FunctionCallKind::TypeConversion) {
+    return genRValExpr(call->arguments().front().get(),
+                       call->annotation().type);
+  }
 
   auto const *calleeTy =
       dynamic_cast<FunctionType const *>(call->expression().annotation().type);
@@ -488,6 +498,7 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
 
   mlir::Location loc = getLoc(call->location());
   switch (calleeTy->kind()) {
+  // Internal call
   case FunctionType::Kind::Internal: {
     // Get callee.
     assert(currContract);
@@ -517,6 +528,7 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
     return resTys.empty() ? mlir::Value{} : callOp.getResult(0);
   }
 
+  // Event invocation
   case FunctionType::Kind::Event: {
     auto const &event =
         dynamic_cast<EventDefinition const &>(calleeTy->declaration());
