@@ -415,12 +415,9 @@ contract C {
 // ASM-NEXT: 	add	r2, r0, r7
 // ASM-NEXT: 	jump	@.BB2_19
 // ASM-NEXT: .BB2_14:
+// ASM-NEXT: 	add	r2, r6, r7
 // ASM-NEXT: 	sub!	r6, r0, r0
 // ASM-NEXT: 	jump.eq	@.BB2_15
-// ASM-NEXT: 	sub.s	32, r6, r8
-// ASM-NEXT: 	and	@CPI2_3[0], r8, r7
-// ASM-NEXT: 	add	r7, r2, r7
-// ASM-NEXT: 	add	32, r7, r7
 // ASM-NEXT: 	add	r4, r0, r8
 // ASM-NEXT: 	add	r2, r0, r9
 // ASM-NEXT: .BB2_17:
@@ -431,7 +428,6 @@ contract C {
 // ASM-NEXT: .BB2_15:
 // ASM-NEXT: 	sub!	r5, r0, r0
 // ASM-NEXT: 	jump.eq	@.BB2_20
-// ASM-NEXT: 	add	r2, r6, r7
 // ASM-NEXT: 	add	r4, r6, r4
 // ASM-NEXT: .BB2_19:
 // ASM-NEXT: 	shl.s	3, r5, r5
