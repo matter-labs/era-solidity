@@ -41,16 +41,16 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
-using namespace eravm;
 using namespace mlir;
 
-unsigned eravm::getAlignment(AddrSpace addrSpace) {
-  return addrSpace == AddrSpace_Stack ? ByteLen_Field : ByteLen_Byte;
+unsigned eravm::getAlignment(eravm::AddrSpace addrSpace) {
+  return addrSpace == eravm::AddrSpace_Stack ? eravm::ByteLen_Field
+                                             : eravm::ByteLen_Byte;
 }
 
 unsigned eravm::getAlignment(Value ptr) {
   auto ty = cast<LLVM::LLVMPointerType>(ptr.getType());
-  return getAlignment(static_cast<AddrSpace>(ty.getAddressSpace()));
+  return getAlignment(static_cast<eravm::AddrSpace>(ty.getAddressSpace()));
 }
 
 unsigned eravm::getCallDataHeadSize(Type ty) {
@@ -74,7 +74,7 @@ Value eravm::Builder::genHeapPtr(Value addr, std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
 
   auto heapAddrSpacePtrTy =
-      LLVM::LLVMPointerType::get(b.getContext(), AddrSpace_Heap);
+      LLVM::LLVMPointerType::get(b.getContext(), eravm::AddrSpace_Heap);
   return b.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, addr);
 }
 
@@ -96,14 +96,15 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
   auto i256Ty = b.getIntegerType(256);
 
   // Initialize the following global ints
-  initInt(GlobHeapMemPtr);
-  initInt(GlobCallDataSize);
-  initInt(GlobRetDataSize);
-  initInt(GlobCallFlags);
+  initInt(eravm::GlobHeapMemPtr);
+  initInt(eravm::GlobCallDataSize);
+  initInt(eravm::GlobRetDataSize);
+  initInt(eravm::GlobCallFlags);
 
   // Initialize the GlobExtraABIData int array
   auto extraABIData = bExt.getOrInsertGlobalOp(
-      GlobExtraABIData, LLVM::LLVMArrayType::get(i256Ty, 10), AddrSpace_Stack,
+      eravm::GlobExtraABIData, LLVM::LLVMArrayType::get(i256Ty, 10),
+      eravm::AddrSpace_Stack,
       /*alignment=*/0, LLVM::Linkage::Private,
       b.getZeroAttr(RankedTensorType::get({10}, i256Ty)), mod);
   Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
@@ -195,6 +196,7 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
                                          std::vector<Value> &results,
                                          bool fromMem,
                                          std::optional<mlir::Location> locArg) {
+  // TODO: Move this to the evm namespace.
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
@@ -277,15 +279,17 @@ Value eravm::Builder::genABIData(Value addr, Value size,
   abiData = b.create<arith::AddIOp>(loc, abiData, shiftedGas);
 
   if (addrSpace == eravm::AddrSpace_HeapAuxiliary) {
-    APInt shiftedAuxHeapMarker(/*numBits=*/256, RetForwardPageType::UseAuxHeap);
+    APInt shiftedAuxHeapMarker(/*numBits=*/256,
+                               eravm::RetForwardPageType::UseAuxHeap);
     shiftedAuxHeapMarker <<= eravm::BitLen_X32 * 7;
     abiData = b.create<arith::AddIOp>(loc, abiData,
                                       bExt.genI256Const(shiftedAuxHeapMarker));
   }
 
   if (isSysCall) {
-    APInt shiftedAuxHeapMarker(/*numBits=*/256, RetForwardPageType::UseAuxHeap);
-    shiftedAuxHeapMarker <<= eravm::BitLen_X32 * 7 + BitLen_Byte * 3;
+    APInt shiftedAuxHeapMarker(/*numBits=*/256,
+                               eravm::RetForwardPageType::UseAuxHeap);
+    shiftedAuxHeapMarker <<= eravm::BitLen_X32 * 7 + eravm::BitLen_Byte * 3;
     abiData = b.create<arith::AddIOp>(loc, abiData,
                                       bExt.genI256Const(shiftedAuxHeapMarker));
   }
