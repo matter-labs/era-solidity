@@ -29,11 +29,17 @@
 
 void solidity::mlirgen::addConversionPasses(mlir::PassManager &passMgr,
                                             Target tgt) {
+  assert(tgt == Target::EraVM);
   passMgr.addPass(mlir::sol::createConvertSolToStandardPass(tgt));
 
   // FIXME: Adding individual conversion passes for each dialects causes
   // unrealized_conversion_cast's with index types.
-  passMgr.addPass(mlir::sol::createConvertStandardToLLVMPass());
+  //
+  // FIXME: `Target` should track triple, index bitwidth and data-layout.
+  passMgr.addPass(mlir::sol::createConvertStandardToLLVMPass(
+      /*triple=*/"eravm-unknown-unknown",
+      /*indexBitwidth=*/256,
+      /*dataLayout=*/"E-p:256:256-i256:256:256-S32-a:256:256"));
 }
 
 std::unique_ptr<llvm::TargetMachine>

@@ -29,6 +29,8 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Attributes.h"
+#include "llvm/IR/DataLayout.h"
 
 using namespace mlir;
 
@@ -38,6 +40,19 @@ struct ConvertStandardToLLVM
     : public PassWrapper<ConvertStandardToLLVM, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConvertStandardToLLVM)
 
+  /// LLVM target triple.
+  StringRef triple;
+
+  /// Bitwidth of index type.
+  unsigned indexBitwidth;
+
+  /// LLVM target datalayout.
+  StringRef dataLayout;
+
+  explicit ConvertStandardToLLVM(StringRef triple, unsigned indexBitwidth,
+                                 StringRef dataLayout)
+      : triple(triple), indexBitwidth(indexBitwidth), dataLayout(dataLayout) {}
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<cf::ControlFlowDialect, LLVM::LLVMDialect>();
   }
@@ -46,23 +61,37 @@ struct ConvertStandardToLLVM
     LLVMConversionTarget tgt(getContext());
     tgt.addLegalOp<ModuleOp>();
 
+    // Create the llvm type converter.
     LowerToLLVMOptions opts(&getContext());
-    opts.overrideIndexBitwidth(256);
+    opts.overrideIndexBitwidth(indexBitwidth);
+    opts.dataLayout = llvm::DataLayout(dataLayout);
     LLVMTypeConverter tyConv(&getContext(), opts);
 
+    // Set the llvm target triple and data-layout.
+    ModuleOp mod = getOperation();
+    mod->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
+                 StringAttr::get(&getContext(), triple));
+    mod->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
+                 StringAttr::get(&getContext(), dataLayout));
+
+    // Populate patterns.
     RewritePatternSet pats(&getContext());
     populateFuncToLLVMConversionPatterns(tyConv, pats);
     populateSCFToControlFlowConversionPatterns(pats);
     cf::populateControlFlowToLLVMConversionPatterns(tyConv, pats);
     mlir::arith::populateArithToLLVMConversionPatterns(tyConv, pats);
 
-    if (failed(applyFullConversion(getOperation(), tgt, std::move(pats))))
+    // Run the conversion.
+    if (failed(applyFullConversion(mod, tgt, std::move(pats))))
       signalPassFailure();
   }
 };
 
 } // namespace
 
-std::unique_ptr<Pass> sol::createConvertStandardToLLVMPass() {
-  return std::make_unique<ConvertStandardToLLVM>();
+std::unique_ptr<Pass>
+sol::createConvertStandardToLLVMPass(StringRef triple, unsigned indexBitwidth,
+                                     StringRef dataLayout) {
+  return std::make_unique<ConvertStandardToLLVM>(triple, indexBitwidth,
+                                                 dataLayout);
 }

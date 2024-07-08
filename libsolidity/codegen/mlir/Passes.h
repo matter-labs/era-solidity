@@ -42,7 +42,9 @@ createConvertSolToStandardPass(solidity::mlirgen::Target tgt);
 
 // TODO: Is mlir::sol the right namespace for this?
 /// Creates a pass to convert standard dialects to llvm dialect.
-std::unique_ptr<Pass> createConvertStandardToLLVMPass();
+std::unique_ptr<Pass> createConvertStandardToLLVMPass(StringRef triple,
+                                                      unsigned indexBitwidth,
+                                                      StringRef dataLayout);
 
 } // namespace sol
 
