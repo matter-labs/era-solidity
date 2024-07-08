@@ -1414,16 +1414,35 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
             bExt.getGlobalOp(callDataPtrAddr.getGlobalName(), mod)
                 .getAddrSpace()),
         /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
+        /*basePtr=*/
         entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
-        callDataSz.getResult());
+        /*indices=*/callDataSz.getResult());
     auto storeRetDataABIInitializer = [&](const char *name) {
       LLVM::GlobalOp globDef = bExt.getOrInsertPtrGlobalOp(
           name, eravm::AddrSpace_Generic, LLVM::Linkage::Private, mod);
       Value globAddr = rewriter.create<LLVM::AddressOfOp>(loc, globDef);
-      rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
-                                     eravm::getAlignment(globAddr));
+      if (name == eravm::GlobActivePtr) {
+        auto arrTy = cast<LLVM::LLVMArrayType>(globDef.getType());
+        for (unsigned i = 0; i < arrTy.getNumElements(); ++i) {
+          auto gep = rewriter.create<LLVM::GEPOp>(
+              loc, /*resultType=*/
+              LLVM::LLVMPointerType::get(mod.getContext(),
+                                         eravm::AddrSpace_Generic),
+              /*basePtrType=*/arrTy, /*basePtr=*/globAddr,
+              /*indices=*/
+              ValueRange{bExt.genI256Const(0), bExt.genI256Const(i)});
+          gep.setElemTypeAttr(TypeAttr::get(
+              LLVM::LLVMArrayType::get(i256Ty, arrTy.getNumElements())));
+          rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, gep,
+                                         eravm::getAlignment(globAddr));
+        }
+      } else {
+        rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
+                                       eravm::getAlignment(globAddr));
+      }
     };
     storeRetDataABIInitializer(eravm::GlobRetDataPtr);
+    storeRetDataABIInitializer(eravm::GlobDecommitPtr);
     storeRetDataABIInitializer(eravm::GlobActivePtr);
 
     // Store call flags arg to the global call flags

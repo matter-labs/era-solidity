@@ -95,13 +95,13 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
 
   auto i256Ty = b.getIntegerType(256);
 
-  // Initialize the following global ints
+  // Initialize the following global ints.
   initInt(eravm::GlobHeapMemPtr);
   initInt(eravm::GlobCallDataSize);
   initInt(eravm::GlobRetDataSize);
   initInt(eravm::GlobCallFlags);
 
-  // Initialize the GlobExtraABIData int array
+  // Initialize the GlobExtraABIData int array.
   auto extraABIData = bExt.getOrInsertGlobalOp(
       eravm::GlobExtraABIData, LLVM::LLVMArrayType::get(i256Ty, 10),
       eravm::AddrSpace_Stack,
@@ -113,6 +113,14 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
       bExt.genI256ConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)),
                              locArg),
       extraABIDataAddr);
+
+  // Initialize the GlobActivePtr array.
+  auto genericAddrSpacePtrTy =
+      LLVM::LLVMPointerType::get(b.getContext(), eravm::AddrSpace_Generic);
+  bExt.getOrInsertGlobalOp(
+      eravm::GlobActivePtr, LLVM::LLVMArrayType::get(genericAddrSpacePtrTy, 16),
+      eravm::AddrSpace_Stack,
+      /*alignment=*/0, LLVM::Linkage::Private, /*attr=*/{}, mod);
 }
 
 Value eravm::Builder::genABILen(Value ptr, std::optional<Location> locArg) {

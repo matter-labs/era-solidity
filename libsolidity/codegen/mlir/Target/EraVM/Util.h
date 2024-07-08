@@ -87,6 +87,7 @@ enum RetForwardPageType { UseHeap = 0, ForwardFatPtr = 1, UseAuxHeap = 2 };
 
 enum : uint16_t { Address_EventWriter = 0x800D };
 
+// TODO: Track address space, linkage etc. here (in a struct?) as well?
 static const char *GlobHeapMemPtr = "memory_pointer";
 static const char *GlobCallDataSize = "calldatasize";
 static const char *GlobRetDataSize = "returndatasize";
@@ -94,6 +95,7 @@ static const char *GlobCallFlags = "call_flags";
 static const char *GlobExtraABIData = "extra_abi_data";
 static const char *GlobCallDataPtr = "ptr_calldata";
 static const char *GlobRetDataPtr = "ptr_return_data";
+static const char *GlobDecommitPtr = "ptr_decommit";
 static const char *GlobActivePtr = "ptr_active";
 
 enum EntryInfo {

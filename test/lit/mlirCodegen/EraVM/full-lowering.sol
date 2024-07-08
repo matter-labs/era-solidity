@@ -13,9 +13,10 @@ contract C {
 // CHECK: ; ModuleID = 'LLVMDialectModule'
 // CHECK-NEXT: source_filename = "LLVMDialectModule"
 // CHECK-EMPTY:
-// CHECK-NEXT: @ptr_active = private global ptr addrspace(3) undef
+// CHECK-NEXT: @ptr_decommit = private global ptr addrspace(3) undef
 // CHECK-NEXT: @ptr_return_data = private global ptr addrspace(3) undef
 // CHECK-NEXT: @ptr_calldata = private global ptr addrspace(3) undef
+// CHECK-NEXT: @ptr_active = private global [16 x ptr addrspace(3)] undef
 // CHECK-NEXT: @extra_abi_data = private global [10 x i256] zeroinitializer
 // CHECK-NEXT: @call_flags = private global i256 0
 // CHECK-NEXT: @returndatasize = private global i256 0
@@ -161,7 +162,23 @@ contract C {
 // CHECK-NEXT:   %13 = load i256, ptr @calldatasize, align 32
 // CHECK-NEXT:   %14 = getelementptr i8, ptr addrspace(3) %0, i256 %13
 // CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_return_data, align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_decommit, align 32
 // CHECK-NEXT:   store ptr addrspace(3) %14, ptr @ptr_active, align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 1), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 2), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 3), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 4), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 5), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 6), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 7), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 8), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 9), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 10), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 11), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 12), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 13), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 14), align 32
+// CHECK-NEXT:   store ptr addrspace(3) %14, ptr getelementptr ([16 x i256], ptr @ptr_active, i256 0, i256 15), align 32
 // CHECK-NEXT:   store i256 %1, ptr @call_flags, align 32
 // CHECK-NEXT:   store i256 %2, ptr @extra_abi_data, align 32
 // CHECK-NEXT:   store i256 %3, ptr getelementptr inbounds ([10 x i256], ptr @extra_abi_data, i256 0, i256 1), align 32
@@ -467,7 +484,38 @@ contract C {
 // ASM-NEXT: 	shr.s	96, r13, r13
 // ASM-NEXT: 	and	@CPI3_0[0], r13, r14
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_return_data]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_decommit]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 15]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 14]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 13]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 12]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 11]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 10]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 9]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 8]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 7]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 6]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 5]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 4]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 3]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 2]
+// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 1]
 // ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active]
+// ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
+// ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 9]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 8]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 7]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 6]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 5]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 4]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 3]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 2]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 1]
+// ASM-NEXT: 	add	0, r0, stack[@extra_abi_data]
+// ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
+// ASM-NEXT: 	add	0, r0, stack[@returndatasize]
+// ASM-NEXT: 	add	0, r0, stack[@call_flags]
 // ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data]
 // ASM-NEXT: 	add	r4, r0, stack[@extra_abi_data + 1]
 // ASM-NEXT: 	add	r5, r0, stack[@extra_abi_data + 2]
@@ -478,11 +526,7 @@ contract C {
 // ASM-NEXT: 	add	r10, r0, stack[@extra_abi_data + 7]
 // ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data + 8]
 // ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data + 9]
-// ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
-// ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
 // ASM-NEXT: 	add	r2, r0, stack[@call_flags]
-// ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
-// ASM-NEXT: 	add	0, r0, stack[@returndatasize]
 // ASM-NEXT: 	and!	1, r2, r0
 // ASM-NEXT: 	jump.eq	@.BB3_2
 // ASM-NEXT: 	near_call	r0, @__deploy, @DEFAULT_UNWIND
@@ -568,7 +612,7 @@ contract C {
 // ASM-EMPTY:
 // ASM-NEXT: 	.data
 // ASM-NEXT: 	.p2align	5, 0x0
-// ASM-NEXT: ptr_active:
+// ASM-NEXT: ptr_decommit:
 // ASM-NEXT: 	.zero	32
 // ASM-EMPTY:
 // ASM-NEXT: 	.p2align	5, 0x0
@@ -578,6 +622,10 @@ contract C {
 // ASM-NEXT: 	.p2align	5, 0x0
 // ASM-NEXT: ptr_calldata:
 // ASM-NEXT: 	.zero	32
+// ASM-EMPTY:
+// ASM-NEXT: 	.p2align	5, 0x0
+// ASM-NEXT: ptr_active:
+// ASM-NEXT: 	.zero	512
 // ASM-EMPTY:
 // ASM-NEXT: 	.p2align	5, 0x0
 // ASM-NEXT: extra_abi_data:
