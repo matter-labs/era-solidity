@@ -551,74 +551,73 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
   using OpRewritePattern<sol::BuiltinRetOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::BuiltinRetOp op,
-                                PatternRewriter &rewriter) const override {
+                                PatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
 
-    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
-    eravm::Builder eraB(rewriter);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r);
     SymbolRefAttr returnFunc =
         eraB.getOrInsertReturn(op->getParentOfType<ModuleOp>());
 
     //
-    // Lowering in the runtime context
+    // Lowering in the runtime context.
     //
     if (inRuntimeContext(op)) {
       // Create the return call (__return(offset, length,
-      // RetForwardPageType::UseHeap)) and the unreachable op
-      rewriter.create<sol::CallOp>(
+      // RetForwardPageType::UseHeap)) and the unreachable op.
+      r.create<sol::CallOp>(
           loc, returnFunc, TypeRange{},
           ValueRange{op.getInp0(), op.getInp1(),
                      bExt.genI256Const(eravm::RetForwardPageType::UseHeap)});
       bExt.createCallToUnreachableWrapper(mod);
 
-      rewriter.eraseOp(op);
+      r.eraseOp(op);
       return success();
     }
 
     //
-    // Lowering in the creation context
+    // Lowering in the creation context.
     //
     auto heapAuxAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), eravm::AddrSpace_HeapAuxiliary);
+        r.getContext(), eravm::AddrSpace_HeapAuxiliary);
 
-    // Store ByteLen_Field to the immutables offset
-    auto immutablesOffsetPtr = rewriter.create<LLVM::IntToPtrOp>(
+    // Generate the store of ByteLen_Field to the immutables offset.
+    auto immutablesOffsetPtr = r.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
         bExt.genI256Const(eravm::HeapAuxOffsetCtorRetData));
-    rewriter.create<LLVM::StoreOp>(loc, bExt.genI256Const(eravm::ByteLen_Field),
-                                   immutablesOffsetPtr,
-                                   eravm::getAlignment(immutablesOffsetPtr));
+    r.create<LLVM::StoreOp>(loc, bExt.genI256Const(eravm::ByteLen_Field),
+                            immutablesOffsetPtr,
+                            eravm::getAlignment(immutablesOffsetPtr));
 
-    // Store size of immutables in terms of ByteLen_Field to the immutables
-    // number offset
+    // Generate the store of the size of immutables in terms of ByteLen_Field to
+    // the immutables number offset.
     auto immutablesSize = 0; // TODO: Implement this!
-    auto immutablesNumPtr = rewriter.create<LLVM::IntToPtrOp>(
+    auto immutablesNumPtr = r.create<LLVM::IntToPtrOp>(
         loc, heapAuxAddrSpacePtrTy,
         bExt.genI256Const(eravm::HeapAuxOffsetCtorRetData +
                           eravm::ByteLen_Field));
-    rewriter.create<LLVM::StoreOp>(
+    r.create<LLVM::StoreOp>(
         loc, bExt.genI256Const(immutablesSize / eravm::ByteLen_Field),
         immutablesNumPtr, eravm::getAlignment(immutablesNumPtr));
 
-    // Calculate the return data length (i.e. immutablesSize * 2 +
-    // ByteLen_Field * 2
-    auto immutablesCalcSize = rewriter.create<arith::MulIOp>(
+    // Generate the return data length (immutablesSize * 2 + ByteLen_Field * 2).
+    auto immutablesCalcSize = r.create<arith::MulIOp>(
         loc, bExt.genI256Const(immutablesSize), bExt.genI256Const(2));
-    auto returnDataLen = rewriter.create<arith::AddIOp>(
-        loc, immutablesCalcSize.getResult(),
-        bExt.genI256Const(eravm::ByteLen_Field * 2));
+    auto returnDataLen =
+        r.create<arith::AddIOp>(loc, immutablesCalcSize.getResult(),
+                                bExt.genI256Const(eravm::ByteLen_Field * 2));
 
     // Create the return call (__return(HeapAuxOffsetCtorRetData, returnDataLen,
-    // RetForwardPageType::UseAuxHeap)) and the unreachable op
-    rewriter.create<sol::CallOp>(
+    // RetForwardPageType::UseAuxHeap)) and the unreachable op.
+    r.create<sol::CallOp>(
         loc, returnFunc, TypeRange{},
         ValueRange{bExt.genI256Const(eravm::HeapAuxOffsetCtorRetData),
                    returnDataLen.getResult(),
                    bExt.genI256Const(eravm::RetForwardPageType::UseAuxHeap)});
     bExt.createCallToUnreachableWrapper(mod);
 
-    rewriter.eraseOp(op);
+    r.eraseOp(op);
     return success();
   }
 };
