@@ -1294,17 +1294,12 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
 struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   using OpRewritePattern<sol::ObjectOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(sol::ObjectOp objOp,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = objOp.getLoc();
-
-    auto mod = objOp->getParentOfType<ModuleOp>();
-    auto i256Ty = rewriter.getIntegerType(256);
-    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
-    eravm::Builder eraB(rewriter, loc);
-
+  /// Move FuncOps in the ObjectOp to the ModuleOp by disambiguating the symbol
+  /// names.
+  void moveFuncsToModule(sol::ObjectOp objOp, ModuleOp mod) const {
     // Track the names of the existing function in the module.
     std::set<std::string> fnNamesInMod;
+    // TODO: Is there a way to run .walk for 1 level depth?
     for (mlir::Operation &op : *mod.getBody()) {
       if (auto fn = dyn_cast<sol::FuncOp>(&op)) {
         std::string name(fn.getName());
@@ -1314,8 +1309,6 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
       }
     }
 
-    // Move FuncOps under the ModuleOp by disambiguating functions with same
-    // names.
     // TODO:
     // - Is there a better way to do the symbol disambiguation?
     // - replaceAllSymbolUses doesn't affect symbolic reference by attributes.
@@ -1335,8 +1328,8 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         // fetch the parent ObjectOp.
         auto parentObjectOp = fn->getParentOfType<sol::ObjectOp>();
         assert(parentObjectOp);
-        if (failed(fn.replaceAllSymbolUses(rewriter.getStringAttr(newName),
-                                           parentObjectOp)))
+        if (failed(fn.replaceAllSymbolUses(
+                StringAttr::get(objOp.getContext(), newName), parentObjectOp)))
           llvm_unreachable("replaceAllSymbolUses failed");
         fn.setName(newName);
         fnNamesInMod.insert(newName);
@@ -1345,35 +1338,46 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
         fnNamesInMod.insert(name);
       }
 
-      Block *modBlk = mod.getBody();
-      fn->moveBefore(modBlk, modBlk->begin());
+      fn->moveBefore(mod.getBody(), mod.getBody()->begin());
     });
+  }
+
+  LogicalResult matchAndRewrite(sol::ObjectOp objOp,
+                                PatternRewriter &r) const override {
+    mlir::Location loc = objOp.getLoc();
+
+    auto mod = objOp->getParentOfType<ModuleOp>();
+    auto i256Ty = r.getIntegerType(256);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
+
+    moveFuncsToModule(objOp, mod);
 
     // Is this a runtime object?
     // FIXME: Is there a better way to check this?
     if (objOp.getSymName().endswith("_deployed")) {
       // Move the runtime object region under the __runtime function
       sol::FuncOp runtimeFunc = eraB.getOrInsertRuntimeFuncOp(
-          "__runtime", rewriter.getFunctionType({}, {}), mod);
+          "__runtime", r.getFunctionType({}, {}), mod);
       Region &runtimeFuncRegion = runtimeFunc.getRegion();
       assert(runtimeFuncRegion.empty());
-      rewriter.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
-                                  runtimeFuncRegion.begin());
-      rewriter.eraseOp(objOp);
+      r.inlineRegionBefore(objOp.getRegion(), runtimeFuncRegion,
+                           runtimeFuncRegion.begin());
+      r.eraseOp(objOp);
       return success();
     }
 
     // Define the __entry function
-    auto genericAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), eravm::AddrSpace_Generic);
+    auto genericAddrSpacePtrTy =
+        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Generic);
     std::vector<Type> inTys{genericAddrSpacePtrTy};
     constexpr unsigned argCnt =
         eravm::MandatoryArgCnt + eravm::ExtraABIDataSize;
     for (unsigned i = 0; i < argCnt - 1; ++i) {
       inTys.push_back(i256Ty);
     }
-    FunctionType funcType = rewriter.getFunctionType(inTys, {i256Ty});
-    rewriter.setInsertionPointToEnd(mod.getBody());
+    FunctionType funcType = r.getFunctionType(inTys, {i256Ty});
+    r.setInsertionPointToEnd(mod.getBody());
     // FIXME: Assert __entry is created here.
     sol::FuncOp entryFunc = bExt.getOrInsertFuncOp(
         "__entry", funcType, LLVM::Linkage::External, mod);
@@ -1381,50 +1385,50 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
     // Setup the entry block and set insertion point to it
     auto &entryFuncRegion = entryFunc.getRegion();
-    Block *entryBlk = rewriter.createBlock(&entryFuncRegion);
+    Block *entryBlk = r.createBlock(&entryFuncRegion);
     for (auto inTy : inTys) {
       entryBlk->addArgument(inTy, loc);
     }
-    rewriter.setInsertionPointToStart(entryBlk);
+    r.setInsertionPointToStart(entryBlk);
 
     // Initialize globals.
     eraB.genGlobalVarsInit(mod);
 
     // Store the calldata ABI arg to the global calldata ptr.
     LLVM::AddressOfOp callDataPtrAddr = eraB.genCallDataPtrAddr(mod);
-    rewriter.create<LLVM::StoreOp>(
+    r.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
 
     // Store the calldata ABI size to the global calldata size.
     Value abiLen = eraB.genABILen(callDataPtrAddr);
     LLVM::AddressOfOp callDataSizeAddr = eraB.genCallDataSizeAddr(mod);
-    rewriter.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
-                                   eravm::getAlignment(callDataSizeAddr));
+    r.create<LLVM::StoreOp>(loc, abiLen, callDataSizeAddr,
+                            eravm::getAlignment(callDataSizeAddr));
 
     // Store calldatasize[calldata abi arg] to the global ret data ptr and
     // active ptr
-    auto callDataSz = rewriter.create<LLVM::LoadOp>(
+    auto callDataSz = r.create<LLVM::LoadOp>(
         loc, callDataSizeAddr, eravm::getAlignment(callDataSizeAddr));
-    auto retDataABIInitializer = rewriter.create<LLVM::GEPOp>(
+    auto retDataABIInitializer = r.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
         LLVM::LLVMPointerType::get(
             mod.getContext(),
             bExt.getGlobalOp(callDataPtrAddr.getGlobalName(), mod)
                 .getAddrSpace()),
-        /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
+        /*basePtrType=*/r.getIntegerType(eravm::BitLen_Byte),
         /*basePtr=*/
         entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallDataABI),
         /*indices=*/callDataSz.getResult());
     auto storeRetDataABIInitializer = [&](const char *name) {
       LLVM::GlobalOp globDef = bExt.getOrInsertPtrGlobalOp(
           name, eravm::AddrSpace_Generic, LLVM::Linkage::Private, mod);
-      Value globAddr = rewriter.create<LLVM::AddressOfOp>(loc, globDef);
+      Value globAddr = r.create<LLVM::AddressOfOp>(loc, globDef);
       if (name == eravm::GlobActivePtr) {
         auto arrTy = cast<LLVM::LLVMArrayType>(globDef.getType());
         for (unsigned i = 0; i < arrTy.getNumElements(); ++i) {
-          auto gep = rewriter.create<LLVM::GEPOp>(
+          auto gep = r.create<LLVM::GEPOp>(
               loc, /*resultType=*/
               LLVM::LLVMPointerType::get(mod.getContext(),
                                          eravm::AddrSpace_Generic),
@@ -1433,12 +1437,12 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
               ValueRange{bExt.genI256Const(0), bExt.genI256Const(i)});
           gep.setElemTypeAttr(TypeAttr::get(
               LLVM::LLVMArrayType::get(i256Ty, arrTy.getNumElements())));
-          rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, gep,
-                                         eravm::getAlignment(globAddr));
+          r.create<LLVM::StoreOp>(loc, retDataABIInitializer, gep,
+                                  eravm::getAlignment(globAddr));
         }
       } else {
-        rewriter.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
-                                       eravm::getAlignment(globAddr));
+        r.create<LLVM::StoreOp>(loc, retDataABIInitializer, globAddr,
+                                eravm::getAlignment(globAddr));
       }
     };
     storeRetDataABIInitializer(eravm::GlobRetDataPtr);
@@ -1447,18 +1451,17 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
     // Store call flags arg to the global call flags
     auto globCallFlagsDef = bExt.getGlobalOp(eravm::GlobCallFlags, mod);
-    Value globCallFlags =
-        rewriter.create<LLVM::AddressOfOp>(loc, globCallFlagsDef);
-    rewriter.create<LLVM::StoreOp>(
+    Value globCallFlags = r.create<LLVM::AddressOfOp>(loc, globCallFlagsDef);
+    r.create<LLVM::StoreOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
         globCallFlags, eravm::getAlignment(globCallFlags));
 
     // Store the remaining args to the global extra ABI data
     auto globExtraABIDataDef = bExt.getGlobalOp(eravm::GlobExtraABIData, mod);
     Value globExtraABIData =
-        rewriter.create<LLVM::AddressOfOp>(loc, globExtraABIDataDef);
+        r.create<LLVM::AddressOfOp>(loc, globExtraABIDataDef);
     for (unsigned i = 2; i < entryBlk->getNumArguments(); ++i) {
-      auto gep = rewriter.create<LLVM::GEPOp>(
+      auto gep = r.create<LLVM::GEPOp>(
           loc,
           /*resultType=*/
           LLVM::LLVMPointerType::get(mod.getContext(),
@@ -1468,52 +1471,52 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
       // FIXME: How does the opaque ptr geps with scalar element types lower
       // without explictly setting the elem_type attr?
       gep.setElemTypeAttr(TypeAttr::get(globExtraABIDataDef.getType()));
-      rewriter.create<LLVM::StoreOp>(loc, entryBlk->getArgument(i), gep,
-                                     eravm::getAlignment(gep));
+      r.create<LLVM::StoreOp>(loc, entryBlk->getArgument(i), gep,
+                              eravm::getAlignment(gep));
     }
 
     // Check Deploy call flag
-    auto deployCallFlag = rewriter.create<arith::AndIOp>(
+    auto deployCallFlag = r.create<arith::AndIOp>(
         loc, entryBlk->getArgument(eravm::EntryInfo::ArgIndexCallFlags),
         bExt.genI256Const(1));
-    auto isDeployCallFlag = rewriter.create<arith::CmpIOp>(
+    auto isDeployCallFlag = r.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::eq, deployCallFlag.getResult(),
         bExt.genI256Const(1));
 
     // Create the __runtime function
     sol::FuncOp runtimeFunc = eraB.getOrInsertRuntimeFuncOp(
-        "__runtime", rewriter.getFunctionType({}, {}), mod);
+        "__runtime", r.getFunctionType({}, {}), mod);
     Region &runtimeFuncRegion = runtimeFunc.getRegion();
     // Move the runtime object getter under the ObjectOp public API
     for (auto const &op : *objOp.getBody()) {
       if (auto runtimeObj = dyn_cast<sol::ObjectOp>(&op)) {
         assert(runtimeObj.getSymName().endswith("_deployed"));
         assert(runtimeFuncRegion.empty());
-        rewriter.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
-                                    runtimeFuncRegion.begin());
-        OpBuilder::InsertionGuard insertGuard(rewriter);
-        rewriter.setInsertionPointToEnd(&runtimeFuncRegion.front());
-        rewriter.create<LLVM::UnreachableOp>(runtimeObj.getLoc());
-        rewriter.eraseOp(runtimeObj);
+        r.inlineRegionBefore(runtimeObj.getRegion(), runtimeFuncRegion,
+                             runtimeFuncRegion.begin());
+        OpBuilder::InsertionGuard insertGuard(r);
+        r.setInsertionPointToEnd(&runtimeFuncRegion.front());
+        r.create<LLVM::UnreachableOp>(runtimeObj.getLoc());
+        r.eraseOp(runtimeObj);
       }
     }
 
     // Create the __deploy function
     sol::FuncOp deployFunc = eraB.getOrInsertCreationFuncOp(
-        "__deploy", rewriter.getFunctionType({}, {}), mod);
+        "__deploy", r.getFunctionType({}, {}), mod);
     Region &deployFuncRegion = deployFunc.getRegion();
     assert(deployFuncRegion.empty());
-    rewriter.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
-                                deployFuncRegion.begin());
+    r.inlineRegionBefore(objOp.getRegion(), deployFuncRegion,
+                         deployFuncRegion.begin());
     {
-      OpBuilder::InsertionGuard insertGuard(rewriter);
-      rewriter.setInsertionPointToEnd(&deployFuncRegion.front());
-      rewriter.create<LLVM::UnreachableOp>(loc);
+      OpBuilder::InsertionGuard insertGuard(r);
+      r.setInsertionPointToEnd(&deployFuncRegion.front());
+      r.create<LLVM::UnreachableOp>(loc);
     }
 
     // If the deploy call flag is set, call __deploy()
-    auto ifOp = rewriter.create<scf::IfOp>(loc, isDeployCallFlag.getResult(),
-                                           /*withElseRegion=*/true);
+    auto ifOp = r.create<scf::IfOp>(loc, isDeployCallFlag.getResult(),
+                                    /*withElseRegion=*/true);
     OpBuilder thenBuilder = ifOp.getThenBodyBuilder();
     thenBuilder.create<sol::CallOp>(loc, deployFunc, ValueRange{});
     // FIXME: Why the following fails with a "does not reference a valid
@@ -1525,10 +1528,10 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // Else call __runtime()
     OpBuilder elseBuilder = ifOp.getElseBodyBuilder();
     elseBuilder.create<sol::CallOp>(loc, runtimeFunc, ValueRange{});
-    rewriter.setInsertionPointAfter(ifOp);
-    rewriter.create<LLVM::UnreachableOp>(loc);
+    r.setInsertionPointAfter(ifOp);
+    r.create<LLVM::UnreachableOp>(loc);
 
-    rewriter.eraseOp(objOp);
+    r.eraseOp(objOp);
     return success();
   }
 };
