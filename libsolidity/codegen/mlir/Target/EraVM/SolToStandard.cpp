@@ -1240,6 +1240,32 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
   }
 };
 
+struct RequireOpLowering : public OpRewritePattern<sol::RequireOp> {
+  using OpRewritePattern<sol::RequireOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::RequireOp op,
+                                PatternRewriter &r) const override {
+    assert(op.getMsg().empty() && "NYI");
+
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+
+    // Generate the revert if the assertion condition is not met.
+    mlir::Value zero = r.create<arith::ConstantIntOp>(loc, 0, r.getI1Type());
+    mlir::Value negCond = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                                  op.getCond(), zero);
+    r.create<scf::IfOp>(loc, negCond,
+                        /*thenBuilder=*/[&](OpBuilder b, Location loc) {
+                          mlir::Value zero = bExt.genI256Const(0);
+                          r.create<sol::RevertOp>(loc, zero, zero);
+                          r.create<scf::YieldOp>(loc);
+                        });
+
+    r.eraseOp(op);
+    return success();
+  }
+};
+
 struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
   using OpConversionPattern<sol::FuncOp>::OpConversionPattern;
 
@@ -1972,8 +1998,8 @@ struct ConvertSolToStandard
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
-                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp,
-                     sol::EmitOp>();
+                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp, sol::EmitOp,
+                     sol::RequireOp>();
     tgt.addDynamicallyLegalOp<sol::ConvCastOp>([&](sol::ConvCastOp op) -> bool {
       Operation *inp = op.getOperand().getDefiningOp();
       std::vector<Operation *> users(op.getResult().getUsers().begin(),
@@ -1989,7 +2015,8 @@ struct ConvertSolToStandard
     pats.add<AllocaOpLowering, MapOpLowering, DataLocCastOpLowering,
              LoadOpLowering, StoreOpLowering, ConvCastOpLowering,
              EmitOpLowering>(tyConv, &getContext());
-    pats.add<MallocOpLowering, AddrOfOpLowering>(&getContext());
+    pats.add<MallocOpLowering, AddrOfOpLowering, RequireOpLowering>(
+        &getContext());
 
     // Assign slots to state variables.
     mod.walk([&](sol::ContractOp contr) {

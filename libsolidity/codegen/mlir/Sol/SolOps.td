@@ -274,6 +274,16 @@ def Sol_EmitOp : Sol_Op<"emit"> {
   // TODO: verifier ($indexedArgsCount <= 3)
 }
 
+def Sol_RequireOp : Sol_Op<"require"> {
+  // TODO: summary, description
+
+  // TODO: $msg should be an OptionalAttr, but it doesn't reflect in the
+  // generated build API.
+  let arguments = (ins I1:$cond, DefaultValuedStrAttr<StrAttr, "">:$msg);
+
+  let assemblyFormat = "$cond `,` $msg attr-dict";
+}
+
 def Sol_ReturnOp : Sol_Op<"return", [Pure, HasParent<"FuncOp">,
                                      ReturnLike, Terminator]> {
   let summary = "ReturnOp for sol.func";

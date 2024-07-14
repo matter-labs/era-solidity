@@ -425,11 +425,14 @@ mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
   assert(inUncheckedBlk() && "NYI");
   switch (op) {
   case Token::Add:
-    return b.create<mlir::arith::AddIOp>(loc, lhs, rhs)->getResult(0);
+    return b.create<mlir::arith::AddIOp>(loc, lhs, rhs);
   case Token::Sub:
-    return b.create<mlir::arith::SubIOp>(loc, lhs, rhs)->getResult(0);
+    return b.create<mlir::arith::SubIOp>(loc, lhs, rhs);
   case Token::Mul:
-    return b.create<mlir::arith::MulIOp>(loc, lhs, rhs)->getResult(0);
+    return b.create<mlir::arith::MulIOp>(loc, lhs, rhs);
+  case Token::GreaterThan:
+    return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ugt,
+                                         lhs, rhs);
   default:
     break;
   }
@@ -437,7 +440,7 @@ mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
-  const auto *resTy = binOp->annotation().type;
+  const auto *resTy = binOp->leftExpression().annotation().type;
   auto loc = getLoc(binOp->location());
 
   mlir::Value lhs = genRValExpr(&binOp->leftExpression(), resTy);
@@ -495,6 +498,8 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
   assert(calleeTy);
 
   std::vector<Type const *> argTys = calleeTy->parameterTypes();
+  std::vector<ASTPointer<Expression const>> const &astArgs =
+      call->sortedArguments();
 
   mlir::Location loc = getLoc(call->location());
   switch (calleeTy->kind()) {
@@ -508,8 +513,7 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
 
     // Lower args.
     std::vector<mlir::Value> args;
-    for (auto [arg, dstTy] :
-         llvm::zip(call->sortedArguments(), calleeTy->parameterTypes())) {
+    for (auto [arg, dstTy] : llvm::zip(astArgs, calleeTy->parameterTypes())) {
       args.push_back(genRValExpr(arg.get(), dstTy));
     }
 
@@ -541,8 +545,8 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
              dynamic_cast<AddressType const *>(calleeTy->parameterTypes()[i]));
 
       // TODO? YulUtilFunctions::conversionFunction
-      mlir::Value arg = genRValExpr(call->sortedArguments()[i].get(),
-                                    calleeTy->parameterTypes()[i]);
+      mlir::Value arg =
+          genRValExpr(astArgs[i].get(), calleeTy->parameterTypes()[i]);
 
       if (event.parameters()[i]->isIndexed()) {
         indexedArgs.push_back(arg);
@@ -559,6 +563,13 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
                                   calleeTy->externalSignature());
     }
 
+    return {};
+  }
+
+  // Require statement
+  case FunctionType::Kind::Require: {
+    assert(call->arguments().size() == 1 && "NYI");
+    b.create<mlir::sol::RequireOp>(loc, genRValExpr(astArgs[0].get()));
     return {};
   }
 
