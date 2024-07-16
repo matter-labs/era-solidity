@@ -170,30 +170,27 @@ Value eravm::Builder::genABITupleEncoding(
     totCallDataHeadSz += getCallDataHeadSize(ty);
 
   size_t headOffset = 0;
-  Value currTailAddr;
+  Value tailAddr = b.create<arith::AddIOp>(
+      loc, headStart, bExt.genI256Const(totCallDataHeadSz));
   for (auto it : llvm::zip(tys, vals)) {
     Type ty = std::get<0>(it);
     Value val = std::get<1>(it);
     auto currHeadAddr =
         b.create<arith::AddIOp>(loc, headStart, bExt.genI256Const(headOffset));
-    // FIXME: This shouldn't be here!
-    currTailAddr = b.create<arith::AddIOp>(
-        loc, headStart, bExt.genI256Const(totCallDataHeadSz));
 
     // String type
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       b.create<sol::MStoreOp>(
-          loc, currHeadAddr,
-          b.create<arith::SubIOp>(loc, currTailAddr, headStart));
+          loc, currHeadAddr, b.create<arith::SubIOp>(loc, tailAddr, headStart));
 
       // Copy the length field.
       auto size = b.create<sol::MLoadOp>(loc, val);
-      b.create<sol::MStoreOp>(loc, currTailAddr, size);
+      b.create<sol::MStoreOp>(loc, tailAddr, size);
 
       // Copy the data.
       auto dataAddr = b.create<arith::AddIOp>(loc, val, bExt.genI256Const(32));
       auto tailDataAddr =
-          b.create<arith::AddIOp>(loc, currTailAddr, bExt.genI256Const(32));
+          b.create<arith::AddIOp>(loc, tailAddr, bExt.genI256Const(32));
       b.create<sol::MCopyOp>(loc, tailDataAddr, dataAddr, size);
 
       // Write 0 at the end.
@@ -201,8 +198,8 @@ Value eravm::Builder::genABITupleEncoding(
                               b.create<arith::AddIOp>(loc, tailDataAddr, size),
                               bExt.genI256Const(0));
 
-      currTailAddr = b.create<arith::AddIOp>(
-          loc, tailDataAddr, bExt.genRoundUpToMultiple<32>(size));
+      tailAddr = b.create<arith::AddIOp>(loc, tailDataAddr,
+                                         bExt.genRoundUpToMultiple<32>(size));
 
       // Integer type
     } else if (auto intTy = dyn_cast<IntegerType>(ty)) {
@@ -220,8 +217,7 @@ Value eravm::Builder::genABITupleEncoding(
     headOffset += getCallDataHeadSize(ty);
   }
 
-  assert(currTailAddr);
-  return currTailAddr;
+  return tailAddr;
 }
 
 Value eravm::Builder::genABITupleEncoding(
