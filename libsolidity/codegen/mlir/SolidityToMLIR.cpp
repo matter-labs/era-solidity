@@ -569,7 +569,7 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
   // Require statement
   case FunctionType::Kind::Require: {
     if (call->arguments().size() == 2) {
-      auto msg = dynamic_cast<Literal const *>(astArgs[1].get());
+      const auto *msg = dynamic_cast<Literal const *>(astArgs[1].get());
       assert(msg && "NYI: Magic vars");
       b.create<mlir::sol::RequireOp>(loc, genRValExpr(astArgs[0].get()),
                                      b.getStringAttr(msg->value()));
