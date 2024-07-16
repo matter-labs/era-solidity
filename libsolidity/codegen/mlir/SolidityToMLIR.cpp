@@ -430,8 +430,14 @@ mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
     return b.create<mlir::arith::SubIOp>(loc, lhs, rhs);
   case Token::Mul:
     return b.create<mlir::arith::MulIOp>(loc, lhs, rhs);
+  case Token::NotEqual:
+    return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne,
+                                         lhs, rhs);
   case Token::GreaterThan:
     return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ugt,
+                                         lhs, rhs);
+  case Token::GreaterThanOrEqual:
+    return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::uge,
                                          lhs, rhs);
   default:
     break;
