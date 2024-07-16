@@ -158,7 +158,7 @@ Value eravm::Builder::genABILen(Value ptr, std::optional<Location> locArg) {
 }
 
 Value eravm::Builder::genABITupleEncoding(
-    TypeRange tys, ValueRange vals, Value headStart,
+    TypeRange tys, ValueRange vals, Value headStartAddr,
     std::optional<mlir::Location> locArg) {
   // TODO: Move this to the evm namespace.
 
@@ -169,19 +169,17 @@ Value eravm::Builder::genABITupleEncoding(
   for (Type ty : tys)
     totCallDataHeadSz += getCallDataHeadSize(ty);
 
-  size_t headOffset = 0;
+  Value headAddr = headStartAddr;
   Value tailAddr = b.create<arith::AddIOp>(
-      loc, headStart, bExt.genI256Const(totCallDataHeadSz));
+      loc, headStartAddr, bExt.genI256Const(totCallDataHeadSz));
   for (auto it : llvm::zip(tys, vals)) {
     Type ty = std::get<0>(it);
     Value val = std::get<1>(it);
-    auto currHeadAddr =
-        b.create<arith::AddIOp>(loc, headStart, bExt.genI256Const(headOffset));
 
     // String type
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       b.create<sol::MStoreOp>(
-          loc, currHeadAddr, b.create<arith::SubIOp>(loc, tailAddr, headStart));
+          loc, headAddr, b.create<arith::SubIOp>(loc, tailAddr, headStartAddr));
 
       // Copy the length field.
       auto size = b.create<sol::MLoadOp>(loc, val);
@@ -209,28 +207,29 @@ Value eravm::Builder::genABITupleEncoding(
         // FIXME: We might need to track the sign in integral types for
         // generating the correct extension.
         assert(intTy.getWidth() == 256 && "NYI");
-      b.create<sol::MStoreOp>(loc, currHeadAddr, val);
+      b.create<sol::MStoreOp>(loc, headAddr, val);
 
     } else {
       llvm_unreachable("NYI");
     }
-    headOffset += getCallDataHeadSize(ty);
+    headAddr = b.create<arith::AddIOp>(
+        loc, headAddr, bExt.genI256Const(getCallDataHeadSize(ty)));
   }
 
   return tailAddr;
 }
 
 Value eravm::Builder::genABITupleEncoding(
-    StringAttr str, Value headStart, std::optional<mlir::Location> locArg) {
+    StringAttr str, Value headStartAddr, std::optional<mlir::Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
   // Generate the offset store at the head address.
   mlir::Value thirtyTwo = bExt.genI256Const(32);
-  b.create<sol::MStoreOp>(loc, headStart, thirtyTwo);
+  b.create<sol::MStoreOp>(loc, headStartAddr, thirtyTwo);
 
   // Generate the string creation at the tail address.
-  auto tailAddr = b.create<arith::AddIOp>(loc, headStart, thirtyTwo);
+  auto tailAddr = b.create<arith::AddIOp>(loc, headStartAddr, thirtyTwo);
   genStringStore(str.str(), tailAddr, locArg);
 
   return tailAddr;

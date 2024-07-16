@@ -73,15 +73,15 @@ contract C {
 // CHECK-NEXT:   store i256 128, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %1 = load i256, ptr @calldatasize, align 32
 // CHECK-NEXT:   %2 = icmp uge i256 %1, 4
-// CHECK-NEXT:   br i1 %2, label %3, label %40
+// CHECK-NEXT:   br i1 %2, label %3, label %42
 // CHECK-EMPTY:
 // CHECK-NEXT: 3:                                                ; preds = %0
 // CHECK-NEXT:   %4 = load ptr addrspace(3), ptr @ptr_calldata, align 32
 // CHECK-NEXT:   %5 = getelementptr i8, ptr addrspace(3) %4, i256 0
 // CHECK-NEXT:   %6 = load i256, ptr addrspace(3) %5, align 1
-// CHECK-NEXT:   switch i256 %6, label %38 [
+// CHECK-NEXT:   switch i256 %6, label %40 [
 // CHECK-NEXT:     i256 2776958069, label %7
-// CHECK-NEXT:     i256 3263152901, label %16
+// CHECK-NEXT:     i256 3263152901, label %17
 // CHECK-NEXT:   ]
 // CHECK-EMPTY:
 // CHECK-NEXT: 7:                                                ; preds = %3
@@ -100,53 +100,55 @@ contract C {
 // CHECK-NEXT:   %14 = add i256 %13, 32
 // CHECK-NEXT:   %15 = inttoptr i256 %13 to ptr addrspace(1)
 // CHECK-NEXT:   store i256 %12, ptr addrspace(1) %15, align 1
+// CHECK-NEXT:   %16 = add i256 %13, 32
 // CHECK-NEXT:   call void @__return(i256 %13, i256 32, i256 0)
 // CHECK-NEXT:   call void @.unreachable()
-// CHECK-NEXT:   br label %39
+// CHECK-NEXT:   br label %41
 // CHECK-EMPTY:
-// CHECK-NEXT: 16:                                               ; preds = %3
-// CHECK-NEXT:   %17 = call i256 @llvm.eravm.getu128()
-// CHECK-NEXT:   %18 = icmp ne i256 %17, 0
-// CHECK-NEXT:   br i1 %18, label %19, label %20
+// CHECK-NEXT: 17:                                               ; preds = %3
+// CHECK-NEXT:   %18 = call i256 @llvm.eravm.getu128()
+// CHECK-NEXT:   %19 = icmp ne i256 %18, 0
+// CHECK-NEXT:   br i1 %19, label %20, label %21
 // CHECK-EMPTY:
-// CHECK-NEXT: 19:                                               ; preds = %16
+// CHECK-NEXT: 20:                                               ; preds = %17
 // CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0)
 // CHECK-NEXT:   call void @.unreachable()
-// CHECK-NEXT:   br label %20
+// CHECK-NEXT:   br label %21
 // CHECK-EMPTY:
-// CHECK-NEXT: 20:                                               ; preds = %19, %16
-// CHECK-NEXT:   %21 = call i256 @f1_18()
-// CHECK-NEXT:   %22 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
-// CHECK-NEXT:   %23 = add i256 %22, 32
-// CHECK-NEXT:   %24 = inttoptr i256 %22 to ptr addrspace(1)
-// CHECK-NEXT:   store i256 32, ptr addrspace(1) %24, align 1
-// CHECK-NEXT:   %25 = inttoptr i256 %21 to ptr addrspace(1)
-// CHECK-NEXT:   %26 = load i256, ptr addrspace(1) %25, align 1
-// CHECK-NEXT:   %27 = inttoptr i256 %23 to ptr addrspace(1)
-// CHECK-NEXT:   store i256 %26, ptr addrspace(1) %27, align 1
-// CHECK-NEXT:   %28 = add i256 %21, 32
-// CHECK-NEXT:   %29 = add i256 %23, 32
-// CHECK-NEXT:   %30 = inttoptr i256 %29 to ptr addrspace(1)
-// CHECK-NEXT:   %31 = inttoptr i256 %28 to ptr addrspace(1)
-// CHECK-NEXT:   call void @llvm.memmove.p1.p1.i256(ptr addrspace(1) %30, ptr addrspace(1) %31, i256 %26, i1 false)
-// CHECK-NEXT:   %32 = add i256 %29, %26
-// CHECK-NEXT:   %33 = inttoptr i256 %32 to ptr addrspace(1)
-// CHECK-NEXT:   store i256 0, ptr addrspace(1) %33, align 1
-// CHECK-NEXT:   %34 = add i256 %26, 31
-// CHECK-NEXT:   %35 = and i256 %34, 4294967264
-// CHECK-NEXT:   %36 = add i256 %29, %35
-// CHECK-NEXT:   %37 = sub i256 %36, %22
-// CHECK-NEXT:   call void @__return(i256 %22, i256 %37, i256 0)
+// CHECK-NEXT: 21:                                               ; preds = %20, %17
+// CHECK-NEXT:   %22 = call i256 @f1_18()
+// CHECK-NEXT:   %23 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
+// CHECK-NEXT:   %24 = add i256 %23, 32
+// CHECK-NEXT:   %25 = inttoptr i256 %23 to ptr addrspace(1)
+// CHECK-NEXT:   store i256 32, ptr addrspace(1) %25, align 1
+// CHECK-NEXT:   %26 = inttoptr i256 %22 to ptr addrspace(1)
+// CHECK-NEXT:   %27 = load i256, ptr addrspace(1) %26, align 1
+// CHECK-NEXT:   %28 = inttoptr i256 %24 to ptr addrspace(1)
+// CHECK-NEXT:   store i256 %27, ptr addrspace(1) %28, align 1
+// CHECK-NEXT:   %29 = add i256 %22, 32
+// CHECK-NEXT:   %30 = add i256 %24, 32
+// CHECK-NEXT:   %31 = inttoptr i256 %30 to ptr addrspace(1)
+// CHECK-NEXT:   %32 = inttoptr i256 %29 to ptr addrspace(1)
+// CHECK-NEXT:   call void @llvm.memmove.p1.p1.i256(ptr addrspace(1) %31, ptr addrspace(1) %32, i256 %27, i1 false)
+// CHECK-NEXT:   %33 = add i256 %30, %27
+// CHECK-NEXT:   %34 = inttoptr i256 %33 to ptr addrspace(1)
+// CHECK-NEXT:   store i256 0, ptr addrspace(1) %34, align 1
+// CHECK-NEXT:   %35 = add i256 %27, 31
+// CHECK-NEXT:   %36 = and i256 %35, 4294967264
+// CHECK-NEXT:   %37 = add i256 %30, %36
+// CHECK-NEXT:   %38 = add i256 %23, 32
+// CHECK-NEXT:   %39 = sub i256 %37, %23
+// CHECK-NEXT:   call void @__return(i256 %23, i256 %39, i256 0)
 // CHECK-NEXT:   call void @.unreachable()
-// CHECK-NEXT:   br label %39
+// CHECK-NEXT:   br label %41
 // CHECK-EMPTY:
-// CHECK-NEXT: 38:                                               ; preds = %3
-// CHECK-NEXT:   br label %39
+// CHECK-NEXT: 40:                                               ; preds = %3
+// CHECK-NEXT:   br label %41
 // CHECK-EMPTY:
-// CHECK-NEXT: 39:                                               ; preds = %38, %11, %20
-// CHECK-NEXT:   br label %40
+// CHECK-NEXT: 41:                                               ; preds = %40, %11, %21
+// CHECK-NEXT:   br label %42
 // CHECK-EMPTY:
-// CHECK-NEXT: 40:                                               ; preds = %39, %0
+// CHECK-NEXT: 42:                                               ; preds = %41, %0
 // CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0)
 // CHECK-NEXT:   call void @.unreachable()
 // CHECK-NEXT:   unreachable

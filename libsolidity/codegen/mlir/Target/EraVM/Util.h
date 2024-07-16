@@ -152,13 +152,13 @@ public:
   /// Generates the tuple encoding as per ABI for the literal string and return
   /// the "tail" address.
   mlir::Value
-  genABITupleEncoding(mlir::StringAttr str, mlir::Value headStart,
+  genABITupleEncoding(mlir::StringAttr str, mlir::Value headStartAddr,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple encoding as per ABI and return the "tail" address.
   mlir::Value
   genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
-                      mlir::Value headStart,
+                      mlir::Value headStartAddr,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple decoder as per ABI and populates the results.
