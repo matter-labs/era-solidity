@@ -27,6 +27,7 @@
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/ErrorCodes.h"
 #include "libsolutil/FixedHash.h"
+#include "libsolutil/FunctionSelector.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -1245,21 +1246,46 @@ struct RequireOpLowering : public OpRewritePattern<sol::RequireOp> {
 
   LogicalResult matchAndRewrite(sol::RequireOp op,
                                 PatternRewriter &r) const override {
-    assert(op.getMsg().empty() && "NYI");
-
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
 
     // Generate the revert if the assertion condition is not met.
-    mlir::Value zero = r.create<arith::ConstantIntOp>(loc, 0, r.getI1Type());
+    mlir::Value falseVal =
+        r.create<arith::ConstantIntOp>(loc, 0, r.getI1Type());
     mlir::Value negCond = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                                  op.getCond(), zero);
-    r.create<scf::IfOp>(loc, negCond,
-                        /*thenBuilder=*/[&](OpBuilder b, Location loc) {
-                          mlir::Value zero = bExt.genI256Const(0);
-                          r.create<sol::RevertOp>(loc, zero, zero);
-                          r.create<scf::YieldOp>(loc);
-                        });
+                                                  op.getCond(), falseVal);
+    auto ifOp = r.create<scf::IfOp>(loc, negCond);
+    auto thenB = ifOp.getThenBodyBuilder();
+
+    solidity::mlirgen::BuilderExt thenBExt(thenB, loc);
+    eravm::Builder eraThenB(thenB, loc);
+
+    if (!op.getMsg().empty()) {
+      // Generate the "Error(string)" selector store at free ptr.
+      std::string selector =
+          solidity::util::selectorFromSignatureU256("Error(string)").str();
+      mlir::Value freePtr = eraThenB.genFreePtr();
+      thenB.create<sol::MStoreOp>(loc, freePtr,
+                                  thenBExt.genI256Const(selector));
+
+      // Generate the tuple encoding of the message.
+      auto freePtrPlus4 =
+          thenB.create<arith::AddIOp>(loc, freePtr, thenBExt.genI256Const(4));
+      mlir::Value tailAddr =
+          eraThenB.genABITupleEncoding(op.getMsgAttr(), freePtrPlus4);
+
+      // Generate the revert.
+      mlir::Value retDataSize =
+          thenB.create<arith::SubIOp>(loc, tailAddr, freePtr);
+      thenB.create<sol::RevertOp>(loc, freePtr, retDataSize);
+      // FIXME?
+      // thenB.create<scf::YieldOp>(loc);
+
+    } else {
+      mlir::Value zero = thenBExt.genI256Const(0);
+      thenB.create<sol::RevertOp>(loc, zero, zero);
+      // FIXME?
+      // thenB.create<scf::YieldOp>(loc);
+    }
 
     r.eraseOp(op);
     return success();

@@ -138,12 +138,22 @@ public:
   void genGlobalVarsInit(mlir::ModuleOp mod,
                          std::optional<mlir::Location> locArg = std::nullopt);
 
+  /// Generates the store of string at address.
+  void genStringStore(std::string const &str, mlir::Value addr,
+                      std::optional<mlir::Location> locArg = std::nullopt);
+
   /// Generates the ABI length for the pointer `ptr`.
   mlir::Value genABILen(mlir::Value ptr,
                         std::optional<mlir::Location> locArg = std::nullopt);
 
   // FIXME: Refactor ABI APIs to distinguish solidity/evm ones with eravm
   // specfic ones.
+
+  /// Generates the tuple encoding as per ABI for the literal string and return
+  /// the "tail" address.
+  mlir::Value
+  genABITupleEncoding(mlir::StringAttr str, mlir::Value headStart,
+                      std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple encoding as per ABI and return the "tail" address.
   mlir::Value

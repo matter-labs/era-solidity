@@ -19,7 +19,9 @@
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/ErrorCodes.h"
+#include "libsolutil/FixedHash.h"
 #include "libsolutil/FunctionSelector.h"
+#include "libsolutil/Numeric.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -123,6 +125,27 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
       /*alignment=*/0, LLVM::Linkage::Private, /*attr=*/{}, mod);
 }
 
+void eravm::Builder::genStringStore(std::string const &str, Value addr,
+                                    std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  // Generate the size store.
+  b.create<sol::MStoreOp>(loc, addr, bExt.genI256Const(str.length()));
+
+  // Store the strings in 32 byte chunks of their numerical representation.
+  for (size_t i = 0; i < str.length(); i += 32) {
+    // Copied from solidity::yul::valueOfStringLiteral.
+    std::string subStrAsI256 =
+        solidity::u256(solidity::util::h256(str.substr(i, 32),
+                                            solidity::util::h256::FromBinary,
+                                            solidity::util::h256::AlignLeft))
+            .str();
+    addr = b.create<arith::AddIOp>(loc, addr, bExt.genI256Const(32));
+    b.create<sol::MStoreOp>(loc, addr, bExt.genI256Const(subStrAsI256));
+  }
+}
+
 Value eravm::Builder::genABILen(Value ptr, std::optional<Location> locArg) {
   auto i256Ty = b.getIntegerType(256);
   Location loc = locArg ? *locArg : defLoc;
@@ -153,6 +176,7 @@ Value eravm::Builder::genABITupleEncoding(
     Value val = std::get<1>(it);
     auto currHeadAddr =
         b.create<arith::AddIOp>(loc, headStart, bExt.genI256Const(headOffset));
+    // FIXME: This shouldn't be here!
     currTailAddr = b.create<arith::AddIOp>(
         loc, headStart, bExt.genI256Const(totCallDataHeadSz));
 
@@ -198,6 +222,22 @@ Value eravm::Builder::genABITupleEncoding(
 
   assert(currTailAddr);
   return currTailAddr;
+}
+
+Value eravm::Builder::genABITupleEncoding(
+    StringAttr str, Value headStart, std::optional<mlir::Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  // Generate the offset store at the head address.
+  mlir::Value thirtyTwo = bExt.genI256Const(32);
+  b.create<sol::MStoreOp>(loc, headStart, thirtyTwo);
+
+  // Generate the string creation at the tail address.
+  auto tailAddr = b.create<arith::AddIOp>(loc, headStart, thirtyTwo);
+  genStringStore(str.str(), tailAddr, locArg);
+
+  return tailAddr;
 }
 
 void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
