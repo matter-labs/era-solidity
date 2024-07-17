@@ -63,10 +63,10 @@ enum class Target {
 };
 
 struct JobSpec {
-  // TODO: Add other codegen info like optimization level, debug info, output
-  // file?
+  // TODO: Add other codegen info like debug info, output file?
   Action action = Action::Undefined;
   Target tgt = Target::Undefined;
+  char optLevel = '0';
 };
 
 /// Registers required command line options in the MLIR framework

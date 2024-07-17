@@ -108,10 +108,11 @@ static std::string const g_strMMLIR = "mmlir";
 // TODO: Should we also support something like "--via-mlir" which would affect the --ir, --asm etc. (including imposing
 // the aforementioned constraints) ?
 //
-// TODO: Add mlir specific optimization and debug-info options
-// TODO: Support writing output to files
+// TODO: Add mlir specific debug-info options.
+// TODO: Support writing output to files.
 static std::string const g_strMLIRTarget = "mlir-target";
 static std::string const g_strMLIRAction = "mlir-action";
+static std::string const g_strMLIROpt = "mlir-opt";
 
 /// Possible arguments to for --revert-strings
 static std::set<std::string> const g_revertStringsArgs
@@ -675,6 +676,11 @@ General Information)").c_str(),
 			"Target for the MLIR based codegen"
 		)
 		(
+			g_strMLIROpt.c_str(),
+			po::value<char>()->value_name("opt")->default_value('0'),
+			"Optimization level of the MLIR based codegen"
+		)
+		(
 			g_strMMLIR.c_str(),
 			po::value<std::vector<std::string>>()->value_name("option"),
 			"Forwards the option to the MLIR framework"
@@ -1181,6 +1187,13 @@ void CommandLineParser::processArgs()
 				m_options.mlirGenJob.tgt = mlirgen::Target::EraVM;
 			else
 				solThrow(CommandLineValidationError, "Invalid target");
+		}
+		if (!m_args[g_strMLIROpt].defaulted())
+		{
+			auto val = m_args[g_strMLIROpt].as<char>();
+			if (!(val == '0' || val == '1' || val == '2' || val == '3' || val == 's' || val == 'z'))
+				solThrow(CommandLineValidationError, "Invalid optimization level");
+			m_options.mlirGenJob.optLevel = val;
 		}
 	}
 

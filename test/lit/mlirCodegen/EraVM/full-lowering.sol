@@ -25,23 +25,10 @@ contract C {
 // CHECK-NEXT: @calldatasize = private global i256 0
 // CHECK-NEXT: @memory_pointer = private global i256 0
 // CHECK-EMPTY:
-// CHECK-NEXT: declare ptr @malloc(i64)
-// CHECK-EMPTY:
-// CHECK-NEXT: declare void @free(ptr)
-// CHECK-EMPTY:
-// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: declare void @__return(i256, i256, i256) #0
-// CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
 // CHECK-NEXT: define private void @.unreachable() #0 personality ptr @__personality {
 // CHECK-NEXT:   unreachable
 // CHECK-NEXT: }
-// CHECK-EMPTY:
-// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: declare void @__revert(i256, i256, i256) #0
-// CHECK-EMPTY:
-// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: declare i256 @__sha3(ptr addrspace(1), i256, i1) #0
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
 // CHECK-NEXT: define private void @__deploy() #0 personality ptr @__personality {
@@ -211,61 +198,6 @@ contract C {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: define private i256 @f1_18.0() #0 personality ptr @__personality {
-// CHECK-NEXT:   store i256 0, ptr addrspace(1) null, align 1
-// CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
-// CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
-// CHECK-NEXT:   %3 = add i256 %2, 31
-// CHECK-NEXT:   %4 = and i256 %3, 4294967264
-// CHECK-NEXT:   %5 = add i256 %4, 32
-// CHECK-NEXT:   %6 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
-// CHECK-NEXT:   %7 = add i256 %6, %5
-// CHECK-NEXT:   %8 = icmp ugt i256 %7, 18446744073709551615
-// CHECK-NEXT:   %9 = icmp ult i256 %7, %6
-// CHECK-NEXT:   %10 = or i1 %8, %9
-// CHECK-NEXT:   br i1 %10, label %11, label %12
-// CHECK-EMPTY:
-// CHECK-NEXT: 11:                                               ; preds = %0
-// CHECK-NEXT:   store i256 35408467139433450592217433187231851964531694900788300625387963629091585785856, ptr addrspace(1) null, align 1
-// CHECK-NEXT:   store i256 65, ptr addrspace(1) inttoptr (i256 4 to ptr addrspace(1)), align 1
-// CHECK-NEXT:   call void @__revert(i256 0, i256 24, i256 2)
-// CHECK-NEXT:   call void @.unreachable()
-// CHECK-NEXT:   br label %12
-// CHECK-EMPTY:
-// CHECK-NEXT: 12:                                               ; preds = %11, %0
-// CHECK-NEXT:   store i256 %7, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
-// CHECK-NEXT:   %13 = inttoptr i256 %6 to ptr addrspace(1)
-// CHECK-NEXT:   store i256 %2, ptr addrspace(1) %13, align 1
-// CHECK-NEXT:   %14 = add i256 %2, 31
-// CHECK-NEXT:   %15 = and i256 %14, 4294967264
-// CHECK-NEXT:   br label %16
-// CHECK-EMPTY:
-// CHECK-NEXT: 16:                                               ; preds = %19, %12
-// CHECK-NEXT:   %17 = phi i256 [ 0, %12 ], [ %26, %19 ]
-// CHECK-NEXT:   %18 = icmp slt i256 %17, %15
-// CHECK-NEXT:   br i1 %18, label %19, label %27
-// CHECK-EMPTY:
-// CHECK-NEXT: 19:                                               ; preds = %16
-// CHECK-NEXT:   %20 = add i256 %1, %17
-// CHECK-NEXT:   %21 = inttoptr i256 %20 to ptr addrspace(5)
-// CHECK-NEXT:   %22 = load i256, ptr addrspace(5) %21, align 1
-// CHECK-NEXT:   %23 = mul i256 %17, 32
-// CHECK-NEXT:   %24 = add i256 %6, %23
-// CHECK-NEXT:   %25 = inttoptr i256 %24 to ptr addrspace(1)
-// CHECK-NEXT:   store i256 %22, ptr addrspace(1) %25, align 1
-// CHECK-NEXT:   %26 = add i256 %17, 1
-// CHECK-NEXT:   br label %16
-// CHECK-EMPTY:
-// CHECK-NEXT: 27:                                               ; preds = %16
-// CHECK-NEXT:   ret i256 %6
-// CHECK-NEXT: }
-// CHECK-EMPTY:
-// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
-// CHECK-NEXT: define private i256 @f0_10.0() #0 personality ptr @__personality {
-// CHECK-NEXT:   ret i256 42
-// CHECK-NEXT: }
-// CHECK-EMPTY:
-// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid
 // CHECK-NEXT: define private i256 @f0_10() #0 personality ptr @__personality {
 // CHECK-NEXT:   ret i256 42
 // CHECK-NEXT: }
@@ -332,9 +264,106 @@ contract C {
 // CHECK-NEXT: ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 // CHECK-NEXT: declare void @llvm.memmove.p1.p1.i256(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i256, i1 immarg) #2
 // CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: noinline noreturn
+// CHECK-NEXT: define internal void @__cxa_throw(ptr %addr, ptr %0, ptr %1) #3 {
+// CHECK-NEXT:   %addrval = ptrtoint ptr %addr to i256
+// CHECK-NEXT:   call void @llvm.eravm.throw(i256 %addrval)
+// CHECK-NEXT:   unreachable
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: noreturn
+// CHECK-NEXT: declare void @llvm.eravm.throw(i256) #4
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: noreturn nounwind
+// CHECK-NEXT: define internal void @__revert(i256 %0, i256 %1, i256 %2) #5 personality ptr @__personality {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %3 = call i256 @llvm.umin.i256(i256 %0, i256 4294967295)
+// CHECK-NEXT:   %4 = call i256 @llvm.umin.i256(i256 %1, i256 4294967295)
+// CHECK-NEXT:   %offset_shifted.i = shl nuw nsw i256 %3, 64
+// CHECK-NEXT:   %length_shifted.i = shl nuw nsw i256 %4, 96
+// CHECK-NEXT:   %mode_shifted.i = shl nuw nsw i256 %2, 224
+// CHECK-NEXT:   %tmp.i = add i256 %offset_shifted.i, %length_shifted.i
+// CHECK-NEXT:   %abi.i = add i256 %tmp.i, %mode_shifted.i
+// CHECK-NEXT:   tail call void @llvm.eravm.revert(i256 %abi.i)
+// CHECK-NEXT:   unreachable
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: noreturn nounwind
+// CHECK-NEXT: declare void @llvm.eravm.revert(i256) #6
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+// CHECK-NEXT: declare i256 @llvm.umin.i256(i256, i256) #7
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: noreturn nounwind
+// CHECK-NEXT: define internal void @__return(i256 %0, i256 %1, i256 %2) #5 personality ptr @__personality {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %3 = call i256 @llvm.umin.i256(i256 %0, i256 4294967295)
+// CHECK-NEXT:   %4 = call i256 @llvm.umin.i256(i256 %1, i256 4294967295)
+// CHECK-NEXT:   %offset_shifted.i = shl nuw nsw i256 %3, 64
+// CHECK-NEXT:   %length_shifted.i = shl nuw nsw i256 %4, 96
+// CHECK-NEXT:   %mode_shifted.i = shl nuw nsw i256 %2, 224
+// CHECK-NEXT:   %tmp.i = add i256 %offset_shifted.i, %length_shifted.i
+// CHECK-NEXT:   %abi.i = add i256 %tmp.i, %mode_shifted.i
+// CHECK-NEXT:   tail call void @llvm.eravm.return(i256 %abi.i)
+// CHECK-NEXT:   unreachable
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: noreturn nounwind
+// CHECK-NEXT: declare void @llvm.eravm.return(i256) #6
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid memory(argmem: read)
+// CHECK-NEXT: define internal i256 @__sha3(ptr addrspace(1) nocapture nofree noundef %0, i256 %1, i1 %throw_at_failure) #8 personality ptr @__personality {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %addr_int = ptrtoint ptr addrspace(1) %0 to i256
+// CHECK-NEXT:   %2 = tail call i256 @llvm.umin.i256(i256 %addr_int, i256 4294967295)
+// CHECK-NEXT:   %3 = tail call i256 @llvm.umin.i256(i256 %1, i256 4294967295)
+// CHECK-NEXT:   %gas_left = tail call i256 @llvm.eravm.gasleft()
+// CHECK-NEXT:   %4 = tail call i256 @llvm.umin.i256(i256 %gas_left, i256 4294967295)
+// CHECK-NEXT:   %abi_data_input_offset_shifted = shl nuw nsw i256 %2, 64
+// CHECK-NEXT:   %abi_data_input_length_shifted = shl nuw nsw i256 %3, 96
+// CHECK-NEXT:   %abi_data_gas_shifted = shl nuw nsw i256 %4, 192
+// CHECK-NEXT:   %abi_data_offset_and_length = add i256 %abi_data_input_length_shifted, %abi_data_input_offset_shifted
+// CHECK-NEXT:   %abi_data_add_gas = add i256 %abi_data_gas_shifted, %abi_data_offset_and_length
+// CHECK-NEXT:   %abi_data_add_system_call_marker = add i256 %abi_data_add_gas, 904625697166532776746648320380374280103671755200316906558262375061821325312
+// CHECK-NEXT:   %call_external = tail call { ptr addrspace(3), i1 } @__staticcall(i256 %abi_data_add_system_call_marker, i256 32784, i256 undef, i256 undef, i256 undef, i256 undef, i256 undef, i256 undef, i256 undef, i256 undef, i256 undef, i256 undef)
+// CHECK-NEXT:   %status_code = extractvalue { ptr addrspace(3), i1 } %call_external, 1
+// CHECK-NEXT:   br i1 %status_code, label %success_block, label %failure_block
+// CHECK-EMPTY:
+// CHECK-NEXT: success_block:                                    ; preds = %entry
+// CHECK-NEXT:   %abi_data_pointer = extractvalue { ptr addrspace(3), i1 } %call_external, 0
+// CHECK-NEXT:   %data_pointer = bitcast ptr addrspace(3) %abi_data_pointer to ptr addrspace(3)
+// CHECK-NEXT:   %keccak256_child_data = load i256, ptr addrspace(3) %data_pointer, align 1
+// CHECK-NEXT:   ret i256 %keccak256_child_data
+// CHECK-EMPTY:
+// CHECK-NEXT: failure_block:                                    ; preds = %entry
+// CHECK-NEXT:   br i1 %throw_at_failure, label %throw_block, label %revert_block
+// CHECK-EMPTY:
+// CHECK-NEXT: revert_block:                                     ; preds = %failure_block
+// CHECK-NEXT:   call void @__revert(i256 0, i256 0, i256 0)
+// CHECK-NEXT:   unreachable
+// CHECK-EMPTY:
+// CHECK-NEXT: throw_block:                                      ; preds = %failure_block
+// CHECK-NEXT:   call void @__cxa_throw(ptr noalias nocapture nofree align 32 null, ptr noalias nocapture nofree align 32 undef, ptr noalias nocapture nofree align 32 undef)
+// CHECK-NEXT:   unreachable
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: nomerge nounwind willreturn memory(inaccessiblemem: readwrite)
+// CHECK-NEXT: declare i256 @llvm.eravm.gasleft() #9
+// CHECK-EMPTY:
+// CHECK-NEXT: ; Function Attrs: nofree null_pointer_is_valid memory(argmem: read)
+// CHECK-NEXT: declare { ptr addrspace(3), i1 } @__staticcall(i256, i256, i256, i256, i256, i256, i256, i256, i256, i256, i256, i256) #10
+// CHECK-EMPTY:
 // CHECK-NEXT: attributes #0 = { nofree null_pointer_is_valid }
 // CHECK-NEXT: attributes #1 = { nounwind willreturn memory(none) }
 // CHECK-NEXT: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// CHECK-NEXT: attributes #3 = { noinline noreturn }
+// CHECK-NEXT: attributes #4 = { noreturn }
+// CHECK-NEXT: attributes #5 = { noreturn nounwind "noinline-oz" }
+// CHECK-NEXT: attributes #6 = { noreturn nounwind }
+// CHECK-NEXT: attributes #7 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// CHECK-NEXT: attributes #8 = { nofree null_pointer_is_valid memory(argmem: read) "noinline-oz" }
+// CHECK-NEXT: attributes #9 = { nomerge nounwind willreturn memory(inaccessiblemem: readwrite) }
+// CHECK-NEXT: attributes #10 = { nofree null_pointer_is_valid memory(argmem: read) }
 // CHECK-EMPTY:
 // CHECK-NEXT: !llvm.module.flags = !{!0}
 // CHECK-EMPTY:
@@ -351,13 +380,16 @@ contract C {
 // ASM-NEXT: 	add	128, r0, r1
 // ASM-NEXT: 	st.1	64, r1
 // ASM-NEXT: 	context.get_context_u128	r1
-// ASM-NEXT: 	sub!	r1, r0, r0
+// ASM-NEXT: 	sub!	r1, r0, r1
 // ASM-NEXT: 	jump.eq	@.BB1_2
+// ASM-NEXT: 	jump	@.BB1_1
+// ASM-NEXT: .BB1_1:
 // ASM-NEXT: 	add	2, r0, r3
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: 	jump	@.BB1_2
 // ASM-NEXT: .BB1_2:
 // ASM-NEXT: 	add	32, r0, r1
 // ASM-NEXT: 	st.2	256, r1
@@ -371,108 +403,190 @@ contract C {
 // ASM-EMPTY:
 // ASM-NEXT: __runtime:
 // ASM-NEXT: .func_begin2:
+// ASM-NEXT: 	nop	stack+=[18 + r0]
 // ASM-NEXT: 	add	128, r0, r1
 // ASM-NEXT: 	st.1	64, r1
 // ASM-NEXT: 	add	stack[@calldatasize], r0, r1
-// ASM-NEXT: 	sub.s!	4, r1, r0
+// ASM-NEXT: 	sub.s!	4, r1, r1
 // ASM-NEXT: 	jump.lt	@.BB2_22
+// ASM-NEXT: 	jump	@.BB2_1
+// ASM-NEXT: .BB2_1:
 // ASM-NEXT: 	ptr.add	stack[@ptr_calldata], r0, r1
+// ASM-NEXT: 	ptr.add.s	0, r1, r1
 // ASM-NEXT: 	ld	r1, r1
-// ASM-NEXT: 	sub.s!	@CPI2_0[0], r1, r0
-// ASM-NEXT: 	jump.eq	@.BB2_6
-// ASM-NEXT: 	sub.s!	@CPI2_1[0], r1, r0
-// ASM-NEXT: 	jump.ne	@.BB2_22
-// ASM-NEXT: 	context.get_context_u128	r1
-// ASM-NEXT: 	sub!	r1, r0, r0
+// ASM-NEXT: 	add	r1, r0, stack-[18]
+// ASM-NEXT: 	sub.s!	@CPI2_0[0], r1, r1
+// ASM-NEXT: 	jump.eq	@.BB2_2
+// ASM-NEXT: 	jump	@.BB2_23
+// ASM-NEXT: .BB2_23:
+// ASM-NEXT: 	add	stack-[18], r0, r1
+// ASM-NEXT: 	sub.s!	@CPI2_1[0], r1, r1
 // ASM-NEXT: 	jump.eq	@.BB2_5
-// ASM-NEXT: 	add	r0, r0, r1
-// ASM-NEXT: 	add	r0, r0, r2
-// ASM-NEXT: 	add	r0, r0, r3
-// ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
-// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
-// ASM-NEXT: .BB2_5:
-// ASM-NEXT: 	near_call	r0, @f0_10, @DEFAULT_UNWIND
-// ASM-NEXT: 	ld.1	64, r3
-// ASM-NEXT: 	st.1	r3, r1
-// ASM-NEXT: 	add	32, r0, r2
-// ASM-NEXT: 	jump	@.BB2_21
-// ASM-NEXT: .BB2_6:
+// ASM-NEXT: 	jump	@.BB2_20
+// ASM-NEXT: .BB2_2:
 // ASM-NEXT: 	context.get_context_u128	r1
-// ASM-NEXT: 	sub!	r1, r0, r0
-// ASM-NEXT: 	jump.eq	@.BB2_8
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.eq	@.BB2_4
+// ASM-NEXT: 	jump	@.BB2_3
+// ASM-NEXT: .BB2_3:
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
-// ASM-NEXT: .BB2_8:
-// ASM-NEXT: 	near_call	r0, @f1_18, @DEFAULT_UNWIND
+// ASM-NEXT: 	jump	@.BB2_4
+// ASM-NEXT: .BB2_4:
+// ASM-NEXT: 	near_call	r0, @f0_10, @DEFAULT_UNWIND
+// ASM-NEXT: 	add	r1, r0, r2
+// ASM-NEXT: 	ld.1	64, r1
+// ASM-NEXT: 	st.1	r1, r2
 // ASM-NEXT: 	add	32, r0, r2
-// ASM-NEXT: 	ld.1	64, r3
-// ASM-NEXT: 	st.1.inc	r3, r2, r2
-// ASM-NEXT: 	ld.1.inc	r1, r1, r4
-// ASM-NEXT: 	st.1	r2, r1
-// ASM-NEXT: 	and	@CPI2_3[0], r1, r6
-// ASM-NEXT: 	and	31, r1, r5
-// ASM-NEXT: 	add	64, r3, r2
-// ASM-NEXT: 	sub!	r4, r2, r0
-// ASM-NEXT: 	jump.ge	@.BB2_14
-// ASM-NEXT: 	sub!	r6, r0, r0
-// ASM-NEXT: 	jump.eq	@.BB2_10
-// ASM-NEXT: 	add	r4, r5, r8
-// ASM-NEXT: 	add	r2, r5, r7
-// ASM-NEXT: 	sub.s	32, r7, r7
-// ASM-NEXT: 	sub.s	32, r8, r8
-// ASM-NEXT: .BB2_13:
-// ASM-NEXT: 	add	r7, r6, r9
-// ASM-NEXT: 	add	r8, r6, r10
-// ASM-NEXT: 	ld.1	r10, r10
-// ASM-NEXT: 	st.1	r9, r10
-// ASM-NEXT: 	sub.s!	32, r6, r6
-// ASM-NEXT: 	jump.ne	@.BB2_13
-// ASM-NEXT: .BB2_10:
-// ASM-NEXT: 	sub!	r5, r0, r0
-// ASM-NEXT: 	jump.eq	@.BB2_20
-// ASM-NEXT: 	add	r2, r0, r7
-// ASM-NEXT: 	jump	@.BB2_19
-// ASM-NEXT: .BB2_14:
-// ASM-NEXT: 	add	r2, r6, r7
-// ASM-NEXT: 	sub!	r6, r0, r0
-// ASM-NEXT: 	jump.eq	@.BB2_15
-// ASM-NEXT: 	add	r4, r0, r8
-// ASM-NEXT: 	add	r2, r0, r9
-// ASM-NEXT: .BB2_17:
-// ASM-NEXT: 	ld.1.inc	r8, r10, r8
-// ASM-NEXT: 	st.1.inc	r9, r10, r9
-// ASM-NEXT: 	sub!	r9, r7, r0
-// ASM-NEXT: 	jump.ne	@.BB2_17
-// ASM-NEXT: .BB2_15:
-// ASM-NEXT: 	sub!	r5, r0, r0
-// ASM-NEXT: 	jump.eq	@.BB2_20
-// ASM-NEXT: 	add	r4, r6, r4
-// ASM-NEXT: .BB2_19:
-// ASM-NEXT: 	shl.s	3, r5, r5
-// ASM-NEXT: 	ld.1	r7, r6
-// ASM-NEXT: 	shl	r6, r5, r6
-// ASM-NEXT: 	shr	r6, r5, r6
-// ASM-NEXT: 	ld.1	r4, r4
-// ASM-NEXT: 	sub	256, r5, r5
-// ASM-NEXT: 	shr	r4, r5, r4
-// ASM-NEXT: 	shl	r4, r5, r4
-// ASM-NEXT: 	or	r4, r6, r4
-// ASM-NEXT: 	st.1	r7, r4
-// ASM-NEXT: .BB2_20:
-// ASM-NEXT: 	add	r2, r1, r4
-// ASM-NEXT: 	st.1	r4, r0
-// ASM-NEXT: 	add	31, r1, r1
-// ASM-NEXT: 	and	@CPI2_2[0], r1, r1
-// ASM-NEXT: 	add	r2, r1, r1
-// ASM-NEXT: 	sub	r1, r3, r2
-// ASM-NEXT: .BB2_21:
-// ASM-NEXT: 	add	r3, r0, r1
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: 	jump	@.BB2_21
+// ASM-NEXT: .BB2_5:
+// ASM-NEXT: 	context.get_context_u128	r1
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.eq	@.BB2_7
+// ASM-NEXT: 	jump	@.BB2_6
+// ASM-NEXT: .BB2_6:
+// ASM-NEXT: 	add	r0, r0, r1
+// ASM-NEXT: 	add	r0, r0, r2
+// ASM-NEXT: 	add	r0, r0, r3
+// ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: 	jump	@.BB2_7
+// ASM-NEXT: .BB2_7:
+// ASM-NEXT: 	near_call	r0, @f1_18, @DEFAULT_UNWIND
+// ASM-NEXT: 	ld.1	64, r2
+// ASM-NEXT: 	add	r2, r0, stack-[9]
+// ASM-NEXT: 	add	32, r2, r4
+// ASM-NEXT: 	add	32, r0, r3
+// ASM-NEXT: 	st.1	r2, r3
+// ASM-NEXT: 	ld.1	r1, r3
+// ASM-NEXT: 	add	r3, r0, stack-[10]
+// ASM-NEXT: 	st.1	r4, r3
+// ASM-NEXT: 	add	32, r1, r1
+// ASM-NEXT: 	add	r1, r0, stack-[11]
+// ASM-NEXT: 	add	64, r2, r2
+// ASM-NEXT: 	add	r2, r0, stack-[12]
+// ASM-NEXT: 	add	r2, r0, stack-[13]
+// ASM-NEXT: 	and	@CPI2_3[0], r3, r4
+// ASM-NEXT: 	add	r4, r0, stack-[14]
+// ASM-NEXT: 	and	31, r3, r3
+// ASM-NEXT: 	add	r3, r0, stack-[15]
+// ASM-NEXT: 	sub!	r4, r0, r4
+// ASM-NEXT: 	add	0, r0, r4
+// ASM-NEXT: 	add.eq	1, r0, r4
+// ASM-NEXT: 	add	r4, r0, stack-[16]
+// ASM-NEXT: 	sub!	r3, r0, r3
+// ASM-NEXT: 	add	0, r0, r3
+// ASM-NEXT: 	add.eq	1, r0, r3
+// ASM-NEXT: 	add	r3, r0, stack-[17]
+// ASM-NEXT: 	sub!	r1, r2, r1
+// ASM-NEXT: 	jump.ge	@.BB2_12
+// ASM-NEXT: 	jump	@.BB2_8
+// ASM-NEXT: .BB2_8:
+// ASM-NEXT: 	add	stack-[16], r0, r1
+// ASM-NEXT: 	and	1, r1, r1
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.eq	@.BB2_10
+// ASM-NEXT: 	jump	@.BB2_9
+// ASM-NEXT: .BB2_9:
+// ASM-NEXT: 	add	stack-[17], r0, r3
+// ASM-NEXT: 	and	1, r3, r3
+// ASM-NEXT: 	sub!	r3, r0, r3
+// ASM-NEXT: 	add	stack-[11], r0, stack-[7]
+// ASM-NEXT: 	add	stack-[13], r0, stack-[8]
+// ASM-NEXT: 	jump.ne	@.BB2_19
+// ASM-NEXT: 	jump	@.BB2_18
+// ASM-NEXT: .BB2_10:
+// ASM-NEXT: 	add	stack-[15], r0, r3
+// ASM-NEXT: 	add	stack-[11], r3, r4
+// ASM-NEXT: 	sub.s!	32, r4, stack-[4]
+// ASM-NEXT: 	add	stack-[13], r3, r2
+// ASM-NEXT: 	sub.s!	32, r2, stack-[5]
+// ASM-NEXT: 	add	stack-[14], r0, stack-[6]
+// ASM-NEXT: 	jump	@.BB2_11
+// ASM-NEXT: .BB2_11:
+// ASM-NEXT: 	add	stack-[6], r0, r1
+// ASM-NEXT: 	add	stack-[4], r1, r3
+// ASM-NEXT: 	ld.1	r3, r3
+// ASM-NEXT: 	add	stack-[5], r1, r2
+// ASM-NEXT: 	st.1	r2, r3
+// ASM-NEXT: 	sub.s!	32, r1, stack-[6]
+// ASM-NEXT: 	sub!	stack-[6], r0, r2
+// ASM-NEXT: 	jump.eq	@.BB2_9
+// ASM-NEXT: 	jump	@.BB2_11
+// ASM-NEXT: .BB2_12:
+// ASM-NEXT: 	add	stack-[16], r0, r1
+// ASM-NEXT: 	add	stack-[14], r0, r3
+// ASM-NEXT: 	add	stack-[13], r3, stack-[3]
+// ASM-NEXT: 	and	1, r1, r1
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.eq	@.BB2_14
+// ASM-NEXT: 	jump	@.BB2_13
+// ASM-NEXT: .BB2_13:
+// ASM-NEXT: 	add	stack-[17], r0, r1
+// ASM-NEXT: 	and	1, r1, r1
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.ne	@.BB2_19
+// ASM-NEXT: 	jump	@.BB2_17
+// ASM-NEXT: .BB2_14:
+// ASM-NEXT: 	add	stack-[11], r0, stack-[1]
+// ASM-NEXT: 	add	stack-[13], r0, stack-[2]
+// ASM-NEXT: 	jump	@.BB2_15
+// ASM-NEXT: .BB2_15:
+// ASM-NEXT: 	add	stack-[2], r0, r4
+// ASM-NEXT: 	add	stack-[1], r0, r5
+// ASM-NEXT: 	add	32, r5, stack-[1]
+// ASM-NEXT: 	add	32, r4, r1
+// ASM-NEXT: 	ld.1	r5, r5
+// ASM-NEXT: 	st.1	r4, r5
+// ASM-NEXT: 	sub.s!	stack-[3], r1, r3
+// ASM-NEXT: 	add	r1, r0, stack-[2]
+// ASM-NEXT: 	jump.ne	@.BB2_15
+// ASM-NEXT: 	jump	@.BB2_16
+// ASM-NEXT: .BB2_16:
+// ASM-NEXT: 	jump	@.BB2_13
+// ASM-NEXT: .BB2_17:
+// ASM-NEXT: 	add	stack-[14], r0, r3
+// ASM-NEXT: 	add	stack-[11], r3, stack-[7]
+// ASM-NEXT: 	add	stack-[3], r0, stack-[8]
+// ASM-NEXT: 	jump	@.BB2_18
+// ASM-NEXT: .BB2_18:
+// ASM-NEXT: 	add	stack-[15], r0, r3
+// ASM-NEXT: 	add	stack-[7], r0, r2
+// ASM-NEXT: 	add	stack-[8], r0, r1
+// ASM-NEXT: 	ld.1	r2, r2
+// ASM-NEXT: 	shl.s	3, r3, r4
+// ASM-NEXT: 	sub	256, r4, r3
+// ASM-NEXT: 	shr	r2, r3, r2
+// ASM-NEXT: 	shl	r2, r3, r2
+// ASM-NEXT: 	ld.1	r1, r3
+// ASM-NEXT: 	shl	r3, r4, r3
+// ASM-NEXT: 	shr	r3, r4, r3
+// ASM-NEXT: 	or	r2, r3, r2
+// ASM-NEXT: 	st.1	r1, r2
+// ASM-NEXT: 	jump	@.BB2_19
+// ASM-NEXT: .BB2_19:
+// ASM-NEXT: 	add	stack-[9], r0, r1
+// ASM-NEXT: 	add	stack-[10], r0, r3
+// ASM-NEXT: 	add	stack-[12], r3, r4
+// ASM-NEXT: 	st.1	r4, r0
+// ASM-NEXT: 	add	31, r3, r3
+// ASM-NEXT: 	and	@CPI2_2[0], r3, r3
+// ASM-NEXT: 	add	stack-[12], r3, r2
+// ASM-NEXT: 	sub!	r2, r1, r2
+// ASM-NEXT: 	add	r0, r0, r3
+// ASM-NEXT: 	near_call	r0, @__return, @DEFAULT_UNWIND
+// ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
+// ASM-NEXT: 	jump	@.BB2_21
+// ASM-NEXT: .BB2_20:
+// ASM-NEXT: 	jump	@.BB2_21
+// ASM-NEXT: .BB2_21:
+// ASM-NEXT: 	jump	@.BB2_22
 // ASM-NEXT: .BB2_22:
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r2
@@ -484,29 +598,12 @@ contract C {
 // ASM-NEXT: 	.globl	__entry
 // ASM-NEXT: __entry:
 // ASM-NEXT: .func_begin3:
-// ASM-NEXT: 	add	stack[@ptr_calldata + r0], r0, r13
-// ASM-NEXT: 	shr.s	96, r13, r13
-// ASM-NEXT: 	and	@CPI3_0[0], r13, r14
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_return_data]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_decommit]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 15]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 14]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 13]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 12]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 11]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 10]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 9]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 8]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 7]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 6]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 5]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 4]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 3]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 2]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active + 1]
-// ASM-NEXT: 	ptr.add	r1, r14, stack[@ptr_active]
-// ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
-// ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
+// ASM-NEXT: 	nop	stack+=[2 + r0]
+// ASM-NEXT: 	ptr.add	r1, r0, stack-[1]
+// ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
+// ASM-NEXT: 	add	0, r0, stack[@calldatasize]
+// ASM-NEXT: 	add	0, r0, stack[@returndatasize]
+// ASM-NEXT: 	add	0, r0, stack[@call_flags]
 // ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 9]
 // ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 8]
 // ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 7]
@@ -517,9 +614,31 @@ contract C {
 // ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 2]
 // ASM-NEXT: 	add	0, r0, stack[@extra_abi_data + 1]
 // ASM-NEXT: 	add	0, r0, stack[@extra_abi_data]
-// ASM-NEXT: 	add	0, r0, stack[@memory_pointer]
-// ASM-NEXT: 	add	0, r0, stack[@returndatasize]
-// ASM-NEXT: 	add	0, r0, stack[@call_flags]
+// ASM-NEXT: 	ptr.add	r1, r0, stack[@ptr_calldata]
+// ASM-NEXT: 	add	stack[@ptr_calldata + r0], r0, r13
+// ASM-NEXT: 	shr.s	96, r13, r13
+// ASM-NEXT: 	and	@CPI3_0[0], r13, stack[@calldatasize]
+// ASM-NEXT: 	add	stack[@calldatasize], r0, r13
+// ASM-NEXT: 	add	r13, r0, stack-[2]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_return_data]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_decommit]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 1]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 2]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 3]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 4]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 5]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 6]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 7]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 8]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 9]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 10]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 11]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 12]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 13]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 14]
+// ASM-NEXT: 	ptr.add	r1, r13, stack[@ptr_active + 15]
+// ASM-NEXT: 	add	r2, r0, stack[@call_flags]
 // ASM-NEXT: 	add	r3, r0, stack[@extra_abi_data]
 // ASM-NEXT: 	add	r4, r0, stack[@extra_abi_data + 1]
 // ASM-NEXT: 	add	r5, r0, stack[@extra_abi_data + 2]
@@ -530,12 +649,17 @@ contract C {
 // ASM-NEXT: 	add	r10, r0, stack[@extra_abi_data + 7]
 // ASM-NEXT: 	add	r11, r0, stack[@extra_abi_data + 8]
 // ASM-NEXT: 	add	r12, r0, stack[@extra_abi_data + 9]
-// ASM-NEXT: 	add	r2, r0, stack[@call_flags]
-// ASM-NEXT: 	and!	1, r2, r0
+// ASM-NEXT: 	and	1, r2, r1
+// ASM-NEXT: 	sub!	r1, r0, r1
 // ASM-NEXT: 	jump.eq	@.BB3_2
+// ASM-NEXT: 	jump	@.BB3_1
+// ASM-NEXT: .BB3_1:
 // ASM-NEXT: 	near_call	r0, @__deploy, @DEFAULT_UNWIND
+// ASM-NEXT: 	jump	@.BB3_3
 // ASM-NEXT: .BB3_2:
 // ASM-NEXT: 	near_call	r0, @__runtime, @DEFAULT_UNWIND
+// ASM-NEXT: 	jump	@.BB3_3
+// ASM-NEXT: .BB3_3:
 // ASM-NEXT: .func_end3:
 // ASM-EMPTY:
 // ASM-NEXT: f0_10:
@@ -546,73 +670,188 @@ contract C {
 // ASM-EMPTY:
 // ASM-NEXT: f1_18:
 // ASM-NEXT: .func_begin5:
-// ASM-NEXT: 	nop	stack+=[5 + r0]
+// ASM-NEXT: 	nop	stack+=[7 + r0]
 // ASM-NEXT: 	st.1	0, r0
 // ASM-NEXT: 	add	32, r0, r2
 // ASM-NEXT: 	add	r0, r0, r1
 // ASM-NEXT: 	add	r0, r0, r3
 // ASM-NEXT: 	near_call	r0, @__sha3, @DEFAULT_UNWIND
-// ASM-NEXT: 	add	r1, r0, r5
-// ASM-NEXT: 	sload	r0, r2
-// ASM-NEXT: 	add	31, r2, r1
-// ASM-NEXT: 	and	@CPI5_0[0], r1, r7
-// ASM-NEXT: 	ld.1	64, r6
-// ASM-NEXT: 	add	r7, r6, r1
-// ASM-NEXT: 	add	32, r1, r3
-// ASM-NEXT: 	sub!	r3, r6, r0
-// ASM-NEXT: 	add	0, r0, r1
-// ASM-NEXT: 	add.lt	1, r0, r1
-// ASM-NEXT: 	sub.s!	@CPI5_1[0], r3, r0
-// ASM-NEXT: 	jump.gt	@.BB5_2
-// ASM-NEXT: 	and!	1, r1, r0
-// ASM-NEXT: 	jump.eq	@.BB5_3
-// ASM-NEXT: .BB5_2:
+// ASM-NEXT: 	add	r1, r0, stack-[4]
+// ASM-NEXT: 	sload	r0, r1
+// ASM-NEXT: 	add	r1, r0, stack-[5]
+// ASM-NEXT: 	add	31, r1, r1
+// ASM-NEXT: 	and	@CPI5_0[0], r1, r1
+// ASM-NEXT: 	ld.1	64, r2
+// ASM-NEXT: 	add	r2, r0, stack-[6]
+// ASM-NEXT: 	add	r1, r2, r1
+// ASM-NEXT: 	add	32, r1, r1
+// ASM-NEXT: 	add	r1, r0, stack-[7]
+// ASM-NEXT: 	sub.s!	@CPI5_1[0], r1, r1
+// ASM-NEXT: 	jump.gt	@.BB5_1
+// ASM-NEXT: 	jump	@.BB5_6
+// ASM-NEXT: .BB5_6:
+// ASM-NEXT: 	add	stack-[6], r0, r2
+// ASM-NEXT: 	sub!	stack-[7], r2, r1
+// ASM-NEXT: 	jump.ge	@.BB5_2
+// ASM-NEXT: 	jump	@.BB5_1
+// ASM-NEXT: .BB5_1:
 // ASM-NEXT: 	add	@CPI5_2[0], r0, r1
 // ASM-NEXT: 	st.1	0, r1
 // ASM-NEXT: 	add	65, r0, r1
 // ASM-NEXT: 	st.1	4, r1
-// ASM-NEXT: 	add	r2, r0, stack-[2]
 // ASM-NEXT: 	add	24, r0, r2
 // ASM-NEXT: 	add	r0, r0, r1
-// ASM-NEXT: 	add	r3, r0, stack-[1]
 // ASM-NEXT: 	add	r0, r0, r3
-// ASM-NEXT: 	add	r5, r0, stack-[5]
-// ASM-NEXT: 	add	r6, r0, stack-[4]
-// ASM-NEXT: 	add	r7, r0, stack-[3]
 // ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
 // ASM-NEXT: 	near_call	r0, @.unreachable, @DEFAULT_UNWIND
-// ASM-NEXT: 	add	stack-[1], r0, r3
-// ASM-NEXT: 	add	stack-[2], r0, r2
-// ASM-NEXT: 	add	stack-[3], r0, r7
-// ASM-NEXT: 	add	stack-[4], r0, r6
-// ASM-NEXT: 	add	stack-[5], r0, r5
-// ASM-NEXT: .BB5_3:
+// ASM-NEXT: 	jump	@.BB5_2
+// ASM-NEXT: .BB5_2:
+// ASM-NEXT: 	add	stack-[5], r0, r1
+// ASM-NEXT: 	add	stack-[6], r0, r2
+// ASM-NEXT: 	add	stack-[7], r0, r3
 // ASM-NEXT: 	st.1	64, r3
-// ASM-NEXT: 	st.1	r6, r2
-// ASM-NEXT: 	add	r0, r0, r1
-// ASM-NEXT: .BB5_4:
-// ASM-NEXT: 	sub!	r1, r7, r0
+// ASM-NEXT: 	st.1	r2, r1
+// ASM-NEXT: 	add	31, r1, r1
+// ASM-NEXT: 	and	@CPI5_0[0], r1, stack-[2]
+// ASM-NEXT: 	add	r0, r0, stack-[3]
+// ASM-NEXT: 	jump	@.BB5_3
+// ASM-NEXT: .BB5_3:
+// ASM-NEXT: 	add	stack-[2], r0, r3
+// ASM-NEXT: 	add	stack-[3], r0, r1
+// ASM-NEXT: 	add	r1, r0, stack-[1]
+// ASM-NEXT: 	sub!	r1, r3, r2
 // ASM-NEXT: 	add	r0, r0, r2
 // ASM-NEXT: 	add.ge	@CPI5_3[0], r0, r2
-// ASM-NEXT: 	and	@CPI5_3[0], r1, r3
-// ASM-NEXT: 	sub!	r3, r0, r0
-// ASM-NEXT: 	add	r0, r0, r4
-// ASM-NEXT: 	add.lt	@CPI5_3[0], r0, r4
-// ASM-NEXT: 	sub.s!	@CPI5_3[0], r3, r0
-// ASM-NEXT: 	add.ne	r2, r0, r4
-// ASM-NEXT: 	sub!	r4, r0, r0
-// ASM-NEXT: 	jump.ne	@.BB5_6
-// ASM-NEXT: 	shl.s	5, r1, r2
-// ASM-NEXT: 	add	r6, r2, r2
-// ASM-NEXT: 	add	r5, r1, r3
-// ASM-NEXT: 	sload	r3, r3
-// ASM-NEXT: 	st.1	r2, r3
-// ASM-NEXT: 	add	1, r1, r1
+// ASM-NEXT: 	and	@CPI5_3[0], r3, r4
+// ASM-NEXT: 	and	@CPI5_3[0], r1, r1
+// ASM-NEXT: 	xor	r1, r4, r3
+// ASM-NEXT: 	sub!	r1, r4, r1
+// ASM-NEXT: 	add	r0, r0, r1
+// ASM-NEXT: 	add.lt	@CPI5_3[0], r0, r1
+// ASM-NEXT: 	sub.s!	@CPI5_3[0], r3, r3
+// ASM-NEXT: 	add.ne	r2, r0, r1
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.ne	@.BB5_5
 // ASM-NEXT: 	jump	@.BB5_4
-// ASM-NEXT: .BB5_6:
-// ASM-NEXT: 	add	r6, r0, r1
+// ASM-NEXT: .BB5_4:
+// ASM-NEXT: 	add	stack-[1], r0, r1
+// ASM-NEXT: 	add	stack-[4], r1, r3
+// ASM-NEXT: 	sload	r3, r3
+// ASM-NEXT: 	shl.s	5, r1, r4
+// ASM-NEXT: 	add	stack-[6], r4, r2
+// ASM-NEXT: 	st.1	r2, r3
+// ASM-NEXT: 	add	1, r1, stack-[3]
+// ASM-NEXT: 	jump	@.BB5_3
+// ASM-NEXT: .BB5_5:
+// ASM-NEXT: 	add	stack-[6], r0, r1
 // ASM-NEXT: 	ret
 // ASM-NEXT: .func_end5:
+// ASM-EMPTY:
+// ASM-NEXT: __cxa_throw:
+// ASM-NEXT: 	revert
+// ASM-EMPTY:
+// ASM-NEXT: __revert:
+// ASM-NEXT: .func_begin6:
+// ASM-NEXT: 	nop	stack+=[1 + r0]
+// ASM-NEXT: 	add	r3, r0, stack-[1]
+// ASM-NEXT: 	add	r2, r0, r3
+// ASM-NEXT: 	add	stack-[1], r0, r2
+// ASM-NEXT: 	sub.s!	@CPI7_0[0], r1, r4
+// ASM-NEXT: 	add.ge	@CPI7_0[0], r0, r1
+// ASM-NEXT: 	sub.s!	@CPI7_0[0], r3, r4
+// ASM-NEXT: 	add.ge	@CPI7_0[0], r0, r3
+// ASM-NEXT: 	shl.s	64, r1, r1
+// ASM-NEXT: 	shl.s	96, r3, r3
+// ASM-NEXT: 	shl.s	224, r2, r2
+// ASM-NEXT: 	or	r1, r3, r1
+// ASM-NEXT: 	or	r1, r2, r1
+// ASM-NEXT: 	ret.revert.to_label	r1, @DEFAULT_FAR_REVERT
+// ASM-NEXT: .func_end6:
+// ASM-EMPTY:
+// ASM-NEXT: __return:
+// ASM-NEXT: .func_begin7:
+// ASM-NEXT: 	nop	stack+=[1 + r0]
+// ASM-NEXT: 	add	r3, r0, stack-[1]
+// ASM-NEXT: 	add	r2, r0, r3
+// ASM-NEXT: 	add	stack-[1], r0, r2
+// ASM-NEXT: 	sub.s!	@CPI8_0[0], r1, r4
+// ASM-NEXT: 	add.ge	@CPI8_0[0], r0, r1
+// ASM-NEXT: 	sub.s!	@CPI8_0[0], r3, r4
+// ASM-NEXT: 	add.ge	@CPI8_0[0], r0, r3
+// ASM-NEXT: 	shl.s	64, r1, r1
+// ASM-NEXT: 	shl.s	96, r3, r3
+// ASM-NEXT: 	shl.s	224, r2, r2
+// ASM-NEXT: 	or	r1, r3, r1
+// ASM-NEXT: 	or	r1, r2, r1
+// ASM-NEXT: 	ret.ok.to_label	r1, @DEFAULT_FAR_RETURN
+// ASM-NEXT: .func_end7:
+// ASM-EMPTY:
+// ASM-NEXT: __sha3:
+// ASM-NEXT: .func_begin8:
+// ASM-NEXT: 	nop	stack+=[3 + r0]
+// ASM-NEXT: 	add	r3, r0, stack-[1]
+// ASM-NEXT: 	sub.s!	@CPI9_0[0], r1, r3
+// ASM-NEXT: 	add	@CPI9_0[0], r0, r3
+// ASM-NEXT: 	add.lt	r1, r0, r3
+// ASM-NEXT: 	sub.s!	@CPI9_0[0], r2, r1
+// ASM-NEXT: 	add.ge	@CPI9_0[0], r0, r2
+// ASM-NEXT: 	context.gas_left	r1
+// ASM-NEXT: 	sub.s!	@CPI9_0[0], r1, r4
+// ASM-NEXT: 	add.ge	@CPI9_0[0], r0, r1
+// ASM-NEXT: 	shl.s	64, r3, r3
+// ASM-NEXT: 	shl.s	96, r2, r2
+// ASM-NEXT: 	shl.s	192, r1, r1
+// ASM-NEXT: 	or	r2, r3, r2
+// ASM-NEXT: 	or	r1, r2, r1
+// ASM-NEXT: 	or	@CPI9_1[0], r1, r1
+// ASM-NEXT: 	add	32784, r0, r2
+// ASM-NEXT: 	near_call	r0, @__staticcall, @DEFAULT_UNWIND
+// ASM-NEXT: 	ptr.add	r1, r0, stack-[2]
+// ASM-NEXT: 	add	r2, r0, r3
+// ASM-NEXT: 	and	1, r3, r1
+// ASM-NEXT: 	ptr.add	stack-[2], r0, stack-[3]
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.eq	@.BB9_2
+// ASM-NEXT: 	jump	@.BB9_1
+// ASM-NEXT: .BB9_1:
+// ASM-NEXT: 	ptr.add	stack-[3], r0, r1
+// ASM-NEXT: 	ld	r1, r1
+// ASM-NEXT: 	ret
+// ASM-NEXT: .BB9_2:
+// ASM-NEXT: 	add	stack-[1], r0, r1
+// ASM-NEXT: 	and	1, r1, r1
+// ASM-NEXT: 	sub!	r1, r0, r1
+// ASM-NEXT: 	jump.ne	@.BB9_4
+// ASM-NEXT: 	jump	@.BB9_3
+// ASM-NEXT: .BB9_3:
+// ASM-NEXT: 	add	r0, r0, r1
+// ASM-NEXT: 	add	r0, r0, r2
+// ASM-NEXT: 	add	r0, r0, r3
+// ASM-NEXT: 	near_call	r0, @__revert, @DEFAULT_UNWIND
+// ASM-NEXT: .BB9_4:
+// ASM-NEXT: 	add	r0, r0, r1
+// ASM-NEXT: 	revert
+// ASM-NEXT: .func_end8:
+// ASM-EMPTY:
+// ASM-NEXT: __staticcall:
+// ASM-NEXT: .func_begin9:
+// ASM-NEXT: 	nop	stack+=[2 + r0]
+// ASM-NEXT: .tmp0:
+// ASM-NEXT: 	far_call.static	r1, r2, @.BB10_2
+// ASM-NEXT: 	ptr.add	r1, r0, stack-[1]
+// ASM-NEXT: 	ptr.add	stack-[1], r0, r1
+// ASM-NEXT: .tmp1:
+// ASM-NEXT: 	ptr.add	r1, r0, stack-[2]
+// ASM-NEXT: 	jump	@.BB10_1
+// ASM-NEXT: .BB10_1:
+// ASM-NEXT: 	ptr.add	stack-[2], r0, r1
+// ASM-NEXT: 	add	1, r0, r2
+// ASM-NEXT: 	ret
+// ASM-NEXT: .BB10_2:
+// ASM-NEXT: .tmp2:
+// ASM-NEXT: 	add	r0, r0, r2
+// ASM-NEXT: 	ret
+// ASM-NEXT: .func_end9:
 // ASM-EMPTY:
 // ASM-NEXT: 	.data
 // ASM-NEXT: 	.p2align	5, 0x0
@@ -654,15 +893,18 @@ contract C {
 // ASM-NEXT: 	.note.GNU-stack
 // ASM-NEXT: 	.rodata
 // ASM-NEXT: CPI2_0:
-// ASM-NEXT: 	.cell	3263152901
-// ASM-NEXT: CPI2_1:
 // ASM-NEXT: 	.cell	2776958069
+// ASM-NEXT: CPI2_1:
+// ASM-NEXT: 	.cell	3263152901
 // ASM-NEXT: CPI2_2:
 // ASM-NEXT: CPI5_0:
 // ASM-NEXT: 	.cell	4294967264
 // ASM-NEXT: CPI2_3:
 // ASM-NEXT: 	.cell	-32
 // ASM-NEXT: CPI3_0:
+// ASM-NEXT: CPI7_0:
+// ASM-NEXT: CPI8_0:
+// ASM-NEXT: CPI9_0:
 // ASM-NEXT: 	.cell	4294967295
 // ASM-NEXT: CPI5_1:
 // ASM-NEXT: 	.cell	18446744073709551615
@@ -670,4 +912,6 @@ contract C {
 // ASM-NEXT: 	.cell	35408467139433450592217433187231851964531694900788300625387963629091585785856
 // ASM-NEXT: CPI5_3:
 // ASM-NEXT: 	.cell	-57896044618658097711785492504343953926634992332820282019728792003956564819968
+// ASM-NEXT: CPI9_1:
+// ASM-NEXT: 	.cell	904625697166532776746648320380374280103671755200316906558262375061821325312
 // ASM-EMPTY:

@@ -21,10 +21,16 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm-c/TargetMachine.h"
+#include "llvm-c/Transforms/PassBuilder.h"
+#include "llvm-c/Types.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
 #include <mutex>
 
 void solidity::mlirgen::addConversionPasses(mlir::PassManager &passMgr,
@@ -93,6 +99,30 @@ void solidity::mlirgen::setTgtSpecificInfoInModule(
   llvmMod.setDataLayout(tgtMach.createDataLayout());
 }
 
+/// Sets the optimization level of the llvm::TargetMachine.
+static void setTgtMachOpt(llvm::TargetMachine *tgtMach, char levelChar) {
+  // Set level to 2 if size optimization is specified.
+  if (levelChar == 's' || levelChar == 'z')
+    levelChar = '2';
+  auto level = llvm::CodeGenOpt::parseLevel(levelChar);
+  assert(level);
+  tgtMach->setOptLevel(*level);
+}
+
+/// Runs the llvm optimization pipeline.
+static void runLLVMOptPipeline(llvm::Module *mod, char level,
+                               llvm::TargetMachine *tgtMach) {
+  char pipeline[12];
+  std::sprintf(pipeline, "default<O%c>", level);
+  LLVMErrorRef status =
+      LLVMRunPasses(reinterpret_cast<LLVMModuleRef>(mod), pipeline,
+                    reinterpret_cast<LLVMTargetMachineRef>(tgtMach),
+                    LLVMCreatePassBuilderOptions());
+  if (status != LLVMErrorSuccess) {
+    llvm_unreachable(LLVMGetErrorMessage(status));
+  }
+}
+
 bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
                               mlir::ModuleOp mod) {
   mlir::PassManager passMgr(&ctx);
@@ -119,6 +149,13 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     std::unique_ptr<llvm::Module> llvmMod =
         mlir::translateModuleToLLVMIR(mod, llvmCtx);
     assert(llvmMod);
+
+    // Run the llvm optimization pipeline.
+    std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(job.tgt);
+    assert(tgtMach);
+    setTgtMachOpt(tgtMach.get(), job.optLevel);
+    runLLVMOptPipeline(llvmMod.get(), job.optLevel, tgtMach.get());
+
     llvm::outs() << *llvmMod;
     break;
   }
@@ -140,6 +177,10 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
 
     // Set target specfic info in `llvmMod`
     setTgtSpecificInfoInModule(job.tgt, *llvmMod, *tgtMach);
+
+    // Run the llvm optimization pipeline.
+    setTgtMachOpt(tgtMach.get(), job.optLevel);
+    runLLVMOptPipeline(llvmMod.get(), job.optLevel, tgtMach.get());
 
     // Set up and run the asm printer
     llvm::legacy::PassManager llvmPassMgr;
