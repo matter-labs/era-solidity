@@ -1106,7 +1106,7 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
     Type srcTy = op.getInp().getType();
     Type dstTy = op.getType();
 
-    mlir::Value resPtr;
+    mlir::Value resAddr;
     // From storage to memory.
     if (sol::getDataLocation(srcTy) == sol::DataLocation::Storage &&
         sol::getDataLocation(dstTy) == sol::DataLocation::Memory) {
@@ -1118,9 +1118,9 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
 
         // Generate keccak256(slot) to get the slot having the data.
         auto zero = bExt.genI256Const(0);
+        auto thirtyTwo = bExt.genI256Const(32);
         r.create<sol::MStoreOp>(loc, zero, slot);
-        auto dataSlot =
-            r.create<sol::Keccak256Op>(loc, zero, bExt.genI256Const(32));
+        auto dataSlot = r.create<sol::Keccak256Op>(loc, zero, thirtyTwo);
 
         // Generate the memory allocation.
         auto sizeInBytes = r.create<sol::SLoadOp>(loc, slot);
@@ -1132,14 +1132,14 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
             r.create<sol::MallocOp>(loc, memPtrTy, memPtrTy, sizeInBytes);
         Type i256Ty = r.getIntegerType(256);
         assert(getTypeConverter()->convertType(mallocRes.getType()) == i256Ty);
-        auto memPtr = getTypeConverter()->materializeSourceConversion(
-            r, loc, i256Ty, mallocRes);
-        resPtr = memPtr;
-        auto sizeInWords = bExt.genRoundUpToMultiple<32>(sizeInBytes);
+        mlir::Value memAddr = getTypeConverter()->materializeSourceConversion(
+            r, loc, /*resultType=*/i256Ty, /*inputs=*/mallocRes);
+        resAddr = memAddr;
 
-        // FIXME: Don't overwrite the size field!
         // Generate the loop to copy the data (sol.malloc lowering will generate
         // the store of the size field).
+        auto dataMemAddr = r.create<arith::AddIOp>(loc, memAddr, thirtyTwo);
+        auto sizeInWords = bExt.genRoundUpToMultiple<32>(sizeInBytes);
         r.create<scf::ForOp>(
             loc, /*lowerBound=*/bExt.genIdxConst(0),
             /*upperBound=*/bExt.genCastToIdx(sizeInWords),
@@ -1152,11 +1152,12 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
                   r.create<arith::AddIOp>(loc, dataSlot, i256IndVar);
               Value slotVal = r.create<sol::SLoadOp>(loc, slotIdx);
 
-              Value memIdx = r.create<arith::MulIOp>(loc, i256IndVar,
-                                                     bExt.genI256Const(32));
-              Value memPtrAtIdx = r.create<arith::AddIOp>(loc, memPtr, memIdx);
+              Value memIdx =
+                  r.create<arith::MulIOp>(loc, i256IndVar, thirtyTwo);
+              Value memAddrAtIdx =
+                  r.create<arith::AddIOp>(loc, dataMemAddr, memIdx);
 
-              r.create<sol::MStoreOp>(loc, memPtrAtIdx, slotVal);
+              r.create<sol::MStoreOp>(loc, memAddrAtIdx, slotVal);
               b.create<scf::YieldOp>(loc);
             });
       } else {
@@ -1167,9 +1168,9 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
       llvm_unreachable("NYI");
     }
 
-    assert(resPtr);
+    assert(resAddr);
 
-    r.replaceOp(op, resPtr);
+    r.replaceOp(op, resAddr);
     return success();
   }
 };
