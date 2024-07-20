@@ -1650,9 +1650,11 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       Value memPtr = eraB.genMemAlloc(argSize);
       r.create<sol::CodeCopyOp>(loc, memPtr, progSize, argSize);
       std::vector<Value> decodedArgs;
-      eraB.genABITupleSizeAssert(ctor.getFunctionType().getInputs(), argSize);
-      eraB.genABITupleDecoding(ctor.getFunctionType().getInputs(), memPtr,
-                               decodedArgs, /*fromMem=*/true);
+      if (!ctor.getFunctionType().getInputs().empty()) {
+        eraB.genABITupleSizeAssert(ctor.getFunctionType().getInputs(), argSize);
+        eraB.genABITupleDecoding(ctor.getFunctionType().getInputs(), memPtr,
+                                 decodedArgs, /*fromMem=*/true);
+      }
       r.create<sol::CallOp>(loc, ctor, decodedArgs);
     }
 
@@ -1760,7 +1762,7 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
         // Decode the input parameters.
         std::vector<Value> params;
-        {
+        if (!func.getFunctionType().getInputs().empty()) {
           Value headStart = bExt.genI256Const(4);
           eraB.genABITupleSizeAssert(
               func.getFunctionType().getInputs(),
