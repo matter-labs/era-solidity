@@ -152,8 +152,12 @@ public:
   /// Generates the tuple encoding as per ABI for the literal string and return
   /// the "tail" address.
   mlir::Value
-  genABITupleEncoding(mlir::StringAttr str, mlir::Value headStartAddr,
+  genABITupleEncoding(std::string const &str, mlir::Value headStartAddr,
                       std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a revert with message.
+  void genRevertWithMsg(std::string const &msg,
+                        std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple encoding as per ABI and return the "tail" address.
   mlir::Value

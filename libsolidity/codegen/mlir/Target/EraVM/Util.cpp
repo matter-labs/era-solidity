@@ -220,7 +220,8 @@ Value eravm::Builder::genABITupleEncoding(
 }
 
 Value eravm::Builder::genABITupleEncoding(
-    StringAttr str, Value headStartAddr, std::optional<mlir::Location> locArg) {
+    std::string const &str, Value headStartAddr,
+    std::optional<mlir::Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
@@ -230,9 +231,31 @@ Value eravm::Builder::genABITupleEncoding(
 
   // Generate the string creation at the tail address.
   auto tailAddr = b.create<arith::AddIOp>(loc, headStartAddr, thirtyTwo);
-  genStringStore(str.str(), tailAddr, locArg);
+  genStringStore(str, tailAddr, locArg);
 
   return tailAddr;
+}
+
+void eravm::Builder::genRevertWithMsg(std::string const &msg,
+                                      std::optional<mlir::Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  // Generate the "Error(string)" selector store at free ptr.
+  std::string selector =
+      solidity::util::selectorFromSignatureU256("Error(string)").str();
+  Value freePtr = genFreePtr();
+  b.create<sol::MStoreOp>(loc, freePtr, bExt.genI256Const(selector));
+
+  // Generate the tuple encoding of the message.
+  auto freePtrPlus4 =
+      b.create<arith::AddIOp>(loc, freePtr, bExt.genI256Const(4));
+  Value tailAddr = genABITupleEncoding(msg, /*headStartAddr=*/freePtrPlus4);
+
+  // Generate the revert.
+  auto retDataSize = b.create<arith::SubIOp>(loc, tailAddr, freePtr);
+  b.create<sol::RevertOp>(loc, freePtr, retDataSize);
 }
 
 void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,

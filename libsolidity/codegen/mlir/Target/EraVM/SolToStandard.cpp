@@ -1261,23 +1261,7 @@ struct RequireOpLowering : public OpRewritePattern<sol::RequireOp> {
     eravm::Builder eraThenB(thenB, loc);
 
     if (!op.getMsg().empty()) {
-      // Generate the "Error(string)" selector store at free ptr.
-      std::string selector =
-          solidity::util::selectorFromSignatureU256("Error(string)").str();
-      mlir::Value freePtr = eraThenB.genFreePtr();
-      thenB.create<sol::MStoreOp>(loc, freePtr,
-                                  thenBExt.genI256Const(selector));
-
-      // Generate the tuple encoding of the message.
-      auto freePtrPlus4 =
-          thenB.create<arith::AddIOp>(loc, freePtr, thenBExt.genI256Const(4));
-      mlir::Value tailAddr =
-          eraThenB.genABITupleEncoding(op.getMsgAttr(), freePtrPlus4);
-
-      // Generate the revert.
-      mlir::Value retDataSize =
-          thenB.create<arith::SubIOp>(loc, tailAddr, freePtr);
-      thenB.create<sol::RevertOp>(loc, freePtr, retDataSize);
+      eraThenB.genRevertWithMsg(op.getMsg().str());
       // FIXME?
       // thenB.create<scf::YieldOp>(loc);
 
