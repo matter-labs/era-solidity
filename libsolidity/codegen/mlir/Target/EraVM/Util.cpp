@@ -157,8 +157,26 @@ Value eravm::Builder::genABILen(Value ptr, std::optional<Location> locArg) {
   return b.create<LLVM::AndOp>(loc, lShr, bExt.genI256Const(UINT_MAX, locArg));
 }
 
+void eravm::Builder::genABITupleSizeAssert(TypeRange tys, Value tupleSize,
+                                           std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  unsigned totCallDataHeadSz = 0;
+  for (Type ty : tys)
+    totCallDataHeadSz += getCallDataHeadSize(ty);
+
+  auto shortTupleCond =
+      b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, tupleSize,
+                              bExt.genI256Const(totCallDataHeadSz));
+  if (/*TODO: m_revertStrings < RevertStrings::Debug*/ false)
+    genRevertWithMsg(shortTupleCond, "ABI decoding: tuple data too short");
+  else
+    genRevert(shortTupleCond);
+}
+
 Value eravm::Builder::genABITupleEncoding(
-    TypeRange tys, ValueRange vals, Value headStartAddr,
+    TypeRange tys, ValueRange vals, Value headStart,
     std::optional<mlir::Location> locArg) {
   // TODO: Move this to the evm namespace.
 
@@ -169,9 +187,9 @@ Value eravm::Builder::genABITupleEncoding(
   for (Type ty : tys)
     totCallDataHeadSz += getCallDataHeadSize(ty);
 
-  Value headAddr = headStartAddr;
+  Value headAddr = headStart;
   Value tailAddr = b.create<arith::AddIOp>(
-      loc, headStartAddr, bExt.genI256Const(totCallDataHeadSz));
+      loc, headStart, bExt.genI256Const(totCallDataHeadSz));
   for (auto it : llvm::zip(tys, vals)) {
     Type ty = std::get<0>(it);
     Value val = std::get<1>(it);
@@ -179,7 +197,7 @@ Value eravm::Builder::genABITupleEncoding(
     // String type
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       b.create<sol::MStoreOp>(
-          loc, headAddr, b.create<arith::SubIOp>(loc, tailAddr, headStartAddr));
+          loc, headAddr, b.create<arith::SubIOp>(loc, tailAddr, headStart));
 
       // Copy the length field.
       auto size = b.create<sol::MLoadOp>(loc, val);
@@ -220,20 +238,33 @@ Value eravm::Builder::genABITupleEncoding(
 }
 
 Value eravm::Builder::genABITupleEncoding(
-    std::string const &str, Value headStartAddr,
+    std::string const &str, Value headStart,
     std::optional<mlir::Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
   // Generate the offset store at the head address.
   mlir::Value thirtyTwo = bExt.genI256Const(32);
-  b.create<sol::MStoreOp>(loc, headStartAddr, thirtyTwo);
+  b.create<sol::MStoreOp>(loc, headStart, thirtyTwo);
 
   // Generate the string creation at the tail address.
-  auto tailAddr = b.create<arith::AddIOp>(loc, headStartAddr, thirtyTwo);
+  auto tailAddr = b.create<arith::AddIOp>(loc, headStart, thirtyTwo);
   genStringStore(str, tailAddr, locArg);
 
   return tailAddr;
+}
+
+void eravm::Builder::genRevert(Value cond, std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  auto ifOp = b.create<scf::IfOp>(loc, cond);
+
+  OpBuilder::InsertionGuard insertGuard(b);
+  b.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+  mlir::Value zero = bExt.genI256Const(0);
+  b.create<sol::RevertOp>(loc, zero, zero);
 }
 
 void eravm::Builder::genRevertWithMsg(std::string const &msg,
@@ -251,11 +282,22 @@ void eravm::Builder::genRevertWithMsg(std::string const &msg,
   // Generate the tuple encoding of the message.
   auto freePtrPlus4 =
       b.create<arith::AddIOp>(loc, freePtr, bExt.genI256Const(4));
-  Value tailAddr = genABITupleEncoding(msg, /*headStartAddr=*/freePtrPlus4);
+  Value tailAddr = genABITupleEncoding(msg, /*headStart=*/freePtrPlus4);
 
   // Generate the revert.
   auto retDataSize = b.create<arith::SubIOp>(loc, tailAddr, freePtr);
   b.create<sol::RevertOp>(loc, freePtr, retDataSize);
+}
+
+void eravm::Builder::genRevertWithMsg(Value cond, std::string const &msg,
+                                      std::optional<mlir::Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  auto ifOp = b.create<scf::IfOp>(loc, cond);
+
+  OpBuilder::InsertionGuard insertGuard(b);
+  b.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  genRevertWithMsg(msg);
 }
 
 void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
@@ -267,8 +309,6 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
   // TODO? {en|de}codingType() for sol dialect types.
-
-  // TODO: Generate "ABI decoding: tuple data too short" revert check.
 
   size_t headPos = 0;
   for (auto ty : tys) {

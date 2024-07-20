@@ -152,17 +152,28 @@ public:
   /// Generates the tuple encoding as per ABI for the literal string and return
   /// the "tail" address.
   mlir::Value
-  genABITupleEncoding(std::string const &str, mlir::Value headStartAddr,
+  genABITupleEncoding(std::string const &str, mlir::Value headStart,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates a revert with message.
   void genRevertWithMsg(std::string const &msg,
                         std::optional<mlir::Location> locArg = std::nullopt);
+  void genRevertWithMsg(mlir::Value cond, std::string const &msg,
+                        std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a revert without message.
+  void genRevert(mlir::Value cond,
+                 std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates an assertion that the tuple size should be less than `size`.
+  void
+  genABITupleSizeAssert(mlir::TypeRange tys, mlir::Value size,
+                        std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple encoding as per ABI and return the "tail" address.
   mlir::Value
   genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
-                      mlir::Value headStartAddr,
+                      mlir::Value headStart,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple decoder as per ABI and populates the results.

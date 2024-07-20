@@ -1249,28 +1249,17 @@ struct RequireOpLowering : public OpRewritePattern<sol::RequireOp> {
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
 
-    // Generate the revert if the assertion condition is not met.
+    // Generate the revert condition.
     mlir::Value falseVal =
         r.create<arith::ConstantIntOp>(loc, 0, r.getI1Type());
     mlir::Value negCond = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
                                                   op.getCond(), falseVal);
-    auto ifOp = r.create<scf::IfOp>(loc, negCond);
-    auto thenB = ifOp.getThenBodyBuilder();
-
-    solidity::mlirgen::BuilderExt thenBExt(thenB, loc);
-    eravm::Builder eraThenB(thenB, loc);
-
-    if (!op.getMsg().empty()) {
-      eraThenB.genRevertWithMsg(op.getMsg().str());
-      // FIXME?
-      // thenB.create<scf::YieldOp>(loc);
-
-    } else {
-      mlir::Value zero = thenBExt.genI256Const(0);
-      thenB.create<sol::RevertOp>(loc, zero, zero);
-      // FIXME?
-      // thenB.create<scf::YieldOp>(loc);
-    }
+    // Generate the revert.
+    eravm::Builder eraB(r, loc);
+    if (!op.getMsg().empty())
+      eraB.genRevertWithMsg(negCond, op.getMsg().str());
+    else
+      eraB.genRevert(negCond);
 
     r.eraseOp(op);
     return success();
@@ -1661,6 +1650,7 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       Value memPtr = eraB.genMemAlloc(argSize);
       r.create<sol::CodeCopyOp>(loc, memPtr, progSize, argSize);
       std::vector<Value> decodedArgs;
+      eraB.genABITupleSizeAssert(ctor.getFunctionType().getInputs(), argSize);
       eraB.genABITupleDecoding(ctor.getFunctionType().getInputs(), memPtr,
                                decodedArgs, /*fromMem=*/true);
       r.create<sol::CallOp>(loc, ctor, decodedArgs);
@@ -1770,9 +1760,15 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
         // Decode the input parameters.
         std::vector<Value> params;
-        eraB.genABITupleDecoding(func.getFunctionType().getInputs(),
-                                 /*headStart=*/bExt.genI256Const(4), params,
-                                 /*fromMem=*/false);
+        {
+          Value headStart = bExt.genI256Const(4);
+          eraB.genABITupleSizeAssert(
+              func.getFunctionType().getInputs(),
+              r.create<arith::SubIOp>(loc, callDataSz, headStart));
+          eraB.genABITupleDecoding(func.getFunctionType().getInputs(),
+                                   headStart, params,
+                                   /*fromMem=*/false);
+        }
 
         // Generate the actual call.
         auto callOp = r.create<sol::CallOp>(loc, func, params);
