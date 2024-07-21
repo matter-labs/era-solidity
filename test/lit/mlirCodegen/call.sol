@@ -33,7 +33,7 @@ contract C {
 // CHECK-NEXT:       %1 = sol.call @ret_10() : () -> i256 loc(#loc13)
 // CHECK-NEXT:       sol.return %1 : i256 loc(#loc14)
 // CHECK-NEXT:     } loc(#loc10)
-// CHECK-NEXT:   } {interface_fns = [{selector = "dffeadd0", sym = @main_33, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = -536957488 : i32, sym = @main_33, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)

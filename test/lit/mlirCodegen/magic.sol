@@ -21,7 +21,7 @@ contract C {
 // CHECK-NEXT:       %0 = arith.extui %c0_i8 : i8 to i256 loc(#loc6)
 // CHECK-NEXT:       sol.return %0 : i256 loc(#loc7)
 // CHECK-NEXT:     } loc(#loc5)
-// CHECK-NEXT:   } {interface_fns = [{selector = "767800de", sym = @addr_20, type = () -> i256}, {selector = "d737d0c7", sym = @msgSender_9, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = 1987576030 : i32, sym = @addr_20, type = () -> i256}, {selector = -684207929 : i32, sym = @msgSender_9, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)

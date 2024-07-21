@@ -67,7 +67,7 @@ contract C {
 // CHECK-NEXT:       sol.call @f_12(%19) : (i256) -> () loc(#loc24)
 // CHECK-NEXT:       sol.return loc(#loc7)
 // CHECK-NEXT:     } loc(#loc7)
-// CHECK-NEXT:   } {interface_fns = [{selector = "b6a03e79", sym = @unchk_51, type = (i256, i256) -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = -1231012231 : i32, sym = @unchk_51, type = (i256, i256) -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)

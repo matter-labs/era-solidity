@@ -1706,26 +1706,30 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
       OpBuilder::InsertionGuard insertGuard(r);
       r.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+      // Load the selector from the calldata.
       auto callDataLd =
           r.create<sol::CallDataLoadOp>(loc, bExt.genI256Const(0));
+      Value callDataSelector =
+          r.create<arith::ShRUIOp>(loc, callDataLd, bExt.genI256Const(224));
+      callDataSelector = r.create<arith::TruncIOp>(loc, r.getIntegerType(32),
+                                                   callDataSelector);
 
       // Collect the ABI selectors and create the switch case attribute.
       std::vector<llvm::APInt> selectors;
       selectors.reserve(interfaceFnInfos.size());
       for (auto const &interfaceFn : interfaceFnInfos) {
         DictionaryAttr attr = interfaceFn.second;
-        llvm::StringRef selectorStr =
-            cast<StringAttr>(attr.get("selector")).getValue();
-        selectors.emplace_back(256, selectorStr, 16);
+        selectors.push_back(cast<IntegerAttr>(attr.get("selector")).getValue());
       }
       auto selectorsAttr = mlir::DenseIntElementsAttr::get(
           mlir::RankedTensorType::get(static_cast<int64_t>(selectors.size()),
-                                      r.getIntegerType(256)),
+                                      r.getIntegerType(32)),
           selectors);
 
       // Generate the switch op.
       auto switchOp = r.create<mlir::scf::IntSwitchOp>(
-          loc, /*resultTypes=*/std::nullopt, callDataLd, selectorsAttr,
+          loc, /*resultTypes=*/std::nullopt, callDataSelector, selectorsAttr,
           selectors.size());
 
       // Generate the default block.

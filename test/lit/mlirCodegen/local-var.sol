@@ -30,7 +30,7 @@ contract C {
 // CHECK-NEXT:       %2 = sol.load %0 : !sol.ptr<i256, Stack>, i256 loc(#loc9)
 // CHECK-NEXT:       sol.return %2 : i256 loc(#loc10)
 // CHECK-NEXT:     } loc(#loc6)
-// CHECK-NEXT:   } {interface_fns = [{selector = "dd2509dc", sym = @defInit_11, type = () -> i256}, {selector = "e1c7392a", sym = @init_23, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = -584775204 : i32, sym = @defInit_11, type = () -> i256}, {selector = -507037398 : i32, sym = @init_23, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)

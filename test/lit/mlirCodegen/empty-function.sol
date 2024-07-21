@@ -10,7 +10,7 @@ contract C {
 // CHECK-NEXT:     sol.func @f_4() attributes {state_mutability = #sol<StateMutability Pure>} {
 // CHECK-NEXT:       sol.return loc(#loc2)
 // CHECK-NEXT:     } loc(#loc2)
-// CHECK-NEXT:   } {interface_fns = [{selector = "26121ff0", sym = @f_4, type = () -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = 638722032 : i32, sym = @f_4, type = () -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)

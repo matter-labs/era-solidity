@@ -42,6 +42,7 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
 #include "range/v3/view/zip.hpp"
 #include "llvm/Support/CommandLine.h"
 #include <string>
@@ -300,8 +301,8 @@ SolidityToMLIRPass::getInterfaceFnsAttr(ContractDefinition const &cont) {
     mlir::FunctionType fnTy = mlir::cast<mlir::FunctionType>(getType(i.second));
     auto fnTyAttr = mlir::TypeAttr::get(fnTy);
 
-    std::string selector = i.first.hex();
-    auto selectorAttr = b.getStringAttr(selector);
+    auto selectorAttr = b.getIntegerAttr(b.getIntegerType(32),
+                                         mlir::APInt(32, i.first.hex(), 16));
 
     interfaceFnAttrs.push_back(b.getDictionaryAttr(
         {b.getNamedAttr("sym", fnSymAttr), b.getNamedAttr("type", fnTyAttr),

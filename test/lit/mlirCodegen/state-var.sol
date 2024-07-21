@@ -54,7 +54,7 @@ contract C {
 // CHECK-NEXT:       %1 = sol.data_loc_cast %0 : !sol.string<Storage>, !sol.string<Memory> loc(#loc5)
 // CHECK-NEXT:       sol.return %1 : !sol.string<Memory> loc(#loc22)
 // CHECK-NEXT:     } loc(#loc21)
-// CHECK-NEXT:   } {interface_fns = [{selector = "0fd708de", sym = @f_s_58, type = () -> !sol.string<Memory>}, {selector = "c2bf6003", sym = @f_m0_34, type = (i256) -> i256}, {selector = "ea3b4c07", sym = @f_m1_50, type = (i256, i256) -> i256}, {selector = "eb80bd39", sym = @f_ui_22, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = 265750750 : i32, sym = @f_s_58, type = () -> !sol.string<Memory>}, {selector = -1027645437 : i32, sym = @f_m0_34, type = (i256) -> i256}, {selector = -365212665 : i32, sym = @f_m1_50, type = (i256, i256) -> i256}, {selector = -343884487 : i32, sym = @f_ui_22, type = () -> i256}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)

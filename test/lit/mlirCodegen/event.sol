@@ -26,7 +26,7 @@ contract C {
 // CHECK-NEXT:       "sol.emit"(%3, %4, %5) {indexedArgsCount = 2 : i8, signature = "E(address,address,uint256)"} : (i256, i256, i256) -> () loc(#loc9)
 // CHECK-NEXT:       sol.return loc(#loc2)
 // CHECK-NEXT:     } loc(#loc2)
-// CHECK-NEXT:   } {interface_fns = [{selector = "9548dc8c", sym = @f_24, type = (i256, i256, i256) -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
+// CHECK-NEXT:   } {interface_fns = [{selector = -1790387060 : i32, sym = @f_24, type = (i256, i256, i256) -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
 // CHECK-NEXT: #loc1 = loc({{.*}}:2:0)
