@@ -279,10 +279,10 @@ void eravm::Builder::genRevertWithMsg(std::string const &msg,
   Value freePtr = genFreePtr();
   b.create<sol::MStoreOp>(loc, freePtr, bExt.genI256Const(selector));
 
-  // Generate the tuple encoding of the message.
-  auto freePtrPlus4 =
+  // Generate the tuple encoding of the message after the selector.
+  auto freePtrPostSelector =
       b.create<arith::AddIOp>(loc, freePtr, bExt.genI256Const(4));
-  Value tailAddr = genABITupleEncoding(msg, /*headStart=*/freePtrPlus4);
+  Value tailAddr = genABITupleEncoding(msg, /*headStart=*/freePtrPostSelector);
 
   // Generate the revert.
   auto retDataSize = b.create<arith::SubIOp>(loc, tailAddr, freePtr);
