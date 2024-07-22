@@ -34,9 +34,8 @@ contract C {
 // CHECK-NEXT:     %2 = arith.cmpi ne, %1, %c0_i256 : i256 loc(#loc2)
 // CHECK-NEXT:     scf.if %2 {
 // CHECK-NEXT:       %c0_i256_8 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:       %c0_i256_9 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:       %c2_i256_10 = arith.constant 2 : i256 loc(#loc2)
-// CHECK-NEXT:       func.call @__revert(%c0_i256_8, %c0_i256_9, %c2_i256_10) : (i256, i256, i256) -> () loc(#loc2)
+// CHECK-NEXT:       %c2_i256_9 = arith.constant 2 : i256 loc(#loc2)
+// CHECK-NEXT:       func.call @__revert(%c0_i256_8, %c0_i256_8, %c2_i256_9) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:       func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:     %c64_i256_0 = arith.constant 64 : i256 loc(#loc2)
@@ -94,8 +93,7 @@ contract C {
 // CHECK-NEXT:         scf.if %11 {
 // CHECK-NEXT:           %c0_i256_7 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:           %c0_i256_8 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           %c0_i256_9 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_8, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc2)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_7, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         } loc(#loc2)
 // CHECK-NEXT:         %12 = func.call @f_ui_22() : () -> i256 loc(#loc2)
@@ -121,8 +119,7 @@ contract C {
 // CHECK-NEXT:         scf.if %11 {
 // CHECK-NEXT:           %c0_i256_10 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:           %c0_i256_11 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           %c0_i256_12 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           func.call @__revert(%c0_i256_10, %c0_i256_11, %c0_i256_12) : (i256, i256, i256) -> () loc(#loc2)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_10, %c0_i256_10, %c0_i256_11) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         } loc(#loc2)
 // CHECK-NEXT:         %c4_i256_4 = arith.constant 4 : i256 loc(#loc2)
@@ -164,8 +161,7 @@ contract C {
 // CHECK-NEXT:         scf.if %11 {
 // CHECK-NEXT:           %c0_i256_11 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:           %c0_i256_12 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           %c0_i256_13 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           func.call @__revert(%c0_i256_11, %c0_i256_12, %c0_i256_13) : (i256, i256, i256) -> () loc(#loc2)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_11, %c0_i256_11, %c0_i256_12) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         } loc(#loc2)
 // CHECK-NEXT:         %c4_i256_4 = arith.constant 4 : i256 loc(#loc2)
@@ -213,8 +209,7 @@ contract C {
 // CHECK-NEXT:         scf.if %11 {
 // CHECK-NEXT:           %c0_i256_10 = arith.constant 0 : i256 loc(#loc2)
 // CHECK-NEXT:           %c0_i256_11 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           %c0_i256_12 = arith.constant 0 : i256 loc(#loc2)
-// CHECK-NEXT:           func.call @__revert(%c0_i256_10, %c0_i256_11, %c0_i256_12) : (i256, i256, i256) -> () loc(#loc2)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_10, %c0_i256_10, %c0_i256_11) : (i256, i256, i256) -> () loc(#loc2)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc2)
 // CHECK-NEXT:         } loc(#loc2)
 // CHECK-NEXT:         %12 = func.call @f_s_58() : () -> i256 loc(#loc2)

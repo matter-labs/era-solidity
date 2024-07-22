@@ -27,9 +27,8 @@ contract C {
 // CHECK-NEXT:     %2 = arith.cmpi ne, %1, %c0_i256 : i256 loc(#loc1)
 // CHECK-NEXT:     scf.if %2 {
 // CHECK-NEXT:       %c0_i256_8 = arith.constant 0 : i256 loc(#loc1)
-// CHECK-NEXT:       %c0_i256_9 = arith.constant 0 : i256 loc(#loc1)
-// CHECK-NEXT:       %c2_i256_10 = arith.constant 2 : i256 loc(#loc1)
-// CHECK-NEXT:       func.call @__revert(%c0_i256_8, %c0_i256_9, %c2_i256_10) : (i256, i256, i256) -> () loc(#loc1)
+// CHECK-NEXT:       %c2_i256_9 = arith.constant 2 : i256 loc(#loc1)
+// CHECK-NEXT:       func.call @__revert(%c0_i256_8, %c0_i256_8, %c2_i256_9) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:       func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:     } loc(#loc1)
 // CHECK-NEXT:     %c64_i256_0 = arith.constant 64 : i256 loc(#loc1)
@@ -87,8 +86,7 @@ contract C {
 // CHECK-NEXT:         scf.if %11 {
 // CHECK-NEXT:           %c0_i256_7 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:           %c0_i256_8 = arith.constant 0 : i256 loc(#loc1)
-// CHECK-NEXT:           %c0_i256_9 = arith.constant 0 : i256 loc(#loc1)
-// CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_8, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc1)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_7, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         } loc(#loc1)
 // CHECK-NEXT:         %12 = func.call @msgSender_9() : () -> i256 loc(#loc1)
@@ -114,8 +112,7 @@ contract C {
 // CHECK-NEXT:         scf.if %11 {
 // CHECK-NEXT:           %c0_i256_7 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:           %c0_i256_8 = arith.constant 0 : i256 loc(#loc1)
-// CHECK-NEXT:           %c0_i256_9 = arith.constant 0 : i256 loc(#loc1)
-// CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_8, %c0_i256_9) : (i256, i256, i256) -> () loc(#loc1)
+// CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_7, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         } loc(#loc1)
 // CHECK-NEXT:         %12 = func.call @addr_20() : () -> i256 loc(#loc1)

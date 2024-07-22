@@ -1561,11 +1561,38 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   }
 };
 
-// TODO: Move the lambda function to separate helper class.
-// TODO: This lowering is copied from libyul's IRGenerator. Move it to the
-// generic solidity dialect lowering.
 struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
   using OpConversionPattern<sol::ContractOp>::OpConversionPattern;
+
+  // Generate the call value check.
+  void genCallValChk(PatternRewriter &r, Location loc) const {
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
+
+    auto callVal = r.create<sol::CallValOp>(loc);
+    auto callValChk = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
+                                              callVal, bExt.genI256Const(0));
+    eraB.genRevert(callValChk);
+  };
+
+  // Generate the free pointer initialization.
+  void genFreePtrInit(PatternRewriter &r, Location loc) const {
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    mlir::Value freeMem;
+    if (/* TODO: op.memoryUnsafeInlineAssemblySeen */ false) {
+      freeMem = bExt.genI256Const(
+          solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
+          /* TODO: op.getReservedMem() */ 0);
+    } else {
+      freeMem = r.create<sol::MemGuardOp>(
+          loc,
+          r.getIntegerAttr(
+              r.getIntegerType(256),
+              solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
+                  /* TODO: op.getReservedMem() */ 0));
+    }
+    r.create<sol::MStoreOp>(loc, bExt.genI256Const(64), freeMem);
+  };
 
   LogicalResult matchAndRewrite(sol::ContractOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
@@ -1607,42 +1634,13 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
     r.setInsertionPointToStart(creationObj.getBody());
 
-    // Generate the memory init.
-    auto genMemInit = [&]() {
-      mlir::Value freeMemStart{};
-      if (/* TODO: op.memoryUnsafeInlineAssemblySeen */ false) {
-        freeMemStart = bExt.genI256Const(
-            solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
-            /* TODO: op.getReservedMem() */ 0);
-      } else {
-        freeMemStart = r.create<sol::MemGuardOp>(
-            loc,
-            r.getIntegerAttr(
-                r.getIntegerType(256),
-                solidity::frontend::CompilerUtils::generalPurposeMemoryStart +
-                    /* TODO: op.getReservedMem() */ 0));
-      }
-      r.create<sol::MStoreOp>(loc, bExt.genI256Const(64), freeMemStart);
-    };
-    genMemInit();
-
-    // Generate the call value check.
-    auto genCallValChk = [&]() {
-      auto callVal = r.create<sol::CallValOp>(loc);
-      auto callValChk = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
-                                                callVal, bExt.genI256Const(0));
-      auto ifOp =
-          r.create<scf::IfOp>(loc, callValChk, /*withElseRegion=*/false);
-      OpBuilder::InsertionGuard insertGuard(r);
-      r.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      r.create<sol::RevertOp>(loc, bExt.genI256Const(0), bExt.genI256Const(0));
-    };
+    genFreePtrInit(r, loc);
 
     if (!ctor /* TODO: || !op.ctor.isPayable() */) {
-      genCallValChk();
+      genCallValChk(r, loc);
     }
 
-    // Generate the call to constructor.
+    // Generate the call to constructor (if required).
     if (ctor && op.getKind() != sol::ContractKind::Library) {
       auto progSize = r.create<sol::DataSizeOp>(loc, creationObj.getName());
       auto codeSize = r.create<sol::CodeSizeOp>(loc);
@@ -1678,7 +1676,7 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
 
     // Generate the memory init.
     // TODO: Confirm if this should be the same as in the creation context.
-    genMemInit();
+    genFreePtrInit(r, loc);
 
     if (op.getKind() == sol::ContractKind::Library) {
       // TODO: called_via_delegatecall
@@ -1758,13 +1756,12 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
         mlir::Block *caseBlk = r.createBlock(&caseRegion);
         r.setInsertionPointToStart(caseBlk);
 
-        // Generate the call value check.
         if (!(op.getKind() ==
               sol::ContractKind::Library /* || func.isPayable() */)) {
-          genCallValChk();
+          genCallValChk(r, loc);
         }
 
-        // Decode the input parameters.
+        // Decode the input parameters (if required).
         std::vector<Value> params;
         if (!func.getFunctionType().getInputs().empty()) {
           Value headStart = bExt.genI256Const(4);
