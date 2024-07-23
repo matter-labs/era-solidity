@@ -684,20 +684,6 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     return 32;
   }
 
-  /// Generates the memory allocation code for dynamic array.
-  Value genMemAllocForDynArray(Value sizeVar, Value sizeInBytes,
-                               PatternRewriter &r, Location loc) const {
-    solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
-
-    // dynSize is size + length-slot where length-slot's size is 32 bytes.
-    auto dynSizeInBytes =
-        r.create<arith::AddIOp>(loc, sizeInBytes, bExt.genI256Const(32));
-    auto memPtr = eraB.genMemAlloc(dynSizeInBytes, loc);
-    r.create<sol::MStoreOp>(loc, memPtr, sizeVar);
-    return memPtr;
-  }
-
   /// Generates the memory allocation and zeroing code.
   Value genZeroedMemAlloc(Type ty, Value sizeVar, int64_t recDepth,
                           PatternRewriter &r, Location loc) const {
@@ -719,7 +705,7 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
           assert(sizeVar);
           sizeInBytes =
               r.create<arith::MulIOp>(loc, sizeVar, bExt.genI256Const(32));
-          memPtr = genMemAllocForDynArray(sizeVar, sizeInBytes, r, loc);
+          memPtr = eraB.genMemAllocForDynArray(sizeVar, sizeInBytes);
           dataPtr = r.create<arith::AddIOp>(loc, memPtr, bExt.genI256Const(32));
         } else {
           return bExt.genI256Const(
@@ -791,8 +777,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
       // String type.
     } else if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       if (sizeVar)
-        memPtr = genMemAllocForDynArray(
-            sizeVar, bExt.genRoundUpToMultiple<32>(sizeVar), r, loc);
+        memPtr = eraB.genMemAllocForDynArray(
+            sizeVar, bExt.genRoundUpToMultiple<32>(sizeVar));
       else
         return bExt.genI256Const(
             solidity::frontend::CompilerUtils::zeroPointer);

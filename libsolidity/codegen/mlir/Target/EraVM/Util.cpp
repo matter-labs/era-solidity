@@ -310,23 +310,43 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
 
   // TODO? {en|de}codingType() for sol dialect types.
 
-  size_t headPos = 0;
-  for (auto ty : tys) {
-    if (!isa<IntegerType>(ty))
-      llvm_unreachable("NYI");
-
-    Value offset = bExt.genI256Const(headPos);
-
-    auto headStartPlusOffset = b.create<arith::AddIOp>(loc, headStart, offset);
+  Value headAddr = headStart;
+  auto genLoad = [&](Value addr) -> Value {
     if (fromMem)
-      results.push_back(b.create<sol::MLoadOp>(loc, headStartPlusOffset));
+      return b.create<sol::MLoadOp>(loc, headAddr);
     else
-      results.push_back(
-          b.create<sol::CallDataLoadOp>(loc, headStartPlusOffset));
+      return b.create<sol::CallDataLoadOp>(loc, headAddr);
+  };
 
-    // TODO: Generate "Validator".
+  for (auto ty : tys) {
+    if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
+      llvm_unreachable("WIP");
+      Value tailAddr = genLoad(headAddr);
+      auto invalidTailAddrChk =
+          b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, tailAddr,
+                                  bExt.genI256Const("0xffffffffffffffff"));
+      genRevertWithMsg(invalidTailAddrChk, "ABI decoding: invalid tuple offset",
+                       locArg);
 
-    headPos += getCallDataHeadSize(ty);
+      // TODO: "ABI decoding: invalid calldata array offset" revert check. We
+      // need to track the "headEnd" for this.
+
+      Value len = genLoad(tailAddr);
+      Value memPtr =
+          genMemAllocForDynArray(len, bExt.genRoundUpToMultiple<32>(len));
+      (void)memPtr;
+
+    } else if (auto intTy = dyn_cast<IntegerType>(ty)) {
+      assert(intTy.getWidth() == 256 && "NYI");
+      if (fromMem)
+        results.push_back(genLoad(headAddr));
+      else
+        results.push_back(genLoad(headAddr));
+      // TODO: Generate "Validator".
+    }
+
+    headAddr = b.create<arith::AddIOp>(
+        loc, headAddr, bExt.genI256Const(getCallDataHeadSize(ty)));
   }
 }
 
@@ -571,6 +591,20 @@ Value eravm::Builder::genMemAlloc(AllocSize size,
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
   return genMemAlloc(bExt.genI256Const(size), loc);
+}
+
+Value eravm::Builder::genMemAllocForDynArray(Value sizeVar, Value sizeInBytes,
+                                             std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  // dynSize is size + length-slot where length-slot's size is 32 bytes.
+  auto dynSizeInBytes =
+      b.create<arith::AddIOp>(loc, sizeInBytes, bExt.genI256Const(32));
+  auto memPtr = genMemAlloc(dynSizeInBytes, loc);
+  b.create<sol::MStoreOp>(loc, memPtr, sizeVar);
+  return memPtr;
 }
 
 void eravm::Builder::genPanic(solidity::util::PanicCode code, Value cond,

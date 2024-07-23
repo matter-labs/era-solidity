@@ -250,6 +250,11 @@ public:
                           std::optional<mlir::Location> locArg = std::nullopt);
   mlir::Value genMemAlloc(AllocSize size,
                           std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates the memory allocation code for dynamic array.
+  mlir::Value
+  genMemAllocForDynArray(mlir::Value sizeVar, mlir::Value sizeInBytes,
+                         std::optional<mlir::Location> locArg = std::nullopt);
 };
 
 } // namespace eravm
