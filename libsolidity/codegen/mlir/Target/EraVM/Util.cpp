@@ -320,7 +320,6 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
 
   for (auto ty : tys) {
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
-      llvm_unreachable("WIP");
       Value tailAddr = genLoad(headAddr);
       auto invalidTailAddrChk =
           b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, tailAddr,
@@ -332,16 +331,34 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
       // need to track the "headEnd" for this.
 
       Value len = genLoad(tailAddr);
-      Value memPtr =
+
+      // Copy the decoded string to a new memory allocation.
+      Value dstAddr =
           genMemAllocForDynArray(len, bExt.genRoundUpToMultiple<32>(len));
-      (void)memPtr;
+      Value thirtyTwo = bExt.genI256Const(32);
+      Value dstDataAddr = b.create<arith::AddIOp>(loc, dstAddr, thirtyTwo);
+      Value srcDataAddr = b.create<arith::AddIOp>(loc, tailAddr, thirtyTwo);
+      // TODO: "ABI decoding: invalid byte array length" revert check.
+      // TODO: Do we really need to store 0 to the last byte (i.e. the
+      // "cleanup") in the codegen related to ABI tuples?
+      if (fromMem) {
+        // TODO? Check m_evmVersion.hasMcopy() and legalize here or in sol.mcopy
+        // lowering?
+        b.create<sol::MCopyOp>(loc, dstDataAddr, srcDataAddr, len);
+        auto end = b.create<arith::AddIOp>(loc, dstDataAddr, len);
+        b.create<sol::MStoreOp>(loc, end, bExt.genI256Const(0));
+
+      } else {
+        b.create<sol::CallDataCopyOp>(loc, dstDataAddr, srcDataAddr, len);
+        auto end = b.create<arith::AddIOp>(loc, dstDataAddr, len);
+        b.create<sol::MStoreOp>(loc, end, bExt.genI256Const(0));
+      }
+
+      results.push_back(dstAddr);
 
     } else if (auto intTy = dyn_cast<IntegerType>(ty)) {
       assert(intTy.getWidth() == 256 && "NYI");
-      if (fromMem)
-        results.push_back(genLoad(headAddr));
-      else
-        results.push_back(genLoad(headAddr));
+      results.push_back(genLoad(headAddr));
       // TODO: Generate "Validator".
     }
 

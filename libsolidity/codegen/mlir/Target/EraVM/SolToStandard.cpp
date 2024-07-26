@@ -33,6 +33,7 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -491,6 +492,8 @@ struct MCopyOpLowering : public OpRewritePattern<sol::MCopyOp> {
 
   LogicalResult matchAndRewrite(sol::MCopyOp op,
                                 PatternRewriter &rewriter) const override {
+    // TODO? Check m_evmVersion.hasMcopy() and legalize here?
+
     mlir::Location loc = op->getLoc();
     eravm::Builder eraB(rewriter, loc);
 
@@ -1062,12 +1065,24 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
   LogicalResult matchAndRewrite(sol::StoreOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     Value addrAtIdx = genAddrCalc(op, adaptor, r);
+    Value val = op.getVal();
+    if (sol::isRefType(val.getType())) {
+      Type convTy = getTypeConverter()->convertType(val.getType());
+      // FIXME: ConversionPattern would already generate the remapped values
+      // (using ConversionPatternRewriterImpl::remapValues) for reference types
+      // using UnrealizedConversionCastOp. Explicitly doing materialization here
+      // and/or adding ReconcileUnrealizedCasts patterns won't remove it and
+      // will always cause a "failed to materialize conversion" legalization
+      // error. I'm seeing this for block arguments; Would defining
+      // addArgumentMaterialization in the TypeConverter fix this?
+      val = getTypeConverter()->materializeSourceConversion(
+          r, op.getLoc(), /*resultType=*/convTy, /*inputs=*/val);
+    }
 
     switch (sol::getDataLocation(op.getBaseAddr().getType())) {
     case sol::DataLocation::Stack:
       r.replaceOpWithNewOp<LLVM::StoreOp>(
-          op, op.getVal(), addrAtIdx,
-          eravm::getAlignment(adaptor.getBaseAddr()));
+          op, val, addrAtIdx, eravm::getAlignment(adaptor.getBaseAddr()));
       return success();
     case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MStoreOp>(op, addrAtIdx, op.getVal());
@@ -1995,16 +2010,24 @@ struct ConvertSolToStandard
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
                      sol::DataLocCastOp, sol::LoadOp, sol::StoreOp, sol::EmitOp,
-                     sol::RequireOp>();
+                     sol::RequireOp, UnrealizedConversionCastOp>();
     tgt.addDynamicallyLegalOp<sol::ConvCastOp>([&](sol::ConvCastOp op) -> bool {
-      Operation *inp = op.getOperand().getDefiningOp();
+      Value inp = op.getOperand();
+
+      // FIXME: Confirm if this is required.
+      // True if the inp is a sol.func arg.
+      if (auto blkArg = dyn_cast<BlockArgument>(inp)) {
+        return isa<sol::FuncOp>(blkArg.getOwner()->getParentOp());
+      }
+
+      Operation *inpDefOp = inp.getDefiningOp();
       std::vector<Operation *> users(op.getResult().getUsers().begin(),
                                      op.getResult().getUsers().end());
       // FIXME:
       assert(users.size() == 1);
 
       Operation *user = users[0];
-      return isa<sol::CallOp>(inp) || isa<sol::ReturnOp>(user);
+      return isa<sol::CallOp>(inpDefOp) || isa<sol::ReturnOp>(user);
     });
 
     RewritePatternSet pats(&getContext());
@@ -2013,6 +2036,13 @@ struct ConvertSolToStandard
              EmitOpLowering>(tyConv, &getContext());
     pats.add<MallocOpLowering, AddrOfOpLowering, RequireOpLowering>(
         &getContext());
+
+    // TODO: Remove this! This never fixed my type reconciliation problems so
+    // far (most of the problems were due to a misconfigured TypeConverter
+    // and/or ConversionPattern etc.). But I'm always interested to see if it
+    // can.
+    // tgt.addIllegalOp<UnrealizedConversionCastOp>();
+    // populateReconcileUnrealizedCastsPatterns(pats);
 
     // Assign slots to state variables.
     mod.walk([&](sol::ContractOp contr) {
