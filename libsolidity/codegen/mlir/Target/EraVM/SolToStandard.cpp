@@ -1085,30 +1085,18 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
   LogicalResult matchAndRewrite(sol::StoreOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     Value addrAtIdx = genAddrCalc(op, adaptor, r);
-    Value val = op.getVal();
-    if (sol::isRefType(val.getType())) {
-      Type convTy = getTypeConverter()->convertType(val.getType());
-      // FIXME: ConversionPattern would already generate the remapped values
-      // (using ConversionPatternRewriterImpl::remapValues) for reference types
-      // using UnrealizedConversionCastOp. Explicitly doing materialization here
-      // and/or adding ReconcileUnrealizedCasts patterns won't remove it and
-      // will always cause a "failed to materialize conversion" legalization
-      // error. I'm seeing this for block arguments; Would defining
-      // addArgumentMaterialization in the TypeConverter fix this?
-      val = getTypeConverter()->materializeSourceConversion(
-          r, op.getLoc(), /*resultType=*/convTy, /*inputs=*/val);
-    }
 
     switch (sol::getDataLocation(op.getBaseAddr().getType())) {
     case sol::DataLocation::Stack:
       r.replaceOpWithNewOp<LLVM::StoreOp>(
-          op, val, addrAtIdx, eravm::getAlignment(adaptor.getBaseAddr()));
+          op, adaptor.getVal(), addrAtIdx,
+          eravm::getAlignment(adaptor.getBaseAddr()));
       return success();
     case sol::DataLocation::Memory:
-      r.replaceOpWithNewOp<sol::MStoreOp>(op, addrAtIdx, op.getVal());
+      r.replaceOpWithNewOp<sol::MStoreOp>(op, addrAtIdx, adaptor.getVal());
       return success();
     case sol::DataLocation::Storage:
-      r.replaceOpWithNewOp<sol::SStoreOp>(op, addrAtIdx, op.getVal());
+      r.replaceOpWithNewOp<sol::SStoreOp>(op, addrAtIdx, adaptor.getVal());
       return success();
     default:
       break;
