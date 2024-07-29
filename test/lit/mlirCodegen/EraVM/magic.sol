@@ -79,7 +79,7 @@ contract C {
 // CHECK-NEXT:       %8 = arith.shrui %7, %c224_i256 : i256 loc(#loc1)
 // CHECK-NEXT:       %9 = arith.trunci %8 : i256 to i32 loc(#loc1)
 // CHECK-NEXT:       scf.int_switch %9 : i32
-// CHECK-NEXT:       case -684207929 {
+// CHECK-NEXT:       case 1987576030 {
 // CHECK-NEXT:         %10 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:         %11 = arith.cmpi ne, %10, %c0_i256_3 : i256 loc(#loc1)
@@ -89,7 +89,7 @@ contract C {
 // CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_7, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         } loc(#loc1)
-// CHECK-NEXT:         %12 = func.call @msgSender_9() : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %12 = func.call @addr_20() : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c64_i256_4 = arith.constant 64 : i256 loc(#loc1)
 // CHECK-NEXT:         %13 = llvm.inttoptr %c64_i256_4 : i256 to !llvm.ptr<1> loc(#loc1)
 // CHECK-NEXT:         %14 = llvm.load %13 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc1)
@@ -105,7 +105,7 @@ contract C {
 // CHECK-NEXT:         func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         scf.yield loc(#loc1)
 // CHECK-NEXT:       }
-// CHECK-NEXT:       case 1987576030 {
+// CHECK-NEXT:       case -684207929 {
 // CHECK-NEXT:         %10 = "llvm.intrcall"() <{id = 3177 : i32, name = "eravm.getu128"}> : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c0_i256_3 = arith.constant 0 : i256 loc(#loc1)
 // CHECK-NEXT:         %11 = arith.cmpi ne, %10, %c0_i256_3 : i256 loc(#loc1)
@@ -115,7 +115,7 @@ contract C {
 // CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_7, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         } loc(#loc1)
-// CHECK-NEXT:         %12 = func.call @addr_20() : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %12 = func.call @msgSender_9() : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c64_i256_4 = arith.constant 64 : i256 loc(#loc1)
 // CHECK-NEXT:         %13 = llvm.inttoptr %c64_i256_4 : i256 to !llvm.ptr<1> loc(#loc1)
 // CHECK-NEXT:         %14 = llvm.load %13 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc1)

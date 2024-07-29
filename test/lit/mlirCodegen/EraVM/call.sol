@@ -89,7 +89,7 @@ contract C {
 // CHECK-NEXT:           func.call @__revert(%c0_i256_7, %c0_i256_7, %c0_i256_8) : (i256, i256, i256) -> () loc(#loc1)
 // CHECK-NEXT:           func.call @".unreachable"() : () -> () loc(#loc1)
 // CHECK-NEXT:         } loc(#loc1)
-// CHECK-NEXT:         %12 = func.call @ret_10() : () -> i256 loc(#loc1)
+// CHECK-NEXT:         %12 = func.call @main_33() : () -> i256 loc(#loc1)
 // CHECK-NEXT:         %c64_i256_4 = arith.constant 64 : i256 loc(#loc1)
 // CHECK-NEXT:         %13 = llvm.inttoptr %c64_i256_4 : i256 to !llvm.ptr<1> loc(#loc1)
 // CHECK-NEXT:         %14 = llvm.load %13 {alignment = 1 : i64} : !llvm.ptr<1> -> i256 loc(#loc1)

@@ -115,6 +115,26 @@ static bool inRuntimeContext(Operation *op) {
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
 
+/// A generic conversion pattern that replaces the operands with the legalized
+/// ones and legalizes the return types.
+template <typename OpT>
+struct GenericTypeConversion : public OpConversionPattern<OpT> {
+  using OpConversionPattern<OpT>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(OpT op, typename OpT::Adaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    SmallVector<Type> retTys;
+    if (failed(this->getTypeConverter()->convertTypes(op->getResultTypes(),
+                                                      retTys)))
+      return failure();
+
+    // TODO: Use updateRootInPlace instead?
+    r.replaceOpWithNewOp<OpT>(op, retTys, adaptor.getOperands(),
+                              op->getAttrs());
+    return success();
+  }
+};
+
 struct ConvCastOpLowering : public OpConversionPattern<sol::ConvCastOp> {
   using OpConversionPattern<sol::ConvCastOp>::OpConversionPattern;
 
@@ -1562,10 +1582,10 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   }
 };
 
-struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
-  using OpConversionPattern<sol::ContractOp>::OpConversionPattern;
+struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
+  using OpRewritePattern<sol::ContractOp>::OpRewritePattern;
 
-  // Generate the call value check.
+  /// Generate the call value check.
   void genCallValChk(PatternRewriter &r, Location loc) const {
     solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
@@ -1576,7 +1596,7 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
     eraB.genRevert(callValChk);
   };
 
-  // Generate the free pointer initialization.
+  /// Generate the free pointer initialization.
   void genFreePtrInit(PatternRewriter &r, Location loc) const {
     solidity::mlirgen::BuilderExt bExt(r, loc);
     mlir::Value freeMem;
@@ -1595,8 +1615,124 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
     r.create<sol::MStoreOp>(loc, bExt.genI256Const(64), freeMem);
   };
 
-  LogicalResult matchAndRewrite(sol::ContractOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
+  /// Generates the dispatch to interface function of the contract op inside the
+  /// object op.
+  void genDispatch(sol::ContractOp contrOp, sol::ObjectOp objOp,
+                   PatternRewriter &r) const {
+    Location loc = contrOp.getLoc();
+    ArrayAttr ifcFnsAttr = contrOp.getInterfaceFnsAttr();
+
+    if (ifcFnsAttr.empty())
+      return;
+
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
+
+    auto callDataSz = r.create<sol::CallDataSizeOp>(loc);
+    // Generate `iszero(lt(calldatasize(), 4))`.
+    auto callDataSzCmp = r.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::uge, callDataSz, bExt.genI256Const(4));
+    auto ifOp =
+        r.create<scf::IfOp>(loc, callDataSzCmp, /*withElseRegion=*/false);
+
+    OpBuilder::InsertionGuard insertGuard(r);
+    r.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+    // Load the selector from the calldata.
+    auto callDataLd = r.create<sol::CallDataLoadOp>(loc, bExt.genI256Const(0));
+    Value callDataSelector =
+        r.create<arith::ShRUIOp>(loc, callDataLd, bExt.genI256Const(224));
+    callDataSelector =
+        r.create<arith::TruncIOp>(loc, r.getIntegerType(32), callDataSelector);
+
+    std::vector<uint32_t> selectors;
+    for (Attribute attr : ifcFnsAttr) {
+      DictionaryAttr ifcFnAttr = cast<DictionaryAttr>(attr);
+      selectors.push_back(
+          cast<IntegerAttr>(ifcFnAttr.get("selector")).getInt());
+    }
+    auto selectorsAttr = mlir::DenseIntElementsAttr::get(
+        mlir::RankedTensorType::get(static_cast<int64_t>(selectors.size()),
+                                    r.getIntegerType(32)),
+        selectors);
+
+    // Generate the switch op.
+    auto switchOp = r.create<mlir::scf::IntSwitchOp>(
+        loc, /*resultTypes=*/std::nullopt, callDataSelector, selectorsAttr,
+        selectors.size());
+
+    // Generate the default block.
+    {
+      OpBuilder::InsertionGuard insertGuard(r);
+      r.setInsertionPointToStart(r.createBlock(&switchOp.getDefaultRegion()));
+      r.create<scf::YieldOp>(loc);
+    }
+
+    for (auto [caseRegion, attr] :
+         llvm::zip(switchOp.getCaseRegions(), ifcFnsAttr)) {
+      DictionaryAttr ifcFnAttr = cast<DictionaryAttr>(attr);
+      auto ifcFnSym = cast<SymbolRefAttr>(ifcFnAttr.get("sym"));
+      sol::FuncOp ifcFnOp = objOp.lookupSymbol<sol::FuncOp>(ifcFnSym);
+      assert(ifcFnOp);
+      auto origIfcFnTy =
+          cast<FunctionType>(cast<TypeAttr>(ifcFnAttr.get("type")).getValue());
+
+      if (contrOp.getKind() == sol::ContractKind::Library) {
+        auto optStateMutability = ifcFnOp.getStateMutability();
+        assert(optStateMutability);
+        sol::StateMutability stateMutability = *optStateMutability;
+
+        assert(!(stateMutability == sol::StateMutability::Payable));
+
+        if (stateMutability > sol::StateMutability::View) {
+          assert(false && "NYI: Delegate call check");
+        }
+      }
+
+      OpBuilder::InsertionGuard insertGuard(r);
+      mlir::Block *caseBlk = r.createBlock(&caseRegion);
+      r.setInsertionPointToStart(caseBlk);
+
+      if (!(contrOp.getKind() ==
+            sol::ContractKind::Library /* || func.isPayable() */)) {
+        genCallValChk(r, loc);
+      }
+
+      // Decode the input parameters (if required).
+      std::vector<Value> params;
+      if (!origIfcFnTy.getInputs().empty()) {
+        Value headStart = bExt.genI256Const(4);
+        eraB.genABITupleSizeAssert(
+            origIfcFnTy.getInputs(),
+            r.create<arith::SubIOp>(loc, callDataSz, headStart));
+        eraB.genABITupleDecoding(origIfcFnTy.getInputs(), headStart, params,
+                                 /*fromMem=*/false);
+      }
+
+      // Generate the actual call.
+      auto callOp = r.create<sol::CallOp>(loc, ifcFnOp, params);
+
+      // Encode the result using the ABI's tuple encoder.
+      auto headStart = eraB.genFreePtr();
+      mlir::Value tupleSize;
+      if (!callOp.getResultTypes().empty()) {
+        auto tail = eraB.genABITupleEncoding(origIfcFnTy.getResults(),
+                                             callOp.getResults(), headStart);
+        tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
+      } else {
+        tupleSize = bExt.genI256Const(0);
+      }
+
+      // Generate the return.
+      assert(tupleSize);
+      r.create<sol::BuiltinRetOp>(loc, headStart, tupleSize);
+
+      r.create<mlir::scf::YieldOp>(loc);
+    }
+  }
+
+  LogicalResult matchAndRewrite(sol::ContractOp op,
+                                PatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
@@ -1683,129 +1819,8 @@ struct ContractOpLowering : public OpConversionPattern<sol::ContractOp> {
       // TODO: called_via_delegatecall
     }
 
-    //
-    // Dispatch generation in the runtime context
-    //
-
-    // Collect interface function infos.
-    std::vector<std::pair<sol::FuncOp, DictionaryAttr>> interfaceFnInfos;
-    for (sol::FuncOp fn : funcs) {
-      DictionaryAttr interfaceFnAttr = op.getInterfaceFnAttr(fn);
-      if (interfaceFnAttr)
-        interfaceFnInfos.emplace_back(fn, interfaceFnAttr);
-    }
-
-    if (!interfaceFnInfos.empty()) {
-      auto callDataSz = r.create<sol::CallDataSizeOp>(loc);
-      // Generate `iszero(lt(calldatasize(), 4))`.
-      auto callDataSzCmp = r.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::uge, callDataSz, bExt.genI256Const(4));
-      auto ifOp =
-          r.create<scf::IfOp>(loc, callDataSzCmp, /*withElseRegion=*/false);
-
-      OpBuilder::InsertionGuard insertGuard(r);
-      r.setInsertionPointToStart(&ifOp.getThenRegion().front());
-
-      // Load the selector from the calldata.
-      auto callDataLd =
-          r.create<sol::CallDataLoadOp>(loc, bExt.genI256Const(0));
-      Value callDataSelector =
-          r.create<arith::ShRUIOp>(loc, callDataLd, bExt.genI256Const(224));
-      callDataSelector = r.create<arith::TruncIOp>(loc, r.getIntegerType(32),
-                                                   callDataSelector);
-
-      // Collect the ABI selectors and create the switch case attribute.
-      std::vector<llvm::APInt> selectors;
-      selectors.reserve(interfaceFnInfos.size());
-      for (auto const &interfaceFn : interfaceFnInfos) {
-        DictionaryAttr attr = interfaceFn.second;
-        selectors.push_back(cast<IntegerAttr>(attr.get("selector")).getValue());
-      }
-      auto selectorsAttr = mlir::DenseIntElementsAttr::get(
-          mlir::RankedTensorType::get(static_cast<int64_t>(selectors.size()),
-                                      r.getIntegerType(32)),
-          selectors);
-
-      // Generate the switch op.
-      auto switchOp = r.create<mlir::scf::IntSwitchOp>(
-          loc, /*resultTypes=*/std::nullopt, callDataSelector, selectorsAttr,
-          selectors.size());
-
-      // Generate the default block.
-      {
-        OpBuilder::InsertionGuard insertGuard(r);
-        r.setInsertionPointToStart(r.createBlock(&switchOp.getDefaultRegion()));
-        r.create<scf::YieldOp>(loc);
-      }
-
-      // Generate the case blocks.
-      for (auto [caseRegion, func] :
-           llvm::zip(switchOp.getCaseRegions(), funcs)) {
-        if (op.getKind() == sol::ContractKind::Library) {
-          auto optStateMutability = func.getStateMutability();
-          assert(optStateMutability);
-          sol::StateMutability stateMutability = *optStateMutability;
-
-          assert(!(stateMutability == sol::StateMutability::Payable));
-
-          if (stateMutability > sol::StateMutability::View) {
-            assert(false && "NYI: Delegate call check");
-          }
-        }
-
-        OpBuilder::InsertionGuard insertGuard(r);
-        mlir::Block *caseBlk = r.createBlock(&caseRegion);
-        r.setInsertionPointToStart(caseBlk);
-
-        if (!(op.getKind() ==
-              sol::ContractKind::Library /* || func.isPayable() */)) {
-          genCallValChk(r, loc);
-        }
-
-        // Decode the input parameters (if required).
-        std::vector<Value> params;
-        if (!func.getFunctionType().getInputs().empty()) {
-          Value headStart = bExt.genI256Const(4);
-          eraB.genABITupleSizeAssert(
-              func.getFunctionType().getInputs(),
-              r.create<arith::SubIOp>(loc, callDataSz, headStart));
-          eraB.genABITupleDecoding(func.getFunctionType().getInputs(),
-                                   headStart, params,
-                                   /*fromMem=*/false);
-        }
-
-        // Generate the actual call.
-        auto callOp = r.create<sol::CallOp>(loc, func, params);
-
-        // Collect the remapped results for generating the tuple encoder.
-        std::vector<Value> remappedResults;
-        for (auto res : callOp.getResults()) {
-          auto remappedTy = getTypeConverter()->convertType(res.getType());
-          Value remappedRes = res;
-          if (remappedTy != res.getType())
-            remappedRes = getTypeConverter()->materializeSourceConversion(
-                r, loc, remappedTy, res);
-          remappedResults.push_back(remappedRes);
-        }
-
-        // Encode the result using the ABI's tuple encoder.
-        auto headStart = eraB.genFreePtr();
-        mlir::Value tupleSize;
-        if (!callOp.getResultTypes().empty()) {
-          auto tail = eraB.genABITupleEncoding(callOp.getResultTypes(),
-                                               remappedResults, headStart);
-          tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
-        } else {
-          tupleSize = bExt.genI256Const(0);
-        }
-
-        // Generate the return.
-        assert(tupleSize);
-        r.create<sol::BuiltinRetOp>(loc, headStart, tupleSize);
-
-        r.create<mlir::scf::YieldOp>(loc);
-      }
-    }
+    // Generate the dispatch to interface functions.
+    genDispatch(op, runtimeObj, r);
 
     if (op.getReceiveFnAttr()) {
       assert(false && "NYI: Receive functions");
@@ -2011,6 +2026,13 @@ struct ConvertSolToStandard
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
                      sol::DataLocCastOp, sol::LoadOp, sol::StoreOp, sol::EmitOp,
                      sol::RequireOp, UnrealizedConversionCastOp>();
+    tgt.addDynamicallyLegalOp<sol::FuncOp>([&](sol::FuncOp op) {
+      return tyConv.isSignatureLegal(op.getFunctionType());
+    });
+    tgt.addDynamicallyLegalOp<sol::CallOp, sol::ReturnOp>(
+        [&](Operation *op) { return tyConv.isLegal(op); });
+
+    // TODO: Remove this!
     tgt.addDynamicallyLegalOp<sol::ConvCastOp>([&](sol::ConvCastOp op) -> bool {
       Value inp = op.getOperand();
 
@@ -2034,6 +2056,9 @@ struct ConvertSolToStandard
     pats.add<AllocaOpLowering, MapOpLowering, DataLocCastOpLowering,
              LoadOpLowering, StoreOpLowering, ConvCastOpLowering,
              EmitOpLowering>(tyConv, &getContext());
+    populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
+    pats.add<GenericTypeConversion<sol::CallOp>,
+             GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());
     pats.add<MallocOpLowering, AddrOfOpLowering, RequireOpLowering>(
         &getContext());
 
@@ -2063,7 +2088,7 @@ struct ConvertSolToStandard
   }
 
   /// Converts sol.contract and all yul dialect ops.
-  void runStage2Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
+  void runStage2Conversion(ModuleOp mod) {
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
@@ -2072,12 +2097,11 @@ struct ConvertSolToStandard
     tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp, sol::ConvCastOp>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<ContractOpLowering>(tyConv, &getContext());
-    pats.add<ObjectOpLowering, BuiltinRetOpLowering, RevertOpLowering,
-             MLoadOpLowering, MStoreOpLowering, MCopyOpLowering,
-             DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
-             CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
-             CallDataLoadOpLowering, CallDataSizeOpLowering,
+    pats.add<ContractOpLowering, ObjectOpLowering, BuiltinRetOpLowering,
+             RevertOpLowering, MLoadOpLowering, MStoreOpLowering,
+             MCopyOpLowering, DataOffsetOpLowering, DataSizeOpLowering,
+             CodeSizeOpLowering, CodeCopyOpLowering, MemGuardOpLowering,
+             CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
              CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
              Keccak256OpLowering, LogOpLowering, CallerOpLowering>(
         &getContext());
@@ -2113,7 +2137,7 @@ struct ConvertSolToStandard
     ModuleOp mod = getOperation();
     SolTypeConverter tyConv;
     runStage1Conversion(mod, tyConv);
-    runStage2Conversion(mod, tyConv);
+    runStage2Conversion(mod);
     runStage3Conversion(mod, tyConv);
   }
 
