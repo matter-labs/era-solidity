@@ -33,7 +33,6 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -1983,20 +1982,7 @@ struct ConvertSolToStandard
   // simplify the implementation of this multi-staged lowering.
 
   /// Converts sol dialect ops except sol.contract and sol.func + related ops.
-  // FIXME: Since sol.func and related ops lowered in a different stage, we
-  // have to generate materializations like:
-  //
-  // sol.return <orig-val>
-  // to
-  // <mat> = <cast-op> <remap-val> -> <orig-ty>
-  // sol.return <mat>
-  //
-  // The <cast-op>s can only be lowered when sol.func + related ops are
-  // lowered.
-  //
-  // Is there a better way to handle this? I feel we should prioritize getting
-  // the sol.func + related ops lowering to be part of stage 1 due to the use
-  // of the type-converter.
+  /// This pass also legalizes all the sol dialect types.
   void runStage1Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
     OpBuilder b(mod.getContext());
     eravm::Builder eraB(b);
@@ -2013,32 +1999,12 @@ struct ConvertSolToStandard
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
                      sol::DataLocCastOp, sol::LoadOp, sol::StoreOp, sol::EmitOp,
-                     sol::RequireOp, UnrealizedConversionCastOp>();
+                     sol::RequireOp, sol::ConvCastOp>();
     tgt.addDynamicallyLegalOp<sol::FuncOp>([&](sol::FuncOp op) {
       return tyConv.isSignatureLegal(op.getFunctionType());
     });
     tgt.addDynamicallyLegalOp<sol::CallOp, sol::ReturnOp>(
         [&](Operation *op) { return tyConv.isLegal(op); });
-
-    // TODO: Remove this!
-    tgt.addDynamicallyLegalOp<sol::ConvCastOp>([&](sol::ConvCastOp op) -> bool {
-      Value inp = op.getOperand();
-
-      // FIXME: Confirm if this is required.
-      // True if the inp is a sol.func arg.
-      if (auto blkArg = dyn_cast<BlockArgument>(inp)) {
-        return isa<sol::FuncOp>(blkArg.getOwner()->getParentOp());
-      }
-
-      Operation *inpDefOp = inp.getDefiningOp();
-      std::vector<Operation *> users(op.getResult().getUsers().begin(),
-                                     op.getResult().getUsers().end());
-      // FIXME:
-      assert(users.size() == 1);
-
-      Operation *user = users[0];
-      return isa<sol::CallOp>(inpDefOp) || isa<sol::ReturnOp>(user);
-    });
 
     RewritePatternSet pats(&getContext());
     pats.add<AllocaOpLowering, MapOpLowering, DataLocCastOpLowering,
@@ -2049,13 +2015,6 @@ struct ConvertSolToStandard
              GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());
     pats.add<MallocOpLowering, AddrOfOpLowering, RequireOpLowering>(
         &getContext());
-
-    // TODO: Remove this! This never fixed my type reconciliation problems so
-    // far (most of the problems were due to a misconfigured TypeConverter
-    // and/or ConversionPattern etc.). But I'm always interested to see if it
-    // can.
-    // tgt.addIllegalOp<UnrealizedConversionCastOp>();
-    // populateReconcileUnrealizedCastsPatterns(pats);
 
     // Assign slots to state variables.
     mod.walk([&](sol::ContractOp contr) {
@@ -2107,8 +2066,8 @@ struct ConvertSolToStandard
     tgt.addIllegalDialect<sol::SolDialect>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering,
-             ConvCastOpLowering>(tyConv, &getContext());
+    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(tyConv,
+                                                               &getContext());
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();

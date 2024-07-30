@@ -272,8 +272,6 @@ set(mlir_libs
 	MLIRArithAttrToLLVMConversion
 	MLIRArithToLLVM
 
-	MLIRReconcileUnrealizedCasts
-
 	MLIRBuiltinToLLVMIRTranslation
 	MLIRLLVMToLLVMIRTranslation
 
