@@ -325,7 +325,8 @@ void SolidityToMLIRPass::genZeroedVal(mlir::Value addr) {
 
 mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
                                         Type const *dstTy) {
-  // Don't cast if we're casting to the same type
+  // Don't cast if we're casting to the same type (Type pointers having the same
+  // address should track the same type).
   if (srcTy == dstTy)
     return val;
 
@@ -362,6 +363,9 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
   const auto *dstIntTy = getAsIntTy(dstTy);
 
   if (srcIntTy && dstIntTy) {
+    if (*srcIntTy == *dstIntTy)
+      return val;
+
     // Generate extends.
     if (dstIntTy->numBits() > srcIntTy->numBits()) {
       return dstIntTy->isSigned()
@@ -382,9 +386,10 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
   // Casting between arrays/strings with different data-location.
   const auto *srcArrTy = dynamic_cast<ArrayType const *>(srcTy);
   const auto *dstArrTy = dynamic_cast<ArrayType const *>(dstTy);
-  if (srcArrTy) {
-    assert(dstArrTy);
-    assert(srcArrTy->location() != dstArrTy->location());
+  if (srcArrTy && dstArrTy) {
+    if (*srcArrTy == *dstArrTy)
+      return val;
+
     return b.create<mlir::sol::DataLocCastOp>(val.getLoc(), getType(dstArrTy),
                                               val);
   }
