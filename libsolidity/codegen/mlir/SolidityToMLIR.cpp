@@ -114,8 +114,8 @@ private:
   /// and selector) in the contract.
   mlir::ArrayAttr getInterfaceFnsAttr(ContractDefinition const &cont);
 
-  /// Generates the ir to zero the allocation at `addr`.
-  void genZeroedVal(mlir::Value addr);
+  /// Generates the ir to zero the allocation.
+  void genZeroedVal(mlir::sol::AllocaOp addr);
 
   /// Returns the cast from `val` having the corresponding mlir type of
   /// `srcTy` to a value having the corresponding mlir type of `dstTy`
@@ -311,16 +311,24 @@ SolidityToMLIRPass::getInterfaceFnsAttr(ContractDefinition const &cont) {
   return b.getArrayAttr(interfaceFnAttrs);
 }
 
-void SolidityToMLIRPass::genZeroedVal(mlir::Value addr) {
-  assert(mlir::isa<mlir::sol::PointerType>(addr.getType()) &&
-         "NYI: Other ref types");
+void SolidityToMLIRPass::genZeroedVal(mlir::sol::AllocaOp addr) {
+  mlir::Location loc = addr.getLoc();
 
-  auto addrTy = mlir::cast<mlir::sol::PointerType>(addr.getType());
+  auto pointeeTy =
+      mlir::cast<mlir::sol::PointerType>(addr.getType()).getPointeeType();
 
-  auto pointeeTy = mlir::cast<mlir::IntegerType>(addrTy.getPointeeType());
-  auto zeroVal = b.create<mlir::arith::ConstantIntOp>(addr.getLoc(), 0,
-                                                      pointeeTy.getWidth());
-  b.create<mlir::sol::StoreOp>(addr.getLoc(), zeroVal, addr);
+  mlir::Value val;
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(pointeeTy)) {
+    val = b.create<mlir::arith::ConstantIntOp>(loc, 0, intTy.getWidth());
+  } else if (auto stringTy = mlir::dyn_cast<mlir::sol::StringType>(pointeeTy)) {
+    assert(stringTy.getDataLocation() == mlir::sol::DataLocation::Memory &&
+           "NYI");
+    val = b.create<mlir::sol::MallocOp>(loc, stringTy, stringTy,
+                                        /*size=*/mlir::Value{});
+  }
+  assert(val);
+
+  b.create<mlir::sol::StoreOp>(loc, val, addr);
 }
 
 mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
@@ -695,10 +703,8 @@ bool SolidityToMLIRPass::visit(
   mlir::Location loc = getLoc(varDeclStmt.location());
 
   mlir::Type varTy = getType(varDecl->type());
-  mlir::Type allocTy = varTy;
-  if (!mlir::sol::isRefType(varTy))
-    allocTy = mlir::sol::PointerType::get(b.getContext(), varTy,
-                                          mlir::sol::DataLocation::Stack);
+  mlir::Type allocTy = mlir::sol::PointerType::get(
+      b.getContext(), varTy, mlir::sol::DataLocation::Stack);
 
   auto addr = b.create<mlir::sol::AllocaOp>(loc, allocTy);
   trackLocalVarAddr(varDecl, addr);
