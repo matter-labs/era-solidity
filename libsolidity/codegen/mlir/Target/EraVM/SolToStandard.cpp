@@ -1607,21 +1607,22 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   void genDispatch(sol::ContractOp contrOp, sol::ObjectOp objOp,
                    PatternRewriter &r) const {
     Location loc = contrOp.getLoc();
-    ArrayAttr ifcFnsAttr = contrOp.getInterfaceFnsAttr();
 
+    ArrayAttr ifcFnsAttr = contrOp.getInterfaceFnsAttr();
+    // Do nothing if there are no interface functions.
     if (ifcFnsAttr.empty())
       return;
 
     solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
+    // Generate `if iszero(lt(calldatasize(), 4))` and set the insertion point
+    // to its then block.
     auto callDataSz = r.create<sol::CallDataSizeOp>(loc);
-    // Generate `iszero(lt(calldatasize(), 4))`.
     auto callDataSzCmp = r.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::uge, callDataSz, bExt.genI256Const(4));
     auto ifOp =
         r.create<scf::IfOp>(loc, callDataSzCmp, /*withElseRegion=*/false);
-
     OpBuilder::InsertionGuard insertGuard(r);
     r.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
@@ -1632,6 +1633,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     callDataSelector =
         r.create<arith::TruncIOp>(loc, r.getIntegerType(32), callDataSelector);
 
+    // Create an attribute to track all the selectors.
     std::vector<uint32_t> selectors;
     for (Attribute attr : ifcFnsAttr) {
       DictionaryAttr ifcFnAttr = cast<DictionaryAttr>(attr);
