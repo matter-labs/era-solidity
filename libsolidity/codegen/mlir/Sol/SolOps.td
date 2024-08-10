@@ -389,6 +389,16 @@ def Sol_MapOp : Sol_Op<"map"> {
   }];
 }
 
+def Sol_CopyOp : Sol_Op<"copy"> {
+  // TODO: Add summary and desc.
+
+  let arguments = (ins AnyType:$src, AnyType:$dst);
+
+  let assemblyFormat = [{
+    $src `,` $dst attr-dict `:` type($src) `,` type($dst)
+  }];
+}
+
 // TODO: Remove this.
 def Sol_GetSlotOp : Sol_Op<"get_slot"> {
   let summary = "Maps slot+key to slot";

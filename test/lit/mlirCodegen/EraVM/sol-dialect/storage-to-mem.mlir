@@ -247,8 +247,8 @@ module {
 // CHECK-NEXT:     %4 = llvm.load %3 {alignment = 1 : i64} : !llvm.ptr<5> -> i256
 // CHECK-NEXT:     %c31_i256 = arith.constant 31 : i256
 // CHECK-NEXT:     %5 = arith.addi %4, %c31_i256 : i256
-// CHECK-NEXT:     %c4294967264_i256 = arith.constant 4294967264 : i256
-// CHECK-NEXT:     %6 = arith.andi %5, %c4294967264_i256 : i256
+// CHECK-NEXT:     %c-32_i256 = arith.constant -32 : i256
+// CHECK-NEXT:     %6 = arith.andi %5, %c-32_i256 : i256
 // CHECK-NEXT:     %c32_i256_1 = arith.constant 32 : i256
 // CHECK-NEXT:     %7 = arith.addi %6, %c32_i256_1 : i256
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
@@ -282,8 +282,8 @@ module {
 // CHECK-NEXT:     %16 = arith.addi %9, %c32_i256 : i256
 // CHECK-NEXT:     %c31_i256_3 = arith.constant 31 : i256
 // CHECK-NEXT:     %17 = arith.addi %4, %c31_i256_3 : i256
-// CHECK-NEXT:     %c4294967264_i256_4 = arith.constant 4294967264 : i256
-// CHECK-NEXT:     %18 = arith.andi %17, %c4294967264_i256_4 : i256
+// CHECK-NEXT:     %c-32_i256_4 = arith.constant -32 : i256
+// CHECK-NEXT:     %18 = arith.andi %17, %c-32_i256_4 : i256
 // CHECK-NEXT:     %c0 = arith.constant 0 : index
 // CHECK-NEXT:     %19 = arith.index_castui %18 : i256 to index
 // CHECK-NEXT:     %c1 = arith.constant 1 : index
@@ -312,8 +312,8 @@ module {
 // CHECK-NEXT:     %4 = llvm.load %3 {alignment = 1 : i64} : !llvm.ptr<5> -> i256
 // CHECK-NEXT:     %c31_i256 = arith.constant 31 : i256
 // CHECK-NEXT:     %5 = arith.addi %4, %c31_i256 : i256
-// CHECK-NEXT:     %c4294967264_i256 = arith.constant 4294967264 : i256
-// CHECK-NEXT:     %6 = arith.andi %5, %c4294967264_i256 : i256
+// CHECK-NEXT:     %c-32_i256 = arith.constant -32 : i256
+// CHECK-NEXT:     %6 = arith.andi %5, %c-32_i256 : i256
 // CHECK-NEXT:     %c32_i256_1 = arith.constant 32 : i256
 // CHECK-NEXT:     %7 = arith.addi %6, %c32_i256_1 : i256
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256
@@ -347,8 +347,8 @@ module {
 // CHECK-NEXT:     %16 = arith.addi %9, %c32_i256 : i256
 // CHECK-NEXT:     %c31_i256_3 = arith.constant 31 : i256
 // CHECK-NEXT:     %17 = arith.addi %4, %c31_i256_3 : i256
-// CHECK-NEXT:     %c4294967264_i256_4 = arith.constant 4294967264 : i256
-// CHECK-NEXT:     %18 = arith.andi %17, %c4294967264_i256_4 : i256
+// CHECK-NEXT:     %c-32_i256_4 = arith.constant -32 : i256
+// CHECK-NEXT:     %18 = arith.andi %17, %c-32_i256_4 : i256
 // CHECK-NEXT:     %c0 = arith.constant 0 : index
 // CHECK-NEXT:     %19 = arith.index_castui %18 : i256 to index
 // CHECK-NEXT:     %c1 = arith.constant 1 : index

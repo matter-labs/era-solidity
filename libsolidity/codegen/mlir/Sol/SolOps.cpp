@@ -84,10 +84,24 @@ bool mlir::sol::isRefType(Type ty) {
          isa<PointerType>(ty) || isa<MappingType>(ty);
 }
 
+bool mlir::sol::isNonPtrRefType(Type ty) {
+  return isRefType(ty) && !isa<PointerType>(ty);
+}
+
 bool mlir::sol::isLeftAligned(Type ty) {
   if (isa<IntegerType>(ty))
     return false;
   llvm_unreachable("NYI: isLeftAligned of other types");
+}
+
+bool mlir::sol::isDynamicallySized(Type ty) {
+  if (isa<StringType>(ty))
+    return true;
+
+  if (auto arrTy = dyn_cast<ArrayType>(ty))
+    return arrTy.isDynSized();
+
+  return false;
 }
 
 bool mlir::sol::hasDynamicallySizedElt(Type ty) {

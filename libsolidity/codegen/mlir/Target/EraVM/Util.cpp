@@ -624,6 +624,89 @@ Value eravm::Builder::genMemAllocForDynArray(Value sizeVar, Value sizeInBytes,
   return memPtr;
 }
 
+Value eravm::Builder::genLoad(Value addr, sol::DataLocation dataLoc,
+                              std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  if (dataLoc == sol::DataLocation::Memory)
+    return b.create<sol::MLoadOp>(loc, addr);
+
+  if (dataLoc == sol::DataLocation::Storage)
+    return b.create<sol::SLoadOp>(loc, addr);
+
+  llvm_unreachable("NYI");
+}
+
+void eravm::Builder::genStore(Value val, Value addr, sol::DataLocation dataLoc,
+                              std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  if (dataLoc == sol::DataLocation::Memory) {
+    b.create<sol::MStoreOp>(loc, addr, val);
+  } else if (dataLoc == sol::DataLocation::Storage) {
+    b.create<sol::SStoreOp>(loc, addr, val);
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
+
+void eravm::Builder::genCopyLoop(Value srcAddr, Value dstAddr,
+                                 Value sizeInWords,
+                                 sol::DataLocation srcDataLoc,
+                                 sol::DataLocation dstDataLoc,
+                                 std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  auto genAddrAtIdx = [&](Value baseAddr, Value idx, sol::DataLocation dataLoc,
+                          Location loc) {
+    if (dataLoc == sol::DataLocation::Memory) {
+      Value memIdx = b.create<arith::MulIOp>(loc, idx, bExt.genI256Const(32));
+      return b.create<arith::AddIOp>(loc, baseAddr, memIdx);
+    }
+
+    if (dataLoc == sol::DataLocation::Storage) {
+      return b.create<arith::AddIOp>(loc, baseAddr, idx);
+    }
+
+    llvm_unreachable("NYI");
+  };
+
+  b.create<scf::ForOp>(
+      loc, /*lowerBound=*/bExt.genIdxConst(0),
+      /*upperBound=*/bExt.genCastToIdx(sizeInWords),
+      /*step=*/bExt.genIdxConst(1),
+      /*iterArgs=*/std::nullopt,
+      /*builder=*/
+      [&](OpBuilder &b, Location loc, Value indVar, ValueRange iterArgs) {
+        Value i256IndVar = bExt.genCastToI256(indVar);
+
+        Value srcAddrAtIdx = genAddrAtIdx(srcAddr, i256IndVar, srcDataLoc, loc);
+        Value val = genLoad(srcAddrAtIdx, srcDataLoc, loc);
+        Value dstAddrAtIdx = genAddrAtIdx(dstAddr, i256IndVar, dstDataLoc, loc);
+        genStore(val, dstAddrAtIdx, dstDataLoc, loc);
+
+        b.create<scf::YieldOp>(loc);
+      });
+}
+
+Value eravm::Builder::genDataAddrPtr(Value addr, sol::DataLocation dataLoc,
+                                     std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+  solidity::mlirgen::BuilderExt bExt(b, loc);
+
+  // Return the address after the first word (memory/storage).
+  if (dataLoc == sol::DataLocation::Memory) {
+    return b.create<arith::AddIOp>(loc, addr, bExt.genI256Const(32));
+  }
+  if (dataLoc == sol::DataLocation::Storage) {
+    return b.create<arith::AddIOp>(loc, addr, bExt.genI256Const(1));
+  }
+
+  llvm_unreachable("NYI");
+}
+
 void eravm::Builder::genPanic(solidity::util::PanicCode code, Value cond,
                               std::optional<Location> locArg) {
   // TODO: Move this to the evm namespace.

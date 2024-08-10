@@ -1104,6 +1104,42 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
   }
 };
 
+struct CopyOpLowering : public OpConversionPattern<sol::CopyOp> {
+  using OpConversionPattern<sol::CopyOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::CopyOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
+
+    sol::DataLocation srcDataLoc = sol::getDataLocation(op.getSrc().getType());
+    sol::DataLocation dstDataLoc = sol::getDataLocation(op.getDst().getType());
+    assert(srcDataLoc == sol::DataLocation::Memory &&
+           dstDataLoc == sol::DataLocation::Storage && "NYI");
+
+    if (sol::isDynamicallySized(op.getSrc().getType())) {
+      assert(sol::isDynamicallySized(op.getDst().getType()));
+
+      // Generate the size update.
+      Value srcSize = eraB.genLoad(adaptor.getSrc(), srcDataLoc);
+      eraB.genStore(srcSize, adaptor.getDst(), dstDataLoc);
+
+      // Generate the copy loop.
+      Value srcDataAddr = eraB.genDataAddrPtr(adaptor.getSrc(), srcDataLoc);
+      Value dstDataAddr = eraB.genDataAddrPtr(adaptor.getDst(), dstDataLoc);
+      Value sizeInWords = bExt.genRoundUpToMultiple<32>(srcSize);
+      eraB.genCopyLoop(srcDataAddr, dstDataAddr, sizeInWords, srcDataLoc,
+                       dstDataLoc);
+    } else {
+      llvm_unreachable("NYI");
+    }
+
+    r.eraseOp(op);
+    return success();
+  }
+};
+
 struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
   using OpConversionPattern<sol::DataLocCastOp>::OpConversionPattern;
 
@@ -2000,8 +2036,8 @@ struct ConvertSolToStandard
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
-                     sol::DataLocCastOp, sol::LoadOp, sol::StoreOp, sol::EmitOp,
-                     sol::RequireOp, sol::ConvCastOp>();
+                     sol::CopyOp, sol::DataLocCastOp, sol::LoadOp, sol::StoreOp,
+                     sol::EmitOp, sol::RequireOp, sol::ConvCastOp>();
     tgt.addDynamicallyLegalOp<sol::FuncOp>([&](sol::FuncOp op) {
       return tyConv.isSignatureLegal(op.getFunctionType());
     });
@@ -2009,9 +2045,9 @@ struct ConvertSolToStandard
         [&](Operation *op) { return tyConv.isLegal(op); });
 
     RewritePatternSet pats(&getContext());
-    pats.add<AllocaOpLowering, MapOpLowering, DataLocCastOpLowering,
-             LoadOpLowering, StoreOpLowering, ConvCastOpLowering,
-             EmitOpLowering>(tyConv, &getContext());
+    pats.add<AllocaOpLowering, MapOpLowering, CopyOpLowering,
+             DataLocCastOpLowering, LoadOpLowering, StoreOpLowering,
+             ConvCastOpLowering, EmitOpLowering>(tyConv, &getContext());
     populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
     pats.add<GenericTypeConversion<sol::CallOp>,
              GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());

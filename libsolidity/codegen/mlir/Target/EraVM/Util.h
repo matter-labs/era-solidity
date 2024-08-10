@@ -255,6 +255,33 @@ public:
   mlir::Value
   genMemAllocForDynArray(mlir::Value sizeVar, mlir::Value sizeInBytes,
                          std::optional<mlir::Location> locArg = std::nullopt);
+
+  //
+  // TODO? Should we work with the high level types + OpAdaptor for the APIs
+  // that work with low level integral type pointers?
+  //
+
+  /// Generates a low level integral type pointer to the address holding the
+  /// data of a dynamic allocation.
+  mlir::Value
+  genDataAddrPtr(mlir::Value addr, mlir::sol::DataLocation dataLoc,
+                 std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a load from the low level integral type address.
+  mlir::Value genLoad(mlir::Value addr, mlir::sol::DataLocation dataLoc,
+                      std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a store to the low level integral type address.
+  void genStore(mlir::Value val, mlir::Value addr,
+                mlir::sol::DataLocation dataLoc,
+                std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a loop to copy the data. This works for low level integral type
+  /// addresses.
+  void genCopyLoop(mlir::Value srcAddr, mlir::Value dstAddr,
+                   mlir::Value sizeInWords, mlir::sol::DataLocation srcDataLoc,
+                   mlir::sol::DataLocation dstDataLoc,
+                   std::optional<mlir::Location> locArg = std::nullopt);
 };
 
 } // namespace eravm

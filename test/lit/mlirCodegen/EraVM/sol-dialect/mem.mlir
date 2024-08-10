@@ -747,8 +747,8 @@ module {
 // CHECK-NEXT:     %c5_i256 = arith.constant 5 : i256
 // CHECK-NEXT:     %c31_i256 = arith.constant 31 : i256
 // CHECK-NEXT:     %0 = arith.addi %c5_i256, %c31_i256 : i256
-// CHECK-NEXT:     %c4294967264_i256 = arith.constant 4294967264 : i256
-// CHECK-NEXT:     %1 = arith.andi %0, %c4294967264_i256 : i256
+// CHECK-NEXT:     %c-32_i256 = arith.constant -32 : i256
+// CHECK-NEXT:     %1 = arith.andi %0, %c-32_i256 : i256
 // CHECK-NEXT:     %c32_i256 = arith.constant 32 : i256
 // CHECK-NEXT:     %2 = arith.addi %1, %c32_i256 : i256
 // CHECK-NEXT:     %c64_i256 = arith.constant 64 : i256

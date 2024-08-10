@@ -123,7 +123,7 @@ contract C {
 // CHECK-NEXT:   %36 = inttoptr i256 %35 to ptr addrspace(1)
 // CHECK-NEXT:   store i256 0, ptr addrspace(1) %36, align 1
 // CHECK-NEXT:   %37 = add i256 %29, 31
-// CHECK-NEXT:   %38 = and i256 %37, 4294967264
+// CHECK-NEXT:   %38 = and i256 %37, -32
 // CHECK-NEXT:   %39 = add i256 %32, %38
 // CHECK-NEXT:   %40 = add i256 %25, 32
 // CHECK-NEXT:   %41 = sub i256 %39, %25
@@ -210,7 +210,7 @@ contract C {
 // CHECK-NEXT:   %1 = call i256 @__sha3(ptr addrspace(1) null, i256 32, i1 false)
 // CHECK-NEXT:   %2 = load i256, ptr addrspace(5) null, align 1
 // CHECK-NEXT:   %3 = add i256 %2, 31
-// CHECK-NEXT:   %4 = and i256 %3, 4294967264
+// CHECK-NEXT:   %4 = and i256 %3, -32
 // CHECK-NEXT:   %5 = add i256 %4, 32
 // CHECK-NEXT:   %6 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
 // CHECK-NEXT:   %7 = add i256 %6, %5
@@ -232,7 +232,7 @@ contract C {
 // CHECK-NEXT:   store i256 %2, ptr addrspace(1) %13, align 1
 // CHECK-NEXT:   %14 = add i256 %6, 32
 // CHECK-NEXT:   %15 = add i256 %2, 31
-// CHECK-NEXT:   %16 = and i256 %15, 4294967264
+// CHECK-NEXT:   %16 = and i256 %15, -32
 // CHECK-NEXT:   br label %17
 // CHECK-EMPTY:
 // CHECK-NEXT: 17:                                               ; preds = %20, %12
@@ -477,7 +477,7 @@ contract C {
 // ASM-NEXT: 	add	64, r2, r2
 // ASM-NEXT: 	add	r2, r0, stack-[12]
 // ASM-NEXT: 	add	r2, r0, stack-[13]
-// ASM-NEXT: 	and	@CPI2_4[0], r3, r4
+// ASM-NEXT: 	and	@CPI2_3[0], r3, r4
 // ASM-NEXT: 	add	r4, r0, stack-[14]
 // ASM-NEXT: 	and	31, r3, r3
 // ASM-NEXT: 	add	r3, r0, stack-[15]
@@ -685,13 +685,13 @@ contract C {
 // ASM-NEXT: 	sload	r0, r1
 // ASM-NEXT: 	add	r1, r0, stack-[6]
 // ASM-NEXT: 	add	31, r1, r1
-// ASM-NEXT: 	and	@CPI5_0[0], r1, r1
+// ASM-NEXT: 	and	@CPI5_3[0], r1, r1
 // ASM-NEXT: 	ld.1	64, r2
 // ASM-NEXT: 	add	r2, r0, stack-[7]
 // ASM-NEXT: 	add	r1, r2, r1
 // ASM-NEXT: 	add	32, r1, r1
 // ASM-NEXT: 	add	r1, r0, stack-[8]
-// ASM-NEXT: 	sub.s!	@CPI5_1[0], r1, r1
+// ASM-NEXT: 	sub.s!	@CPI5_0[0], r1, r1
 // ASM-NEXT: 	jump.gt	@.BB5_1
 // ASM-NEXT: 	jump	@.BB5_6
 // ASM-NEXT: .BB5_6:
@@ -700,7 +700,7 @@ contract C {
 // ASM-NEXT: 	jump.ge	@.BB5_2
 // ASM-NEXT: 	jump	@.BB5_1
 // ASM-NEXT: .BB5_1:
-// ASM-NEXT: 	add	@CPI5_2[0], r0, r1
+// ASM-NEXT: 	add	@CPI5_1[0], r0, r1
 // ASM-NEXT: 	st.1	0, r1
 // ASM-NEXT: 	add	65, r0, r1
 // ASM-NEXT: 	st.1	4, r1
@@ -718,7 +718,7 @@ contract C {
 // ASM-NEXT: 	st.1	r2, r1
 // ASM-NEXT: 	add	32, r2, stack-[2]
 // ASM-NEXT: 	add	31, r1, r1
-// ASM-NEXT: 	and	@CPI5_0[0], r1, stack-[3]
+// ASM-NEXT: 	and	@CPI5_3[0], r1, stack-[3]
 // ASM-NEXT: 	add	r0, r0, stack-[4]
 // ASM-NEXT: 	jump	@.BB5_3
 // ASM-NEXT: .BB5_3:
@@ -727,14 +727,14 @@ contract C {
 // ASM-NEXT: 	add	r1, r0, stack-[1]
 // ASM-NEXT: 	sub!	r1, r3, r2
 // ASM-NEXT: 	add	r0, r0, r2
-// ASM-NEXT: 	add.ge	@CPI5_3[0], r0, r2
-// ASM-NEXT: 	and	@CPI5_3[0], r3, r4
-// ASM-NEXT: 	and	@CPI5_3[0], r1, r1
+// ASM-NEXT: 	add.ge	@CPI5_2[0], r0, r2
+// ASM-NEXT: 	and	@CPI5_2[0], r3, r4
+// ASM-NEXT: 	and	@CPI5_2[0], r1, r1
 // ASM-NEXT: 	xor	r1, r4, r3
 // ASM-NEXT: 	sub!	r1, r4, r1
 // ASM-NEXT: 	add	r0, r0, r1
-// ASM-NEXT: 	add.lt	@CPI5_3[0], r0, r1
-// ASM-NEXT: 	sub.s!	@CPI5_3[0], r3, r3
+// ASM-NEXT: 	add.lt	@CPI5_2[0], r0, r1
+// ASM-NEXT: 	sub.s!	@CPI5_2[0], r3, r3
 // ASM-NEXT: 	add.ne	r2, r0, r1
 // ASM-NEXT: 	sub!	r1, r0, r1
 // ASM-NEXT: 	jump.ne	@.BB5_5
@@ -909,15 +909,13 @@ contract C {
 // ASM-NEXT: CPI2_2:
 // ASM-NEXT: 	.cell	3263152901
 // ASM-NEXT: CPI2_3:
-// ASM-NEXT: CPI5_0:
-// ASM-NEXT: 	.cell	4294967264
-// ASM-NEXT: CPI2_4:
-// ASM-NEXT: 	.cell	-32
-// ASM-NEXT: CPI5_1:
-// ASM-NEXT: 	.cell	18446744073709551615
-// ASM-NEXT: CPI5_2:
-// ASM-NEXT: 	.cell	35408467139433450592217433187231851964531694900788300625387963629091585785856
 // ASM-NEXT: CPI5_3:
+// ASM-NEXT: 	.cell	-32
+// ASM-NEXT: CPI5_0:
+// ASM-NEXT: 	.cell	18446744073709551615
+// ASM-NEXT: CPI5_1:
+// ASM-NEXT: 	.cell	35408467139433450592217433187231851964531694900788300625387963629091585785856
+// ASM-NEXT: CPI5_2:
 // ASM-NEXT: 	.cell	-57896044618658097711785492504343953926634992332820282019728792003956564819968
 // ASM-NEXT: CPI9_1:
 // ASM-NEXT: 	.cell	904625697166532776746648320380374280103671755200316906558262375061821325312

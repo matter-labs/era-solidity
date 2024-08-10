@@ -258,7 +258,7 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Identifier const *id) {
           currContr.lookupSymbol<mlir::sol::StateVarOp>(var->name());
       assert(stateVarOp);
       mlir::Type addrTy;
-      if (mlir::sol::isRefType(stateVarOp.getType()))
+      if (mlir::sol::isNonPtrRefType(stateVarOp.getType()))
         addrTy = stateVarOp.getType();
       else
         addrTy =
@@ -282,8 +282,7 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Identifier const *id) {
   auto addr = genLValExpr(id);
 
   // Don't load non pointer ref types.
-  if (mlir::sol::isRefType(addr.getType()) &&
-      !mlir::isa<mlir::sol::PointerType>(addr.getType()))
+  if (mlir::sol::isNonPtrRefType(addr.getType()))
     return addr;
 
   return b.create<mlir::sol::LoadOp>(getLoc(id->location()), addr);
@@ -474,7 +473,7 @@ mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
   if (auto mappingTy =
           mlir::dyn_cast<mlir::sol::MappingType>(baseExpr.getType())) {
     mlir::Type addrTy;
-    if (mlir::sol::isRefType(mappingTy.getValType()))
+    if (mlir::sol::isNonPtrRefType(mappingTy.getValType()))
       addrTy = mappingTy.getValType();
     else
       addrTy =
@@ -626,7 +625,15 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
     mlir::Value rhs = genRValExpr(&asgnStmt->rightHandSide());
 
     if (asgnStmt->assignmentOperator() == Token::Assign) {
-      b.create<mlir::sol::StoreOp>(loc, rhs, lhs);
+      mlir::Type lhsTy = lhs.getType();
+      mlir::Type rhsTy = rhs.getType();
+
+      if (mlir::sol::isNonPtrRefType(lhsTy) &&
+          mlir::sol::isNonPtrRefType(rhsTy)) {
+        b.create<mlir::sol::CopyOp>(loc, rhs, lhs);
+      } else {
+        b.create<mlir::sol::StoreOp>(loc, rhs, lhs);
+      }
 
       // Compound assignment statement
     } else {

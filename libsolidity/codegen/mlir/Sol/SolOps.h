@@ -52,13 +52,19 @@ using Index = uint64_t;
 /// sol dialect version of solc's Type::leftAligned().
 bool isLeftAligned(Type ty);
 
-/// Returns true if type or its element or member type type (recursively) is
+/// Returns true if the type is dynamically sized.
+bool isDynamicallySized(Type ty);
+
+/// Returns true if the type or its element or member type (recursively) is
 /// dynamically sized.
 bool hasDynamicallySizedElt(Type ty);
 
 /// Returns true if the type is a reference type (not exactly solidity's
 /// reference types).
 bool isRefType(Type ty);
+
+/// Returns true if the type is a reference type but not a pointer type.
+bool isNonPtrRefType(Type ty);
 
 } // namespace sol
 } // namespace mlir
