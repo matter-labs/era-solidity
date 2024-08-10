@@ -896,7 +896,6 @@ contract C {
 // ASM-NEXT: memory_pointer:
 // ASM-NEXT: 	.cell	0
 // ASM-EMPTY:
-// ASM-NEXT: 	.note.GNU-stack
 // ASM-NEXT: 	.rodata
 // ASM-NEXT: CPI2_0:
 // ASM-NEXT: 	.cell	2776958069
