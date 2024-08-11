@@ -1147,13 +1147,17 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
+
     Type srcTy = op.getInp().getType();
     Type dstTy = op.getType();
+    sol::DataLocation srcDataLoc = sol::getDataLocation(srcTy);
+    sol::DataLocation dstDataLoc = sol::getDataLocation(dstTy);
 
     mlir::Value resAddr;
     // From storage to memory.
-    if (sol::getDataLocation(srcTy) == sol::DataLocation::Storage &&
-        sol::getDataLocation(dstTy) == sol::DataLocation::Memory) {
+    if (srcDataLoc == sol::DataLocation::Storage &&
+        dstDataLoc == sol::DataLocation::Memory) {
       // String type
       if (auto srcStrTy = dyn_cast<sol::StringType>(srcTy)) {
         assert(isa<sol::StringType>(dstTy));
@@ -1184,26 +1188,8 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
         // the store of the size field).
         auto dataMemAddr = r.create<arith::AddIOp>(loc, memAddr, thirtyTwo);
         auto sizeInWords = bExt.genRoundUpToMultiple<32>(sizeInBytes);
-        r.create<scf::ForOp>(
-            loc, /*lowerBound=*/bExt.genIdxConst(0),
-            /*upperBound=*/bExt.genCastToIdx(sizeInWords),
-            /*step=*/bExt.genIdxConst(1), /*iterArgs=*/std::nullopt,
-            /*builder=*/
-            [&](OpBuilder &b, Location loc, Value indVar, ValueRange iterArgs) {
-              Value i256IndVar = bExt.genCastToI256(indVar);
-
-              Value slotIdx =
-                  r.create<arith::AddIOp>(loc, dataSlot, i256IndVar);
-              Value slotVal = r.create<sol::SLoadOp>(loc, slotIdx);
-
-              Value memIdx =
-                  r.create<arith::MulIOp>(loc, i256IndVar, thirtyTwo);
-              Value memAddrAtIdx =
-                  r.create<arith::AddIOp>(loc, dataMemAddr, memIdx);
-
-              r.create<sol::MStoreOp>(loc, memAddrAtIdx, slotVal);
-              b.create<scf::YieldOp>(loc);
-            });
+        eraB.genCopyLoop(dataSlot, dataMemAddr, sizeInWords, srcDataLoc,
+                         dstDataLoc);
       } else {
         llvm_unreachable("NYI");
       }

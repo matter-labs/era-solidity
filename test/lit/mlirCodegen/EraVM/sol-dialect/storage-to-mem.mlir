@@ -292,7 +292,8 @@ module {
 // CHECK-NEXT:       %21 = arith.addi %2, %20 : i256
 // CHECK-NEXT:       %22 = llvm.inttoptr %21 : i256 to !llvm.ptr<5>
 // CHECK-NEXT:       %23 = llvm.load %22 {alignment = 1 : i64} : !llvm.ptr<5> -> i256
-// CHECK-NEXT:       %24 = arith.muli %20, %c32_i256 : i256
+// CHECK-NEXT:       %c32_i256_5 = arith.constant 32 : i256
+// CHECK-NEXT:       %24 = arith.muli %20, %c32_i256_5 : i256
 // CHECK-NEXT:       %25 = arith.addi %16, %24 : i256
 // CHECK-NEXT:       %26 = llvm.inttoptr %25 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:       llvm.store %23, %26 {alignment = 1 : i64} : i256, !llvm.ptr<1>
@@ -357,7 +358,8 @@ module {
 // CHECK-NEXT:       %21 = arith.addi %2, %20 : i256
 // CHECK-NEXT:       %22 = llvm.inttoptr %21 : i256 to !llvm.ptr<5>
 // CHECK-NEXT:       %23 = llvm.load %22 {alignment = 1 : i64} : !llvm.ptr<5> -> i256
-// CHECK-NEXT:       %24 = arith.muli %20, %c32_i256 : i256
+// CHECK-NEXT:       %c32_i256_5 = arith.constant 32 : i256
+// CHECK-NEXT:       %24 = arith.muli %20, %c32_i256_5 : i256
 // CHECK-NEXT:       %25 = arith.addi %16, %24 : i256
 // CHECK-NEXT:       %26 = llvm.inttoptr %25 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:       llvm.store %23, %26 {alignment = 1 : i64} : i256, !llvm.ptr<1>
