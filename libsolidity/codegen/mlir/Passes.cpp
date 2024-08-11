@@ -123,6 +123,27 @@ static void runLLVMOptPipeline(llvm::Module *mod, char level,
   }
 }
 
+static std::unique_ptr<llvm::Module>
+genLLVMIR(mlir::ModuleOp mod, solidity::mlirgen::Target tgt,
+          mlir::PassManager &passMgr, llvm::TargetMachine const &tgtMach,
+          llvm::LLVMContext &llvmCtx) {
+  // Convert the module's ir to llvm dialect.
+  addConversionPasses(passMgr, tgt);
+  if (mlir::failed(passMgr.run(mod)))
+    llvm_unreachable("Conversion to llvm dialect failed");
+
+  // Translate the llvm dialect to llvm-ir.
+  mlir::registerLLVMDialectTranslation(*passMgr.getContext());
+  mlir::registerBuiltinDialectTranslation(*passMgr.getContext());
+  std::unique_ptr<llvm::Module> llvmMod =
+      mlir::translateModuleToLLVMIR(mod, llvmCtx);
+
+  // Set target specfic info in the llvm module.
+  setTgtSpecificInfoInModule(tgt, *llvmMod, tgtMach);
+
+  return llvmMod;
+}
+
 bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
                               mlir::ModuleOp mod) {
   mlir::PassManager passMgr(&ctx);
@@ -136,23 +157,20 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
     assert(job.tgt != Target::Undefined);
     passMgr.addPass(mlir::sol::createConvertSolToStandardPass(job.tgt));
     if (mlir::failed(passMgr.run(mod)))
-      return false;
+      llvm_unreachable("Conversion to standard dialects failed");
     mod.print(llvm::outs());
     break;
   case Action::PrintLLVMIR: {
     assert(job.tgt != Target::Undefined);
-    addConversionPasses(passMgr, job.tgt);
-    if (mlir::failed(passMgr.run(mod)))
-      return false;
-    mlir::registerLLVMDialectTranslation(ctx);
-    mlir::registerBuiltinDialectTranslation(ctx);
+
+    // Generate llvm-ir.
+    std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(job.tgt);
+    assert(tgtMach);
     std::unique_ptr<llvm::Module> llvmMod =
-        mlir::translateModuleToLLVMIR(mod, llvmCtx);
+        genLLVMIR(mod, job.tgt, passMgr, *tgtMach, llvmCtx);
     assert(llvmMod);
 
     // Run the llvm optimization pipeline.
-    std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(job.tgt);
-    assert(tgtMach);
     setTgtMachOpt(tgtMach.get(), job.optLevel);
     runLLVMOptPipeline(llvmMod.get(), job.optLevel, tgtMach.get());
 
@@ -162,21 +180,13 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
   case Action::PrintAsm:
   case Action::GenObj: {
     assert(job.tgt != Target::Undefined);
-    addConversionPasses(passMgr, job.tgt);
-    if (mlir::failed(passMgr.run(mod)))
-      return false;
-    mlir::registerLLVMDialectTranslation(ctx);
-    mlir::registerBuiltinDialectTranslation(ctx);
-    std::unique_ptr<llvm::Module> llvmMod =
-        mlir::translateModuleToLLVMIR(mod, llvmCtx);
-    assert(llvmMod);
 
-    // Create TargetMachine from `tgt`
+    // Create TargetMachine and generate llvm-ir.
     std::unique_ptr<llvm::TargetMachine> tgtMach = createTargetMachine(job.tgt);
     assert(tgtMach);
-
-    // Set target specfic info in `llvmMod`
-    setTgtSpecificInfoInModule(job.tgt, *llvmMod, *tgtMach);
+    std::unique_ptr<llvm::Module> llvmMod =
+        genLLVMIR(mod, job.tgt, passMgr, *tgtMach, llvmCtx);
+    assert(llvmMod);
 
     // Run the llvm optimization pipeline.
     setTgtMachOpt(tgtMach.get(), job.optLevel);
