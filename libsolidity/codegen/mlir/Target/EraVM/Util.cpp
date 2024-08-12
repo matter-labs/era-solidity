@@ -314,8 +314,7 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
   auto genLoad = [&](Value addr) -> Value {
     if (fromMem)
       return b.create<sol::MLoadOp>(loc, headAddr);
-    else
-      return b.create<sol::CallDataLoadOp>(loc, headAddr);
+    return b.create<sol::CallDataLoadOp>(loc, headAddr);
   };
 
   for (auto ty : tys) {
