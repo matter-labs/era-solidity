@@ -1113,13 +1113,15 @@ struct CopyOpLowering : public OpConversionPattern<sol::CopyOp> {
     solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
-    sol::DataLocation srcDataLoc = sol::getDataLocation(op.getSrc().getType());
-    sol::DataLocation dstDataLoc = sol::getDataLocation(op.getDst().getType());
+    Type srcTy = op.getSrc().getType();
+    Type dstTy = op.getDst().getType();
+    sol::DataLocation srcDataLoc = sol::getDataLocation(srcTy);
+    sol::DataLocation dstDataLoc = sol::getDataLocation(dstTy);
     assert(srcDataLoc == sol::DataLocation::Memory &&
            dstDataLoc == sol::DataLocation::Storage && "NYI");
 
-    if (sol::isDynamicallySized(op.getSrc().getType())) {
-      assert(sol::isDynamicallySized(op.getDst().getType()));
+    if (isa<sol::StringType>(srcTy)) {
+      assert(isa<sol::StringType>(dstTy));
 
       // Generate the size update.
       Value srcSize = eraB.genLoad(adaptor.getSrc(), srcDataLoc);
@@ -1159,19 +1161,12 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
     if (srcDataLoc == sol::DataLocation::Storage &&
         dstDataLoc == sol::DataLocation::Memory) {
       // String type
-      if (auto srcStrTy = dyn_cast<sol::StringType>(srcTy)) {
+      if (isa<sol::StringType>(srcTy)) {
         assert(isa<sol::StringType>(dstTy));
-        Value slot = adaptor.getInp();
-        assert(cast<IntegerType>(slot.getType()).getWidth() == 256);
-
-        // Generate keccak256(slot) to get the slot having the data.
-        auto zero = bExt.genI256Const(0);
-        auto thirtyTwo = bExt.genI256Const(32);
-        r.create<sol::MStoreOp>(loc, zero, slot);
-        auto dataSlot = r.create<sol::Keccak256Op>(loc, zero, thirtyTwo);
+        auto dataSlot = eraB.genDataAddrPtr(adaptor.getInp(), srcDataLoc);
 
         // Generate the memory allocation.
-        auto sizeInBytes = r.create<sol::SLoadOp>(loc, slot);
+        auto sizeInBytes = eraB.genLoad(adaptor.getInp(), srcDataLoc);
         auto memPtrTy =
             sol::StringType::get(r.getContext(), sol::DataLocation::Memory);
         // TODO: Define custom builder (or remove the type-attr arg?) in
@@ -1186,7 +1181,8 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
 
         // Generate the loop to copy the data (sol.malloc lowering will generate
         // the store of the size field).
-        auto dataMemAddr = r.create<arith::AddIOp>(loc, memAddr, thirtyTwo);
+        auto dataMemAddr =
+            r.create<arith::AddIOp>(loc, memAddr, bExt.genI256Const(32));
         auto sizeInWords = bExt.genRoundUpToMultiple<32>(sizeInBytes);
         eraB.genCopyLoop(dataSlot, dataMemAddr, sizeInWords, srcDataLoc,
                          dstDataLoc);

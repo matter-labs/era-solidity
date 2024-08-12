@@ -155,7 +155,7 @@ public:
     auto add =
         b.create<mlir::arith::AddIOp>(loc, val, genI256Const(multiple - 1));
     return b.create<mlir::arith::AndIOp>(
-        loc, add, genI256Const(~(llvm::APInt(256, multiple - 1))));
+        loc, add, genI256Const(~(llvm::APInt(/*numBits=*/256, multiple - 1))));
   }
 
   /// Returns an existing LLVM::GlobalOp; Assert fails if not found.

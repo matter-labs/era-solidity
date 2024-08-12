@@ -696,12 +696,16 @@ Value eravm::Builder::genDataAddrPtr(Value addr, sol::DataLocation dataLoc,
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
-  // Return the address after the first word (memory/storage).
   if (dataLoc == sol::DataLocation::Memory) {
+    // Return the address after the first word.
     return b.create<arith::AddIOp>(loc, addr, bExt.genI256Const(32));
   }
+
   if (dataLoc == sol::DataLocation::Storage) {
-    return b.create<arith::AddIOp>(loc, addr, bExt.genI256Const(1));
+    // Return the keccak256 of addr.
+    auto zero = bExt.genI256Const(0);
+    b.create<sol::MStoreOp>(loc, zero, addr);
+    return b.create<sol::Keccak256Op>(loc, zero, bExt.genI256Const(32));
   }
 
   llvm_unreachable("NYI");
