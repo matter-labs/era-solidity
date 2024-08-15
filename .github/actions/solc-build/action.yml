@@ -55,14 +55,14 @@ runs:
         cd ./build
         [ ${RUNNER_OS} = macOS ] && PARALLEL=$(sysctl -n hw.ncpu) || PARALLEL=$(nproc)
         [ ${RUNNER_OS} = Linux ] && COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-        find . -name mlir
-        ls -la ${PWD}/target-llvm/target-final/lib/cmake/mlir
+        find .. -name mlir
+        ls -la ${PWD}/../target-llvm/target-final/lib/cmake/mlir
         cmake .. \
           -DCMAKE_BUILD_TYPE="Release" ${COMPILER_FLAGS} \
           -DSOL_VERSION_ZKSYNC="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOLC_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOL_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
-          -DMLIR_DIR="${PWD}/target-llvm/target-final/lib/cmake/mlir" \
+          -DMLIR_DIR="${PWD}/../target-llvm/target-final/lib/cmake/mlir" \
           -DUSE_Z3=OFF \
           -DUSE_CVC4=OFF \
           -DTESTS=0 \
