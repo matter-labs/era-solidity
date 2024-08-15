@@ -40,6 +40,12 @@ runs:
         ./b2 link=static runtime-link=static -j$(sysctl -n hw.ncpu)
         ./b2 install -j$(sysctl -n hw.ncpu)
 
+    - name: Build LLVM
+      uses: matter-labs/era-compiler-ci/.github/actions/build-llvm@aba-builder-with-rtti
+      with:
+        enable-assertions: true
+        enable-rtti: true
+
     - name: Build solc
       shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
       env:
@@ -54,6 +60,7 @@ runs:
           -DSOL_VERSION_ZKSYNC="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOLC_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOL_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
+          -DMLIR_DIR="${{ github.workspace }}/target-llvm/target-final/lib/cmake/mlir" \
           -DUSE_Z3=OFF \
           -DUSE_CVC4=OFF \
           -DTESTS=0 \
