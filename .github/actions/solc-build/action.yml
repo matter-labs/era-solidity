@@ -74,7 +74,7 @@ runs:
           cmake --build . --config Release --parallel ${PARALLEL} --target jsoncpp-project
           cmake --build . --config Release --parallel ${PARALLEL} --target range-v3-project
         fi
-        cmake --build . --config Release --parallel ${PARALLEL} --target solc
+        cmake --build . --config Release --target solc
         [ "$RUNNER_OS" = "Windows" ] && WIN_SUFFIX=".exe"
         cp ./solc/solc${WIN_SUFFIX} ./solc/solc-${{ inputs.solc-version }}-${{ inputs.build-type }}${WIN_SUFFIX}
 
