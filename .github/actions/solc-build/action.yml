@@ -55,8 +55,6 @@ runs:
         cd ./build
         [ ${RUNNER_OS} = macOS ] && PARALLEL=$(sysctl -n hw.ncpu) || PARALLEL=$(nproc)
         [ ${RUNNER_OS} = Linux ] && COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-        find .. -name mlir
-        ls -la ${PWD}/../target-llvm/target-final/lib/cmake/mlir
         cmake .. \
           -DCMAKE_BUILD_TYPE="Release" ${COMPILER_FLAGS} \
           -DSOL_VERSION_ZKSYNC="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
