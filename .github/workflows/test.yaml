@@ -61,10 +61,10 @@ jobs:
             ref: ${{ github.base_ref }}
           - type: "candidate"
             ref: ''
-    runs-on: ci-runner-compiler
+    runs-on: [ci-runner-compiler, Linux]
     name: build-${{ matrix.type }}
     container:
-      image: matterlabs/llvm_runner:ubuntu20-llvm17-latest
+      image: ghcr.io/matter-labs/zksync-llvm-runner:latest
     outputs:
       solc-version: ${{ steps.project_version.outputs.solc-version }}
     steps:
@@ -103,7 +103,7 @@ jobs:
   # If you would like to make a change to the integration tests workflow, please do it in the era-compiler-ci repository
   integration-tests:
     needs: [ compiler-tester-ref, build ]
-    uses: matter-labs/era-compiler-ci/.github/workflows/integration-tests.yaml@main
+    uses: matter-labs/era-compiler-ci/.github/workflows/integration-tests.yaml@v1
     secrets: inherit
     with:
       compiler-tester-ref: ${{ needs.compiler-tester-ref.outputs.candidate-ref }}
@@ -120,7 +120,7 @@ jobs:
   # If you would like to make a change to the benchmarks workflow, please do it in the era-compiler-ci repository
   benchmarks:
     needs: [ compiler-tester-ref, build ]
-    uses: matter-labs/era-compiler-ci/.github/workflows/benchmarks.yml@main
+    uses: matter-labs/era-compiler-ci/.github/workflows/benchmarks.yml@v1
     secrets: inherit
     with:
       compiler_tester_reference_branch: ${{ needs.compiler-tester-ref.outputs.reference-ref }}
