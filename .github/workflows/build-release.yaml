@@ -71,11 +71,11 @@ jobs:
             runner: [self-hosted, macOS, ARM64]
             release-suffix: macosx-arm64
           - name: "Linux x86"
-            runner: [matterlabs-ci-runner, Linux]
+            runner: matterlabs-ci-runner
             image: ghcr.io/matter-labs/zksync-llvm-runner:latest
             release-suffix: linux-amd64
           - name: "Linux ARM64"
-            runner: [matterlabs-ci-runner-arm, Linux]
+            runner: matterlabs-ci-runner-arm
             image: ghcr.io/matter-labs/zksync-llvm-runner:latest
             release-suffix: linux-arm64
     runs-on: ${{ matrix.runner }}
