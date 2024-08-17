@@ -51,7 +51,7 @@ void SolDialect::initialize() {
       >();
 }
 
-static Type getEltType(Type ty, Index index = 0) {
+Type mlir::sol::getEltType(Type ty, Index structTyIdx) {
   if (auto ptrTy = dyn_cast<sol::PointerType>(ty)) {
     return ptrTy.getPointeeType();
   }
@@ -59,7 +59,7 @@ static Type getEltType(Type ty, Index index = 0) {
     return arrTy.getEltType();
   }
   if (auto structTy = dyn_cast<sol::StructType>(ty)) {
-    return structTy.getMemTypes()[index];
+    return structTy.getMemTypes()[structTyIdx];
   }
   llvm_unreachable("Invalid type");
 }

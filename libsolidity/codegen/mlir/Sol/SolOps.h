@@ -66,5 +66,8 @@ bool isRefType(Type ty);
 /// Returns true if the type is a reference type but not a pointer type.
 bool isNonPtrRefType(Type ty);
 
+/// Returns the element type of a non mapping reference type.
+Type getEltType(Type ty, Index structTyIdx = 0);
+
 } // namespace sol
 } // namespace mlir

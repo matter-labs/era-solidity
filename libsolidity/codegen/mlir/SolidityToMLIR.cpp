@@ -117,9 +117,8 @@ private:
   /// Generates the ir to zero the allocation.
   void genZeroedVal(mlir::sol::AllocaOp addr);
 
-  /// Returns the cast from `val` having the corresponding mlir type of
-  /// `srcTy` to a value having the corresponding mlir type of `dstTy`
-  mlir::Value genCast(mlir::Value val, Type const *srcTy, Type const *dstTy);
+  /// Generates type cast expression.
+  mlir::Value genCast(mlir::Value val, mlir::Type dstTy);
 
   // We can't completely rely on ExpressionAnnotation::isLValue here since the
   // TypeChecker doesn't, for instance, tag RHS expression of an assignment as
@@ -162,7 +161,7 @@ private:
   /// Returns the mlir expression in an r-value context and optionally casts it
   /// to the corresponding mlir type of `resTy`.
   mlir::Value genRValExpr(Expression const *expr,
-                          std::optional<Type const *> resTy = std::nullopt);
+                          std::optional<mlir::Type> resTy = std::nullopt);
 
   bool visit(ExpressionStatement const &) override;
   bool visit(VariableDeclarationStatement const &) override;
@@ -194,6 +193,8 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
 
   // Integer type
   if (const auto *intTy = dynamic_cast<IntegerType const *>(ty)) {
+    // FIXME: Switch to (un)signed int types in mlir?
+    assert(!intTy->isSigned() && "NYI");
     return b.getIntegerType(intTy->numBits());
   }
 
@@ -330,78 +331,39 @@ void SolidityToMLIRPass::genZeroedVal(mlir::sol::AllocaOp addr) {
   b.create<mlir::sol::StoreOp>(loc, val, addr);
 }
 
-mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, Type const *srcTy,
-                                        Type const *dstTy) {
-  // Don't cast if we're casting to the same type (Type pointers having the same
-  // address should track the same type).
+mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, mlir::Type dstTy) {
+  mlir::Location loc = val.getLoc();
+  mlir::Type srcTy = val.getType();
+
+  // Don't cast if we're casting to the same type.
   if (srcTy == dstTy)
     return val;
 
-  // Casting from bool to integer type.
-  const auto *srcBoolTy = dynamic_cast<BoolType const *>(srcTy);
-  if (srcBoolTy) {
-    const auto *dstIntTy = dynamic_cast<IntegerType const *>(dstTy);
-    assert(dstIntTy);
-    return b.create<mlir::arith::ExtUIOp>(val.getLoc(), getType(dstIntTy), val);
-  }
+  // Casting to integer type.
+  if (auto dstIntTy = mlir::dyn_cast<mlir::IntegerType>(dstTy)) {
+    auto srcIntTy = mlir::cast<mlir::IntegerType>(srcTy);
 
-  // FIXME:
-  auto addrAsIntTy = IntegerType(256);
-  auto getAsIntTy = [&](Type const *ty) -> IntegerType const * {
-    const auto *intTy = dynamic_cast<IntegerType const *>(ty);
-    if (!intTy) {
-      if (auto *ratTy = dynamic_cast<RationalNumberType const *>(ty)) {
-        if (auto *intRatTy = ratTy->integerType())
-          return intRatTy;
-      }
-      if (auto *addrTy = dynamic_cast<AddressType const *>(ty)) {
-        return &addrAsIntTy;
-      }
-      return nullptr;
-    }
-    return intTy;
-  };
+    // Casting from bool to integer type.
+    if (srcIntTy.getWidth() == 1)
+      return b.create<mlir::arith::ExtUIOp>(loc, dstTy, val);
 
-  // We generate signless integral mlir::Types, so we must track the solidity
-  // type to perform "sign aware lowering".
-  //
-  // Casting between integers.
-  const auto *srcIntTy = getAsIntTy(srcTy);
-  const auto *dstIntTy = getAsIntTy(dstTy);
-
-  if (srcIntTy && dstIntTy) {
-    if (*srcIntTy == *dstIntTy)
-      return val;
-
-    // Generate extends.
-    if (dstIntTy->numBits() > srcIntTy->numBits()) {
-      return dstIntTy->isSigned()
-                 ? b.create<mlir::arith::ExtSIOp>(val.getLoc(),
-                                                  getType(dstIntTy), val)
-                       ->getResult(0)
-                 : b.create<mlir::arith::ExtUIOp>(val.getLoc(),
-                                                  getType(dstIntTy), val)
-                       ->getResult(0);
-    }
-
-    // In case of cast between literal and non-literal ints of same bitwidth.
-    if (dstIntTy->numBits() == srcIntTy->numBits()) {
-      return val;
+    // Casting between integer types of different width.
+    assert(srcIntTy.isSignless() && "FIXME");
+    assert(dstIntTy.isSignless() && "FIXME");
+    if (dstIntTy.getWidth() > srcIntTy.getWidth()) {
+      return b.create<mlir::arith::ExtUIOp>(loc, dstTy, val);
+    } else {
+      return b.create<mlir::arith::TruncIOp>(loc, dstTy, val);
     }
   }
 
-  // Casting between arrays/strings with different data-location.
-  const auto *srcArrTy = dynamic_cast<ArrayType const *>(srcTy);
-  const auto *dstArrTy = dynamic_cast<ArrayType const *>(dstTy);
-  if (srcArrTy && dstArrTy) {
-    if (*srcArrTy == *dstArrTy)
-      return val;
-
-    return b.create<mlir::sol::DataLocCastOp>(val.getLoc(), getType(dstArrTy),
-                                              val);
+  // Casting between reference types (excluding pointer types).
+  if (mlir::sol::isNonPtrRefType(dstTy)) {
+    assert(mlir::sol::isNonPtrRefType(dstTy));
+    return b.create<mlir::sol::DataLocCastOp>(loc, dstTy, val);
   }
 
-  llvm_unreachable("NYI: Unknown cast");
+  llvm_unreachable("NYI or invalid cast");
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
@@ -459,7 +421,7 @@ mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
-  const auto *resTy = binOp->leftExpression().annotation().type;
+  mlir::Type resTy = getType(binOp->leftExpression().annotation().type);
   auto loc = getLoc(binOp->location());
 
   mlir::Value lhs = genRValExpr(&binOp->leftExpression(), resTy);
@@ -509,7 +471,7 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
   // Type conversion
   if (*call->annotation().kind == FunctionCallKind::TypeConversion) {
     return genRValExpr(call->arguments().front().get(),
-                       call->annotation().type);
+                       getType(call->annotation().type));
   }
 
   auto const *calleeTy =
@@ -533,7 +495,7 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
     // Lower args.
     std::vector<mlir::Value> args;
     for (auto [arg, dstTy] : llvm::zip(astArgs, calleeTy->parameterTypes())) {
-      args.push_back(genRValExpr(arg.get(), dstTy));
+      args.push_back(genRValExpr(arg.get(), getType(dstTy)));
     }
 
     // Collect return types.
@@ -565,7 +527,7 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
 
       // TODO? YulUtilFunctions::conversionFunction
       mlir::Value arg =
-          genRValExpr(astArgs[i].get(), calleeTy->parameterTypes()[i]);
+          genRValExpr(astArgs[i].get(), getType(calleeTy->parameterTypes()[i]));
 
       if (event.parameters()[i]->isIndexed()) {
         indexedArgs.push_back(arg);
@@ -628,11 +590,14 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
       mlir::Type lhsTy = lhs.getType();
       mlir::Type rhsTy = rhs.getType();
 
-      if (mlir::sol::isNonPtrRefType(lhsTy) &&
-          mlir::sol::isNonPtrRefType(rhsTy)) {
+      // Generate copy for assignment to storage reference types.
+      if (mlir::sol::isNonPtrRefType(rhsTy) &&
+          mlir::sol::getDataLocation(lhsTy) ==
+              mlir::sol::DataLocation::Storage) {
         b.create<mlir::sol::CopyOp>(loc, rhs, lhs);
       } else {
-        b.create<mlir::sol::StoreOp>(loc, rhs, lhs);
+        b.create<mlir::sol::StoreOp>(
+            loc, genCast(rhs, mlir::sol::getEltType(lhs.getType())), lhs);
       }
 
       // Compound assignment statement
@@ -651,7 +616,7 @@ mlir::Value SolidityToMLIRPass::genLValExpr(Expression const *expr) {
 }
 
 mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
-                                            std::optional<Type const *> resTy) {
+                                            std::optional<mlir::Type> resTy) {
   mlir::Value val;
 
   // Literal
@@ -691,7 +656,7 @@ mlir::Value SolidityToMLIRPass::genRValExpr(Expression const *expr,
 
   // Generate cast (optional).
   if (resTy) {
-    return genCast(val, expr->annotation().type, *resTy);
+    return genCast(val, *resTy);
   }
 
   return val;
@@ -717,8 +682,7 @@ bool SolidityToMLIRPass::visit(
   trackLocalVarAddr(varDecl, addr);
 
   if (Expression const *initExpr = varDeclStmt.initialValue()) {
-    b.create<mlir::sol::StoreOp>(loc, genRValExpr(initExpr, varDecl->type()),
-                                 addr);
+    b.create<mlir::sol::StoreOp>(loc, genRValExpr(initExpr, varTy), addr);
   } else {
     genZeroedVal(addr);
   }
@@ -743,7 +707,8 @@ bool SolidityToMLIRPass::visit(Return const &ret) {
 
   Expression const *astExpr = ret.expression();
   if (astExpr) {
-    mlir::Value expr = genRValExpr(ret.expression(), currFuncResTys[0]);
+    mlir::Value expr =
+        genRValExpr(ret.expression(), getType(currFuncResTys[0]));
     b.create<mlir::sol::ReturnOp>(getLoc(ret.location()), expr);
   } else {
     llvm_unreachable("NYI: Empty return");
