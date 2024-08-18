@@ -1684,11 +1684,6 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       auto origIfcFnTy =
           cast<FunctionType>(cast<TypeAttr>(ifcFnAttr.get("type")).getValue());
 
-      auto selector =
-          APInt(256, cast<IntegerAttr>(ifcFnAttr.get("selector")).getInt());
-      selector <<= 224;
-      llvm::errs() << ifcFnSym << ": " << selector << "\n";
-
       if (contrOp.getKind() == sol::ContractKind::Library) {
         auto optStateMutability = ifcFnOp.getStateMutability();
         assert(optStateMutability);
