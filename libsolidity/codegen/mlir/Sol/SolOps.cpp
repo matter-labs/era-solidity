@@ -536,6 +536,84 @@ void MallocOp::print(OpAsmPrinter &p) {
   printAllocationOp(*this, p, getSize());
 }
 
+//===----------------------------------------------------------------------===//
+// EmitOp
+//===----------------------------------------------------------------------===//
+
+/// Parses an emit op.
+///
+///   emit-op signature? (`indexed` `=` `[` indexed-args `]`)?
+///           (`non-indexed` `=` `[` non-indexed-args `]`)?
+///           attr-dict `:` type(args)
+///
+ParseResult EmitOp::parse(OpAsmParser &p, OperationState &result) {
+  auto b = p.getBuilder();
+
+  // Parse the signature.
+  std::string signature;
+  if (!p.parseOptionalString(&signature))
+    result.addAttribute("signature", b.getStringAttr(signature));
+
+  SmallVector<OpAsmParser::UnresolvedOperand> unresolvedOpnds;
+
+  // Parse indexed args and add the attribute to track its count.
+  if (!p.parseOptionalKeyword("indexed")) {
+    if (p.parseEqual())
+      return failure();
+
+    if (p.parseOperandList(unresolvedOpnds, OpAsmParser::Delimiter::Square))
+      return failure();
+    assert(unresolvedOpnds.size() <= UINT8_MAX);
+  }
+  result.addAttribute("indexedArgsCount",
+                      b.getI8IntegerAttr(unresolvedOpnds.size()));
+
+  // Parse non-indexed args.
+  if (!p.parseOptionalKeyword("non_indexed")) {
+    if (p.parseEqual())
+      return failure();
+
+    if (p.parseOperandList(unresolvedOpnds, OpAsmParser::Delimiter::Square))
+      return failure();
+  }
+
+  // Parse other attributes and the type list.
+  SmallVector<Type> opndTys;
+  if (p.parseOptionalAttrDict(result.attributes) ||
+      p.parseOptionalColonTypeList(opndTys))
+    return failure();
+
+  // Resolve all the indexed and non-indexed args.
+  if (p.resolveOperands(unresolvedOpnds, opndTys, p.getNameLoc(),
+                        result.operands))
+    return failure();
+
+  return success();
+}
+
+void EmitOp::print(OpAsmPrinter &p) {
+  if (auto signature = getSignatureAttr()) {
+    p << ' ' << signature;
+  }
+
+  if (getIndexedArgsCount()) {
+    p << " indexed = [";
+    p.printOperands(getIndexedArgs());
+    p << ']';
+  }
+
+  if (getNonIndexedArgs().size()) {
+    p << " non_indexed = [";
+    p.printOperands(getNonIndexedArgs());
+    p << ']';
+  }
+
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {"indexedArgsCount", "signature"});
+  if (!getArgs().empty())
+    p << " : " << getArgs().getTypes();
+}
+
 #define GET_OP_CLASSES
 #include "Sol/SolOps.cpp.inc"
 

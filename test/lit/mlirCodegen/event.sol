@@ -23,7 +23,7 @@ contract C {
 // CHECK-NEXT:       %3 = sol.load %0 : !sol.ptr<i256, Stack>, i256 loc(#loc6)
 // CHECK-NEXT:       %4 = sol.load %1 : !sol.ptr<i256, Stack>, i256 loc(#loc7)
 // CHECK-NEXT:       %5 = sol.load %2 : !sol.ptr<i256, Stack>, i256 loc(#loc8)
-// CHECK-NEXT:       "sol.emit"(%3, %4, %5) {indexedArgsCount = 2 : i8, signature = "E(address,address,uint256)"} : (i256, i256, i256) -> () loc(#loc9)
+// CHECK-NEXT:       sol.emit "E(address,address,uint256)" indexed = [%3, %4] non_indexed = [%5] : i256, i256, i256 loc(#loc9)
 // CHECK-NEXT:       sol.return loc(#loc2)
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:   } {interface_fns = [{selector = -1790387060 : i32, sym = @f_24, type = (i256, i256, i256) -> ()}], kind = #sol<ContractKind Contract>} loc(#loc1)

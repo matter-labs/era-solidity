@@ -272,6 +272,8 @@ def Sol_EmitOp : Sol_Op<"emit"> {
   }];
 
   // TODO: verifier ($indexedArgsCount <= 3)
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 def Sol_RequireOp : Sol_Op<"require"> {
