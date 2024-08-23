@@ -319,7 +319,17 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
 
   for (auto ty : tys) {
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
-      Value tailAddr = genLoad(headAddr);
+      Value tailAddr =
+          b.create<arith::AddIOp>(loc, headStart, genLoad(headAddr));
+
+      // FIXME: Shouldn't we check the tailAddr < tupleEnd ? The following code
+      // is copied from the yul codegen. I assume this is from the following
+      // ir-breaking-changes:
+      //
+      // - The new code generator imposes a hard limit of ``type(uint64).max``
+      //   (``0xffffffffffffffff``) for the free memory pointer. Allocations
+      //   that would increase its value beyond this limit revert. The old code
+      //   generator does not have this limit.
       auto invalidTailAddrChk =
           b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, tailAddr,
                                   bExt.genI256Const("0xffffffffffffffff"));
@@ -357,8 +367,10 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
 
     } else if (auto intTy = dyn_cast<IntegerType>(ty)) {
       assert(intTy.getWidth() == 256 && "NYI");
+      // TODO: Generate the validator for non 256 bit types. The validator
+      // should just check if the loaded value is what we would get if we
+      // extended the original `intTy` value to 256 bits.
       results.push_back(genLoad(headAddr));
-      // TODO: Generate "Validator".
     }
 
     headAddr = b.create<arith::AddIOp>(
