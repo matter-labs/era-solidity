@@ -339,29 +339,30 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
       // TODO: "ABI decoding: invalid calldata array offset" revert check. We
       // need to track the "headEnd" for this.
 
-      Value len = genLoad(tailAddr);
+      Value sizeInBytes = genLoad(tailAddr);
 
       // Copy the decoded string to a new memory allocation.
-      Value dstAddr =
-          genMemAllocForDynArray(len, bExt.genRoundUpToMultiple<32>(len));
+      Value dstAddr = genMemAllocForDynArray(
+          sizeInBytes, bExt.genRoundUpToMultiple<32>(sizeInBytes));
       Value thirtyTwo = bExt.genI256Const(32);
       Value dstDataAddr = b.create<arith::AddIOp>(loc, dstAddr, thirtyTwo);
       Value srcDataAddr = b.create<arith::AddIOp>(loc, tailAddr, thirtyTwo);
       // TODO: "ABI decoding: invalid byte array length" revert check.
-      // TODO: Do we really need to store 0 to the last byte (i.e. the
-      // "cleanup") in the codegen related to ABI tuples?
-      if (fromMem) {
+
+      // FIXME: ABIFunctions::abiDecodingFunctionByteArrayAvailableLength only
+      // allocates length + 32 (where length is rounded up to a multiple of 32)
+      // bytes. The "+ 32" is for the size field. But it calls
+      // YulUtilFunctions::copyToMemoryFunction with the _cleanup param enabled
+      // which makes the writing of the zero at the end an out-of-bounds write.
+      // Even if the allocation was done correctly, why should we write zero at
+      // the end?
+      if (fromMem)
         // TODO? Check m_evmVersion.hasMcopy() and legalize here or in sol.mcopy
         // lowering?
-        b.create<sol::MCopyOp>(loc, dstDataAddr, srcDataAddr, len);
-        auto end = b.create<arith::AddIOp>(loc, dstDataAddr, len);
-        b.create<sol::MStoreOp>(loc, end, bExt.genI256Const(0));
-
-      } else {
-        b.create<sol::CallDataCopyOp>(loc, dstDataAddr, srcDataAddr, len);
-        auto end = b.create<arith::AddIOp>(loc, dstDataAddr, len);
-        b.create<sol::MStoreOp>(loc, end, bExt.genI256Const(0));
-      }
+        b.create<sol::MCopyOp>(loc, dstDataAddr, srcDataAddr, sizeInBytes);
+      else
+        b.create<sol::CallDataCopyOp>(loc, dstDataAddr, srcDataAddr,
+                                      sizeInBytes);
 
       results.push_back(dstAddr);
 
@@ -600,6 +601,13 @@ Value eravm::Builder::genMemAlloc(Value size, std::optional<Location> locArg) {
   Value newFreePtr = b.create<arith::AddIOp>(loc, freePtr, size);
 
   // Generate the PanicCode::ResourceError check.
+  //
+  // FIXME: Do we need to check this in EraVM? I assume this is from the
+  // following ir-breaking-changes:
+  // - The new code generator imposes a hard limit of ``type(uint64).max``
+  //   (``0xffffffffffffffff``) for the free memory pointer. Allocations that
+  //   would increase its value beyond this limit revert. The old code generator
+  //   does not have this limit.
   auto newPtrGtMax =
       b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, newFreePtr,
                               bExt.genI256Const("0xffffffffffffffff"));
