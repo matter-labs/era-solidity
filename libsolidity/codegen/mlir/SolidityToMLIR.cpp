@@ -352,9 +352,8 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, mlir::Type dstTy) {
     assert(dstIntTy.isSignless() && "FIXME");
     if (dstIntTy.getWidth() > srcIntTy.getWidth()) {
       return b.create<mlir::arith::ExtUIOp>(loc, dstTy, val);
-    } else {
-      return b.create<mlir::arith::TruncIOp>(loc, dstTy, val);
     }
+    return b.create<mlir::arith::TruncIOp>(loc, dstTy, val);
   }
 
   // Casting between reference types (excluding pointer types).

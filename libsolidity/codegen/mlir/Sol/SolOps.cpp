@@ -602,7 +602,7 @@ void EmitOp::print(OpAsmPrinter &p) {
     p << ']';
   }
 
-  if (getNonIndexedArgs().size()) {
+  if (!getNonIndexedArgs().empty()) {
     p << " non_indexed = [";
     p.printOperands(getNonIndexedArgs());
     p << ']';
