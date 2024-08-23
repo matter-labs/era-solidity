@@ -51,6 +51,11 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
   // - IRGenerationContext::reservedMemory
   let arguments = (ins SymbolNameAttr:$sym_name, Sol_ContractKindAttr:$kind,
                    ArrayAttr:$interface_fns,
+                   // FIXME: This is a hack until sol.contract lowering happens
+                   // during the legalization by SolTypeConverter. Also, if this
+                   // is fixed, maybe we could track interface function
+                   // attributes in sol.func intead?
+                   OptionalAttr<TypeAttrOf<FunctionType>>:$ctorFnType,
                    OptionalAttr<FlatSymbolRefAttr>:$fallbackFn,
                    OptionalAttr<FlatSymbolRefAttr>:$receiveFn);
   let regions = (region SizedRegion<1>:$bodyRegion);

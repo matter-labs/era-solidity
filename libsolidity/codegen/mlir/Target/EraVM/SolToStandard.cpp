@@ -1792,10 +1792,12 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       Value memPtr = eraB.genMemAlloc(argSize);
       r.create<sol::CodeCopyOp>(loc, memPtr, progSize, argSize);
       std::vector<Value> decodedArgs;
-      if (!ctor.getFunctionType().getInputs().empty()) {
-        eraB.genABITupleSizeAssert(ctor.getFunctionType().getInputs(), argSize);
-        eraB.genABITupleDecoding(ctor.getFunctionType().getInputs(), memPtr,
-                                 decodedArgs, /*fromMem=*/true);
+      assert(op.getCtorFnType());
+      auto ctorFnTy = *op.getCtorFnType();
+      if (!ctorFnTy.getInputs().empty()) {
+        eraB.genABITupleSizeAssert(ctorFnTy.getInputs(), argSize);
+        eraB.genABITupleDecoding(ctorFnTy.getInputs(), memPtr, decodedArgs,
+                                 /*fromMem=*/true);
       }
       r.create<sol::CallOp>(loc, ctor, decodedArgs);
     }

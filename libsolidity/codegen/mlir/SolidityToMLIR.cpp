@@ -758,6 +758,12 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
       b.create<mlir::sol::FuncOp>(getLoc(func.location()), getMangledName(func),
                                   funcType, getStateMutability(func));
   op.setCtor(func.isConstructor());
+  if (func.isConstructor()) {
+    auto currContr =
+        mlir::cast<mlir::sol::ContractOp>(b.getBlock()->getParentOp());
+    assert(currContr);
+    currContr.setCtorFnType(op.getFunctionType());
+  }
 
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);
@@ -805,7 +811,8 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   // Create the contract op.
   auto op = b.create<mlir::sol::ContractOp>(
       getLoc(cont.location()), cont.name() + "_" + util::toString(cont.id()),
-      getContractKind(cont), getInterfaceFnsAttr(cont), fallbackFn, receiveFn);
+      getContractKind(cont), getInterfaceFnsAttr(cont),
+      /*ctorFnType=*/mlir::TypeAttr{}, fallbackFn, receiveFn);
   b.setInsertionPointToStart(&op.getBodyRegion().emplaceBlock());
 
   for (VariableDeclaration const *stateVar : cont.stateVariables()) {
