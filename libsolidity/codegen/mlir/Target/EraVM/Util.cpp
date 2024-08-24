@@ -300,7 +300,8 @@ void eravm::Builder::genRevertWithMsg(Value cond, std::string const &msg,
   genRevertWithMsg(msg);
 }
 
-void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
+void eravm::Builder::genABITupleDecoding(TypeRange tys, Value tupleStart,
+                                         Value tupleEnd,
                                          std::vector<Value> &results,
                                          bool fromMem,
                                          std::optional<mlir::Location> locArg) {
@@ -310,7 +311,9 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
 
   // TODO? {en|de}codingType() for sol dialect types.
 
-  Value headAddr = headStart;
+  genABITupleSizeAssert(tys,
+                        b.create<arith::SubIOp>(loc, tupleEnd, tupleStart));
+  Value headAddr = tupleStart;
   auto genLoad = [&](Value addr) -> Value {
     if (fromMem)
       return b.create<sol::MLoadOp>(loc, headAddr);
@@ -320,7 +323,7 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value headStart,
   for (auto ty : tys) {
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       Value tailAddr =
-          b.create<arith::AddIOp>(loc, headStart, genLoad(headAddr));
+          b.create<arith::AddIOp>(loc, tupleStart, genLoad(headAddr));
 
       // FIXME: Shouldn't we check the tailAddr < tupleEnd ? The following code
       // is copied from the yul codegen. I assume this is from the following

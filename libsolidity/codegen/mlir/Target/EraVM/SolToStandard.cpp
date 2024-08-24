@@ -1706,18 +1706,16 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       }
 
       // Decode the input parameters (if required).
-      std::vector<Value> params;
+      std::vector<Value> decodedArgs;
       if (!origIfcFnTy.getInputs().empty()) {
-        Value headStart = bExt.genI256Const(4);
-        eraB.genABITupleSizeAssert(
-            origIfcFnTy.getInputs(),
-            r.create<arith::SubIOp>(loc, callDataSz, headStart));
-        eraB.genABITupleDecoding(origIfcFnTy.getInputs(), headStart, params,
+        eraB.genABITupleDecoding(origIfcFnTy.getInputs(),
+                                 /*tupleStart=*/bExt.genI256Const(4),
+                                 /*tupleEnd=*/callDataSz, decodedArgs,
                                  /*fromMem=*/false);
       }
 
       // Generate the actual call.
-      auto callOp = r.create<sol::CallOp>(loc, ifcFnOp, params);
+      auto callOp = r.create<sol::CallOp>(loc, ifcFnOp, decodedArgs);
 
       // Encode the result using the ABI's tuple encoder.
       auto headStart = eraB.genFreePtr();
@@ -1789,15 +1787,17 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       auto progSize = r.create<sol::DataSizeOp>(loc, creationObj.getName());
       auto codeSize = r.create<sol::CodeSizeOp>(loc);
       auto argSize = r.create<arith::SubIOp>(loc, codeSize, progSize);
-      Value memPtr = eraB.genMemAlloc(argSize);
-      r.create<sol::CodeCopyOp>(loc, memPtr, progSize, argSize);
+      Value tupleStart = eraB.genMemAlloc(argSize);
+      r.create<sol::CodeCopyOp>(loc, tupleStart, progSize, argSize);
       std::vector<Value> decodedArgs;
       assert(op.getCtorFnType());
       auto ctorFnTy = *op.getCtorFnType();
       if (!ctorFnTy.getInputs().empty()) {
-        eraB.genABITupleSizeAssert(ctorFnTy.getInputs(), argSize);
-        eraB.genABITupleDecoding(ctorFnTy.getInputs(), memPtr, decodedArgs,
-                                 /*fromMem=*/true);
+        eraB.genABITupleDecoding(
+            ctorFnTy.getInputs(), tupleStart,
+            /*tupleEnd=*/r.create<arith::AddIOp>(loc, tupleStart, argSize),
+            decodedArgs,
+            /*fromMem=*/true);
       }
       r.create<sol::CallOp>(loc, ctor, decodedArgs);
     }

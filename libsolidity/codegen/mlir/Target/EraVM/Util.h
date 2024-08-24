@@ -177,7 +177,8 @@ public:
                       std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the tuple decoder as per ABI and populates the results.
-  void genABITupleDecoding(mlir::TypeRange tys, mlir::Value headStart,
+  void genABITupleDecoding(mlir::TypeRange tys, mlir::Value tupleStart,
+                           mlir::Value tupleEnd,
                            std::vector<mlir::Value> &results, bool fromMem,
                            std::optional<mlir::Location> locArg = std::nullopt);
 
