@@ -170,13 +170,14 @@ public:
   genABITupleSizeAssert(mlir::TypeRange tys, mlir::Value size,
                         std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Generates the tuple encoding as per ABI and return the "tail" address.
+  /// Generates the tuple encoder code as per the ABI and returns the address at
+  /// the end of the tuple.
   mlir::Value
   genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
-                      mlir::Value headStart,
+                      mlir::Value tupleStart,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Generates the tuple decoder as per ABI and populates the results.
+  /// Generates the tuple decoder code as per the ABI and populates the results.
   void genABITupleDecoding(mlir::TypeRange tys, mlir::Value tupleStart,
                            mlir::Value tupleEnd,
                            std::vector<mlir::Value> &results, bool fromMem,

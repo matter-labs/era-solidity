@@ -176,7 +176,7 @@ void eravm::Builder::genABITupleSizeAssert(TypeRange tys, Value tupleSize,
 }
 
 Value eravm::Builder::genABITupleEncoding(
-    TypeRange tys, ValueRange vals, Value headStart,
+    TypeRange tys, ValueRange vals, Value tupleStart,
     std::optional<mlir::Location> locArg) {
   // TODO: Move this to the evm namespace.
 
@@ -187,9 +187,9 @@ Value eravm::Builder::genABITupleEncoding(
   for (Type ty : tys)
     totCallDataHeadSz += getCallDataHeadSize(ty);
 
-  Value headAddr = headStart;
+  Value headAddr = tupleStart;
   Value tailAddr = b.create<arith::AddIOp>(
-      loc, headStart, bExt.genI256Const(totCallDataHeadSz));
+      loc, tupleStart, bExt.genI256Const(totCallDataHeadSz));
   for (auto it : llvm::zip(tys, vals)) {
     Type ty = std::get<0>(it);
     Value val = std::get<1>(it);
@@ -197,7 +197,7 @@ Value eravm::Builder::genABITupleEncoding(
     // String type
     if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       b.create<sol::MStoreOp>(
-          loc, headAddr, b.create<arith::SubIOp>(loc, tailAddr, headStart));
+          loc, headAddr, b.create<arith::SubIOp>(loc, tailAddr, tupleStart));
 
       // Copy the length field.
       auto size = b.create<sol::MLoadOp>(loc, val);
@@ -325,9 +325,9 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value tupleStart,
       Value tailAddr =
           b.create<arith::AddIOp>(loc, tupleStart, genLoad(headAddr));
 
-      // FIXME: Shouldn't we check the tailAddr < tupleEnd ? The following code
-      // is copied from the yul codegen. I assume this is from the following
-      // ir-breaking-changes:
+      // FIXME: Shouldn't we check tailAddr < tupleEnd instead? The following
+      // code is copied from the yul codegen. I assume this is from the
+      // following ir-breaking-changes:
       //
       // - The new code generator imposes a hard limit of ``type(uint64).max``
       //   (``0xffffffffffffffff``) for the free memory pointer. Allocations

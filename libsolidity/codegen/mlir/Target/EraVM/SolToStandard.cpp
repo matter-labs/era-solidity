@@ -1246,10 +1246,10 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
       nonIndexedArgsType.push_back(arg.getType());
     }
     // TODO: Are we sure we need an unbounded allocation here?
-    Value headAddr = eraB.genFreePtr();
-    Value tailAddr =
-        eraB.genABITupleEncoding(nonIndexedArgsType, nonIndexedArgs, headAddr);
-    Value tupleSize = r.create<arith::SubIOp>(loc, tailAddr, headAddr);
+    Value tupleStart = eraB.genFreePtr();
+    Value tupleEnd = eraB.genABITupleEncoding(nonIndexedArgsType,
+                                              nonIndexedArgs, tupleStart);
+    Value tupleSize = r.create<arith::SubIOp>(loc, tupleEnd, tupleStart);
 
     // Collect indexed args.
     std::vector<Value> indexedArgs;
@@ -1262,7 +1262,7 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
       indexedArgs.push_back(arg);
 
     // Generate sol.log and replace sol.emit with it.
-    r.replaceOpWithNewOp<sol::LogOp>(op, headAddr, tupleSize, indexedArgs);
+    r.replaceOpWithNewOp<sol::LogOp>(op, tupleStart, tupleSize, indexedArgs);
 
     return success();
   }
@@ -1718,19 +1718,19 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       auto callOp = r.create<sol::CallOp>(loc, ifcFnOp, decodedArgs);
 
       // Encode the result using the ABI's tuple encoder.
-      auto headStart = eraB.genFreePtr();
+      auto tupleStart = eraB.genFreePtr();
       mlir::Value tupleSize;
       if (!callOp.getResultTypes().empty()) {
-        auto tail = eraB.genABITupleEncoding(origIfcFnTy.getResults(),
-                                             callOp.getResults(), headStart);
-        tupleSize = r.create<arith::SubIOp>(loc, tail, headStart);
+        auto tupleEnd = eraB.genABITupleEncoding(
+            origIfcFnTy.getResults(), callOp.getResults(), tupleStart);
+        tupleSize = r.create<arith::SubIOp>(loc, tupleEnd, tupleStart);
       } else {
         tupleSize = bExt.genI256Const(0);
       }
 
       // Generate the return.
       assert(tupleSize);
-      r.create<sol::BuiltinRetOp>(loc, headStart, tupleSize);
+      r.create<sol::BuiltinRetOp>(loc, tupleStart, tupleSize);
 
       r.create<mlir::scf::YieldOp>(loc);
     }
