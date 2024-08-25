@@ -26,6 +26,8 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -612,6 +614,20 @@ void EmitOp::print(OpAsmPrinter &p) {
                           {"indexedArgsCount", "signature"});
   if (!getArgs().empty())
     p << " : " << getArgs().getTypes();
+}
+
+//===----------------------------------------------------------------------===//
+// Arith ops
+//===----------------------------------------------------------------------===//
+
+void CAddOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), intrange::inferAdd(argRanges));
+}
+
+void CSubOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), intrange::inferSub(argRanges));
 }
 
 #define GET_OP_CLASSES

@@ -22,6 +22,8 @@
 #ifndef MLIR_SOL_SOLBASE_TD
 #define MLIR_SOL_SOLBASE_TD
 
+include "mlir/Interfaces/InferIntRangeInterface.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
@@ -29,6 +31,9 @@ include "mlir/IR/OpBase.td"
 def I256 : I<256>;
 def I256Attr : SignlessIntegerAttrBase<I256,
                                         "256-bit signless integer attribute">;
+
+// TODO: Replace 'X' with something better ("Signfull" or something?).
+def AnyXInt : AnyTypeOf<[AnySignedInteger, AnyUnsignedInteger]>;
 
 //===----------------------------------------------------------------------===//
 // Dialect
@@ -198,5 +203,18 @@ def Sol_StateMutabilityAttr : EnumAttr<Sol_Dialect, Sol_StateMutability,
 
 class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Sol_Dialect,
                                                             mnemonic, traits>;
+// The following 2 classes are copied from ArithOps.td.
+
+class Sol_BinaryOp<string mnemonic, list<Trait> traits = []> :
+    Sol_Op<mnemonic, traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
+}
+
+class Sol_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
+    Sol_BinaryOp<mnemonic, traits #
+      [DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
+    Arguments<(ins AnyXInt:$lhs, AnyXInt:$rhs)>,
+    Results<(outs AnyXInt:$result)>;
+    // TODO: Add verifier that check the signedness semantics.
 
 #endif // MLIR_SOL_SOLBASE_TD

@@ -25,7 +25,6 @@
 include "SolBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -34,6 +33,14 @@ def Sol_ConvCastOp : Sol_Op<"conv_cast"> {
   let summary = "Like unrealized_conversion_cast; Represents the remapped value";
   let arguments = (ins AnyType:$inpType);
   let results = (outs AnyType:$outType);
+}
+
+def Sol_CAddOp : Sol_IntBinaryOp<"cadd", [Commutative]> {
+  // TODO: summary, description
+}
+
+def Sol_CSubOp : Sol_IntBinaryOp<"csub"> {
+  // TODO: summary, description
 }
 
 def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,

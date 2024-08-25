@@ -399,10 +399,17 @@ mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
   assert(inUncheckedBlk() && "NYI");
   switch (op) {
   case Token::Add:
-    return b.create<mlir::arith::AddIOp>(loc, lhs, rhs);
+    if (inUncheckedBlk())
+      return b.create<mlir::arith::AddIOp>(loc, lhs, rhs);
+    else
+      return b.create<mlir::sol::CAddOp>(loc, lhs, rhs);
   case Token::Sub:
-    return b.create<mlir::arith::SubIOp>(loc, lhs, rhs);
+    if (inUncheckedBlk())
+      return b.create<mlir::arith::SubIOp>(loc, lhs, rhs);
+    else
+      return b.create<mlir::sol::CSubOp>(loc, lhs, rhs);
   case Token::Mul:
+    assert(inUncheckedBlk() && "NYI");
     return b.create<mlir::arith::MulIOp>(loc, lhs, rhs);
   case Token::NotEqual:
     return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne,
