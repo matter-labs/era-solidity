@@ -792,8 +792,8 @@ struct AllocaOpLowering : public OpConversionPattern<sol::AllocaOp> {
   }
 };
 
-struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
-  using OpRewritePattern<sol::MallocOp>::OpRewritePattern;
+struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
+  using OpConversionPattern<sol::MallocOp>::OpConversionPattern;
 
   /// Returns the size (in bytes) of static type without recursively calculating
   /// the element type size.
@@ -943,8 +943,8 @@ struct MallocOpLowering : public OpRewritePattern<sol::MallocOp> {
     return genZeroedMemAlloc(ty, sizeVar, /*recDepth=*/-1, r, loc);
   }
 
-  LogicalResult matchAndRewrite(sol::MallocOp op,
-                                PatternRewriter &r) const override {
+  LogicalResult matchAndRewrite(sol::MallocOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     Value freePtr = genZeroedMemAlloc(op.getAllocType(), op.getSize(), r, loc);
     r.replaceOp(op, freePtr);
@@ -1098,7 +1098,7 @@ struct MapOpLowering : public OpConversionPattern<sol::MapOp> {
 
     // Setup arguments to keccak256.
     auto zero = bExt.genI256Const(0);
-    r.create<sol::MStoreOp>(loc, zero, op.getKey());
+    r.create<sol::MStoreOp>(loc, zero, adaptor.getKey());
     r.create<sol::MStoreOp>(loc, bExt.genI256Const(0x20), adaptor.getMapping());
 
     r.replaceOpWithNewOp<sol::Keccak256Op>(op, zero, bExt.genI256Const(0x40));
@@ -1345,31 +1345,32 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
     solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
-    // Generate the tuple encoding for the non-indexed args.
-    std::vector<Value> nonIndexedArgs;
+    // Collect the remapped indexed and non-indexed args.
+    //
+    // FIXME: How do we get `extraClassDeclaration` functions to be part of the
+    // OpAdaptor?
+    auto remappedOperands = adaptor.getOperands();
+    std::vector<Value> indexedArgs, nonIndexedArgs;
     std::vector<Type> nonIndexedArgsType;
-    for (Value arg : op.getNonIndexedArgs()) {
-      // FIXME: The remapped non-indexed args should be pushed here. How do we
-      // get getNonIndexedArgs in the OpAdaptor?
-      nonIndexedArgs.push_back(arg);
-      assert(cast<IntegerType>(arg.getType()).getWidth() == 256);
-      nonIndexedArgsType.push_back(arg.getType());
-    }
-    // TODO: Are we sure we need an unbounded allocation here?
-    Value tupleStart = eraB.genFreePtr();
-    Value tupleEnd = eraB.genABITupleEncoding(nonIndexedArgsType,
-                                              nonIndexedArgs, tupleStart);
-    Value tupleSize = r.create<arith::SubIOp>(loc, tupleEnd, tupleStart);
-
-    // Collect indexed args.
-    std::vector<Value> indexedArgs;
     if (op.getSignature()) {
       auto signatureHash =
           solidity::util::h256::Arith(*op.getSignature()).str();
       indexedArgs.push_back(bExt.genI256Const(signatureHash));
     }
-    for (Value arg : op.getIndexedArgs())
-      indexedArgs.push_back(arg);
+    unsigned argIdx = 0;
+    while (argIdx < op.getIndexedArgsCount())
+      indexedArgs.push_back(remappedOperands[argIdx++]);
+    for (Value arg : op.getNonIndexedArgs()) {
+      nonIndexedArgsType.push_back(arg.getType());
+      nonIndexedArgs.push_back(remappedOperands[argIdx++]);
+    }
+
+    // Generate the tuple encoding for the non-indexed args.
+    // TODO: Are we sure we need an unbounded allocation here?
+    Value tupleStart = eraB.genFreePtr();
+    Value tupleEnd = eraB.genABITupleEncoding(nonIndexedArgsType,
+                                              nonIndexedArgs, tupleStart);
+    Value tupleSize = r.create<arith::SubIOp>(loc, tupleEnd, tupleStart);
 
     // Generate sol.log and replace sol.emit with it.
     r.replaceOpWithNewOp<sol::LogOp>(op, tupleStart, tupleSize, indexedArgs);
@@ -1975,7 +1976,7 @@ public:
                               IntegerType::Signless);
     });
 
-    addConversion([&](LLVM::LLVMPointerType ty) -> Type { return ty; });
+    addConversion([](Type ty) { return ty; });
 
     addConversion([&](FunctionType ty) -> Type {
       SmallVector<Type> convertedInpTys, convertedResTys;
@@ -2136,7 +2137,7 @@ struct ConvertSolToStandard
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
-                        arith::ArithDialect, LLVM::LLVMDialect>();
+                        LLVM::LLVMDialect>();
     tgt.addIllegalOp<sol::AllocaOp, sol::MallocOp, sol::AddrOfOp, sol::MapOp,
                      sol::CopyOp, sol::DataLocCastOp, sol::LoadOp, sol::StoreOp,
                      sol::EmitOp, sol::RequireOp, sol::ConvCastOp>();
@@ -2145,17 +2146,26 @@ struct ConvertSolToStandard
     });
     tgt.addDynamicallyLegalOp<sol::CallOp, sol::ReturnOp>(
         [&](Operation *op) { return tyConv.isLegal(op); });
+    tgt.addDynamicallyLegalDialect<arith::ArithDialect>(
+        [&](Operation *op) { return tyConv.isLegal(op); });
 
     RewritePatternSet pats(&getContext());
-    pats.add<CAddOpLowering, CSubOpLowering, AllocaOpLowering, MapOpLowering,
-             CopyOpLowering, DataLocCastOpLowering, LoadOpLowering,
-             StoreOpLowering, ConvCastOpLowering, EmitOpLowering>(
-        tyConv, &getContext());
+    pats.add<CAddOpLowering, CSubOpLowering, AllocaOpLowering, MallocOpLowering,
+             MapOpLowering, CopyOpLowering, DataLocCastOpLowering,
+             LoadOpLowering, StoreOpLowering, ConvCastOpLowering,
+             EmitOpLowering>(tyConv, &getContext());
     populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
-    pats.add<GenericTypeConversion<sol::CallOp>,
+    pats.add<GenericTypeConversion<arith::AddIOp>,
+             GenericTypeConversion<arith::SubIOp>,
+             GenericTypeConversion<arith::MulIOp>,
+             GenericTypeConversion<arith::CmpIOp>,
+             GenericTypeConversion<arith::ConstantOp>,
+             GenericTypeConversion<arith::ExtUIOp>,
+             GenericTypeConversion<arith::ExtSIOp>,
+             GenericTypeConversion<arith::TruncIOp>,
+             GenericTypeConversion<sol::CallOp>,
              GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());
-    pats.add<MallocOpLowering, AddrOfOpLowering, RequireOpLowering>(
-        &getContext());
+    pats.add<AddrOfOpLowering, RequireOpLowering>(&getContext());
 
     // Assign slots to state variables.
     mod.walk([&](sol::ContractOp contr) {
