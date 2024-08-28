@@ -154,15 +154,18 @@ endif()
 # https://discourse.llvm.org/t/undefined-reference-to-typeinfo-for-llvm-genericoptionvalue/71526/4)).
 # TODO: Investigate this further.
 find_package(MLIR REQUIRED CONFIG)
+find_package(LLD REQUIRED CONFIG)
 
-message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
+message(STATUS "Using LLDConfig.cmake in: ${LLD_DIR}")
 
 # Used in test/lit/lit.site.cfg.py.in
 set(SOLIDITY_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLD_CMAKE_DIR}")
 include(TableGen)
 include(AddLLVM)
 include(AddMLIR)
@@ -174,6 +177,7 @@ endif()
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
+include_directories(${LLD_INCLUDE_DIRS})
 
 add_subdirectory(libsolutil)
 add_subdirectory(liblangutil)

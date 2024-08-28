@@ -303,4 +303,4 @@ llvm_map_components_to_libnames(llvm_libs
 
 add_library(solidity ${sources} ${mlir_sources})
 target_link_libraries(solidity PUBLIC yul evmasm langutil smtutil solutil Boost::boost fmt::fmt-header-only Threads::Threads
-	${mlir_libs} ${llvm_libs})
+	${mlir_libs} ${llvm_libs} lldC lldELF lldCommon)

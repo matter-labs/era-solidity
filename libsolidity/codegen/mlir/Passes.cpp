@@ -17,19 +17,24 @@
 
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Interface.h"
+#include "lld-c/LLDAsLibraryC.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm-c/Core.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm-c/Types.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <mutex>
 
@@ -194,12 +199,37 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
 
     // Set up and run the asm printer
     llvm::legacy::PassManager llvmPassMgr;
-    tgtMach->addPassesToEmitFile(llvmPassMgr, llvm::outs(),
+
+    llvm::SmallString<0> outStreamData;
+    llvm::raw_svector_ostream outStream(outStreamData);
+    tgtMach->addPassesToEmitFile(llvmPassMgr, outStream,
                                  /*DwoOut=*/nullptr,
                                  job.action == Action::PrintAsm
                                      ? llvm::CodeGenFileType::CGFT_AssemblyFile
                                      : llvm::CodeGenFileType::CGFT_ObjectFile);
     llvmPassMgr.run(*llvmMod);
+
+    if (job.action == Action::PrintAsm) {
+      llvm::outs() << outStream.str();
+
+      // Print the bytecode in hex.
+    } else {
+      LLVMMemoryBufferRef obj = LLVMCreateMemoryBufferWithMemoryRange(
+          outStream.str().data(), outStream.str().size(), "Input",
+          /*RequiresNullTerminator=*/0);
+      LLVMMemoryBufferRef bytecode = nullptr;
+      char *errMsg = nullptr;
+      if (LLVMLinkEraVM(obj, &bytecode,
+                        /*metadataPtr=*/nullptr, /*metadataSize=*/0, &errMsg))
+        llvm_unreachable(errMsg);
+
+      llvm::outs() << "0x"
+                   << llvm::toHex(llvm::unwrap(bytecode)->getBuffer(),
+                                  /*LowerCase=*/true);
+
+      LLVMDisposeMemoryBuffer(bytecode);
+    }
+
     break;
   }
   case Action::Undefined:

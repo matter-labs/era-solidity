@@ -61,6 +61,7 @@ runs:
           -DSOLC_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOL_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DMLIR_DIR="${PWD}/../target-llvm/build-final/lib/cmake/mlir" \
+          -DLLD_DIR="${PWD}/../target-llvm/build-final/lib/cmake/lld" \
           -DUSE_Z3=OFF \
           -DUSE_CVC4=OFF \
           -DTESTS=0 \
