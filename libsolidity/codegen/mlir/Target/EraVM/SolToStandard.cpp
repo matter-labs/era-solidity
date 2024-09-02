@@ -308,6 +308,7 @@ struct CAddOpLowering : public OpConversionPattern<sol::CAddOp> {
       llvm_unreachable("NYI");
     }
 
+    r.replaceOp(op, sum);
     return success();
   }
 };
@@ -363,6 +364,7 @@ struct CSubOpLowering : public OpConversionPattern<sol::CSubOp> {
       llvm_unreachable("NYI");
     }
 
+    r.replaceOp(op, diff);
     return success();
   }
 };
