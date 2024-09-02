@@ -14,7 +14,7 @@ contract C {
 // CHECK-NEXT:   sol.contract @C_21 {
 // CHECK-NEXT:     sol.func @msgSender_9() -> ui256 attributes {state_mutability = #sol<StateMutability View>} {
 // CHECK-NEXT:       %0 = sol.caller loc(#loc3)
-// CHECK-NEXT:       %1 = "sol.conv_cast"(%0) : (i256) -> ui256 loc(#loc3)
+// CHECK-NEXT:       %1 = sol.conv_cast %0 : i256 -> ui256 loc(#loc3)
 // CHECK-NEXT:       sol.return %1 : ui256 loc(#loc4)
 // CHECK-NEXT:     } loc(#loc2)
 // CHECK-NEXT:     sol.func @addr_20() -> ui256 attributes {state_mutability = #sol<StateMutability View>} {

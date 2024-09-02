@@ -32,8 +32,11 @@ include "mlir/IR/SymbolInterfaces.td"
 
 def Sol_ConvCastOp : Sol_Op<"conv_cast"> {
   let summary = "Like unrealized_conversion_cast; Represents the remapped value";
-  let arguments = (ins AnyType:$inpType);
-  let results = (outs AnyType:$outType);
+
+  let arguments = (ins AnyType:$inp);
+  let results = (outs AnyType:$out);
+
+  let assemblyFormat = "$inp attr-dict `:` type($inp) `->` type($out)";
 }
 
 def Sol_ConstantOp : Op<Sol_Dialect, "constant",

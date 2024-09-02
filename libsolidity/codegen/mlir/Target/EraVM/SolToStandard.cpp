@@ -139,7 +139,7 @@ struct ConvCastOpLowering : public OpConversionPattern<sol::ConvCastOp> {
 
   LogicalResult matchAndRewrite(sol::ConvCastOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    r.replaceOp(op, adaptor.getOperands()[0]);
+    r.replaceOp(op, adaptor.getInp());
     return success();
   }
 };
