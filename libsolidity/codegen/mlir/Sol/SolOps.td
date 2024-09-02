@@ -25,8 +25,9 @@
 include "SolBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 def Sol_ConvCastOp : Sol_Op<"conv_cast"> {
@@ -35,13 +36,66 @@ def Sol_ConvCastOp : Sol_Op<"conv_cast"> {
   let results = (outs AnyType:$outType);
 }
 
+def Sol_ConstantOp : Op<Sol_Dialect, "constant",
+    [ConstantLike, Pure,
+     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+     AllTypesMatch<["value", "result"]>]> {
+  // TODO: summary, description
+
+  let arguments = (ins TypedAttrInterface:$value);
+  let results = (outs AnyType:$result);
+
+  let hasFolder = 1;
+  let assemblyFormat = "attr-dict $value";
+
+  // TODO: verifier
+}
+
+def Sol_ExtOp : Sol_IntCastOp<"ext"> {
+  // TODO: summary, description
+  // TODO: folder, verifier
+}
+
+def Sol_TruncOp : Sol_IntCastOp<"trunc"> {
+  // TODO: summary, description
+  // TODO: folder, verifier
+}
+
 def Sol_CAddOp : Sol_IntBinaryOp<"cadd", [Commutative]> {
   // TODO: summary, description
+  // TODO: verifier
 }
 
 def Sol_CSubOp : Sol_IntBinaryOp<"csub"> {
   // TODO: summary, description
+  // TODO: verifier
 }
+
+def Sol_AddOp : Sol_IntBinaryOp<"add", [Pure, Commutative]> {
+  // TODO: summary, description
+  // TODO: folder, canonicalizer
+}
+
+def Sol_SubOp : Sol_IntBinaryOp<"sub", [Pure]> {
+  // TODO: summary, description
+  // TODO: folder, canonicalizer
+}
+
+def Sol_MulOp : Sol_IntBinaryOp<"mul", [Pure, Commutative]> {
+  // TODO: summary, description
+  // TODO: folder, canonicalizer
+}
+
+def Sol_CmpOp : Sol_Op<"cmp", [Pure, SameTypeOperands]> {
+  // TODO: summary, description
+  let arguments = (ins Sol_CmpPredicateAttr:$predicate, AnyXInt:$lhs,
+                       AnyXInt:$rhs);
+  let results = (outs I1:$result);
+
+  let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
+  // TODO: folder, canonicalizer
+}
+
 
 def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
                                          NoTerminator]> {
@@ -394,12 +448,12 @@ def Sol_MapOp : Sol_Op<"map"> {
   let summary = "Maps a key of a mapping to the address of its value";
   // TODO: Add desc.
 
-  // TODO: I256 -> AnyType.
-  let arguments = (ins AnyType:$mapping, I256:$key);
+  let arguments = (ins AnyType:$mapping, AnyType:$key);
   let results = (outs AnyType:$addr);
 
   let assemblyFormat = [{
-    $mapping `,` $key attr-dict `:` type($mapping) `,` type($addr)
+    $mapping `,` $key attr-dict `:` type($mapping) `,` type($key) `,`
+                                    type($addr)
   }];
 }
 

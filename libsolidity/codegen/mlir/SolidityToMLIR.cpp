@@ -31,7 +31,6 @@
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/CommonIO.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -192,11 +191,8 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
   }
 
   // Integer type
-  if (const auto *intTy = dynamic_cast<IntegerType const *>(ty)) {
-    // FIXME: Switch to (un)signed int types in mlir?
-    assert(!intTy->isSigned() && "NYI");
-    return b.getIntegerType(intTy->numBits());
-  }
+  if (const auto *intTy = dynamic_cast<IntegerType const *>(ty))
+    return b.getIntegerType(intTy->numBits(), intTy->isSigned());
 
   // Rational number type
   if (const auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
@@ -205,14 +201,13 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
 
     // Integral rational number type
     const IntegerType *intTy = ratNumTy->integerType();
-    return b.getIntegerType(intTy->numBits());
+    return b.getIntegerType(intTy->numBits(), intTy->isSigned());
   }
 
   // Address type
-  if (const auto *addrTy = dynamic_cast<AddressType const *>(ty)) {
+  if (const auto *addrTy = dynamic_cast<AddressType const *>(ty))
     // FIXME: 256 -> 160
-    return b.getIntegerType(256);
-  }
+    return b.getIntegerType(256, /*isSigned=*/false);
 
   // Mapping type
   if (const auto *mappingTy = dynamic_cast<MappingType const *>(ty)) {
@@ -319,7 +314,8 @@ void SolidityToMLIRPass::genZeroedVal(mlir::sol::AllocaOp addr) {
 
   mlir::Value val;
   if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(pointeeTy)) {
-    val = b.create<mlir::arith::ConstantIntOp>(loc, 0, intTy.getWidth());
+    val = b.create<mlir::sol::ConstantOp>(
+        loc, b.getIntegerAttr(intTy, llvm::APInt(intTy.getWidth(), 0)));
   } else if (auto stringTy = mlir::dyn_cast<mlir::sol::StringType>(pointeeTy)) {
     assert(stringTy.getDataLocation() == mlir::sol::DataLocation::Memory &&
            "NYI");
@@ -343,17 +339,10 @@ mlir::Value SolidityToMLIRPass::genCast(mlir::Value val, mlir::Type dstTy) {
   if (auto dstIntTy = mlir::dyn_cast<mlir::IntegerType>(dstTy)) {
     auto srcIntTy = mlir::cast<mlir::IntegerType>(srcTy);
 
-    // Casting from bool to integer type.
-    if (srcIntTy.getWidth() == 1)
-      return b.create<mlir::arith::ExtUIOp>(loc, dstTy, val);
-
-    // Casting between integer types of different width.
-    assert(srcIntTy.isSignless() && "FIXME");
-    assert(dstIntTy.isSignless() && "FIXME");
-    if (dstIntTy.getWidth() > srcIntTy.getWidth()) {
-      return b.create<mlir::arith::ExtUIOp>(loc, dstTy, val);
-    }
-    return b.create<mlir::arith::TruncIOp>(loc, dstTy, val);
+    if (dstIntTy.getWidth() > srcIntTy.getWidth())
+      return b.create<mlir::sol::ExtOp>(loc, dstTy, val);
+    assert(dstIntTy.getWidth() < srcIntTy.getWidth());
+    return b.create<mlir::sol::TruncOp>(loc, dstTy, val);
   }
 
   // Casting between reference types (excluding pointer types).
@@ -370,10 +359,9 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
   Type const *ty = lit->annotation().type;
 
   // Bool literal
-  if (auto *boolTy = dynamic_cast<BoolType const *>(ty)) {
-    return b.create<mlir::arith::ConstantOp>(
+  if (auto *boolTy = dynamic_cast<BoolType const *>(ty))
+    return b.create<mlir::sol::ConstantOp>(
         loc, b.getBoolAttr(lit->token() == Token::TrueLiteral));
-  }
 
   // Rational number literal
   if (auto *ratNumTy = dynamic_cast<RationalNumberType const *>(ty)) {
@@ -384,7 +372,7 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
     u256 val = ty->literalValue(lit);
     // TODO: Is there a faster way to convert boost::multiprecision::number to
     // llvm::APInt?
-    return b.create<mlir::arith::ConstantOp>(
+    return b.create<mlir::sol::ConstantOp>(
         loc,
         b.getIntegerAttr(getType(ty), llvm::APInt(intTy->numBits(), val.str(),
                                                   /*radix=*/10)));
@@ -396,30 +384,38 @@ mlir::Value SolidityToMLIRPass::genExpr(Literal const *lit) {
 mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
                                            mlir::Value rhs,
                                            mlir::Location loc) {
-  assert(inUncheckedBlk() && "NYI");
   switch (op) {
   case Token::Add:
     if (inUncheckedBlk())
-      return b.create<mlir::arith::AddIOp>(loc, lhs, rhs);
+      return b.create<mlir::sol::AddOp>(loc, lhs, rhs);
     else
       return b.create<mlir::sol::CAddOp>(loc, lhs, rhs);
   case Token::Sub:
     if (inUncheckedBlk())
-      return b.create<mlir::arith::SubIOp>(loc, lhs, rhs);
+      return b.create<mlir::sol::SubOp>(loc, lhs, rhs);
     else
       return b.create<mlir::sol::CSubOp>(loc, lhs, rhs);
   case Token::Mul:
     assert(inUncheckedBlk() && "NYI");
-    return b.create<mlir::arith::MulIOp>(loc, lhs, rhs);
+    return b.create<mlir::sol::MulOp>(loc, lhs, rhs);
+  case Token::Equal:
+    return b.create<mlir::sol::CmpOp>(loc, mlir::sol::CmpPredicate::eq, lhs,
+                                      rhs);
   case Token::NotEqual:
-    return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne,
-                                         lhs, rhs);
+    return b.create<mlir::sol::CmpOp>(loc, mlir::sol::CmpPredicate::ne, lhs,
+                                      rhs);
+  case Token::LessThan:
+    return b.create<mlir::sol::CmpOp>(loc, mlir::sol::CmpPredicate::lt, lhs,
+                                      rhs);
+  case Token::LessThanOrEqual:
+    return b.create<mlir::sol::CmpOp>(loc, mlir::sol::CmpPredicate::le, lhs,
+                                      rhs);
   case Token::GreaterThan:
-    return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ugt,
-                                         lhs, rhs);
+    return b.create<mlir::sol::CmpOp>(loc, mlir::sol::CmpPredicate::gt, lhs,
+                                      rhs);
   case Token::GreaterThanOrEqual:
-    return b.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::uge,
-                                         lhs, rhs);
+    return b.create<mlir::sol::CmpOp>(loc, mlir::sol::CmpPredicate::ge, lhs,
+                                      rhs);
   default:
     break;
   }
@@ -456,11 +452,15 @@ mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
 }
 
 mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memAcc) {
+  mlir::Location loc = getLoc(memAcc->location());
+
   switch (memAcc->expression().annotation().type->category()) {
   case Type::Category::Magic:
     if (memAcc->memberName() == "sender") {
       // FIXME: sol.caller yields an i256 instead of an address.
-      return b.create<mlir::sol::CallerOp>(getLoc(memAcc->location()));
+      auto callerOp = b.create<mlir::sol::CallerOp>(loc);
+      return b.create<mlir::sol::ConvCastOp>(
+          loc, b.getIntegerType(256, /*isSigned=*/false), callerOp);
     }
     break;
   default:
@@ -840,7 +840,6 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
     CharStream const &stream, solidity::mlirgen::JobSpec const &job) {
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolDialect>();
-  ctx.getOrLoadDialect<mlir::arith::ArithDialect>();
 
   SolidityToMLIRPass gen(ctx, stream);
   for (auto *contract : contracts) {

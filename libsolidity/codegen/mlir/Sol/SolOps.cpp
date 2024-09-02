@@ -26,8 +26,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/ValueRange.h"
-#include "mlir/Interfaces/InferIntRangeInterface.h"
-#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -617,17 +615,53 @@ void EmitOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
-// Arith ops
+// ConstantOp
 //===----------------------------------------------------------------------===//
 
-void CAddOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), intrange::inferAdd(argRanges));
+void ConstantOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  // (Copied from arith dialect)
+
+  auto type = getType();
+  if (auto intCst = dyn_cast<IntegerAttr>(getValue())) {
+    auto intType = dyn_cast<IntegerType>(type);
+
+    // Sugar i1 constants with 'true' and 'false'.
+    if (intType && intType.getWidth() == 1)
+      return setNameFn(getResult(), (intCst.getInt() ? "true" : "false"));
+
+    // Otherwise, build a complex name with the value and type.
+    SmallString<32> specialNameBuffer;
+    llvm::raw_svector_ostream specialName(specialNameBuffer);
+    specialName << 'c' << intCst.getValue();
+    if (intType)
+      specialName << '_' << type;
+    setNameFn(getResult(), specialName.str());
+  } else {
+    setNameFn(getResult(), "cst");
+  }
 }
 
-void CSubOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                               SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), intrange::inferSub(argRanges));
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// ExtOp
+//===----------------------------------------------------------------------===//
+
+bool ExtOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == outputs.size() == 1);
+  return cast<IntegerType>(inputs.front()).getWidth() <
+         cast<IntegerType>(outputs.front()).getWidth();
+}
+
+//===----------------------------------------------------------------------===//
+// TruncOp
+//===----------------------------------------------------------------------===//
+
+bool TruncOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == outputs.size() == 1);
+  return cast<IntegerType>(inputs.front()).getWidth() >
+         cast<IntegerType>(outputs.front()).getWidth();
 }
 
 #define GET_OP_CLASSES

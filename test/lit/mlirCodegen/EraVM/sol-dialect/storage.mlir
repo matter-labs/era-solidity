@@ -11,12 +11,12 @@ module {
       %ld = sol.load %ptr : !sol.ptr<i256, Storage>, i256
 
       %m1.ptr = sol.addr_of @m1 : !sol.mapping<i160, i256>
-      %m1.v.ptr = sol.map %m1.ptr, %k1 : !sol.mapping<i160, i256>, !sol.ptr<i256, Storage>
+      %m1.v.ptr = sol.map %m1.ptr, %k1 : !sol.mapping<i160, i256>, i256, !sol.ptr<i256, Storage>
       %m1.v = sol.load %m1.v.ptr : !sol.ptr<i256, Storage>, i256
 
       %m2.ptr = sol.addr_of @m2 : !sol.mapping<i160, !sol.mapping<i160, i256>>
-      %m2.inner.ptr = sol.map %m2.ptr, %k2 : !sol.mapping<i160, !sol.mapping<i160, i256>>, !sol.mapping<i160, i256>
-      %m2.v.ptr = sol.map %m2.inner.ptr, %k1 : !sol.mapping<i160, i256>, !sol.ptr<i256, Storage>
+      %m2.inner.ptr = sol.map %m2.ptr, %k2 : !sol.mapping<i160, !sol.mapping<i160, i256>>, i256, !sol.mapping<i160, i256>
+      %m2.v.ptr = sol.map %m2.inner.ptr, %k1 : !sol.mapping<i160, i256>, i256, !sol.ptr<i256, Storage>
       %m2.v = sol.load %m2.v.ptr : !sol.ptr<i256, Storage>, i256
 
       sol.return

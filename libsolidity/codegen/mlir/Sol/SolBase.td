@@ -22,8 +22,9 @@
 #ifndef MLIR_SOL_SOLBASE_TD
 #define MLIR_SOL_SOLBASE_TD
 
-include "mlir/Interfaces/InferIntRangeInterface.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
@@ -174,6 +175,17 @@ def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_AggType],
 // Attributes
 //===----------------------------------------------------------------------===//
 
+def Sol_CmpPredicateAttr :
+    I64EnumAttr<"CmpPredicate", "",
+                [I64EnumAttrCase<"eq", 0>,
+                 I64EnumAttrCase<"ne", 1>,
+                 I64EnumAttrCase<"lt", 2>,
+                 I64EnumAttrCase<"le", 3>,
+                 I64EnumAttrCase<"gt", 4>,
+                 I64EnumAttrCase<"ge", 5>]> {
+  let cppNamespace = "::mlir::sol";
+}
+
 def Sol_ContractKind : I32EnumAttr<"ContractKind",
                                    "Represents the solidity contract kind",
                                    [I32EnumAttrCase<"Interface", 0>,
@@ -203,18 +215,22 @@ def Sol_StateMutabilityAttr : EnumAttr<Sol_Dialect, Sol_StateMutability,
 
 class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Sol_Dialect,
                                                             mnemonic, traits>;
-// The following 2 classes are copied from ArithOps.td.
 
-class Sol_BinaryOp<string mnemonic, list<Trait> traits = []> :
+class Sol_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     Sol_Op<mnemonic, traits # [SameOperandsAndResultType]> {
+  let arguments = (ins AnyXInt:$lhs, AnyXInt:$rhs);
+  let results = (outs AnyXInt:$result);
+
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
 }
 
-class Sol_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
-    Sol_BinaryOp<mnemonic, traits #
-      [DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
-    Arguments<(ins AnyXInt:$lhs, AnyXInt:$rhs)>,
-    Results<(outs AnyXInt:$result)>;
-    // TODO: Add verifier that check the signedness semantics.
+class Sol_IntCastOp<string mnemonic, list<Trait> traits = []> :
+    Sol_Op<mnemonic, traits #
+                     [Pure, DeclareOpInterfaceMethods<CastOpInterface>]> {
+  let arguments = (ins AnyXInt:$in);
+  let results = (outs AnyXInt:$out);
+
+  let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
+}
 
 #endif // MLIR_SOL_SOLBASE_TD
