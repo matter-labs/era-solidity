@@ -1005,6 +1005,14 @@ evmasm::LinkerObject const& CompilerStack::runtimeObject(std::string const& _con
 	return contract(_contractName).runtimeObject;
 }
 
+std::string const& CompilerStack::bytecodeFromMlirPipeline(std::string const& _contractName) const
+{
+	if (m_stackState != CompilationSuccessful)
+		solThrow(CompilerError, "Compilation was not successful.");
+
+	return contract(_contractName).mlirPipeline.bytecode;
+}
+
 /// TODO: cache this std::string
 std::string CompilerStack::assemblyString(std::string const& _contractName, StringMap const& _sourceCodes) const
 {

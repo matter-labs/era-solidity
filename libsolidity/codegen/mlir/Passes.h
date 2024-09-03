@@ -62,7 +62,9 @@ std::unique_ptr<llvm::TargetMachine> createTargetMachine(Target tgt);
 void setTgtSpecificInfoInModule(Target tgt, llvm::Module &llvmMod,
                                 llvm::TargetMachine const &tgtMach);
 
+// FIXME: We don't always generate the bytecode here. Refactor this mess!
 /// Performs the JobSpec
-bool doJob(JobSpec const &, mlir::MLIRContext &, mlir::ModuleOp);
+bool doJob(JobSpec const &, mlir::MLIRContext &, mlir::ModuleOp,
+           std::string &bytecodeInHex);
 
 } // namespace solidity::mlirgen

@@ -30,6 +30,7 @@
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Util.h"
+#include "libsolidity/interface/CompilerStack.h"
 #include "libsolutil/CommonIO.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
@@ -835,7 +836,7 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
   b.setInsertionPointAfter(op);
 }
 
-bool solidity::mlirgen::runSolidityToMLIRPass(
+bool CompilerStack::runSolidityToMLIRPass(
     std::vector<ContractDefinition const *> const &contracts,
     CharStream const &stream, solidity::mlirgen::JobSpec const &job) {
   mlir::MLIRContext ctx;
@@ -852,7 +853,9 @@ bool solidity::mlirgen::runSolidityToMLIRPass(
     return false;
   }
 
-  return doJob(job, ctx, mod);
+  return doJob(
+      job, ctx, mod,
+      m_contracts.at(contracts[0]->fullyQualifiedName()).mlirPipeline.bytecode);
 }
 
 void solidity::mlirgen::registerMLIRCLOpts() {

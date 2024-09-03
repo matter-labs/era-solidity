@@ -1,0 +1,25 @@
+// RUN: solc --standard-json  %s | FileCheck %s
+
+{
+  "language": "Solidity",
+  "sources": {
+    "i.sol": {
+      "content": "contract C { function ret_42() public returns (uint256) { return 42; } }"
+    }
+  },
+  "settings": {
+    "viaMLIR": true,
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "metadata",
+          "evm.bytecode.object",
+          "evm.deployedBytecode.object"
+        ]
+      }
+    }
+  }
+}
+
+// CHECK: {"contracts":{"i.sol":{"C":{"abi":[{"inputs":[],"name":"ret_42","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"}],"evm":{"bytecode":{"object":"{{[0-9a-f]+}}"},"deployedBytecode":{"object":"{{[0-9a-f]+}}"}},"metadata":"{\"compiler\":{\"version\":\"{{.*}}"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ret_42\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"i.sol\":\"C\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"i.sol\":{\"keccak256\":\"0x1fe9c2724e9572374dfbc71afe1538954796dcbf7fede72421dd88bba88dc62b\",\"urls\":[\"bzz-raw://d50998513a856040cc392156db6b17c75cd74b811e6c4e8aa709270a29021d99\",\"dweb:/ipfs/QmTduSQ6E46ZyJnUdrxZ3kuUbtzKrkjZ3Z1HVn6SXHs3mi\"]}},\"version\":1}"}}}{{.*}}

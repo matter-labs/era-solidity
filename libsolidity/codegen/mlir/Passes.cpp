@@ -150,7 +150,7 @@ genLLVMIR(mlir::ModuleOp mod, solidity::mlirgen::Target tgt,
 }
 
 bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
-                              mlir::ModuleOp mod) {
+                              mlir::ModuleOp mod, std::string &bytecodeInHex) {
   mlir::PassManager passMgr(&ctx);
   llvm::LLVMContext llvmCtx;
 
@@ -223,8 +223,7 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
                         /*metadataPtr=*/nullptr, /*metadataSize=*/0, &errMsg))
         llvm_unreachable(errMsg);
 
-      llvm::outs() << "0x"
-                   << llvm::toHex(llvm::unwrap(bytecode)->getBuffer(),
+      bytecodeInHex = llvm::toHex(llvm::unwrap(bytecode)->getBuffer(),
                                   /*LowerCase=*/true);
 
       LLVMDisposeMemoryBuffer(bytecode);
