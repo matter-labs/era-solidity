@@ -634,5 +634,6 @@ bool solidity::mlirgen::runYulToMLIRPass(Object const &obj,
     return false;
   }
 
-  return doJob(job, ctx, mod);
+  std::string bytecode;
+  return doJob(job, ctx, mod, bytecode);
 }

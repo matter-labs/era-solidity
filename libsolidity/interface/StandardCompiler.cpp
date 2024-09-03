@@ -24,6 +24,8 @@
 #include <libsolidity/interface/StandardCompiler.h>
 #include <libsolidity/interface/ImportRemapper.h>
 
+#include <libsolidity/codegen/mlir/Interface.h>
+
 #include <libsolidity/ast/ASTJsonExporter.h>
 #include <libyul/YulStack.h>
 #include <libyul/Exceptions.h>
@@ -424,7 +426,7 @@ std::optional<Json> checkAuxiliaryInputKeys(Json const& _input)
 
 std::optional<Json> checkSettingsKeys(Json const& _input)
 {
-	static std::set<std::string> keys{"debug", "evmVersion", "libraries", "metadata", "modelChecker", "optimizer", "outputSelection", "remappings", "stopAfter", "viaIR"};
+	static std::set<std::string> keys{"debug", "evmVersion", "libraries", "metadata", "modelChecker", "optimizer", "outputSelection", "remappings", "stopAfter", "viaIR", "viaMLIR"};
 	return checkKeys(_input, keys, "settings");
 }
 
@@ -813,6 +815,13 @@ std::variant<StandardCompiler::InputsAndSettings, Json> StandardCompiler::parseI
 		if (!settings["viaIR"].is_boolean())
 			return formatFatalError(Error::Type::JSONError, "\"settings.viaIR\" must be a Boolean.");
 		ret.viaIR = settings["viaIR"].get<bool>();
+	}
+
+	if (settings.contains("viaMLIR"))
+	{
+		if (!settings["viaMLIR"].is_boolean())
+			return formatFatalError(Error::Type::JSONError, "\"settings.viaMLIR\" must be a Boolean.");
+		ret.viaMLIR = settings["viaMLIR"].get<bool>();
 	}
 
 	if (settings.contains("evmVersion"))
@@ -1320,6 +1329,9 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 
 	compilerStack.enableEvmBytecodeGeneration(isEvmBytecodeRequested(_inputsAndSettings.outputSelection));
 	compilerStack.enableIRGeneration(isIRRequested(_inputsAndSettings.outputSelection));
+	// FIXME: We should have settings for the target, optimization level etc.
+	if (_inputsAndSettings.viaMLIR)
+		compilerStack.setMLIRGenJobSpec({mlirgen::Action::GenObj, mlirgen::Target::EraVM, '3'});
 
 	Json errors = std::move(_inputsAndSettings.errors);
 
@@ -1581,6 +1593,15 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 					wildcardMatchesExperimental
 				); }
 			);
+
+		if (_inputsAndSettings.viaMLIR)
+		{
+			// Overwrite object fields with the bytecode from the mlir pipeline.
+			if (evmData.contains("bytecode") && evmData["bytecode"].contains("object"))
+				evmData["bytecode"]["object"] = compilerStack.bytecodeFromMlirPipeline(contractName);
+			if (evmData.contains("deployedBytecode") && evmData["deployedBytecode"].contains("object"))
+				evmData["deployedBytecode"]["object"] = compilerStack.bytecodeFromMlirPipeline(contractName);
+		}
 
 		if (!evmData.empty())
 			contractData["evm"] = evmData;

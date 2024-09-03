@@ -744,7 +744,7 @@ bool CompilerStack::compile(State _stopAfter)
 				if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
 					if (isRequestedContract(*contract))
 						contracts.push_back(contract);
-			if (!runSolidityToMLIRPass(contracts, *source->charStream, m_mlirGenJob))
+			if (!runMlirPipeline(contracts, *source->charStream, m_mlirGenJob))
 				return false;
 		}
 	}
@@ -1003,6 +1003,14 @@ evmasm::LinkerObject const& CompilerStack::runtimeObject(std::string const& _con
 		solThrow(CompilerError, "Compilation was not successful.");
 
 	return contract(_contractName).runtimeObject;
+}
+
+std::string const& CompilerStack::bytecodeFromMlirPipeline(std::string const& _contractName) const
+{
+	if (m_stackState != CompilationSuccessful)
+		solThrow(CompilerError, "Compilation was not successful.");
+
+	return contract(_contractName).mlirPipeline.bytecode;
 }
 
 /// TODO: cache this std::string

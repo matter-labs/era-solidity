@@ -73,11 +73,7 @@ struct JobSpec {
 extern void registerMLIRCLOpts();
 
 /// Parses command line options in `argv` for the MLIR framework
-extern bool parseMLIROpts(std::vector<const char *> &_argv);
-
-extern bool runSolidityToMLIRPass(
-    std::vector<frontend::ContractDefinition const *> const &contracts,
-    langutil::CharStream const &stream, JobSpec const &);
+extern bool parseMLIROpts(std::vector<const char *> &argv);
 
 extern bool runYulToMLIRPass(yul::Object const &, langutil::CharStream const &,
                              yul::Dialect const &, JobSpec const &);
