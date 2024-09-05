@@ -21,14 +21,11 @@
 
 #pragma once
 
-#include "libsolidity/ast/ASTForward.h"
-#include "libyul/ASTForward.h"
-#include <optional>
 #include <vector>
 
 namespace solidity::langutil {
 class CharStream;
-};
+} // namespace solidity::langutil
 
 namespace solidity::yul {
 struct Dialect;
@@ -58,7 +55,6 @@ enum class Action {
 
 enum class Target {
   EraVM,
-
   Undefined,
 };
 
