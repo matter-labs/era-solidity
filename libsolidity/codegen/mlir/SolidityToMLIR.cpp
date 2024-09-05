@@ -854,7 +854,7 @@ bool CompilerStack::runMlirPipeline(
   }
 
   return doJob(
-      job, ctx, mod,
+      job, mod,
       m_contracts.at(contracts[0]->fullyQualifiedName()).mlirPipeline.bytecode);
 }
 

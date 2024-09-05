@@ -149,9 +149,9 @@ genLLVMIR(mlir::ModuleOp mod, solidity::mlirgen::Target tgt,
   return llvmMod;
 }
 
-bool solidity::mlirgen::doJob(JobSpec const &job, mlir::MLIRContext &ctx,
-                              mlir::ModuleOp mod, std::string &bytecodeInHex) {
-  mlir::PassManager passMgr(&ctx);
+bool solidity::mlirgen::doJob(JobSpec const &job, mlir::ModuleOp mod,
+                              std::string &bytecodeInHex) {
+  mlir::PassManager passMgr(mod.getContext());
   llvm::LLVMContext llvmCtx;
 
   switch (job.action) {
