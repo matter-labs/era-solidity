@@ -58,12 +58,12 @@ private:
 		set<yul::YulString> recFuncs;
 		if (_p_asm.annotation().optimizedOperations)
 		{
-			yul::Block const& code = *_p_asm.annotation().optimizedOperations;
+			yul::Block const& code = _p_asm.annotation().optimizedOperations->root();
 			recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
 		}
 		else
 		{
-			recFuncs = yul::CallGraphGenerator::callGraph(_p_asm.operations()).recursiveFunctions();
+			recFuncs = yul::CallGraphGenerator::callGraph(_p_asm.operations().root()).recursiveFunctions();
 		}
 		for (auto recFunc: recFuncs)
 		{

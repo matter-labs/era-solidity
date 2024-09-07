@@ -231,7 +231,7 @@ struct InlineAssemblyAnnotation: StatementAnnotation
 	/// True, if the assembly block involves any memory opcode or assigns to variables in memory.
 	util::SetOnce<bool> hasMemoryEffects;
 	/// The yul block of the InlineAssembly::operations() after optimizations.
-	std::shared_ptr<yul::Block> optimizedOperations;
+	std::shared_ptr<const yul::AST> optimizedOperations;
 };
 
 struct BlockAnnotation: StatementAnnotation, ScopableAnnotation

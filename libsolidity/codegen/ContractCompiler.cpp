@@ -965,7 +965,7 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		m_context.optimizeYul(object, *dialect, m_optimiserSettings);
 
 		code = object.code().get();
-		_inlineAssembly.annotation().optimizedOperations = object.code;
+		_inlineAssembly.annotation().optimizedOperations = object.code();
 		analysisInfo = object.analysisInfo.get();
 	}
 	else
@@ -982,7 +982,7 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 			reservedIdentifiers.insert(extRef.first->name);
 		}
 		yul::Disambiguator disambiguator(*dialect, *analysisInfo, reservedIdentifiers);
-		object.code = std::make_shared<yul::Block>(std::get<yul::Block>(disambiguator(*code)));
+		object.setCode(std::make_shared<yul::AST>(std::get<yul::Block>(disambiguator(code->root()))));
 
 		// Run the AsmAnalyzer on `object.code`.
 		// Create a resolver that accepts any identifiers. This is OK since the TypeChecker already did the resolution
@@ -997,8 +997,8 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		object.analysisInfo = std::make_shared<yul::AsmAnalysisInfo>(
 			yul::AsmAnalyzer::analyzeStrictAssertCorrect(*dialect, object, resolver));
 
-		code = object.code.get();
-		_inlineAssembly.annotation().optimizedOperations = object.code;
+		code = object.code().get();
+		_inlineAssembly.annotation().optimizedOperations = object.code();
 		analysisInfo = object.analysisInfo.get();
 	}
 
