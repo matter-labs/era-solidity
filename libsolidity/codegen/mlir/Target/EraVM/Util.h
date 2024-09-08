@@ -142,28 +142,12 @@ public:
   void genStringStore(std::string const &str, mlir::Value addr,
                       std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Generates the ABI length for the pointer `ptr`.
-  mlir::Value genABILen(mlir::Value ptr,
-                        std::optional<mlir::Location> locArg = std::nullopt);
-
   // FIXME: Refactor ABI APIs to distinguish solidity/evm ones with eravm
   // specfic ones.
 
-  /// Generates the tuple encoding as per ABI for the literal string and return
-  /// the "tail" address.
-  mlir::Value
-  genABITupleEncoding(std::string const &str, mlir::Value headStart,
-                      std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates a revert with message.
-  void genRevertWithMsg(std::string const &msg,
+  /// Generates the ABI length for the pointer `ptr`.
+  mlir::Value genABILen(mlir::Value ptr,
                         std::optional<mlir::Location> locArg = std::nullopt);
-  void genRevertWithMsg(mlir::Value cond, std::string const &msg,
-                        std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates a revert without message.
-  void genRevert(mlir::Value cond,
-                 std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates an assertion that the tuple size should be less than `size`.
   void
@@ -172,6 +156,9 @@ public:
 
   /// Generates the tuple encoder code as per the ABI and returns the address at
   /// the end of the tuple.
+  mlir::Value
+  genABITupleEncoding(std::string const &str, mlir::Value headStart,
+                      std::optional<mlir::Location> locArg = std::nullopt);
   mlir::Value
   genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
                       mlir::Value tupleStart,
@@ -182,6 +169,16 @@ public:
                            mlir::Value tupleEnd,
                            std::vector<mlir::Value> &results, bool fromMem,
                            std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a revert with message.
+  void genRevertWithMsg(std::string const &msg,
+                        std::optional<mlir::Location> locArg = std::nullopt);
+  void genRevertWithMsg(mlir::Value cond, std::string const &msg,
+                        std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a revert without message.
+  void genRevert(mlir::Value cond,
+                 std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the ABI data for an external call.
   mlir::Value genABIData(mlir::Value addr, mlir::Value size,
