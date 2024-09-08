@@ -110,7 +110,8 @@ private:
 	void appendExternalFunctionCall(
 		FunctionType const& _functionType,
 		std::vector<ASTPointer<Expression const>> const& _arguments,
-		bool _tryCall
+		bool _tryCall,
+		FunctionCallAnnotation* _annotation = nullptr
 	);
 	/// Appends code that evaluates a single expression and moves the result to memory. The memory offset is
 	/// expected to be on the stack and is updated by this call.
@@ -138,6 +139,9 @@ private:
 
 	/// @returns the CompilerUtils object containing the current context.
 	CompilerUtils utils();
+
+	/// Generates the selector for internal function pointer with type @a _funcType.
+	void generateSelector(FunctionType const& _funcType);
 
 	bool m_optimiseOrderLiterals;
 	CompilerContext& m_context;
