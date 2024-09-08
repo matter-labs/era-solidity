@@ -153,6 +153,12 @@ def Sol_ObjectOp : Sol_Op<"object", [Symbol, SymbolTable, SingleBlock,
   // - All func.funcs to be only under sol.object
 }
 
+//
+// FIXME: What's wrong with using func.func and related ops? We could schedule a
+// custom conversion to do solidity specific things before the func dialect
+// conversion.
+//
+
 def Sol_FuncOp : Sol_Op<"func", [AutomaticAllocationScope, CallableOpInterface,
                                  FunctionOpInterface, IsolatedFromAbove,
                                  Symbol, SingleBlock]> {
