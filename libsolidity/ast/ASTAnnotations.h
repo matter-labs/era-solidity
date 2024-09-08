@@ -29,6 +29,8 @@
 
 #include <libsolutil/SetOnce.h>
 
+#include <libyul/AST.h>
+
 #include <map>
 #include <memory>
 #include <optional>
@@ -164,6 +166,8 @@ struct ContractDefinitionAnnotation: TypeDeclarationAnnotation, StructurallyDocu
 	util::SetOnce<std::shared_ptr<CallGraph const>> creationCallGraph;
 	/// A graph with edges representing calls between functions that may happen in a deployed contract.
 	util::SetOnce<std::shared_ptr<CallGraph const>> deployedCallGraph;
+	/// Set of internal functions referenced as function pointers
+	std::set<FunctionDefinition const*, ASTCompareByID<FunctionDefinition>> intFuncPtrRefs;
 
 	/// List of contracts whose bytecode is referenced by this contract, e.g. through "new".
 	/// The Value represents the ast node that referenced the contract.
@@ -226,6 +230,8 @@ struct InlineAssemblyAnnotation: StatementAnnotation
 	bool markedMemorySafe = false;
 	/// True, if the assembly block involves any memory opcode or assigns to variables in memory.
 	util::SetOnce<bool> hasMemoryEffects;
+	/// The yul block of the InlineAssembly::operations() after optimizations.
+	std::shared_ptr<const yul::AST> optimizedOperations;
 };
 
 struct BlockAnnotation: StatementAnnotation, ScopableAnnotation
@@ -342,6 +348,13 @@ struct FunctionCallAnnotation: ExpressionAnnotation
 	util::SetOnce<FunctionCallKind> kind;
 	/// If true, this is the external call of a try statement.
 	bool tryCall = false;
+
+	// HACK!
+	// We track the success tag here for the `TryStatement` lowering. This is to avoid the redundant status check and
+	// the conditional jump. Such patterns can confuse the zksolc translator.
+	//
+	// uint32_t since Assembly::new[Push]Tag() asserts that the tag is 32 bits.
+	std::optional<uint32_t> tryCallSuccessTag;
 };
 
 /// Experimental Solidity annotations.
