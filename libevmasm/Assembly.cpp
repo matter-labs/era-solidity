@@ -784,7 +784,7 @@ AssemblyItem Assembly::newDupN(size_t _depth) const
 
 Assembly& Assembly::optimise(OptimiserSettings const& _settings)
 {
-	optimiseInternal(_settings, {});
+	(void) _settings;
 	return *this;
 }
 

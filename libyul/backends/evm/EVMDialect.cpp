@@ -29,6 +29,9 @@
 #include <libyul/Object.h>
 #include <libyul/Utilities.h>
 #include <libyul/backends/evm/AbstractAssembly.h>
+#include <libyul/backends/evm/ZKEVMIntrinsics.h>
+
+#include <range/v3/view/zip.hpp>
 
 #include <range/v3/algorithm/all_of.hpp>
 #include <range/v3/view/enumerate.hpp>
@@ -178,6 +181,10 @@ std::set<std::string, std::less<>> createReservedIdentifiers(langutil::EVMVersio
 		)
 			reserved.emplace(name);
 	}
+	for (auto const& intr: solidity::zkevm::intrInfos)
+	{
+		reserved.emplace(intr.name);
+	}
 	reserved += std::vector<std::string>{
 		"linkersymbol",
 		"datasize",
@@ -193,6 +200,57 @@ std::set<std::string, std::less<>> createReservedIdentifiers(langutil::EVMVersio
 		};
 
 	return reserved;
+}
+
+BuiltinFunctionForEVM createVerbatimWrapper(
+	const std::string& _name,
+	size_t _params,
+	size_t _returns,
+	bool _sideEffects,
+	const std::vector<std::optional<LiteralKind>>& _literalKinds)
+{
+	SideEffects sideEffects{};
+	if (_sideEffects)
+	{
+		sideEffects
+			= {/*movable=*/false,
+			   /*movableApartFromEffects=*/false,
+			   /*canBeRemoved=*/false,
+			   /*canBeRemovedIfNoMSize=*/false,
+			   /*cannotLoop=*/true,
+			   /*otherState=*/SideEffects::Effect::Write,
+			   /*storage=*/SideEffects::Effect::Write,
+			   /*memory=*/SideEffects::Effect::Write};
+	}
+
+	std::function<void(FunctionCall const&, AbstractAssembly&, BuiltinContext&)> genCode;
+	if (!_literalKinds.empty())
+	{
+		genCode = [=](FunctionCall const& _call, AbstractAssembly& _assembly, BuiltinContext&)
+		{
+			yulAssert(_call.arguments.size() == _literalKinds.size(), "");
+			size_t numLits = 0;
+			for (const auto&& [arg, kind]: ranges::views::zip(_call.arguments, _literalKinds))
+			{
+				if (!kind)
+					continue;
+
+				yulAssert(std::holds_alternative<Literal>(arg), "Expected literal");
+				yulAssert(std::get<Literal>(arg).kind == kind, "Unexpected literal kind");
+				numLits++;
+			}
+
+			_assembly.appendVerbatim(asBytes(_name), _params - numLits, _returns);
+		};
+	}
+	else
+	{
+		genCode = [=](FunctionCall const&, AbstractAssembly& _assembly, BuiltinContext&)
+		{ _assembly.appendVerbatim(asBytes(_name), _params, _returns); };
+	}
+
+	return createFunction(
+		_name, _params, _returns, sideEffects, ControlFlowSideEffects::worst(), _literalKinds, genCode);
 }
 
 std::vector<std::optional<BuiltinFunctionForEVM>> createBuiltins(langutil::EVMVersion _evmVersion, std::optional<uint8_t> _eofVersion, bool _objectAccess)
@@ -235,15 +293,20 @@ std::vector<std::optional<BuiltinFunctionForEVM>> createBuiltins(langutil::EVMVe
 			builtins.emplace_back(std::nullopt);
 	}
 
-	auto const createIfObjectAccess = [_objectAccess](
-		std::string const& _name,
-		size_t _params,
-		size_t _returns,
-		SideEffects _sideEffects,
-		ControlFlowSideEffects _controlFlowSideEffects,
-		std::vector<std::optional<LiteralKind>> _literalArguments,
-		std::function<void(FunctionCall const&, AbstractAssembly&, BuiltinContext&)> _generateCode
-	) -> std::optional<BuiltinFunctionForEVM>
+	for (auto const& intr: solidity::zkevm::intrInfos)
+		builtins.emplace_back(
+			createVerbatimWrapper(intr.name, intr.args, intr.ret, intr.sideEffects, intr.literalKinds));
+
+	auto const createIfObjectAccess
+		= [_objectAccess](
+			  std::string const& _name,
+			  size_t _params,
+			  size_t _returns,
+			  SideEffects _sideEffects,
+			  ControlFlowSideEffects _controlFlowSideEffects,
+			  std::vector<std::optional<LiteralKind>> _literalArguments,
+			  std::function<void(FunctionCall const&, AbstractAssembly&, BuiltinContext&)> _generateCode)
+		-> std::optional<BuiltinFunctionForEVM>
 	{
 		if (!_objectAccess)
 			return std::nullopt;

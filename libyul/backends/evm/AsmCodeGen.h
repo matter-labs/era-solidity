@@ -22,6 +22,7 @@
 #pragma once
 
 #include <libyul/backends/evm/AbstractAssembly.h>
+#include <libyul/backends/evm/EVMCodeTransform.h>
 #include <libyul/AsmAnalysis.h>
 #include <liblangutil/EVMVersion.h>
 
@@ -45,6 +46,7 @@ public:
 		evmasm::Assembly& _assembly,
 		langutil::EVMVersion _evmVersion,
 		std::optional<uint8_t> _eofVersion,
+		std::shared_ptr<CodeTransformContext>& _context, // out
 		ExternalIdentifierAccess::CodeGenerator _identifierAccess = {},
 		bool _useNamedLabelsForFunctions = false,
 		bool _optimizeStackAllocation = false

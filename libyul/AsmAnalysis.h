@@ -92,6 +92,8 @@ public:
 		AST const& _ast,
 		Object::Structure _objectStructure
 	);
+	static AsmAnalysisInfo analyzeStrictAssertCorrect(
+		Dialect const& _dialect, Object const& _object, yul::ExternalIdentifierAccess::Resolver _resolver);
 
 	size_t operator()(Literal const& _literal);
 	size_t operator()(Identifier const&);
