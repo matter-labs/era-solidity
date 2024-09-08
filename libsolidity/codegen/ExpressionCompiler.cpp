@@ -618,6 +618,68 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	return false;
 }
 
+void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
+{
+	// Are we in the creation context?
+	if (m_context.runtimeContext())
+	{
+		// Extract only the low 32 bits for matching in the tag selector
+		m_context << u256(0xffffffff) << Instruction::AND;
+	}
+
+	struct TagInfo
+	{
+		evmasm::AssemblyItem const tag;
+		FunctionDefinition const* func;
+	};
+	std::vector<TagInfo> tagInfos;
+
+	for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
+	{
+		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
+		// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
+		solAssert(intFuncPtrRefType, "");
+		if (!intFuncPtrRefType->hasEqualParameterTypes(_funcType) || !intFuncPtrRefType->hasEqualReturnTypes(_funcType)
+			|| !intFuncPtrRef->isImplemented())
+			continue;
+
+		// The loaded function pointer
+		m_context << Instruction::DUP1;
+		// We don't need to resolve the function here since FuncPtrTracker already did that.
+		m_context << m_context.functionEntryLabel(*intFuncPtrRef).pushTag();
+		m_context << Instruction::EQ;
+
+		evmasm::AssemblyItem newTag = m_context.newTag();
+		m_context.appendConditionalJumpTo(newTag);
+		tagInfos.push_back({newTag, intFuncPtrRef});
+	}
+
+	if (tagInfos.empty())
+	{
+		// Pop the original function pointer
+		m_context << Instruction::POP;
+	}
+	// If we can't match the entry tag of any of the internal function
+	m_context.appendPanic(PanicCode::InvalidInternalFunction);
+
+	unsigned int stkOffsetAfterJumpI = m_context.stackHeight();
+	for (TagInfo& tagInfo: tagInfos)
+	{
+		// The PC is set to this tag from the jumpi, so we need to set the stack offset correctly
+		m_context.setStackOffset((int) stkOffsetAfterJumpI);
+
+		m_context << tagInfo.tag;
+
+		// Pop the original function pointer
+		m_context << Instruction::POP;
+
+		// We don't need to resolve the function here since FuncPtrTracker already did that.
+		m_context << m_context.functionEntryLabel(*tagInfo.func).pushTag();
+		m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+		// After the call, the vm's pc should be set to the return label since it is pushed to the stack.
+	}
+}
+
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	auto functionCallKind = *_functionCall.annotation().kind;
@@ -709,6 +771,13 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				parameterSize += function.selfType()->sizeOnStack();
 			}
 
+			// There can be cases when ExpressionAnnotation::calledDirectly is false but we can infer that it is a
+			// direct call if the target PC is a literal tag
+			bool directCallInferred = false;
+			auto const& currAsmItems = m_context.assembly().items();
+			if (!currAsmItems.empty() && currAsmItems.back().type() == AssemblyItemType::PushTag)
+				directCallInferred = true;
+
 			if (m_context.runtimeContext())
 				// We have a runtime context, so we need the creation part.
 				utils().rightShiftNumberOnStack(32);
@@ -716,7 +785,12 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// Extract the runtime part.
 				m_context << ((u256(1) << 32) - 1) << Instruction::AND;
 
-			m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+			// Is this a direct call?
+			if (_functionCall.expression().annotation().calledDirectly || directCallInferred)
+				m_context.appendJump(evmasm::AssemblyItem::JumpType::IntoFunction);
+			else
+				generateSelector(function);
+
 			m_context << returnLabel;
 
 			unsigned returnParametersSize = CompilerUtils::sizeOnStack(function.returnParameterTypes());
@@ -732,7 +806,8 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 		case FunctionType::Kind::External:
 		case FunctionType::Kind::DelegateCall:
 			_functionCall.expression().accept(*this);
-			appendExternalFunctionCall(function, arguments, _functionCall.annotation().tryCall);
+			appendExternalFunctionCall(
+				function, arguments, _functionCall.annotation().tryCall, &_functionCall.annotation());
 			break;
 		case FunctionType::Kind::BareCallCode:
 			solAssert(false, "Callcode has been removed.");
@@ -792,7 +867,9 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 				// If this is a try call, return "<address> 1" in the success case and
 				// "0" in the error case.
 				AssemblyItem errorCase = m_context.appendConditionalJump();
-				m_context << u256(1);
+				_functionCall.annotation().tryCallSuccessTag
+					= m_context.appendJumpToNew().data().convert_to<uint32_t>();
+				m_context.adjustStackOffset(1);
 				m_context << errorCase;
 			}
 			else
@@ -2677,7 +2754,8 @@ void ExpressionCompiler::appendExpOperatorCode(Type const& _valueType, Type cons
 void ExpressionCompiler::appendExternalFunctionCall(
 	FunctionType const& _functionType,
 	std::vector<ASTPointer<Expression const>> const& _arguments,
-	bool _tryCall
+	bool _tryCall,
+	FunctionCallAnnotation* _annotation
 )
 {
 	solAssert(
@@ -2967,8 +3045,10 @@ void ExpressionCompiler::appendExternalFunctionCall(
 
 	if (_tryCall)
 	{
+		solAssert(_annotation, "");
 		// Success branch will reach this, failure branch will directly jump to endTag.
-		m_context << u256(1);
+		_annotation->tryCallSuccessTag = m_context.appendJumpToNew().data().convert_to<uint32_t>();
+		m_context.adjustStackOffset(1);
 		m_context << endTag;
 	}
 }
