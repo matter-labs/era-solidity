@@ -551,8 +551,6 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
 }
 
 void YulToMLIRPass::operator()(Block const &blk) {
-  mlirgen::BuilderExt bExt(b);
-
   // "Forward declare" FuncOps (i.e. create them with an empty region) at this
   // block so that we can lower calls before lowering the functions. The
   // function lowering is expected to lookup the FuncOp without creating it.

@@ -263,7 +263,7 @@ struct CAddOpLowering : public OpConversionPattern<sol::CAddOp> {
   LogicalResult matchAndRewrite(sol::CAddOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
     auto ty = cast<IntegerType>(op.getType());
@@ -319,7 +319,7 @@ struct CSubOpLowering : public OpConversionPattern<sol::CSubOp> {
   LogicalResult matchAndRewrite(sol::CSubOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
     auto ty = cast<IntegerType>(op.getType());
@@ -377,7 +377,7 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
   LogicalResult matchAndRewrite(sol::Keccak256Op op,
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
     // Setup arguments for the call to sha3.
@@ -483,7 +483,7 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
   LogicalResult matchAndRewrite(sol::CallDataLoadOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(rewriter);
+    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
     eravm::Builder eraB(rewriter, loc);
 
     Value offset = op.getInp();
@@ -541,7 +541,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
-    solidity::mlirgen::BuilderExt bExt(rewriter);
+    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
     eravm::Builder eraB(rewriter, loc);
 
     mlir::Value srcOffset;
@@ -668,7 +668,7 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
-    solidity::mlirgen::BuilderExt bExt(rewriter);
+    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
     eravm::Builder eraB(rewriter, loc);
 
     assert(!inRuntimeContext(op) &&
@@ -776,7 +776,7 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
     auto mod = op->getParentOfType<ModuleOp>();
 
     solidity::mlirgen::BuilderExt bExt(rewriter, loc);
-    eravm::Builder eraB(rewriter);
+    eravm::Builder eraB(rewriter, loc);
 
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
     // the unreachable op
@@ -804,7 +804,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
     auto mod = op->getParentOfType<ModuleOp>();
 
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r);
+    eravm::Builder eraB(r, loc);
     SymbolRefAttr returnFunc =
         eraB.getOrInsertReturn(op->getParentOfType<ModuleOp>());
 

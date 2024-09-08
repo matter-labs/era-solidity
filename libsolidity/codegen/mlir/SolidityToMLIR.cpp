@@ -526,7 +526,6 @@ mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {
         dynamic_cast<EventDefinition const &>(calleeTy->declaration());
 
     // Lower and track the indexed and non-indexed args.
-    mlirgen::BuilderExt bExt(b, loc);
     std::vector<mlir::Value> indexedArgs, nonIndexedArgs;
     for (size_t i = 0; i < event.parameters().size(); ++i) {
       assert(dynamic_cast<IntegerType const *>(calleeTy->parameterTypes()[i]) ||
@@ -776,7 +775,6 @@ void SolidityToMLIRPass::run(FunctionDefinition const &func) {
   mlir::Block *entryBlk = b.createBlock(&op.getRegion());
   b.setInsertionPointToStart(entryBlk);
 
-  mlirgen::BuilderExt bExt(b);
   for (auto &&[inpTy, inpLoc, param] :
        ranges::views::zip(inpTys, inpLocs, func.parameters())) {
     mlir::Value arg = entryBlk->addArgument(inpTy, inpLoc);

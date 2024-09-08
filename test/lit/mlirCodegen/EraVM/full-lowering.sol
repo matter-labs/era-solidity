@@ -772,7 +772,7 @@ contract C {
 // ASM-NEXT: 	shl.s	224, r2, r2
 // ASM-NEXT: 	or	r1, r3, r1
 // ASM-NEXT: 	or	r1, r2, r1
-// ASM-NEXT: 	revl @DEFAULT_FAR_REVERT
+// ASM-NEXT: 	revl	@DEFAULT_FAR_REVERT
 // ASM-NEXT: .func_end6:
 // ASM-EMPTY:
 // ASM-NEXT: __return:
@@ -790,7 +790,7 @@ contract C {
 // ASM-NEXT: 	shl.s	224, r2, r2
 // ASM-NEXT: 	or	r1, r3, r1
 // ASM-NEXT: 	or	r1, r2, r1
-// ASM-NEXT: 	retl @DEFAULT_FAR_RETURN
+// ASM-NEXT: 	retl	@DEFAULT_FAR_RETURN
 // ASM-NEXT: .func_end7:
 // ASM-EMPTY:
 // ASM-NEXT: __sha3:
@@ -923,7 +923,7 @@ contract C {
 // ASM-NEXT: DEFAULT_UNWIND:
 // ASM-NEXT: 	pncl	@DEFAULT_UNWIND
 // ASM-NEXT: DEFAULT_FAR_RETURN:
-// ASM-NEXT: 	retl @DEFAULT_FAR_RETURN
+// ASM-NEXT: 	retl	@DEFAULT_FAR_RETURN
 // ASM-NEXT: DEFAULT_FAR_REVERT:
-// ASM-NEXT: 	revl @DEFAULT_FAR_REVERT
+// ASM-NEXT: 	revl	@DEFAULT_FAR_REVERT
 // ASM-EMPTY:
