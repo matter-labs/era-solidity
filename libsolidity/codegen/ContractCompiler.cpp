@@ -35,6 +35,7 @@
 #include <libyul/backends/evm/AsmCodeGen.h>
 #include <libyul/backends/evm/EVMMetrics.h>
 #include <libyul/backends/evm/EVMDialect.h>
+#include <libyul/optimiser/Disambiguator.h>
 #include <libyul/optimiser/Suite.h>
 #include <libyul/Object.h>
 #include <libyul/optimiser/ASTCopier.h>
@@ -720,6 +721,20 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 	{
 		solAssert(_context == yul::IdentifierContext::RValue || _context == yul::IdentifierContext::LValue, "");
 		auto ref = _inlineAssembly.annotation().externalReferences.find(&_identifier);
+		if (ref == _inlineAssembly.annotation().externalReferences.end())
+		{
+			// The yul AST might be copied from the original (In case we ran the Disambiguator, for instance). So we'll
+			// search for the identifier's name instead.
+			auto& externalReferences = _inlineAssembly.annotation().externalReferences;
+			for (auto extRef = externalReferences.begin(); extRef != externalReferences.end(); ++extRef)
+			{
+				if (extRef->first->name == _identifier.name)
+				{
+					ref = extRef;
+					break;
+				}
+			}
+		}
 		solAssert(ref != _inlineAssembly.annotation().externalReferences.end(), "");
 		Declaration const* decl = ref->second.declaration;
 		solAssert(!!decl, "");
@@ -950,18 +965,55 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 		m_context.optimizeYul(object, *dialect, m_optimiserSettings);
 
 		code = object.code().get();
+		_inlineAssembly.annotation().optimizedOperations = object.code();
+		analysisInfo = object.analysisInfo.get();
+	}
+	else
+	{
+		auto const* dialect = dynamic_cast<yul::EVMDialect const*>(&_inlineAssembly.dialect());
+		solAssert(dialect, "");
+
+		// Run the disambiguator.
+		// We need this so that the yul::CallGraphGenerator runs correctly (which is required for setting the
+		// "recursiveFunctions" record in the extraMetadata for inline assembly)
+		std::set<yul::YulString> reservedIdentifiers = dialect->fixedFunctionNames();
+		for (auto extRef: _inlineAssembly.annotation().externalReferences)
+		{
+			reservedIdentifiers.insert(extRef.first->name);
+		}
+		yul::Disambiguator disambiguator(*dialect, *analysisInfo, reservedIdentifiers);
+		object.setCode(std::make_shared<yul::AST>(std::get<yul::Block>(disambiguator(code->root()))));
+
+		// Run the AsmAnalyzer on `object.code`.
+		// Create a resolver that accepts any identifiers. This is OK since the TypeChecker already did the resolution
+		// and the disambiguator should have left them as it is.
+		yul::ExternalIdentifierAccess::Resolver resolver
+			= [](yul::Identifier const& _identifier, yul::IdentifierContext _context, bool) -> bool
+		{
+			(void) _identifier;
+			(void) _context;
+			return true;
+		};
+		object.analysisInfo = std::make_shared<yul::AsmAnalysisInfo>(
+			yul::AsmAnalyzer::analyzeStrictAssertCorrect(*dialect, object, resolver));
+
+		code = object.code().get();
+		_inlineAssembly.annotation().optimizedOperations = object.code();
 		analysisInfo = object.analysisInfo.get();
 	}
 
+	std::shared_ptr<yul::CodeTransformContext> yulContext;
 	yul::CodeGenerator::assemble(
 		code->root(),
 		*analysisInfo,
 		*m_context.assemblyPtr(),
 		m_context.evmVersion(),
+		yulContext,
 		identifierAccessCodeGen,
 		false,
 		m_optimiserSettings.optimizeStackAllocation
 	);
+	m_context.addInlineAsmContextMapping(&_inlineAssembly, yulContext);
 	m_context.setStackOffset(static_cast<int>(startStackHeight));
 	return false;
 }
@@ -971,11 +1023,14 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	StackHeightChecker checker(m_context);
 	CompilerContext::LocationSetter locationSetter(m_context, _tryStatement);
 
-	compileExpression(_tryStatement.externalCall());
+	auto* externalCall = dynamic_cast<FunctionCall const*>(&_tryStatement.externalCall());
+	solAssert(externalCall && externalCall->annotation().tryCall, "");
+	compileExpression(*externalCall);
+
 	int const returnSize = static_cast<int>(_tryStatement.externalCall().annotation().type->sizeOnStack());
 
 	// Stack: [ return values] <success flag>
-	evmasm::AssemblyItem successTag = m_context.appendConditionalJump();
+	m_context << Instruction::POP;
 
 	// Catch case.
 	m_context.adjustStackOffset(-returnSize);
@@ -984,7 +1039,11 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 
 	evmasm::AssemblyItem endTag = m_context.appendJumpToNew();
 
-	m_context << successTag;
+	auto& successTag = externalCall->annotation().tryCallSuccessTag;
+	solAssert(successTag, "");
+	m_context << AssemblyItem(AssemblyItemType::Tag, *successTag);
+	successTag.reset();
+
 	m_context.adjustStackOffset(returnSize);
 	{
 		// Success case.

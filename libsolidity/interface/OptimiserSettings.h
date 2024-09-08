@@ -72,7 +72,6 @@ struct OptimiserSettings
 	static OptimiserSettings minimal()
 	{
 		OptimiserSettings s = none();
-		s.runJumpdestRemover = true;
 		s.runPeephole = true;
 		s.simpleCounterForLoopUncheckedIncrement = true;
 		return s;
@@ -82,10 +81,7 @@ struct OptimiserSettings
 	{
 		OptimiserSettings s;
 		s.runOrderLiterals = true;
-		s.runInliner = true;
-		s.runJumpdestRemover = true;
 		s.runPeephole = true;
-		s.runDeduplicate = true;
 		s.runCSE = true;
 		s.runConstantOptimiser = true;
 		s.simpleCounterForLoopUncheckedIncrement = true;
