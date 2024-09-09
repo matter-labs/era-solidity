@@ -30,6 +30,12 @@ include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+// TODO: Implement verifiers for all the ops.
+//
+// Most of the high level sol dialect ops (excluding sol.func + related ops, yul
+// specific ops) should verify that their types (ssa argument types and
+// TypeAttr) are high level ((un)signed int types, sol dialect types etc.).
+
 def Sol_ConvCastOp : Sol_Op<"conv_cast"> {
   let summary = "Like unrealized_conversion_cast; Represents the remapped value";
 

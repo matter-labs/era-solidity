@@ -219,12 +219,7 @@ Value eravm::Builder::genABITupleEncoding(
 
       // Integer type
     } else if (auto intTy = dyn_cast<IntegerType>(ty)) {
-      if (intTy.getWidth() == 1)
-        val = b.create<arith::ExtUIOp>(loc, b.getIntegerType(256), val);
-      else
-        // FIXME: We might need to track the sign in integral types for
-        // generating the correct extension.
-        assert(intTy.getWidth() == 256 && "NYI");
+      val = bExt.genIntCast(/*width=*/256, intTy.isSigned(), val);
       b.create<sol::MStoreOp>(loc, headAddr, val);
 
     } else {

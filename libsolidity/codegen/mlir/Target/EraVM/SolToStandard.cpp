@@ -1213,7 +1213,11 @@ struct MapOpLowering : public OpConversionPattern<sol::MapOp> {
 
     // Setup arguments to keccak256.
     auto zero = bExt.genI256Const(0);
-    r.create<sol::MStoreOp>(loc, zero, adaptor.getKey());
+    assert(isa<IntegerType>(op.getKey().getType()) && "NYI");
+    auto key = bExt.genIntCast(
+        /*width=*/256, cast<IntegerType>(op.getKey().getType()).isSigned(),
+        adaptor.getKey());
+    r.create<sol::MStoreOp>(loc, zero, key);
     r.create<sol::MStoreOp>(loc, bExt.genI256Const(0x20), adaptor.getMapping());
 
     r.replaceOpWithNewOp<sol::Keccak256Op>(op, zero, bExt.genI256Const(0x40));

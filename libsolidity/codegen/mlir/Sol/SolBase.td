@@ -34,6 +34,7 @@ def I256Attr : SignlessIntegerAttrBase<I256,
                                         "256-bit signless integer attribute">;
 
 // TODO: Replace 'X' with something better ("Signfull" or something?).
+// TODO: We should add i1 here.
 def AnyXInt : AnyTypeOf<[AnySignedInteger, AnyUnsignedInteger]>;
 
 //===----------------------------------------------------------------------===//

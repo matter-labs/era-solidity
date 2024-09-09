@@ -28,6 +28,24 @@
 using namespace mlir;
 using namespace solidity::mlirgen;
 
+Value BuilderExt::genIntCast(unsigned width, bool isSigned, Value val,
+                             std::optional<Location> locArg) {
+  auto srcType = cast<IntegerType>(val.getType());
+  assert(srcType.isSignless());
+  auto dstSignlessType = b.getIntegerType(width);
+
+  Location loc = locArg ? *locArg : defLoc;
+
+  if (srcType == dstSignlessType)
+    return val;
+  if (srcType.getWidth() > width)
+    return b.create<arith::TruncIOp>(loc, dstSignlessType, val);
+  if (isSigned)
+    return b.create<arith::ExtSIOp>(loc, dstSignlessType, val);
+  else
+    return b.create<arith::ExtUIOp>(loc, dstSignlessType, val);
+}
+
 LLVM::GlobalOp BuilderExt::getGlobalOp(llvm::StringRef name, ModuleOp mod) {
   LLVM::GlobalOp found = mod.lookupSymbol<LLVM::GlobalOp>(name);
   assert(found);

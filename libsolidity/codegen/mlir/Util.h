@@ -110,6 +110,11 @@ public:
     return genConst(val, 256, locArg);
   }
 
+  /// Generates an arith dialect cast op (if required) (as per the desired width
+  /// and signedness) of the signless typed value.
+  mlir::Value genIntCast(unsigned width, bool isSigned, mlir::Value val,
+                         std::optional<mlir::Location> locArg = std::nullopt);
+
   mlir::Value
   genCastToIdx(mlir::Value val,
                std::optional<mlir::Location> locArg = std::nullopt) {
