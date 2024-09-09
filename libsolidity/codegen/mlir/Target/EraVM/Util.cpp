@@ -319,11 +319,12 @@ void eravm::Builder::genABITupleDecoding(TypeRange tys, Value tupleStart,
       results.push_back(dstAddr);
 
     } else if (auto intTy = dyn_cast<IntegerType>(ty)) {
-      assert(intTy.getWidth() == 256 && "NYI");
+      Value castedArg = bExt.genIntCast(intTy.getWidth(), intTy.isSigned(),
+                                        genLoad(headAddr));
       // TODO: Generate the validator for non 256 bit types. The validator
       // should just check if the loaded value is what we would get if we
       // extended the original `intTy` value to 256 bits.
-      results.push_back(genLoad(headAddr));
+      results.push_back(castedArg);
     }
 
     headAddr = b.create<arith::AddIOp>(
