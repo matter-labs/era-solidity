@@ -31,7 +31,7 @@ include "mlir/IR/OpBase.td"
 
 def I256 : I<256>;
 def I256Attr : SignlessIntegerAttrBase<I256,
-                                        "256-bit signless integer attribute">;
+                                       "256-bit signless integer attribute">;
 
 // TODO: Replace 'X' with something better ("Signfull" or something?).
 // TODO: We should add i1 here.
@@ -171,7 +171,6 @@ def Sol_AggType : AnyTypeOf<[Sol_StringType, Sol_ArrayType, Sol_StructType],
 def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_AggType],
                              "Solidity aggregate types and pointers">;
 
-
 //===----------------------------------------------------------------------===//
 // Attributes
 //===----------------------------------------------------------------------===//
@@ -211,7 +210,7 @@ def Sol_StateMutabilityAttr : EnumAttr<Sol_Dialect, Sol_StateMutability,
                                        "StateMutability">;
 
 //===----------------------------------------------------------------------===//
-// Op
+// Op classes
 //===----------------------------------------------------------------------===//
 
 class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Sol_Dialect,

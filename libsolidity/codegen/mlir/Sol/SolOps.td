@@ -30,12 +30,16 @@ include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+// TODO: Add summary and description to all the op definitions.
+
 // TODO: Implement verifiers for all the ops.
 //
 // Most of the high level sol dialect ops (excluding sol.func + related ops, yul
 // specific ops) should verify that their types (ssa argument types and
 // TypeAttr) are high level ((un)signed int types, sol dialect types etc.).
 
+// FIXME: Can we have a custom lowering of unrealized_conversion_cast instead?
+// ReconcileUnrealizedCasts conversion won't work here.
 def Sol_ConvCastOp : Sol_Op<"conv_cast"> {
   let summary = "Like unrealized_conversion_cast; Represents the remapped value";
 
@@ -49,54 +53,38 @@ def Sol_ConstantOp : Op<Sol_Dialect, "constant",
     [ConstantLike, Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      AllTypesMatch<["value", "result"]>]> {
-  // TODO: summary, description
-
   let arguments = (ins TypedAttrInterface:$value);
   let results = (outs AnyType:$result);
 
-  let hasFolder = 1;
   let assemblyFormat = "attr-dict $value";
-
-  // TODO: verifier
+  let hasFolder = 1;
 }
 
 def Sol_ExtOp : Sol_IntCastOp<"ext"> {
-  // TODO: summary, description
-  // TODO: folder, verifier
+  // TODO: folder
 }
 
 def Sol_TruncOp : Sol_IntCastOp<"trunc"> {
-  // TODO: summary, description
-  // TODO: folder, verifier
+  // TODO: folder
 }
 
-def Sol_CAddOp : Sol_IntBinaryOp<"cadd", [Commutative]> {
-  // TODO: summary, description
-  // TODO: verifier
-}
+def Sol_CAddOp : Sol_IntBinaryOp<"cadd", [Commutative]>;
 
-def Sol_CSubOp : Sol_IntBinaryOp<"csub"> {
-  // TODO: summary, description
-  // TODO: verifier
-}
+def Sol_CSubOp : Sol_IntBinaryOp<"csub">;
 
 def Sol_AddOp : Sol_IntBinaryOp<"add", [Pure, Commutative]> {
-  // TODO: summary, description
   // TODO: folder, canonicalizer
 }
 
 def Sol_SubOp : Sol_IntBinaryOp<"sub", [Pure]> {
-  // TODO: summary, description
   // TODO: folder, canonicalizer
 }
 
 def Sol_MulOp : Sol_IntBinaryOp<"mul", [Pure, Commutative]> {
-  // TODO: summary, description
   // TODO: folder, canonicalizer
 }
 
 def Sol_CmpOp : Sol_Op<"cmp", [Pure, SameTypeOperands]> {
-  // TODO: summary, description
   let arguments = (ins Sol_CmpPredicateAttr:$predicate, AnyXInt:$lhs,
                        AnyXInt:$rhs);
   let results = (outs I1:$result);
@@ -105,17 +93,173 @@ def Sol_CmpOp : Sol_Op<"cmp", [Pure, SameTypeOperands]> {
   // TODO: folder, canonicalizer
 }
 
+def Sol_AllocaOp : Sol_Op<"alloca"> {
+  let arguments = (ins TypeAttr:$alloc_type);
+  let results = (outs Res<Sol_PtrType, "",
+                          [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
 
-def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
-                                         NoTerminator]> {
-  let summary = "An operation that represents a contract";
-  let description = [{
-    Example:
-    sol.contract @C {
-      ...
+  let builders = [OpBuilder<(ins "Type":$allocType), [{
+    $_state.addAttribute("alloc_type", mlir::TypeAttr::get(allocType));
+    $_state.addTypes(allocType);
+  }]>];
+  let skipDefaultBuilders = 1;
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+def Sol_MallocOp : Sol_Op<"malloc"> {
+  let arguments = (ins TypeAttr:$alloc_type, Optional<I256>:$size);
+  let results = (outs Sol_AggType:$addr);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+def Sol_StateVarOp : Sol_Op<"state_var", [Symbol]> {
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type);
+
+  let assemblyFormat = "$sym_name attr-dict `:` $type";
+}
+
+def Sol_AddrOfOp : Sol_Op<"addr_of"> {
+  let arguments = (ins FlatSymbolRefAttr:$var);
+  // FIXME: AnyType -> Sol_PtrTy causes the asm printer to miss the prefix!
+  let results = (outs AnyType:$addr);
+
+  let assemblyFormat = "$var attr-dict `:` type($addr)";
+}
+
+def Sol_MapOp : Sol_Op<"map"> {
+  let arguments = (ins AnyType:$mapping, AnyType:$key);
+  let results = (outs AnyType:$addr);
+
+  let assemblyFormat = [{
+    $mapping `,` $key attr-dict `:` type($mapping) `,` type($key) `,`
+                                    type($addr)
+  }];
+}
+
+def Sol_CopyOp : Sol_Op<"copy"> {
+  let arguments = (ins AnyType:$src, AnyType:$dst);
+
+  let assemblyFormat = [{
+    $src `,` $dst attr-dict `:` type($src) `,` type($dst)
+  }];
+}
+
+// TODO: Remove this.
+def Sol_GetSlotOp : Sol_Op<"get_slot"> {
+  let arguments = (ins I256:$inpSlot, I256:$key);
+  let results = (outs I256:$outSlot);
+
+  let assemblyFormat = "$inpSlot `,` $key attr-dict";
+}
+
+// TODO: Remove this.
+def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
+  let arguments = (ins TypeAttr:$effectiveType, I256:$slot,
+                       I32:$byteOffset);
+  let results = (outs I256:$out);
+
+  let assemblyFormat = "$effectiveType $slot `,` $byteOffset attr-dict";
+}
+
+// TODO: Simplify the asm format by inferring element type of Sol_RefType.
+// TODO? Use a single type (index?) for array/struct size and indexing that
+// conforms to that of solidity.
+
+def Sol_LoadOp : Sol_Op<"load"> {
+  let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
+                       Variadic<I256>:$indices);
+  let results = (outs AnyType:$out);
+
+  let builders = [
+    OpBuilder<(ins "Value":$baseAddr, CArg<"ValueRange", "{}">:$indices), [{
+      build($_builder, $_state, getEltType(baseAddr.getType()),
+        baseAddr, indices);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr) `,` type($out)
+  }];
+}
+
+def Sol_StoreOp : Sol_Op<"store"> {
+  let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
+                       Variadic<I256>:$indices);
+
+  let builders = [
+    OpBuilder<(ins "Value":$val, "Value":$baseAddr), [{
+      build($_builder, $_state, val, baseAddr, /*indices=*/{});
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    $val `,` $baseAddr (`[` $indices^ `]`)? attr-dict
+      `:` type($val) `,` type($baseAddr)
+  }];
+}
+
+def Sol_DataLocCastOp : Sol_Op<"data_loc_cast"> {
+  let arguments = (ins AnyType:$inp);
+  let results = (outs AnyType:$out);
+
+  let assemblyFormat = [{ $inp attr-dict `:` type($inp) `,` type($out) }];
+}
+
+def Sol_EmitOp : Sol_Op<"emit"> {
+  let arguments = (ins Variadic<AnyType>:$args, I8Attr:$indexedArgsCount,
+                       OptionalAttr<StrAttr>:$signature);
+
+  let builders = [
+    OpBuilder<(ins "std::vector<Value>":$indexedArgs,
+                    CArg<"std::vector<Value>", "{}">:$nonIndexedArgs,
+                    CArg<"std::optional<std::string>",
+                         "std::nullopt">:$signature), [{
+      $_state.addOperands(indexedArgs);
+      $_state.addOperands(nonIndexedArgs);
+
+      IntegerAttr indexedArgsCountAttr =
+          $_builder.getIntegerAttr($_builder.getIntegerType(8),
+                                   indexedArgs.size());
+      $_state.addAttribute(getIndexedArgsCountAttrName($_state.name),
+                           indexedArgsCountAttr);
+
+      if (signature) {
+        $_state.addAttribute(getSignatureAttrName($_state.name),
+                             $_builder.getStringAttr(*signature));
+      }
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+
+  let extraClassDeclaration = [{
+    OperandRange getIndexedArgs() {
+      return OperandRange(getOperands().begin(), getOperands().begin() +
+                          getIndexedArgsCount());
+    }
+
+    OperandRange getNonIndexedArgs() {
+      return OperandRange(getOperands().begin() + getIndexedArgsCount(),
+                          getOperands().end());
     }
   }];
 
+  // TODO: Verifier: ($indexedArgsCount <= 3)
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+def Sol_RequireOp : Sol_Op<"require"> {
+  // FIXME: $msg should be an OptionalAttr, but it doesn't reflect in the
+  // generated build API.
+  let arguments = (ins I1:$cond, DefaultValuedStrAttr<StrAttr, "">:$msg);
+
+  let assemblyFormat = "$cond `,` $msg attr-dict";
+}
+
+def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
+                                         NoTerminator]> {
   // TODO: Represent the following for the lowering:
   // - IRGenerationContext::memoryUnsafeInlineAssemblySeen
   // - IRGenerationContext::reservedMemory
@@ -129,34 +273,8 @@ def Sol_ContractOp : Sol_Op<"contract", [Symbol, SymbolTable, SingleBlock,
                    OptionalAttr<FlatSymbolRefAttr>:$fallbackFn,
                    OptionalAttr<FlatSymbolRefAttr>:$receiveFn);
   let regions = (region SizedRegion<1>:$bodyRegion);
+
   let assemblyFormat = "$sym_name $bodyRegion attr-dict";
-
-  let extraClassDeclaration = [{
-    DictionaryAttr getInterfaceFnAttr(sol::FuncOp fn);
-  }];
-}
-
-// TODO? Move this to a "yul" dialect? Do we need a lot of yul specific ops for
-// a new dialect?
-def Sol_ObjectOp : Sol_Op<"object", [Symbol, SymbolTable, SingleBlock,
-                          NoTerminator]> {
-  let summary = "An operation that represents a yul object";
-  let description = [{
-    Example:
-    sol.object @C {
-      ...
-    }
-  }];
-
-  let arguments = (ins SymbolNameAttr:$sym_name);
-  let regions = (region SizedRegion<1>:$bodyRegion);
-  let assemblyFormat = "$sym_name $bodyRegion attr-dict";
-
-  let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<(ins CArg<"StringRef", "{}">:$name)>];
-  // TODO: Implement a verifier that checks for things like:
-  // - Maximum of 2 nesting of sol.object
-  // - All func.funcs to be only under sol.object
 }
 
 //
@@ -312,61 +430,6 @@ def CallOp : Sol_Op<"call", [CallOpInterface,
   }];
 }
 
-def Sol_EmitOp : Sol_Op<"emit"> {
-  // TODO: summary, description
-
-  let arguments = (ins Variadic<AnyType>:$args, I8Attr:$indexedArgsCount,
-                       OptionalAttr<StrAttr>:$signature);
-
-  let builders = [
-    OpBuilder<(ins "std::vector<Value>":$indexedArgs,
-                    CArg<"std::vector<Value>", "{}">:$nonIndexedArgs,
-                    CArg<"std::optional<std::string>",
-                         "std::nullopt">:$signature), [{
-      $_state.addOperands(indexedArgs);
-      $_state.addOperands(nonIndexedArgs);
-
-      IntegerAttr indexedArgsCountAttr =
-          $_builder.getIntegerAttr($_builder.getIntegerType(8),
-                                   indexedArgs.size());
-      $_state.addAttribute(getIndexedArgsCountAttrName($_state.name),
-                           indexedArgsCountAttr);
-
-      if (signature) {
-        $_state.addAttribute(getSignatureAttrName($_state.name),
-                             $_builder.getStringAttr(*signature));
-      }
-    }]>
-  ];
-  let skipDefaultBuilders = 1;
-
-  let extraClassDeclaration = [{
-    OperandRange getIndexedArgs() {
-      return OperandRange(getOperands().begin(), getOperands().begin() +
-                          getIndexedArgsCount());
-    }
-
-    OperandRange getNonIndexedArgs() {
-      return OperandRange(getOperands().begin() + getIndexedArgsCount(),
-                          getOperands().end());
-    }
-  }];
-
-  // TODO: verifier ($indexedArgsCount <= 3)
-
-  let hasCustomAssemblyFormat = 1;
-}
-
-def Sol_RequireOp : Sol_Op<"require"> {
-  // TODO: summary, description
-
-  // TODO: $msg should be an OptionalAttr, but it doesn't reflect in the
-  // generated build API.
-  let arguments = (ins I1:$cond, DefaultValuedStrAttr<StrAttr, "">:$msg);
-
-  let assemblyFormat = "$cond `,` $msg attr-dict";
-}
-
 def Sol_ReturnOp : Sol_Op<"return", [Pure, HasParent<"FuncOp">,
                                      ReturnLike, Terminator]> {
   let summary = "ReturnOp for sol.func";
@@ -393,178 +456,25 @@ def Sol_ReturnOp : Sol_Op<"return", [Pure, HasParent<"FuncOp">,
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
-def Sol_AllocaOp : Sol_Op<"alloca"> {
-  let summary = "Stack allocation op";
-  let description = [{
-    This operation performs allocations on the stack data-location.
+//
+// TODO? Move the rest of the ops to the yul dialect?
+//
 
-    Example:
+def Sol_ObjectOp : Sol_Op<"object", [Symbol, SymbolTable, SingleBlock,
+                          NoTerminator]> {
+  let arguments = (ins SymbolNameAttr:$sym_name);
+  let regions = (region SizedRegion<1>:$bodyRegion);
 
-    ```mlir
-    %addr = sol.alloca : !sol.ptr<i256>
-    ```
-  }];
-
-  let arguments = (ins TypeAttr:$alloc_type);
-  let results = (outs Res<Sol_PtrType, "",
-                          [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
+  let builders = [OpBuilder<(ins CArg<"StringRef", "{}">:$name)>];
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<(ins "Type":$allocType), [{
-    $_state.addAttribute("alloc_type", mlir::TypeAttr::get(allocType));
-    $_state.addTypes(allocType);
-  }]>];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "$sym_name $bodyRegion attr-dict";
 }
 
-def Sol_MallocOp : Sol_Op<"malloc"> {
-  let summary = "Memory allocation op";
-  let description = [{
-    This operation performs allocations for aggregate types on the memory
-    data-location. The optional size argument is used in the dynamic allocation
-    of the outermost dimension. Inner dynamic allocations are initialized to the
-    zero pointer. The outermost dimension is initialized to the zero pointer if
-    the size argument is absent.
-
-    Example:
-
-    ```mlir
-    %addr = sol.malloc : !sol.array<2 x i256, Memory>
-    %addr = sol.malloc %size : !sol.array<? x i256, Memory>
-    ```
-  }];
-
-  let arguments = (ins TypeAttr:$alloc_type, Optional<I256>:$size);
-  let results = (outs Sol_AggType:$addr);
-
-  let hasCustomAssemblyFormat = 1;
-}
-
-def Sol_StateVarOp : Sol_Op<"state_var", [Symbol]> {
-  let summary = "Represents a state variable in a contract";
-  // TODO: Add desc.
-
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type);
-  let assemblyFormat = "$sym_name attr-dict `:` $type";
-}
-
-def Sol_AddrOfOp : Sol_Op<"addr_of"> {
-  let summary = "Generates address of a sol.state_var";
-  // TODO: Add desc.
-
-  let arguments = (ins FlatSymbolRefAttr:$var);
-  // FIXME: AnyType -> Sol_PtrTy causes the asm printer to miss the prefix!
-  let results = (outs AnyType:$addr);
-
-  let assemblyFormat = "$var attr-dict `:` type($addr)";
-}
-
-def Sol_MapOp : Sol_Op<"map"> {
-  let summary = "Maps a key of a mapping to the address of its value";
-  // TODO: Add desc.
-
-  let arguments = (ins AnyType:$mapping, AnyType:$key);
-  let results = (outs AnyType:$addr);
-
-  let assemblyFormat = [{
-    $mapping `,` $key attr-dict `:` type($mapping) `,` type($key) `,`
-                                    type($addr)
-  }];
-}
-
-def Sol_CopyOp : Sol_Op<"copy"> {
-  // TODO: Add summary and desc.
-
-  let arguments = (ins AnyType:$src, AnyType:$dst);
-
-  let assemblyFormat = [{
-    $src `,` $dst attr-dict `:` type($src) `,` type($dst)
-  }];
-}
-
-// TODO: Remove this.
-def Sol_GetSlotOp : Sol_Op<"get_slot"> {
-  let summary = "Maps slot+key to slot";
-  let description = [{
-    Example:
-    %mapped_slot = sol.get_slot %slot_offset %key
-  }];
-
-  let arguments = (ins I256:$inpSlot, I256:$key);
-  let results = (outs I256:$outSlot);
-
-  let assemblyFormat = "$inpSlot `,` $key attr-dict";
-}
-
-// TODO: Remove this.
-def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
-  let summary = "Storage load op";
-  let description = [{
-    This operation loads an i256 value from storage at the given offsets. The
-    value is truncated or extended to the effective type (but always yields an
-    i256).
-
-    Example:
-    %ld = sol.storage_load i32 %slot_offset %byte_offset
-  }];
-
-  let arguments = (ins TypeAttr:$effectiveType, I256:$slot,
-                       I32:$byteOffset);
-  let results = (outs I256:$out);
-  let assemblyFormat = "$effectiveType $slot `,` $byteOffset attr-dict";
-}
-
-// TODO: Simplify the asm format by inferring element type of Sol_RefType.
-// TODO? Use a single type (index?) for array/struct size and indexing that
-// conforms to that of solidity.
-
-def Sol_LoadOp : Sol_Op<"load"> {
-  // TODO: Add summary and desc.
-
-  let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
-                       Variadic<I256>:$indices);
-  let results = (outs AnyType:$out);
-  let assemblyFormat = [{
-    $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr) `,` type($out)
-  }];
-
-  let builders = [
-    OpBuilder<(ins "Value":$baseAddr, CArg<"ValueRange", "{}">:$indices), [{
-      build($_builder, $_state, getEltType(baseAddr.getType()),
-        baseAddr, indices);
-    }]>
-  ];
-  // TODO: Implement a verifier to check the validity of constant index of
-  // struct types.
-}
-
-def Sol_StoreOp : Sol_Op<"store"> {
-  // TODO: Add summary and desc.
-
-  let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
-                       Variadic<I256>:$indices);
-  let assemblyFormat = [{
-    $val `,` $baseAddr (`[` $indices^ `]`)? attr-dict
-      `:` type($val) `,` type($baseAddr)
-  }];
-
-  let builders = [
-    OpBuilder<(ins "Value":$val, "Value":$baseAddr), [{
-      build($_builder, $_state, val, baseAddr, /*indices=*/{});
-    }]>
-  ];
-}
-
-def Sol_DataLocCastOp : Sol_Op<"data_loc_cast"> {
-  // TODO: Add summary and desc.
-
-  let arguments = (ins AnyType:$inp);
-  let results = (outs AnyType:$out);
-  let assemblyFormat = [{ $inp attr-dict `:` type($inp) `,` type($out) }];
-}
-
-// TODO: The op definitions of yul builtins should be auto-generated from
-// evmasm::InstructionInfo
+//
+// TODO? Should we auto-generate op definitions of yul builtins from
+// evmasm::InstructionInfo?
+//
 
 def Sol_CallerOp : Sol_Op<"caller", [Pure]> {
   let summary = "Represents the `caller` call in yul";

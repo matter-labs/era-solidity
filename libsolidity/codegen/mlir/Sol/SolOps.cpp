@@ -297,26 +297,6 @@ void PointerType::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
-// ContractOp
-//===----------------------------------------------------------------------===//
-
-DictionaryAttr ContractOp::getInterfaceFnAttr(sol::FuncOp fn) {
-  ArrayAttr interfaceFnsAttr = getInterfaceFnsAttr();
-  auto fnSym = SymbolRefAttr::get(fn.getSymNameAttr());
-  TypeAttr fnTy = fn.getFunctionTypeAttr();
-
-  for (Attribute interfaceFnAttr : interfaceFnsAttr) {
-    auto attr = cast<DictionaryAttr>(interfaceFnAttr);
-    assert(attr.contains("sym"));
-    if (fnSym == cast<SymbolRefAttr>(attr.get("sym")) &&
-        fnTy == cast<TypeAttr>(attr.get("type")))
-      return attr;
-  }
-
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
 // ObjectOp
 //===----------------------------------------------------------------------===//
 
