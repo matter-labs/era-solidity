@@ -45,10 +45,15 @@ runs:
       env:
         CXXFLAGS: "-Wno-narrowing"
       run: |
+        set -x
         mkdir -p ./build
         cd ./build
         [ ${RUNNER_OS} = macOS ] && PARALLEL=$(sysctl -n hw.ncpu) || PARALLEL=$(nproc)
         [ ${RUNNER_OS} = Linux ] && COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+        if [ ${RUNNER_OS} = Windows ]; then
+           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-fuse-ld=lld"
+           export LDFLAGS='-lbcrypt -lwsock32 -static'
+        fi
         cmake .. \
           -DCMAKE_BUILD_TYPE="Release" ${COMPILER_FLAGS} \
           -DSOL_VERSION_ZKSYNC="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
