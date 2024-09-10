@@ -85,8 +85,8 @@ def Sol_MulOp : Sol_IntBinaryOp<"mul", [Pure, Commutative]> {
 }
 
 def Sol_CmpOp : Sol_Op<"cmp", [Pure, SameTypeOperands]> {
-  let arguments = (ins Sol_CmpPredicateAttr:$predicate, AnyXInt:$lhs,
-                       AnyXInt:$rhs);
+  let arguments = (ins Sol_CmpPredicateAttr:$predicate, SolInt:$lhs,
+                       SolInt:$rhs);
   let results = (outs I1:$result);
 
   let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";

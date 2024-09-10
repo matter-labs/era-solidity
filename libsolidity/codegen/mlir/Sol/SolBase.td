@@ -29,14 +29,6 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
-def I256 : I<256>;
-def I256Attr : SignlessIntegerAttrBase<I256,
-                                       "256-bit signless integer attribute">;
-
-// TODO: Replace 'X' with something better ("Signfull" or something?).
-// TODO: We should add i1 here.
-def AnyXInt : AnyTypeOf<[AnySignedInteger, AnyUnsignedInteger]>;
-
 //===----------------------------------------------------------------------===//
 // Dialect
 //===----------------------------------------------------------------------===//
@@ -55,6 +47,9 @@ def Sol_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 // Types
 //===----------------------------------------------------------------------===//
+
+def I256 : I<256>;
+def SolInt : AnyTypeOf<[I1, AnySignedInteger, AnyUnsignedInteger]>;
 
 class Sol_Type<string name, string typeMnemonic, list<Trait> traits = []> :
     TypeDef<Sol_Dialect, name, traits> {
@@ -175,6 +170,9 @@ def Sol_RefType : AnyTypeOf<[Sol_PtrType, Sol_AggType],
 // Attributes
 //===----------------------------------------------------------------------===//
 
+def I256Attr : SignlessIntegerAttrBase<I256,
+                                       "256-bit signless integer attribute">;
+
 def Sol_CmpPredicateAttr :
     I64EnumAttr<"CmpPredicate", "",
                 [I64EnumAttrCase<"eq", 0>,
@@ -218,8 +216,8 @@ class Sol_Op<string mnemonic, list<Trait> traits = []> : Op<Sol_Dialect,
 
 class Sol_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     Sol_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins AnyXInt:$lhs, AnyXInt:$rhs);
-  let results = (outs AnyXInt:$result);
+  let arguments = (ins SolInt:$lhs, SolInt:$rhs);
+  let results = (outs SolInt:$result);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
 }
@@ -227,8 +225,8 @@ class Sol_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
 class Sol_IntCastOp<string mnemonic, list<Trait> traits = []> :
     Sol_Op<mnemonic, traits #
                      [Pure, DeclareOpInterfaceMethods<CastOpInterface>]> {
-  let arguments = (ins AnyXInt:$in);
-  let results = (outs AnyXInt:$out);
+  let arguments = (ins SolInt:$in);
+  let results = (outs SolInt:$out);
 
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
 }
