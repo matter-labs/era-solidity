@@ -42,8 +42,7 @@ Value BuilderExt::genIntCast(unsigned width, bool isSigned, Value val,
     return b.create<arith::TruncIOp>(loc, dstSignlessType, val);
   if (isSigned)
     return b.create<arith::ExtSIOp>(loc, dstSignlessType, val);
-  else
-    return b.create<arith::ExtUIOp>(loc, dstSignlessType, val);
+  return b.create<arith::ExtUIOp>(loc, dstSignlessType, val);
 }
 
 LLVM::GlobalOp BuilderExt::getGlobalOp(llvm::StringRef name, ModuleOp mod) {
