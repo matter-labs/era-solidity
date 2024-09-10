@@ -186,17 +186,6 @@ def Sol_CmpPredicateAttr :
   let cppNamespace = "::mlir::sol";
 }
 
-def Sol_ContractKind : I32EnumAttr<"ContractKind",
-                                   "Represents the solidity contract kind",
-                                   [I32EnumAttrCase<"Interface", 0>,
-                                    I32EnumAttrCase<"Contract", 1>,
-                                    I32EnumAttrCase<"Library", 2>]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::sol";
-}
-def Sol_ContractKindAttr : EnumAttr<Sol_Dialect, Sol_ContractKind,
-                                    "ContractKind">;
-
 def Sol_StateMutability :
     I32EnumAttr<"StateMutability", "Represents the state mutability of functions",
                  [I32EnumAttrCase<"Pure", 0>,
@@ -208,6 +197,17 @@ def Sol_StateMutability :
 }
 def Sol_StateMutabilityAttr : EnumAttr<Sol_Dialect, Sol_StateMutability,
                                        "StateMutability">;
+
+def Sol_ContractKind : I32EnumAttr<"ContractKind",
+                                   "Represents the solidity contract kind",
+                                   [I32EnumAttrCase<"Interface", 0>,
+                                    I32EnumAttrCase<"Contract", 1>,
+                                    I32EnumAttrCase<"Library", 2>]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::sol";
+}
+def Sol_ContractKindAttr : EnumAttr<Sol_Dialect, Sol_ContractKind,
+                                    "ContractKind">;
 
 //===----------------------------------------------------------------------===//
 // Op classes

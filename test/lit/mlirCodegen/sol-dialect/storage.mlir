@@ -10,12 +10,13 @@ module {
   } {interface_fns = [], kind = #sol<ContractKind Contract>}
 }
 
-// CHECK: module {
+// CHECK: #Contract = #sol<ContractKind Contract>
+// CHECK-NEXT: module {
 // CHECK-NEXT:   sol.contract @C {
 // CHECK-NEXT:     sol.state_var @m : i256
 // CHECK-NEXT:     sol.func @f() {
 // CHECK-NEXT:       %0 = sol.addr_of @m : !sol.ptr<i256, Storage>
 // CHECK-NEXT:       sol.return
 // CHECK-NEXT:     }
-// CHECK-NEXT:   } {interface_fns = [], kind = #sol<ContractKind Contract>}
+// CHECK-NEXT:   } {interface_fns = [], kind = #Contract}
 // CHECK-NEXT: }

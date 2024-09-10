@@ -34,6 +34,26 @@
 using namespace mlir;
 using namespace mlir::sol;
 
+namespace {
+
+struct SolOpAsmDialectInterface : public OpAsmDialectInterface {
+  using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
+    if (auto contrKindAttr = dyn_cast<ContractKindAttr>(attr)) {
+      os << stringifyContractKind(contrKindAttr.getValue());
+      return AliasResult::OverridableAlias;
+    }
+    if (auto stateMutAttr = dyn_cast<StateMutabilityAttr>(attr)) {
+      os << stringifyStateMutability(stateMutAttr.getValue());
+      return AliasResult::OverridableAlias;
+    }
+    return AliasResult::NoAlias;
+  }
+};
+
+} // namespace
+
 void SolDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
@@ -49,6 +69,8 @@ void SolDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "Sol/SolOpsAttributes.cpp.inc"
       >();
+
+  addInterfaces<SolOpAsmDialectInterface>();
 }
 
 Type mlir::sol::getEltType(Type ty, Index structTyIdx) {
