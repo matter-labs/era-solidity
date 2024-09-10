@@ -146,23 +146,6 @@ def Sol_CopyOp : Sol_Op<"copy"> {
   }];
 }
 
-// TODO: Remove this.
-def Sol_GetSlotOp : Sol_Op<"get_slot"> {
-  let arguments = (ins I256:$inpSlot, I256:$key);
-  let results = (outs I256:$outSlot);
-
-  let assemblyFormat = "$inpSlot `,` $key attr-dict";
-}
-
-// TODO: Remove this.
-def Sol_StorageLoadOp : Sol_Op<"storage_load"> {
-  let arguments = (ins TypeAttr:$effectiveType, I256:$slot,
-                       I32:$byteOffset);
-  let results = (outs I256:$out);
-
-  let assemblyFormat = "$effectiveType $slot `,` $byteOffset attr-dict";
-}
-
 // TODO: Simplify the asm format by inferring element type of Sol_RefType.
 // TODO? Use a single type (index?) for array/struct size and indexing that
 // conforms to that of solidity.
