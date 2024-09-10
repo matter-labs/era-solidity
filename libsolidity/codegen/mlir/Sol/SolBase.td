@@ -35,10 +35,6 @@ include "mlir/IR/OpBase.td"
 
 def Sol_Dialect : Dialect {
   let name = "sol";
-  let summary = "Solidity dialect";
-  let description = [{
-    This dialect has high level ops for representing solidity.
-  }];
   let cppNamespace = "::mlir::sol";
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
@@ -48,13 +44,13 @@ def Sol_Dialect : Dialect {
 // Types
 //===----------------------------------------------------------------------===//
 
-def I256 : I<256>;
-def SolInt : AnyTypeOf<[I1, AnySignedInteger, AnyUnsignedInteger]>;
-
 class Sol_Type<string name, string typeMnemonic, list<Trait> traits = []> :
     TypeDef<Sol_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
+
+def I256 : I<256>;
+def SolInt : AnyTypeOf<[I1, AnySignedInteger, AnyUnsignedInteger]>;
 
 def Sol_DataLocation : I32EnumAttr<"DataLocation",
                                    "Data-location in reference-types",
@@ -67,61 +63,24 @@ def Sol_DataLocation : I32EnumAttr<"DataLocation",
 }
 
 def Sol_StringType : Sol_Type<"String", "string"> {
-  let summary = "Sol string type";
-  let description = [{
-    `sol.string` represents solidity string and bytes type.
-
-    Example:
-
-    ```mlir
-    !sol.string<Memory>
-    !sol.string<Storage>
-    ```
-  }];
-
   let parameters = (ins Sol_DataLocation:$dataLocation);
 
   let hasCustomAssemblyFormat = 1;
 }
 
 def Sol_ArrayType : Sol_Type<"Array", "array"> {
-  let summary = "Sol array type";
-  let description = [{
-    `sol.array` represents solidity arrays.
-
-    Example:
-
-    ```mlir
-    !sol.array<2 x i256, CallData>
-    !sol.array<? x i256, Memory>
-    ```
-  }];
-
-  // TODO? Tracking the whole shape here (instead of the recursive
-  // representation) can make the dump easier to read (like that of memref). Is
-  // that better?  Solidity ast-type for arrays use a recursive representation.
   let parameters = (ins "int64_t":$size, "Type":$eltType,
                     Sol_DataLocation:$dataLocation);
 
-  let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
     /// Returns true if the size is dynamic.
     bool isDynSized() { return getSize() == -1; }
   }];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 def Sol_StructType : Sol_Type<"Struct", "struct"> {
-  let summary = "Sol struct type";
-  let description = [{
-    `sol.struct` represents solidity struct.
-
-    Example:
-
-    ```mlir
-    !sol.struct<(i256), CallData>
-    ```
-  }];
-
   let parameters = (ins ArrayRefParameter<"Type">:$memTypes,
                         Sol_DataLocation:$dataLocation);
 
@@ -129,35 +88,14 @@ def Sol_StructType : Sol_Type<"Struct", "struct"> {
 }
 
 def Sol_MappingType : Sol_Type<"Mapping", "mapping"> {
-  let summary = "Sol mapping type";
-  let description = [{
-    `sol.mapping` represents the solidity mapping type.
-
-    Example:
-
-    ```mlir
-    !sol.mapping<i160, i256>
-    ```
-  }];
-
   let parameters = (ins "Type":$keyType, "Type":$valType);
 
   let assemblyFormat = [{ `<` $keyType `,` $valType `>` }];
 }
 
 def Sol_PtrType : Sol_Type<"Pointer", "ptr"> {
-  let summary = "Sol pointer type";
-  let description = [{
-    `sol.ptr` represents a pointer with an element type that's not a reference
-    type.
-
-    Example:
-
-    ```mlir
-    !sol.ptr<i256, Storage>
-    ```
-  }];
   let parameters = (ins "Type":$pointeeType, Sol_DataLocation:$dataLocation);
+
   let hasCustomAssemblyFormat = 1;
 }
 
