@@ -539,6 +539,22 @@ void MallocOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// GepOp
+//===----------------------------------------------------------------------===//
+
+void GepOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                  Value baseAddr, Value idx) {
+  Type eltTy = getEltType(baseAddr.getType());
+  Type resTy;
+  if (isNonPtrRefType(eltTy))
+    resTy = eltTy;
+  else
+    resTy = sol::PointerType::get(odsBuilder.getContext(), eltTy,
+                                  DataLocation::Storage);
+  build(odsBuilder, odsState, resTy, baseAddr, idx);
+}
+
+//===----------------------------------------------------------------------===//
 // EmitOp
 //===----------------------------------------------------------------------===//
 

@@ -128,6 +128,24 @@ def Sol_AddrOfOp : Sol_Op<"addr_of"> {
   let assemblyFormat = "$var attr-dict `:` type($addr)";
 }
 
+def Sol_GepOp : Sol_Op<"gep"> {
+  let arguments = (ins AnyType:$baseAddr, SolInt:$idx);
+  let results = (outs Sol_RefType:$addr);
+
+  let builders = [
+    OpBuilder<(ins "Value":$baseAddr, "Value":$idx)>
+  ];
+
+  // TODO: Verifier:
+  // - Base address type is an array or a struct type.
+  // - Element type should not be a pointer type.
+
+  let assemblyFormat = [{
+    $baseAddr `,` $idx attr-dict `:` type($baseAddr) `,` type($idx)
+      `,` type($addr)
+  }];
+}
+
 def Sol_MapOp : Sol_Op<"map"> {
   let arguments = (ins AnyType:$mapping, AnyType:$key);
   let results = (outs AnyType:$addr);
