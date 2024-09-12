@@ -56,14 +56,13 @@ runs:
         mkdir -p ./build
         cd ./build
         [ ${RUNNER_OS} = macOS ] && PARALLEL=$(sysctl -n hw.ncpu) || PARALLEL=$(nproc)
-        [ ${RUNNER_OS} = Linux ] && COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-fuse-ld=lld"
+        [ ${RUNNER_OS} = Linux ] && COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
         if [ ${RUNNER_OS} = Windows ]; then
-           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-fuse-ld=lld"
+           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-fuse-ld=lld -DUSE_LD_GOLD=0"
            export LDFLAGS='-lbcrypt -lwsock32 -static'
         fi
         cmake .. \
           -DCMAKE_BUILD_TYPE="Release" \
-          -DUSE_LD_GOLD=0 \
           -DSOL_VERSION_ZKSYNC="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOLC_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOL_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
