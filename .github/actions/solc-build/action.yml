@@ -62,7 +62,7 @@ runs:
            export LDFLAGS='-lbcrypt -lwsock32 -static'
         fi
         cmake .. \
-          -DCMAKE_BUILD_TYPE="Release" \
+          -DCMAKE_BUILD_TYPE="Release" ${COMPILER_FLAGS} \
           -DSOL_VERSION_ZKSYNC="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOLC_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
           -DSOL_VERSION_ZKEVM="${{ inputs.solc-version }}-${{ inputs.zksync-version }}" \
