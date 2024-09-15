@@ -1058,6 +1058,7 @@ public:
 	/// and a memory struct of this type.
 	FunctionType const* constructorType() const;
 
+	unsigned index(std::string const& _name) const;
 	std::pair<u256, unsigned> const& storageOffsetsOfMember(std::string const& _name) const;
 	u256 memoryOffsetOfMember(std::string const& _name) const;
 	unsigned calldataOffsetOfMember(std::string const& _name) const;

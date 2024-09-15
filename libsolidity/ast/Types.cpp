@@ -2529,6 +2529,18 @@ FunctionTypePointer StructType::constructorType() const
 	);
 }
 
+unsigned StructType::index(std::string const& _name) const
+{
+	unsigned idx = 0;
+	for (auto const& member: members(nullptr))
+		if (member.name == _name)
+			return idx;
+		else
+			idx++;
+	solAssert(false, "Member not found in struct.");
+	return 0;
+}
+
 std::pair<u256, unsigned> const& StructType::storageOffsetsOfMember(std::string const& _name) const
 {
 	auto const* offsets = members(nullptr).memberStorageOffset(_name);

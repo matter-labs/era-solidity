@@ -117,12 +117,20 @@ private:
   /// Generates the ir to zero the allocation.
   void genZeroedVal(mlir::sol::AllocaOp addr);
 
+  /// Generates a integeral constant op.
+  mlir::Value genConst(uint64_t val, mlir::Location loc) {
+    return b.create<mlir::sol::ConstantOp>(
+        loc, b.getIntegerAttr(b.getIntegerType(64, /*isSigned=*/false), val));
+  }
+
   /// Generates type cast expression.
   mlir::Value genCast(mlir::Value val, mlir::Type dstTy);
 
   // We can't completely rely on ExpressionAnnotation::isLValue here since the
   // TypeChecker doesn't, for instance, tag RHS expression of an assignment as
   // an r-value.
+
+  // FIXME: The genRValExpr's look almost the same. Unify them!
 
   /// Returns the mlir expression for the literal.
   mlir::Value genExpr(Literal const *lit);
@@ -133,6 +141,18 @@ private:
   /// Returns the mlir expression for the identifier in an r-value context.
   mlir::Value genRValExpr(Identifier const *ident);
 
+  /// Returns the mlir expression for the index access in an l-value context.
+  mlir::Value genLValExpr(IndexAccess const *idxAcc);
+
+  /// Returns the mlir expression for the index access in an r-value context.
+  mlir::Value genRValExpr(IndexAccess const *idxAcc);
+
+  /// Returns the mlir expression for the member access in an r-value context.
+  mlir::Value genLValExpr(MemberAccess const *memberAcc);
+
+  /// Returns the mlir expression for the member access in an r-value context.
+  mlir::Value genRValExpr(MemberAccess const *memberAcc);
+
   /// Returns the mlir expression for the binary operation.
   mlir::Value genBinExpr(Token op, mlir::Value lhs, mlir::Value rhs,
                          mlir::Location loc);
@@ -140,20 +160,8 @@ private:
   /// Returns the mlir expression for the binary operation.
   mlir::Value genExpr(BinaryOperation const *binOp);
 
-  /// Returns the mlir expression for the index access in an l-value context.
-  mlir::Value genLValExpr(IndexAccess const *idxAcc);
-
-  /// Returns the mlir expression for the member access in an r-value context.
-  mlir::Value genRValExpr(MemberAccess const *memAcc);
-
   /// Returns the mlir expression for the call.
   mlir::Value genExpr(FunctionCall const *call);
-
-  /// Returns the mlir expression for the index access in an r-value context.
-  mlir::Value genRValExpr(IndexAccess const *idxAcc) {
-    mlir::Value addr = genLValExpr(idxAcc);
-    return b.create<mlir::sol::LoadOp>(getLoc(idxAcc->location()), addr);
-  }
 
   /// Returns the mlir expression in an l-value context.
   mlir::Value genLValExpr(Expression const *expr);
@@ -228,6 +236,17 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
     return mlir::sol::ArrayType::get(b.getContext(),
                                      arrTy->length().convert_to<int64_t>(),
                                      eltTy, getDataLocation(arrTy));
+  }
+
+  // Struct type
+  if (const auto *structTy = dynamic_cast<StructType const *>(ty)) {
+    std::vector<mlir::Type> memberTys;
+    for (auto const &mem : structTy->nativeMembers(nullptr)) {
+      memberTys.push_back(getType(mem.type));
+    }
+
+    return mlir::sol::StructType::get(b.getContext(), memberTys,
+                                      getDataLocation(structTy));
   }
 
   // Function type
@@ -442,14 +461,7 @@ mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
 mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
   mlir::Location loc = getLoc(idxAcc->location());
 
-  mlir::Value baseExpr;
-  if (auto const *baseExprId =
-          dynamic_cast<Identifier const *>(&idxAcc->baseExpression()))
-    // Generate the dereference if stack pointer.
-    baseExpr = genRValExpr(baseExprId);
-  else
-    baseExpr = genLValExpr(&idxAcc->baseExpression());
-
+  mlir::Value baseExpr = genRValExpr(&idxAcc->baseExpression());
   mlir::Value idxExpr = genRValExpr(idxAcc->indexExpression());
 
   // Mapping
@@ -473,23 +485,53 @@ mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
   llvm_unreachable("Invalid IndexAccess");
 }
 
-mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memAcc) {
-  mlir::Location loc = getLoc(memAcc->location());
+mlir::Value SolidityToMLIRPass::genRValExpr(IndexAccess const *idxAcc) {
+  mlir::Value addr = genLValExpr(idxAcc);
 
-  switch (memAcc->expression().annotation().type->category()) {
+  // Don't load non pointer ref types.
+  if (mlir::sol::isNonPtrRefType(addr.getType()))
+    return addr;
+  return b.create<mlir::sol::LoadOp>(getLoc(idxAcc->location()), addr);
+}
+
+mlir::Value SolidityToMLIRPass::genLValExpr(MemberAccess const *memberAcc) {
+  mlir::Location loc = getLoc(memberAcc->location());
+
+  auto memberAccTy = memberAcc->expression().annotation().type;
+  switch (memberAccTy->category()) {
   case Type::Category::Magic:
-    if (memAcc->memberName() == "sender") {
+    if (memberAcc->memberName() == "sender") {
       // FIXME: sol.caller yields an i256 instead of an address.
       auto callerOp = b.create<mlir::sol::CallerOp>(loc);
       return b.create<mlir::sol::ConvCastOp>(
           loc, b.getIntegerType(256, /*isSigned=*/false), callerOp);
     }
     break;
+  case Type::Category::Struct: {
+    auto structTy = dynamic_cast<StructType const *>(memberAccTy);
+    auto memberIdx = genConst(structTy->index(memberAcc->memberName()), loc);
+    return b.create<mlir::sol::GepOp>(
+        loc, genRValExpr(&memberAcc->expression()), memberIdx);
+    break;
+  }
   default:
     break;
   }
 
   llvm_unreachable("NYI");
+}
+
+mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memberAcc) {
+  mlir::Value addr = genLValExpr(memberAcc);
+  if (memberAcc->expression().annotation().type->category() ==
+      Type::Category::Struct) {
+    // Don't load non pointer ref types.
+    if (mlir::sol::isNonPtrRefType(addr.getType()))
+      return addr;
+
+    return b.create<mlir::sol::LoadOp>(getLoc(memberAcc->location()), addr);
+  }
+  return addr;
 }
 
 mlir::Value SolidityToMLIRPass::genExpr(FunctionCall const *call) {

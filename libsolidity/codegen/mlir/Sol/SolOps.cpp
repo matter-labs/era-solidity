@@ -547,6 +547,7 @@ void MallocOp::print(OpAsmPrinter &p) {
 void GepOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                   Value baseAddr, Value idx) {
   Type baseAddrTy = baseAddr.getType();
+  // FIXME: struct type!
   Type eltTy = getEltType(baseAddrTy);
   Type resTy;
   if (isNonPtrRefType(eltTy))
