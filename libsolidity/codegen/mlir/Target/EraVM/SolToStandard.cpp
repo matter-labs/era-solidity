@@ -925,7 +925,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
     if (auto structTy = dyn_cast<sol::StructType>(ty)) {
       // FIXME: Is the memoryHeadSize 32 for all the types (assuming padding is
       // enabled by default) in StructType::memoryDataSize?
-      return structTy.getMemTypes().size() * 32;
+      return structTy.getMemberTypes().size() * 32;
     }
 
     // Value type.
@@ -1036,7 +1036,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
       memPtr = eraB.genMemAlloc(getSize(ty), loc);
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
 
-      for (auto memTy : structTy.getMemTypes()) {
+      for (auto memTy : structTy.getMemberTypes()) {
         Value initVal;
         if (isa<sol::StructType>(memTy) || isa<sol::ArrayType>(memTy))
           initVal = genZeroedMemAlloc(memTy, sizeVar, recDepth, r, loc);
@@ -1160,7 +1160,7 @@ struct GepOpLowering : public OpConversionPattern<sol::GepOp> {
         // Memory struct
       } else if (auto structTy = dyn_cast<sol::StructType>(baseAddrTy)) {
 #ifndef NDEBUG
-        for (Type ty : structTy.getMemTypes())
+        for (Type ty : structTy.getMemberTypes())
           assert(isa<IntegerType>(ty) || sol::isNonPtrRefType(ty) && "NYI");
 #endif
 
@@ -1172,7 +1172,7 @@ struct GepOpLowering : public OpConversionPattern<sol::GepOp> {
         Value addrAtIdx =
             r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
 
-        auto memberTy = structTy.getMemTypes()[idxConstOp.value()];
+        auto memberTy = structTy.getMemberTypes()[idxConstOp.value()];
         if (sol::isNonPtrRefType(memberTy)) {
           assert(sol::getDataLocation(memberTy) == sol::DataLocation::Memory);
           res = r.create<sol::MLoadOp>(loc, addrAtIdx);

@@ -81,7 +81,7 @@ def Sol_ArrayType : Sol_Type<"Array", "array"> {
 }
 
 def Sol_StructType : Sol_Type<"Struct", "struct"> {
-  let parameters = (ins ArrayRefParameter<"Type">:$memTypes,
+  let parameters = (ins ArrayRefParameter<"Type">:$memberTypes,
                         Sol_DataLocation:$dataLocation);
 
   let hasCustomAssemblyFormat = 1;

@@ -81,7 +81,7 @@ Type mlir::sol::getEltType(Type ty, Index structTyIdx) {
     return arrTy.getEltType();
   }
   if (auto structTy = dyn_cast<sol::StructType>(ty)) {
-    return structTy.getMemTypes()[structTyIdx];
+    return structTy.getMemberTypes()[structTyIdx];
   }
   llvm_unreachable("Invalid type");
 }
@@ -136,7 +136,7 @@ bool mlir::sol::hasDynamicallySizedElt(Type ty) {
     return arrTy.isDynSized() || hasDynamicallySizedElt(arrTy.getEltType());
 
   if (auto structTy = dyn_cast<StructType>(ty))
-    return llvm::any_of(structTy.getMemTypes(),
+    return llvm::any_of(structTy.getMemberTypes(),
                         [](Type ty) { return hasDynamicallySizedElt(ty); });
 
   return false;
@@ -280,7 +280,7 @@ Type StructType::parse(AsmParser &parser) {
 /// Prints a sol.array type.
 void StructType::print(AsmPrinter &printer) const {
   printer << "<(";
-  llvm::interleaveComma(getMemTypes(), printer.getStream(),
+  llvm::interleaveComma(getMemberTypes(), printer.getStream(),
                         [&](Type memTy) { printer << memTy; });
   printer << "), " << stringifyDataLocation(getDataLocation()) << ">";
 }
