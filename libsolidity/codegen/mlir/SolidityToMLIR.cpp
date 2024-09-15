@@ -173,7 +173,7 @@ private:
 
 } // namespace solidity::frontend
 
-/// Returns the mlir::sol::StateMutability of the function
+/// Returns the mlir::sol::DataLocation of the type
 static mlir::sol::DataLocation getDataLocation(ReferenceType const *ty) {
   switch (ty->location()) {
   case DataLocation::CallData:
@@ -219,9 +219,15 @@ mlir::Type SolidityToMLIRPass::getType(Type const *ty) {
 
   // Array or string type
   if (const auto *arrTy = dynamic_cast<ArrayType const *>(ty)) {
-    if (arrTy->isString()) {
+    if (arrTy->isString())
       return mlir::sol::StringType::get(b.getContext(), getDataLocation(arrTy));
-    }
+    mlir::Type eltTy = getType(arrTy->baseType());
+
+    // TODO: Does convert_to alreay do this?
+    assert(arrTy->length() <= INT64_MAX);
+    return mlir::sol::ArrayType::get(b.getContext(),
+                                     arrTy->length().convert_to<int64_t>(),
+                                     eltTy, getDataLocation(arrTy));
   }
 
   // Function type
@@ -434,7 +440,19 @@ mlir::Value SolidityToMLIRPass::genExpr(BinaryOperation const *binOp) {
 }
 
 mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
-  mlir::Value baseExpr = genLValExpr(&idxAcc->baseExpression());
+  mlir::Location loc = getLoc(idxAcc->location());
+
+  mlir::Value baseExpr;
+  if (auto const *baseExprId =
+          dynamic_cast<Identifier const *>(&idxAcc->baseExpression()))
+    // Generate the dereference if stack pointer.
+    baseExpr = genRValExpr(baseExprId);
+  else
+    baseExpr = genLValExpr(&idxAcc->baseExpression());
+
+  mlir::Value idxExpr = genRValExpr(idxAcc->indexExpression());
+
+  // Mapping
   if (auto mappingTy =
           mlir::dyn_cast<mlir::sol::MappingType>(baseExpr.getType())) {
     mlir::Type addrTy;
@@ -444,12 +462,15 @@ mlir::Value SolidityToMLIRPass::genLValExpr(IndexAccess const *idxAcc) {
       addrTy =
           mlir::sol::PointerType::get(b.getContext(), mappingTy.getValType(),
                                       mlir::sol::DataLocation::Storage);
-    mlir::Value idxExpr = genRValExpr(idxAcc->indexExpression());
-    return b.create<mlir::sol::MapOp>(getLoc(idxAcc->location()), addrTy,
-                                      baseExpr, idxExpr);
+    return b.create<mlir::sol::MapOp>(loc, addrTy, baseExpr, idxExpr);
   }
 
-  llvm_unreachable("NYI");
+  // Array indexing
+  if (auto arrTy = mlir::dyn_cast<mlir::sol::ArrayType>(baseExpr.getType())) {
+    return b.create<mlir::sol::GepOp>(loc, baseExpr, idxExpr);
+  }
+
+  llvm_unreachable("Invalid IndexAccess");
 }
 
 mlir::Value SolidityToMLIRPass::genRValExpr(MemberAccess const *memAcc) {

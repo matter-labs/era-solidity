@@ -53,6 +53,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/IntrinsicsEraVM.h"
 #include "llvm/Support/Casting.h"
@@ -1067,102 +1068,139 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
   }
 };
 
-template <typename OpT>
-static Value genAddrCalc(OpT op, typename OpT::Adaptor adaptor,
-                         ConversionPatternRewriter &r) {
-  Location loc = op.getLoc();
-  solidity::mlirgen::BuilderExt bExt(r, loc);
-  eravm::Builder eraB(r, loc);
+struct GepOpLowering : public OpConversionPattern<sol::GepOp> {
+  using OpConversionPattern<sol::GepOp>::OpConversionPattern;
 
-  Type baseAddrTy = op.getBaseAddr().getType();
-  Value remappedBaseAddr = adaptor.getBaseAddr();
+  LogicalResult matchAndRewrite(sol::GepOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
 
-  switch (sol::getDataLocation(baseAddrTy)) {
-  case sol::DataLocation::Stack: {
-    auto stkPtrTy =
-        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
-    Value addrAtIdx = remappedBaseAddr;
-    if (!op.getIndices().empty())
-      addrAtIdx =
-          r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
-                                /*basePtrType=*/remappedBaseAddr.getType(),
-                                remappedBaseAddr, op.getIndices());
-    return addrAtIdx;
-  }
-  case sol::DataLocation::Memory: {
-    assert(!op.getIndices().empty());
+    Type baseAddrTy = op.getBaseAddr().getType();
+    Value remappedBaseAddr = adaptor.getBaseAddr();
+    Value idx = adaptor.getIdx();
+    Value res;
 
-    Value idx = op.getIndices()[0];
-    Value addrAtIdx;
-
-    if (auto arrayTy = dyn_cast<sol::ArrayType>(baseAddrTy)) {
-      if (!isa<BlockArgument>(idx)) {
-        auto constIdx = dyn_cast<arith::ConstantIntOp>(idx.getDefiningOp());
-        if (constIdx && !arrayTy.isDynSized()) {
-          // FIXME: Should this be done by the verifier?
-          assert(constIdx.value() < arrayTy.getSize());
-          addrAtIdx = r.create<arith::AddIOp>(
-              loc, remappedBaseAddr, bExt.genI256Const(constIdx.value() * 32));
-        }
-      }
-      if (!addrAtIdx) {
-        //
-        // Generate PanicCode::ArrayOutOfBounds check.
-        //
-        Value size;
-        if (arrayTy.isDynSized()) {
-          size = r.create<sol::MLoadOp>(loc, remappedBaseAddr);
-        } else {
-          size = bExt.genI256Const(arrayTy.getSize());
-        }
-
-        // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul)
-        auto panicCond =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge, idx, size);
-        eraB.genPanic(solidity::util::PanicCode::ArrayOutOfBounds, panicCond);
-
-        //
-        // Generate the address
-        //
-        Value scaledIdx =
-            r.create<arith::MulIOp>(loc, idx, bExt.genI256Const(32));
-        if (arrayTy.isDynSized()) {
-          // Get the address after the length-slot.
-          Value dataAddr = r.create<arith::AddIOp>(loc, remappedBaseAddr,
-                                                   bExt.genI256Const(32));
-          addrAtIdx = r.create<arith::AddIOp>(loc, dataAddr, scaledIdx);
-        } else {
-          addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
-        }
-      }
-    } else if (auto structTy = dyn_cast<sol::StructType>(baseAddrTy)) {
-      auto constIdx = cast<arith::ConstantIntOp>(idx.getDefiningOp());
-      (void)constIdx;
-      assert(constIdx.value() <
-             static_cast<int64_t>(structTy.getMemTypes().size()));
-      auto scaledIdx = r.create<arith::MulIOp>(loc, idx, bExt.genI256Const(32));
-      addrAtIdx = r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
+    switch (sol::getDataLocation(baseAddrTy)) {
+    case sol::DataLocation::Stack: {
+      auto stkPtrTy =
+          LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
+      res = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
+                                  /*basePtrType=*/remappedBaseAddr.getType(),
+                                  remappedBaseAddr, idx);
+      break;
     }
 
-    return addrAtIdx;
-  }
-  case sol::DataLocation::Storage: {
-    assert(op.getIndices().empty() && "NYI");
-    return remappedBaseAddr;
-  }
-  default:
-    break;
-  };
+    case sol::DataLocation::Memory: {
+      // Memory array
+      if (auto arrTy = dyn_cast<sol::ArrayType>(baseAddrTy)) {
+        Value addrAtIdx;
 
-  llvm_unreachable("NYI: Calldata data-location");
-}
+        Type eltTy = arrTy.getEltType();
+        assert((isa<IntegerType>(eltTy) || sol::isNonPtrRefType(eltTy)) &&
+               "NYI");
+
+        // Don't generate out-of-bounds check for constant indexing of static
+        // arrays.
+        if (!isa<BlockArgument>(idx) &&
+            isa<arith::ConstantIntOp>(idx.getDefiningOp())) {
+          auto constIdx = cast<arith::ConstantIntOp>(idx.getDefiningOp());
+          if (!arrTy.isDynSized()) {
+            // FIXME: Should this be done by the verifier?
+            assert(constIdx.value() < arrTy.getSize());
+            addrAtIdx = r.create<arith::AddIOp>(
+                loc, remappedBaseAddr,
+                bExt.genI256Const(constIdx.value() * 32));
+          }
+        }
+
+        if (!addrAtIdx) {
+          //
+          // Generate PanicCode::ArrayOutOfBounds check.
+          //
+          Value size;
+          if (arrTy.isDynSized()) {
+            size = r.create<sol::MLoadOp>(loc, remappedBaseAddr);
+          } else {
+            size = bExt.genI256Const(arrTy.getSize());
+          }
+
+          // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul).
+          auto panicCond = r.create<arith::CmpIOp>(
+              loc, arith::CmpIPredicate::uge, idx, size);
+          eraB.genPanic(solidity::util::PanicCode::ArrayOutOfBounds, panicCond);
+
+          //
+          // Generate the address.
+          //
+          Value scaledIdx =
+              r.create<arith::MulIOp>(loc, idx, bExt.genI256Const(32));
+          if (arrTy.isDynSized()) {
+            // Generate the address after the length-slot.
+            Value dataAddr = r.create<arith::AddIOp>(loc, remappedBaseAddr,
+                                                     bExt.genI256Const(32));
+            addrAtIdx = r.create<arith::AddIOp>(loc, dataAddr, scaledIdx);
+          } else {
+            addrAtIdx =
+                r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
+          }
+        }
+        assert(addrAtIdx);
+
+        // We need to generate load for member/element having a reference type
+        // since reference types track address.
+        if (sol::isNonPtrRefType(eltTy)) {
+          assert(sol::getDataLocation(eltTy) == sol::DataLocation::Memory);
+          res = r.create<sol::MLoadOp>(loc, addrAtIdx);
+        } else {
+          res = addrAtIdx;
+        }
+
+        // Memory struct
+      } else if (auto structTy = dyn_cast<sol::StructType>(baseAddrTy)) {
+#ifndef NDEBUG
+        for (Type ty : structTy.getMemTypes())
+          assert(isa<IntegerType>(ty) || sol::isNonPtrRefType(ty) && "NYI");
+#endif
+
+        auto idxConstOp = cast<arith::ConstantIntOp>(idx.getDefiningOp());
+        Value memberIdx =
+            bExt.genIntCast(/*width=*/256, /*isSigned=*/false, idxConstOp);
+        auto scaledIdx =
+            r.create<arith::MulIOp>(loc, memberIdx, bExt.genI256Const(32));
+        Value addrAtIdx =
+            r.create<arith::AddIOp>(loc, remappedBaseAddr, scaledIdx);
+
+        auto memberTy = structTy.getMemTypes()[idxConstOp.value()];
+        if (sol::isNonPtrRefType(memberTy)) {
+          assert(sol::getDataLocation(memberTy) == sol::DataLocation::Memory);
+          res = r.create<sol::MLoadOp>(loc, addrAtIdx);
+        } else {
+          res = addrAtIdx;
+        }
+      }
+
+      assert(res);
+      break;
+    }
+
+    default:
+      llvm_unreachable("NYI");
+      break;
+    }
+
+    r.replaceOp(op, res);
+    return success();
+  }
+};
 
 struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
   using OpConversionPattern<sol::LoadOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(sol::LoadOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    Value addrAtIdx = genAddrCalc(op, adaptor, r);
+    Value addrAtIdx = adaptor.getBaseAddr();
 
     switch (sol::getDataLocation(op.getBaseAddr().getType())) {
     case sol::DataLocation::Stack:
@@ -1230,7 +1268,7 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
 
   LogicalResult matchAndRewrite(sol::StoreOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    Value addrAtIdx = genAddrCalc(op, adaptor, r);
+    Value addrAtIdx = adaptor.getBaseAddr();
 
     switch (sol::getDataLocation(op.getBaseAddr().getType())) {
     case sol::DataLocation::Stack:
@@ -2087,6 +2125,8 @@ public:
         return LLVM::LLVMPointerType::get(eltTy);
       }
 
+      // Map to the 256 bit address in memory.
+      case sol::DataLocation::Memory:
       // Map to the 256 bit slot offset.
       //
       // TODO: Can we get all storage types to be 32 byte aligned? If so, we can
@@ -2179,8 +2219,8 @@ struct ConvertSolToStandard
     tgt.addIllegalOp<sol::ConstantOp, sol::ExtOp, sol::TruncOp, sol::AddOp,
                      sol::SubOp, sol::MulOp, sol::CmpOp, sol::CAddOp,
                      sol::CSubOp, sol::AllocaOp, sol::MallocOp, sol::AddrOfOp,
-                     sol::MapOp, sol::CopyOp, sol::DataLocCastOp, sol::LoadOp,
-                     sol::StoreOp, sol::EmitOp, sol::RequireOp,
+                     sol::GepOp, sol::MapOp, sol::CopyOp, sol::DataLocCastOp,
+                     sol::LoadOp, sol::StoreOp, sol::EmitOp, sol::RequireOp,
                      sol::ConvCastOp>();
     tgt.addDynamicallyLegalOp<sol::FuncOp>([&](sol::FuncOp op) {
       return tyConv.isSignatureLegal(op.getFunctionType());
@@ -2194,9 +2234,9 @@ struct ConvertSolToStandard
              ArithBinOpConvPat<sol::SubOp, arith::SubIOp>,
              ArithBinOpConvPat<sol::MulOp, arith::MulIOp>, CmpOpLowering,
              CAddOpLowering, CSubOpLowering, AllocaOpLowering, MallocOpLowering,
-             MapOpLowering, CopyOpLowering, DataLocCastOpLowering,
-             LoadOpLowering, StoreOpLowering, ConvCastOpLowering,
-             EmitOpLowering>(tyConv, &getContext());
+             GepOpLowering, MapOpLowering, CopyOpLowering,
+             DataLocCastOpLowering, LoadOpLowering, StoreOpLowering,
+             ConvCastOpLowering, EmitOpLowering>(tyConv, &getContext());
     populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
     pats.add<GenericTypeConversion<sol::CallOp>,
              GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());

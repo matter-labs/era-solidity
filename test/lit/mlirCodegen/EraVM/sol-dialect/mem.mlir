@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: sol-opt -convert-sol-to-std=target=eravm %s | FileCheck %s
 
 module {

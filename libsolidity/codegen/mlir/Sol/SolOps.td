@@ -139,6 +139,8 @@ def Sol_GepOp : Sol_Op<"gep"> {
   // TODO: Verifier:
   // - Base address type is an array or a struct type.
   // - Element type should not be a pointer type.
+  // - Index should be within bounds for static arrays and structs.
+  // - Struct index should be an i64.
 
   let assemblyFormat = [{
     $baseAddr `,` $idx attr-dict `:` type($baseAddr) `,` type($idx)
@@ -167,6 +169,8 @@ def Sol_CopyOp : Sol_Op<"copy"> {
 // TODO: Simplify the asm format by inferring element type of Sol_RefType.
 // TODO? Use a single type (index?) for array/struct size and indexing that
 // conforms to that of solidity.
+
+// TODO: Remove $indices from sol.load and store.
 
 def Sol_LoadOp : Sol_Op<"load"> {
   let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$baseAddr,

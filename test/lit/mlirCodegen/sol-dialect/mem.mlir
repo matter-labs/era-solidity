@@ -1,5 +1,7 @@
 // RUN: sol-opt %s | sol-opt | FileCheck %s
 
+// TODO: Remove this test!
+
 module {
   sol.func @ld_scalar(%a: !sol.ptr<i256, Stack>) -> i256 {
     %ld = sol.load %a : !sol.ptr<i256, Stack>, i256

@@ -101,6 +101,8 @@ DataLocation mlir::sol::getDataLocation(Type ty) {
       .Default([&](Type) { return DataLocation::Stack; });
 }
 
+// TODO? Should we exclude sol.pointer from reference types?
+
 bool mlir::sol::isRefType(Type ty) {
   return isa<ArrayType>(ty) || isa<StringType>(ty) || isa<StructType>(ty) ||
          isa<PointerType>(ty) || isa<MappingType>(ty);
@@ -544,13 +546,14 @@ void MallocOp::print(OpAsmPrinter &p) {
 
 void GepOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                   Value baseAddr, Value idx) {
-  Type eltTy = getEltType(baseAddr.getType());
+  Type baseAddrTy = baseAddr.getType();
+  Type eltTy = getEltType(baseAddrTy);
   Type resTy;
   if (isNonPtrRefType(eltTy))
     resTy = eltTy;
   else
     resTy = sol::PointerType::get(odsBuilder.getContext(), eltTy,
-                                  DataLocation::Storage);
+                                  getDataLocation(baseAddrTy));
   build(odsBuilder, odsState, resTy, baseAddr, idx);
 }
 
