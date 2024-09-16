@@ -497,7 +497,7 @@ mlir::Value SolidityToMLIRPass::genRValExpr(IndexAccess const *idxAcc) {
 mlir::Value SolidityToMLIRPass::genLValExpr(MemberAccess const *memberAcc) {
   mlir::Location loc = getLoc(memberAcc->location());
 
-  auto memberAccTy = memberAcc->expression().annotation().type;
+  const auto *memberAccTy = memberAcc->expression().annotation().type;
   switch (memberAccTy->category()) {
   case Type::Category::Magic:
     if (memberAcc->memberName() == "sender") {
@@ -508,7 +508,7 @@ mlir::Value SolidityToMLIRPass::genLValExpr(MemberAccess const *memberAcc) {
     }
     break;
   case Type::Category::Struct: {
-    auto structTy = dynamic_cast<StructType const *>(memberAccTy);
+    const auto *structTy = dynamic_cast<StructType const *>(memberAccTy);
     auto memberIdx = genConst(structTy->index(memberAcc->memberName()), loc);
     return b.create<mlir::sol::GepOp>(
         loc, genRValExpr(&memberAcc->expression()), memberIdx);
