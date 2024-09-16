@@ -2,6 +2,12 @@ name: Build and release
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish release?"
+        required: false
+        type: boolean
+        default: false
   pull_request:
   push:
     tags:
@@ -106,7 +112,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ startsWith(github.ref, 'refs/tags/') || inputs.publish_release }}
     needs: build
     steps:
 
@@ -132,4 +138,5 @@ jobs:
           name: ZKsync solc ${{ github.ref_name }}
           body_path: release-changelog.txt
           tag_name: ${{ github.ref_name }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
           files: releases/**/**
