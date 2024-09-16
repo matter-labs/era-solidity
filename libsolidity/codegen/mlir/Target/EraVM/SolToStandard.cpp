@@ -1134,8 +1134,10 @@ struct GepOpLowering : public OpConversionPattern<sol::GepOp> {
           //
           // Generate the address.
           //
+          Value castedIdx =
+              bExt.genIntCast(/*width=*/256, /*isSigned=*/false, idx);
           Value scaledIdx =
-              r.create<arith::MulIOp>(loc, idx, bExt.genI256Const(32));
+              r.create<arith::MulIOp>(loc, castedIdx, bExt.genI256Const(32));
           if (arrTy.isDynSized()) {
             // Generate the address after the length-slot.
             Value dataAddr = r.create<arith::AddIOp>(loc, remappedBaseAddr,

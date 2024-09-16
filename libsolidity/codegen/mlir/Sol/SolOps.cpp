@@ -547,8 +547,17 @@ void MallocOp::print(OpAsmPrinter &p) {
 void GepOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                   Value baseAddr, Value idx) {
   Type baseAddrTy = baseAddr.getType();
-  // FIXME: struct type!
-  Type eltTy = getEltType(baseAddrTy);
+
+  Type eltTy;
+  if (auto structTy = dyn_cast<StructType>(baseAddrTy)) {
+    // TODO: Ideally, the index should be an integral attribute in this case.
+    auto idxAttr = cast<ConstantOp>(idx.getDefiningOp()).getValue();
+    auto idxVal = cast<IntegerAttr>(idxAttr).getUInt();
+    eltTy = getEltType(structTy, idxVal);
+  } else {
+    eltTy = getEltType(baseAddrTy);
+  }
+
   Type resTy;
   if (isNonPtrRefType(eltTy))
     resTy = eltTy;
