@@ -190,6 +190,8 @@ static mlir::sol::DataLocation getDataLocation(ReferenceType const *ty) {
     return mlir::sol::DataLocation::Storage;
   case DataLocation::Memory:
     return mlir::sol::DataLocation::Memory;
+  case DataLocation::Transient:
+    llvm_unreachable("NYI");
   }
 }
 

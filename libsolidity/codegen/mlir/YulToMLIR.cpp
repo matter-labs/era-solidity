@@ -167,7 +167,7 @@ private:
 };
 
 /// Returns the llvm::APInt of `num`
-static llvm::APInt getAPInt(std::string num, unsigned width) {
+static llvm::APInt getAPInt(std::string const &num, unsigned width) {
   llvm::StringRef numStr = num;
   uint8_t radix = 10;
   if (numStr.consume_front("0x")) {
