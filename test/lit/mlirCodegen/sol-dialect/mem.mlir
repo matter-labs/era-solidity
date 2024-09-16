@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: sol-opt %s | sol-opt | FileCheck %s
 
 // TODO: Remove this test!

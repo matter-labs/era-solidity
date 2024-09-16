@@ -167,41 +167,25 @@ def Sol_CopyOp : Sol_Op<"copy"> {
 }
 
 // TODO: Simplify the asm format by inferring element type of Sol_RefType.
-// TODO? Use a single type (index?) for array/struct size and indexing that
-// conforms to that of solidity.
-
-// TODO: Remove $indices from sol.load and store.
 
 def Sol_LoadOp : Sol_Op<"load"> {
-  let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
-                       Variadic<I256>:$indices);
+  let arguments = (ins Arg<Sol_RefType, "", [MemRead]>:$addr);
   let results = (outs AnyType:$out);
 
   let builders = [
-    OpBuilder<(ins "Value":$baseAddr, CArg<"ValueRange", "{}">:$indices), [{
-      build($_builder, $_state, getEltType(baseAddr.getType()),
-        baseAddr, indices);
+    OpBuilder<(ins "Value":$addr), [{
+      build($_builder, $_state, getEltType(addr.getType()), addr);
     }]>
   ];
 
-  let assemblyFormat = [{
-    $baseAddr (`[` $indices^ `]`)? attr-dict `:` type($baseAddr) `,` type($out)
-  }];
+  let assemblyFormat = "$addr attr-dict `:` type($addr) `,` type($out)";
 }
 
 def Sol_StoreOp : Sol_Op<"store"> {
-  let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$baseAddr,
-                       Variadic<I256>:$indices);
-
-  let builders = [
-    OpBuilder<(ins "Value":$val, "Value":$baseAddr), [{
-      build($_builder, $_state, val, baseAddr, /*indices=*/{});
-    }]>
-  ];
+  let arguments = (ins AnyType:$val, Arg<Sol_RefType, "", [MemRead]>:$addr);
 
   let assemblyFormat = [{
-    $val `,` $baseAddr (`[` $indices^ `]`)? attr-dict
-      `:` type($val) `,` type($baseAddr)
+    $val `,` $addr attr-dict `:` type($val) `,` type($addr)
   }];
 }
 

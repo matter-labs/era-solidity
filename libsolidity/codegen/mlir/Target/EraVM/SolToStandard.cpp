@@ -1202,22 +1202,22 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
 
   LogicalResult matchAndRewrite(sol::LoadOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    Value addrAtIdx = adaptor.getBaseAddr();
+    Value addr = adaptor.getAddr();
 
-    switch (sol::getDataLocation(op.getBaseAddr().getType())) {
+    switch (sol::getDataLocation(op.getAddr().getType())) {
     case sol::DataLocation::Stack:
-      r.replaceOpWithNewOp<LLVM::LoadOp>(
-          op, addrAtIdx, eravm::getAlignment(adaptor.getBaseAddr()));
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, addr, eravm::getAlignment(addr));
       return success();
     case sol::DataLocation::Memory:
-      r.replaceOpWithNewOp<sol::MLoadOp>(op, addrAtIdx);
+      r.replaceOpWithNewOp<sol::MLoadOp>(op, addr);
       return success();
     case sol::DataLocation::Storage:
-      r.replaceOpWithNewOp<sol::SLoadOp>(op, addrAtIdx);
+      r.replaceOpWithNewOp<sol::SLoadOp>(op, addr);
       return success();
     default:
       break;
     };
+
     llvm_unreachable("NYI: Calldata data-location");
   }
 };
@@ -1270,23 +1270,24 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
 
   LogicalResult matchAndRewrite(sol::StoreOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    Value addrAtIdx = adaptor.getBaseAddr();
+    Value val = adaptor.getVal();
+    Value addr = adaptor.getAddr();
 
-    switch (sol::getDataLocation(op.getBaseAddr().getType())) {
+    switch (sol::getDataLocation(op.getAddr().getType())) {
     case sol::DataLocation::Stack:
-      r.replaceOpWithNewOp<LLVM::StoreOp>(
-          op, adaptor.getVal(), addrAtIdx,
-          eravm::getAlignment(adaptor.getBaseAddr()));
+      r.replaceOpWithNewOp<LLVM::StoreOp>(op, val, addr,
+                                          eravm::getAlignment(addr));
       return success();
     case sol::DataLocation::Memory:
-      r.replaceOpWithNewOp<sol::MStoreOp>(op, addrAtIdx, adaptor.getVal());
+      r.replaceOpWithNewOp<sol::MStoreOp>(op, addr, val);
       return success();
     case sol::DataLocation::Storage:
-      r.replaceOpWithNewOp<sol::SStoreOp>(op, addrAtIdx, adaptor.getVal());
+      r.replaceOpWithNewOp<sol::SStoreOp>(op, addr, val);
       return success();
     default:
       break;
     };
+
     llvm_unreachable("NYI: Calldata data-location");
   }
 };
