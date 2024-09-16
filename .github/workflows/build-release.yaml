@@ -74,10 +74,11 @@ jobs:
             runner: matterlabs-ci-runner-high-performance
             image: ghcr.io/matter-labs/zksync-llvm-runner:latest
             release-suffix: linux-amd64
-          - name: "Linux ARM64"
-            runner: matterlabs-ci-runner-arm
-            image: ghcr.io/matter-labs/zksync-llvm-runner:latest
-            release-suffix: linux-arm64
+          # Disable ARM64 build for now until linker relocation fix
+          # - name: "Linux ARM64"
+          #   runner: matterlabs-ci-runner-arm
+          #   image: ghcr.io/matter-labs/zksync-llvm-runner:latest
+          #   release-suffix: linux-arm64
           - name: Windows
             runner: windows-2019-github-hosted-64core
             release-suffix: windows-amd64
@@ -103,32 +104,32 @@ jobs:
           zksync-version: ${{ needs.setup.outputs.zksync-version }}
           solc-version: ${{ needs.setup.outputs.solc-version }}
 
-  # release:
-  #   runs-on: ubuntu-latest
-  #   if: startsWith(github.ref, 'refs/tags/')
-  #   needs: build
-  #   steps:
+  release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    steps:
 
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #       with:
-  #         submodules: recursive
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         pattern: release*
-  #         path: releases
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release*
+          path: releases
 
-  #     - name: Generate changelog
-  #       shell: bash
-  #       run: awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > release-changelog.txt
+      - name: Generate changelog
+        shell: bash
+        run: awk '/###/ {flag=!flag; if (seen++) exit; next} flag' ./Changelog.md > release-changelog.txt
 
-  #     - name: Prepare release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         generate_release_notes: false
-  #         name: ZKsync solc ${{ github.ref_name }}
-  #         body_path: release-changelog.txt
-  #         tag_name: ${{ github.ref_name }}
-  #         files: releases/**/**
+      - name: Prepare release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: false
+          name: ZKsync solc ${{ github.ref_name }}
+          body_path: release-changelog.txt
+          tag_name: ${{ github.ref_name }}
+          files: releases/**/**
