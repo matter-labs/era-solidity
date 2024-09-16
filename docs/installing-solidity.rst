@@ -327,16 +327,13 @@ The following are dependencies for all builds of Solidity:
 | Windows, 3.13+ otherwise)         |                                                       |
 +-----------------------------------+-------------------------------------------------------+
 | `Boost`_ (version 1.77+ on        | C++ libraries.                                        |
-| Windows, 1.65+ otherwise)         |                                                       |
+| Windows, 1.67+ otherwise)         |                                                       |
 +-----------------------------------+-------------------------------------------------------+
 | `Git`_                            | Command-line tool for retrieving source code.         |
 +-----------------------------------+-------------------------------------------------------+
 | `z3`_ (version 4.8.16+, Optional) | For use with SMT checker.                             |
 +-----------------------------------+-------------------------------------------------------+
-| `cvc4`_ (Optional)                | For use with SMT checker.                             |
-+-----------------------------------+-------------------------------------------------------+
 
-.. _cvc4: https://cvc4.cs.stanford.edu/web/
 .. _Git: https://git-scm.com/download
 .. _Boost: https://www.boost.org
 .. _CMake: https://cmake.org/download/
@@ -530,24 +527,23 @@ If you are interested what CMake options are available run ``cmake .. -LH``.
 
 SMT Solvers
 -----------
-Solidity can be built against SMT solvers and will do so by default if
-they are found in the system. Each solver can be disabled by a ``cmake`` option.
+Solidity can be built against Z3 SMT solver and will do so by default if
+it is found in the system. Z3 can be disabled by a ``cmake`` option.
 
 *Note: In some cases, this can also be a potential workaround for build failures.*
 
 
-Inside the build folder you can disable them, since they are enabled by default:
+Inside the build folder you can disable Z3, since it is enabled by default:
 
 .. code-block:: bash
 
-    # disables only Z3 SMT Solver.
+    # disables Z3 SMT Solver.
     cmake .. -DUSE_Z3=OFF
 
-    # disables only CVC4 SMT Solver.
-    cmake .. -DUSE_CVC4=OFF
+.. note::
 
-    # disables both Z3 and CVC4
-    cmake .. -DUSE_CVC4=OFF -DUSE_Z3=OFF
+    Solidity can optionally use other solvers, namely ``cvc5`` and ``Eldarica``,
+    but their presence is checked only at runtime, they are not needed for the build to succeed.
 
 The Version String in Detail
 ============================

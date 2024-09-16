@@ -51,6 +51,7 @@ using namespace solidity;
 using namespace solidity::yul;
 using namespace solidity::frontend;
 using namespace solidity::langutil;
+using namespace solidity::util;
 using namespace std::string_literals;
 
 namespace
@@ -181,7 +182,7 @@ bool hashMatchesContent(std::string const& _hash, std::string const& _content)
 
 bool isArtifactRequested(Json const& _outputSelection, std::string const& _artifact, bool _wildcardMatchesExperimental)
 {
-	static std::set<std::string> experimental{"ir", "irAst", "irOptimized", "irOptimizedAst"};
+	static std::set<std::string> experimental{"ir", "irAst", "irOptimized", "irOptimizedAst", "yulCFGJson"};
 	for (auto const& selectedArtifactJson: _outputSelection)
 	{
 		std::string const& selectedArtifact = selectedArtifactJson.get<std::string>();
@@ -192,6 +193,9 @@ bool isArtifactRequested(Json const& _outputSelection, std::string const& _artif
 			return true;
 		else if (selectedArtifact == "*")
 		{
+			// TODO: yulCFGJson is only experimental now, so it should not be matched by "*".
+			if (_artifact == "yulCFGJson")
+				return false;
 			// "ir", "irOptimized" can only be matched by "*" if activated.
 			if (experimental.count(_artifact) == 0 || _wildcardMatchesExperimental)
 				return true;
@@ -265,7 +269,7 @@ bool isBinaryRequested(Json const& _outputSelection)
 	// This does not include "evm.methodIdentifiers" on purpose!
 	static std::vector<std::string> const outputsThatRequireBinaries = std::vector<std::string>{
 		"*",
-		"ir", "irAst", "irOptimized", "irOptimizedAst",
+		"ir", "irAst", "irOptimized", "irOptimizedAst", "yulCFGJson",
 		"evm.gasEstimates", "evm.legacyAssembly", "evm.assembly"
 	} + evmObjectComponents("bytecode") + evmObjectComponents("deployedBytecode");
 
@@ -296,25 +300,26 @@ bool isEvmBytecodeRequested(Json const& _outputSelection)
 	return false;
 }
 
-/// @returns true if any Yul IR was requested. Note that as an exception, '*' does not
-/// yet match "ir", "irAst", "irOptimized" or "irOptimizedAst"
-bool isIRRequested(Json const& _outputSelection)
+/// @returns The IR output selection for CompilerStack, based on outputs requested in the JSON.
+/// Note that as an exception, '*' does not yet match "ir", "irAst", "irOptimized" or "irOptimizedAst".
+CompilerStack::IROutputSelection irOutputSelection(Json const& _outputSelection)
 {
 	if (!_outputSelection.is_object())
-		return false;
+		return CompilerStack::IROutputSelection::None;
 
+	CompilerStack::IROutputSelection selection = CompilerStack::IROutputSelection::None;
 	for (auto const& fileRequests: _outputSelection)
 		for (auto const& requests: fileRequests)
 			for (auto const& request: requests)
-				if (
-					request == "ir" ||
-					request == "irAst" ||
-					request == "irOptimized" ||
-					request == "irOptimizedAst"
-				)
-					return true;
+			{
+				if (request == "irOptimized" || request == "irOptimizedAst" || request == "yulCFGJson")
+					return CompilerStack::IROutputSelection::UnoptimizedAndOptimized;
 
-	return false;
+				if (request == "ir" || request == "irAst")
+					selection = CompilerStack::IROutputSelection::UnoptimizedOnly;
+			}
+
+	return selection;
 }
 
 Json formatLinkReferences(std::map<size_t, std::string> const& linkReferences)
@@ -426,7 +431,7 @@ std::optional<Json> checkAuxiliaryInputKeys(Json const& _input)
 
 std::optional<Json> checkSettingsKeys(Json const& _input)
 {
-	static std::set<std::string> keys{"debug", "evmVersion", "libraries", "metadata", "modelChecker", "optimizer", "outputSelection", "remappings", "stopAfter", "viaIR", "viaMLIR"};
+	static std::set<std::string> keys{"debug", "evmVersion", "eofVersion", "libraries", "metadata", "modelChecker", "optimizer", "outputSelection", "remappings", "stopAfter", "viaIR", "viaMLIR"};
 	return checkKeys(_input, keys, "settings");
 }
 
@@ -844,7 +849,7 @@ std::variant<StandardCompiler::InputsAndSettings, Json> StandardCompiler::parseI
 	{
 		if (!settings["eofVersion"].is_number_unsigned())
 			return formatFatalError(Error::Type::JSONError, "eofVersion must be an unsigned integer.");
-		auto eofVersion = settings["evmVersion"].get<uint8_t>();
+		auto eofVersion = settings["eofVersion"].get<uint8_t>();
 		if (eofVersion != 1)
 			return formatFatalError(Error::Type::JSONError, "Invalid EOF version requested.");
 		ret.eofVersion = 1;
@@ -1315,6 +1320,7 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 		compilerStack.addSMTLib2Response(smtLib2Response.first, smtLib2Response.second);
 	compilerStack.setViaIR(_inputsAndSettings.viaIR);
 	compilerStack.setEVMVersion(_inputsAndSettings.evmVersion);
+	compilerStack.setEOFVersion(_inputsAndSettings.eofVersion);
 	compilerStack.setRemappings(std::move(_inputsAndSettings.remappings));
 	compilerStack.setOptimiserSettings(std::move(_inputsAndSettings.optimiserSettings));
 	compilerStack.setRevertStringBehaviour(_inputsAndSettings.revertStrings);
@@ -1328,7 +1334,7 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 	compilerStack.setModelCheckerSettings(_inputsAndSettings.modelCheckerSettings);
 
 	compilerStack.enableEvmBytecodeGeneration(isEvmBytecodeRequested(_inputsAndSettings.outputSelection));
-	compilerStack.enableIRGeneration(isIRRequested(_inputsAndSettings.outputSelection));
+	compilerStack.requestIROutputs(irOutputSelection(_inputsAndSettings.outputSelection));
 	// FIXME: We should have settings for the target, optimization level etc.
 	if (_inputsAndSettings.viaMLIR)
 		compilerStack.setMLIRGenJobSpec({mlirgen::Action::GenObj, mlirgen::Target::EraVM, '3'});
@@ -1372,26 +1378,6 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 				));
 		}
 	}
-	/// This is only thrown in a very few locations.
-	catch (Error const& _error)
-	{
-		errors.emplace_back(formatErrorWithException(
-			compilerStack,
-			_error,
-			_error.type(),
-			"general",
-			"Uncaught error: "
-		));
-	}
-	/// This should not be leaked from compile().
-	catch (FatalError const& _exception)
-	{
-		errors.emplace_back(formatError(
-			Error::Type::FatalError,
-			"general",
-			"Uncaught fatal error: " + boost::diagnostic_information(_exception)
-		));
-	}
 	catch (CompilerError const& _exception)
 	{
 		errors.emplace_back(formatErrorWithException(
@@ -1414,13 +1400,8 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 	}
 	catch (UnimplementedFeatureError const& _exception)
 	{
-		errors.emplace_back(formatErrorWithException(
-			compilerStack,
-			_exception,
-			Error::Type::UnimplementedFeatureError,
-			"general",
-			"Unimplemented feature (" + _exception.lineInfo() + ")"
-		));
+		// let StandardCompiler::compile handle this
+		throw _exception;
 	}
 	catch (yul::YulException const& _exception)
 	{
@@ -1442,22 +1423,6 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 			"SMT logic exception"
 		));
 	}
-	catch (util::Exception const& _exception)
-	{
-		errors.emplace_back(formatError(
-			Error::Type::Exception,
-			"general",
-			"Exception during compilation: " + boost::diagnostic_information(_exception)
-		));
-	}
-	catch (std::exception const& _exception)
-	{
-		errors.emplace_back(formatError(
-			Error::Type::Exception,
-			"general",
-			"Unknown exception during compilation: " + boost::diagnostic_information(_exception)
-		));
-	}
 	catch (...)
 	{
 		errors.emplace_back(formatError(
@@ -1475,18 +1440,13 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 	// Note that not completing analysis due to stopAfter does not count as a failure. It's neither failure nor success.
 	bool analysisFailed = !analysisSuccess && _inputsAndSettings.stopAfter >= CompilerStack::State::AnalysisSuccessful;
 	bool compilationFailed = !compilationSuccess && binariesRequested;
-
-	/// Inconsistent state - stop here to receive error reports from users
-	if (
-		(compilationFailed || analysisFailed || !parsingSuccess) &&
-		errors.empty()
-	)
-		return formatFatalError(Error::Type::InternalCompilerError, "No error reported, but compilation failed.");
+	if (compilationFailed || analysisFailed || !parsingSuccess)
+		solAssert(!errors.empty(), "No error reported, but compilation failed.");
 
 	Json output;
 
 	if (errors.size() > 0)
-		output["errors"] = std::move(errors);
+	output["errors"] = std::move(errors);
 
 	if (!compilerStack.unhandledSMTLib2Queries().empty())
 		for (std::string const& query: compilerStack.unhandledSMTLib2Queries())
@@ -1522,6 +1482,8 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 			contractData["abi"] = compilerStack.contractABI(contractName);
 		if (isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "storageLayout", false))
 			contractData["storageLayout"] = compilerStack.storageLayout(contractName);
+		if (isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "transientStorageLayout", false))
+			contractData["transientStorageLayout"] = compilerStack.transientStorageLayout(contractName);
 		if (isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "metadata", wildcardMatchesExperimental))
 			contractData["metadata"] = compilerStack.metadata(contractName);
 		if (isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "userdoc", wildcardMatchesExperimental))
@@ -1538,6 +1500,8 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 			contractData["irOptimized"] = compilerStack.yulIROptimized(contractName);
 		if (compilationSuccess && isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "irOptimizedAst", wildcardMatchesExperimental))
 			contractData["irOptimizedAst"] = compilerStack.yulIROptimizedAst(contractName);
+		if (compilationSuccess && isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "yulCFGJson", wildcardMatchesExperimental))
+			contractData["yulCFGJson"] = compilerStack.yulCFGJson(contractName);
 
 		// EVM
 		Json evmData;
@@ -1677,7 +1641,7 @@ Json StandardCompiler::compileYul(InputsAndSettings _inputsAndSettings)
 	std::string const& sourceContents = _inputsAndSettings.sources.begin()->second;
 
 	// Inconsistent state - stop here to receive error reports from users
-	if (!stack.parseAndAnalyze(sourceName, sourceContents) && stack.errors().empty())
+	if (!stack.parseAndAnalyze(sourceName, sourceContents) && !stack.hasErrors())
 	{
 		output["errors"].emplace_back(formatError(
 			Error::Type::InternalCompilerError,
@@ -1687,24 +1651,22 @@ Json StandardCompiler::compileYul(InputsAndSettings _inputsAndSettings)
 		return output;
 	}
 
-	if (!stack.errors().empty())
+	for (auto const& error: stack.errors())
 	{
-		for (auto const& error: stack.errors())
-		{
-			auto err = std::dynamic_pointer_cast<Error const>(error);
+		auto err = std::dynamic_pointer_cast<Error const>(error);
 
-			output["errors"].emplace_back(formatErrorWithException(
-				stack,
-				*error,
-				err->type(),
-				"general",
-				""
-			));
-		}
-		return output;
+		output["errors"].emplace_back(formatErrorWithException(
+			stack,
+			*error,
+			err->type(),
+			"general",
+			""
+		));
 	}
+	if (stack.hasErrors())
+		return output;
 
-	std::string contractName = stack.parserResult()->name.str();
+	std::string contractName = stack.parserResult()->name;
 
 	bool const wildcardMatchesExperimental = true;
 	if (isArtifactRequested(_inputsAndSettings.outputSelection, sourceName, contractName, "ir", wildcardMatchesExperimental))
@@ -1759,7 +1721,9 @@ Json StandardCompiler::compileYul(InputsAndSettings _inputsAndSettings)
 	if (isArtifactRequested(_inputsAndSettings.outputSelection, sourceName, contractName, "irOptimized", wildcardMatchesExperimental))
 		output["contracts"][sourceName][contractName]["irOptimized"] = stack.print();
 	if (isArtifactRequested(_inputsAndSettings.outputSelection, sourceName, contractName, "evm.assembly", wildcardMatchesExperimental))
-		output["contracts"][sourceName][contractName]["evm"]["assembly"] = object.assembly;
+		output["contracts"][sourceName][contractName]["evm"]["assembly"] = object.assembly->assemblyString(stack.debugInfoSelection());
+	if (isArtifactRequested(_inputsAndSettings.outputSelection, sourceName, contractName, "yulCFGJson", wildcardMatchesExperimental))
+		output["contracts"][sourceName][contractName]["yulCFGJson"] = stack.cfgJson();
 
 	return output;
 }
@@ -1785,33 +1749,10 @@ Json StandardCompiler::compile(Json const& _input) noexcept
 		else
 			return formatFatalError(Error::Type::JSONError, "Only \"Solidity\", \"Yul\", \"SolidityAST\" or \"EVMAssembly\" is supported as a language.");
 	}
-	catch (Json::parse_error const& _exception)
+	catch (UnimplementedFeatureError const& _exception)
 	{
-		return formatFatalError(Error::Type::InternalCompilerError, std::string("JSON parse_error exception: ") + util::removeNlohmannInternalErrorIdentifier(_exception.what()));
-	}
-	catch (Json::invalid_iterator const& _exception)
-	{
-		return formatFatalError(Error::Type::InternalCompilerError, std::string("JSON invalid_iterator exception: ") + util::removeNlohmannInternalErrorIdentifier(_exception.what()));
-	}
-	catch (Json::type_error const& _exception)
-	{
-		return formatFatalError(Error::Type::InternalCompilerError, std::string("JSON type_error exception: ") + util::removeNlohmannInternalErrorIdentifier(_exception.what()));
-	}
-	catch (Json::out_of_range const& _exception)
-	{
-		return formatFatalError(Error::Type::InternalCompilerError, std::string("JSON out_of_range exception: ") + util::removeNlohmannInternalErrorIdentifier(_exception.what()));
-	}
-	catch (Json::other_error const& _exception)
-	{
-		return formatFatalError(Error::Type::InternalCompilerError, std::string("JSON other_error exception: ") + util::removeNlohmannInternalErrorIdentifier(_exception.what()));
-	}
-	catch (Json::exception const& _exception)
-	{
-		return formatFatalError(Error::Type::InternalCompilerError, std::string("JSON runtime exception: ") + util::removeNlohmannInternalErrorIdentifier(_exception.what()));
-	}
-	catch (util::Exception const& _exception)
-	{
-		return formatFatalError(Error::Type::InternalCompilerError, "Internal exception in StandardCompiler::compile: " + boost::diagnostic_information(_exception));
+		solAssert(_exception.comment(), "Unimplemented feature errors must include a message for the user");
+		return formatFatalError(Error::Type::UnimplementedFeatureError, stringOrDefault(_exception.comment()));
 	}
 	catch (...)
 	{

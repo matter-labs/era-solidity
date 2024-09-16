@@ -37,6 +37,7 @@
 #include <libyul/AsmPrinter.h>
 #include <libyul/AST.h>
 #include <libyul/Dialect.h>
+#include <libyul/Utilities.h>
 #include <libyul/optimiser/ASTCopier.h>
 
 #include <liblangutil/Exceptions.h>
@@ -47,6 +48,7 @@
 #include <libsolutil/FunctionSelector.h>
 #include <libsolutil/Visitor.h>
 
+#include <range/v3/algorithm/all_of.hpp>
 #include <range/v3/view/transform.hpp>
 
 using namespace solidity;
@@ -76,7 +78,7 @@ struct CopyTranslate: public yul::ASTCopier
 			return ASTCopier::operator()(_identifier);
 	}
 
-	yul::YulString translateIdentifier(yul::YulString _name) override
+	yul::YulName translateIdentifier(yul::YulName _name) override
 	{
 		// Strictly, the dialect used by inline assembly (m_dialect) could be different
 		// from the Yul dialect we are compiling to. So we are assuming here that the builtin
@@ -85,7 +87,7 @@ struct CopyTranslate: public yul::ASTCopier
 		if (m_dialect.builtin(_name))
 			return _name;
 		else
-			return yul::YulString{"usr$" + _name.str()};
+			return yul::YulName{"usr$" + _name.str()};
 	}
 
 	yul::Identifier translate(yul::Identifier const& _identifier) override
@@ -202,9 +204,9 @@ private:
 			solAssert(false);
 
 		if (isDigit(value.front()))
-			return yul::Literal{_identifier.debugData, yul::LiteralKind::Number, yul::YulString{value}, {}};
+			return yul::Literal{_identifier.debugData, yul::LiteralKind::Number, yul::valueOfNumberLiteral(value)};
 		else
-			return yul::Identifier{_identifier.debugData, yul::YulString{value}};
+			return yul::Identifier{_identifier.debugData, yul::YulName{value}};
 	}
 
 
@@ -373,6 +375,15 @@ std::string IRGeneratorForStatements::constantValueFunction(VariableDeclaration 
 void IRGeneratorForStatements::endVisit(VariableDeclarationStatement const& _varDeclStatement)
 {
 	setLocation(_varDeclStatement);
+
+	auto static notTransient = [](std::shared_ptr<VariableDeclaration> const& _varDeclaration) {
+		return (_varDeclaration ? _varDeclaration->referenceLocation() != VariableDeclaration::Location::Transient : true);
+	};
+
+	solUnimplementedAssert(
+		ranges::all_of(_varDeclStatement.declarations(), notTransient),
+		"Transient storage variables are not supported."
+	);
 
 	if (Expression const* expression = _varDeclStatement.initialValue())
 	{
@@ -1548,7 +1559,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 
 		ContractDefinition const* contract =
 			&dynamic_cast<ContractType const&>(*functionType->returnParameterTypes().front()).contractDefinition();
-		m_context.subObjectsCreated().insert(contract);
+		m_context.addSubObject(contract);
 
 		Whiskers t(R"(let <memPos> := <allocateUnbounded>()
 			let <memEnd> := add(<memPos>, datasize("<object>"))
@@ -1936,7 +1947,7 @@ void IRGeneratorForStatements::endVisit(MemberAccess const& _memberAccess)
 			auto const& contractType = dynamic_cast<ContractType const&>(*arg);
 			solAssert(!contractType.isSuper());
 			ContractDefinition const& contract = contractType.contractDefinition();
-			m_context.subObjectsCreated().insert(&contract);
+			m_context.addSubObject(&contract);
 			appendCode() << Whiskers(R"(
 				let <size> := datasize("<objectName>")
 				let <result> := <allocationFunction>(add(<size>, 32))
@@ -2241,11 +2252,10 @@ bool IRGeneratorForStatements::visit(InlineAssembly const& _inlineAsm)
 		m_context.setMemoryUnsafeInlineAssemblySeen();
 	CopyTranslate bodyCopier{_inlineAsm.dialect(), m_context, _inlineAsm.annotation().externalReferences};
 
-	yul::Statement modified = bodyCopier(_inlineAsm.operations());
+	yul::Statement modified = bodyCopier(_inlineAsm.operations().root());
 
 	solAssert(std::holds_alternative<yul::Block>(modified));
 
-	// Do not provide dialect so that we get the full type information.
 	appendCode() << yul::AsmPrinter()(std::get<yul::Block>(modified)) << "\n";
 	return false;
 }
@@ -2314,6 +2324,9 @@ void IRGeneratorForStatements::endVisit(IndexAccess const& _indexAccess)
 
 				break;
 			}
+			case DataLocation::Transient:
+				solUnimplemented("Transient data location is only supported for value types.");
+				break;
 			case DataLocation::Memory:
 			{
 				std::string const indexAccessFunction = m_utils.memoryArrayIndexAccessFunction(arrayType);

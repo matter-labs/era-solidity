@@ -119,6 +119,8 @@ EVMVersion ProtoConverter::evmVersionMapping(Program_Version const& _ver)
 		return EVMVersion::shanghai();
 	case Program::CANCUN:
 		return EVMVersion::cancun();
+	case Program::PRAGUE:
+		return EVMVersion::prague();
 	}
 }
 
@@ -1160,6 +1162,11 @@ void ProtoConverter::visit(IfStmt const& _x)
 void ProtoConverter::visit(StoreFunc const& _x)
 {
 	auto storeType = _x.st();
+	// Skip statement generation if tstore is not
+	// supported in EVM version
+	if (storeType == StoreFunc::TSTORE && !m_evmVersion.supportsTransientStorage())
+		return;
+
 	switch (storeType)
 	{
 	case StoreFunc::MSTORE:

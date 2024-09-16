@@ -1,4 +1,4 @@
-// RUN: solc --yul --mlir-action=print-init --mmlir --mlir-print-debuginfo --mlir-target=eravm %s | FileCheck %s
+// RUN: solc --strict-assembly --mlir-action=print-init --mmlir --mlir-print-debuginfo --mlir-target=eravm %s | FileCheck %s
 
 object "Test" {
   code {
@@ -36,18 +36,18 @@ object "Test" {
 // CHECK-NEXT:   } loc(#loc)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
-// CHECK-NEXT: #loc1 = loc({{.*}}:4:4)
-// CHECK-NEXT: #loc2 = loc({{.*}}:4:8)
-// CHECK-NEXT: #loc3 = loc({{.*}}:4:25)
-// CHECK-NEXT: #loc4 = loc({{.*}}:4:19)
-// CHECK-NEXT: #loc5 = loc({{.*}}:5:13)
-// CHECK-NEXT: #loc6 = loc({{.*}}:5:22)
-// CHECK-NEXT: #loc7 = loc({{.*}}:5:51)
-// CHECK-NEXT: #loc8 = loc({{.*}}:5:4)
-// CHECK-NEXT: #loc9 = loc({{.*}}:6:11)
-// CHECK-NEXT: #loc10 = loc({{.*}}:6:14)
-// CHECK-NEXT: #loc11 = loc({{.*}}:6:4)
-// CHECK-NEXT: #loc12 = loc({{.*}}:10:13)
-// CHECK-NEXT: #loc13 = loc({{.*}}:10:16)
-// CHECK-NEXT: #loc14 = loc({{.*}}:10:6)
+// CHECK-NEXT: #loc1 = loc({{.*}}:0:49)
+// CHECK-NEXT: #loc2 = loc({{.*}}:0:53)
+// CHECK-NEXT: #loc3 = loc({{.*}}:0:70)
+// CHECK-NEXT: #loc4 = loc({{.*}}:0:64)
+// CHECK-NEXT: #loc5 = loc({{.*}}:0:95)
+// CHECK-NEXT: #loc6 = loc({{.*}}:0:104)
+// CHECK-NEXT: #loc7 = loc({{.*}}:2:7)
+// CHECK-NEXT: #loc8 = loc({{.*}}:0:86)
+// CHECK-NEXT: #loc9 = loc({{.*}}:4:28)
+// CHECK-NEXT: #loc10 = loc({{.*}}:5:2)
+// CHECK-NEXT: #loc11 = loc({{.*}}:4:21)
+// CHECK-NEXT: #loc12 = loc({{.*}}:5:74)
+// CHECK-NEXT: #loc13 = loc({{.*}}:5:77)
+// CHECK-NEXT: #loc14 = loc({{.*}}:5:67)
 // CHECK-EMPTY:

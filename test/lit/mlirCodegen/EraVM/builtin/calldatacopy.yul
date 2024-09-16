@@ -1,4 +1,4 @@
-// RUN: solc --yul --mlir-action=print-std-mlir --mlir-target=eravm --mmlir --mlir-print-debuginfo %s | FileCheck %s
+// RUN: solc --strict-assembly --mlir-action=print-std-mlir --mlir-target=eravm --mmlir --mlir-print-debuginfo %s | FileCheck %s
 
 object "Test" {
   code {
@@ -229,18 +229,18 @@ object "Test" {
 // CHECK-NEXT:   } loc(#loc)
 // CHECK-NEXT:   func.func private @__personality() -> i32 attributes {llvm.linkage = #llvm.linkage<external>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} loc(#loc)
 // CHECK-NEXT: } loc(#loc)
-// CHECK-NEXT: #loc1 = loc({{.*}}:5:4)
-// CHECK-NEXT: #loc2 = loc({{.*}}:4:17)
-// CHECK-NEXT: #loc3 = loc({{.*}}:4:20)
-// CHECK-NEXT: #loc4 = loc({{.*}}:4:23)
-// CHECK-NEXT: #loc5 = loc({{.*}}:4:4)
-// CHECK-NEXT: #loc6 = loc({{.*}}:5:11)
-// CHECK-NEXT: #loc7 = loc({{.*}}:5:14)
-// CHECK-NEXT: #loc8 = loc({{.*}}:9:19)
-// CHECK-NEXT: #loc9 = loc({{.*}}:9:22)
-// CHECK-NEXT: #loc10 = loc({{.*}}:9:25)
-// CHECK-NEXT: #loc11 = loc({{.*}}:9:6)
-// CHECK-NEXT: #loc12 = loc({{.*}}:10:13)
-// CHECK-NEXT: #loc13 = loc({{.*}}:10:16)
-// CHECK-NEXT: #loc14 = loc({{.*}}:10:6)
+// CHECK-NEXT: #loc1 = loc({{.*}}:0:84)
+// CHECK-NEXT: #loc2 = loc({{.*}}:0:62)
+// CHECK-NEXT: #loc3 = loc({{.*}}:0:65)
+// CHECK-NEXT: #loc4 = loc({{.*}}:0:68)
+// CHECK-NEXT: #loc5 = loc({{.*}}:0:49)
+// CHECK-NEXT: #loc6 = loc({{.*}}:0:91)
+// CHECK-NEXT: #loc7 = loc({{.*}}:0:94)
+// CHECK-NEXT: #loc8 = loc({{.*}}:6:1)
+// CHECK-NEXT: #loc9 = loc({{.*}}:7:0)
+// CHECK-NEXT: #loc10 = loc({{.*}}:7:3)
+// CHECK-NEXT: #loc11 = loc({{.*}}:5:5)
+// CHECK-NEXT: #loc12 = loc({{.*}}:8:3)
+// CHECK-NEXT: #loc13 = loc({{.*}}:8:6)
+// CHECK-NEXT: #loc14 = loc({{.*}}:7:23)
 // CHECK-EMPTY:

@@ -9,16 +9,16 @@ version: 2.1
 parameters:
   ubuntu-2004-docker-image:
     type: string
-    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2004-23
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:84a1fb8771236e8d9aa5c615a425b8929e56a6e4f150a60078c8d74a1ceaa6c2"
+    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2004-24
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:b8b645fa7ab40d55f2d16eac295d16ca01ec51d32be7d668ae6eaecd47dbd763"
   ubuntu-2204-docker-image:
     type: string
-    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2204-8
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:1c3a4118218640b2bf632242979a63d48f3d9c70d48be9574332f2dbbd04b192"
+    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2204-9
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:80247de9655b1f39afd4ac22b14266bc9b9a0d64b283ae8fb9cb5b8250e4e77d"
   ubuntu-2204-clang-docker-image:
     type: string
-    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2204.clang-7
-    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:0f47e733e100080c4174381c262cfcf974bc8e7c3c41b8dff611b9641c82f714"
+    # solbuildpackpusher/solidity-buildpack-deps:ubuntu2204.clang-8
+    default: "solbuildpackpusher/solidity-buildpack-deps@sha256:2662376fe0e1ec2d346495a19a6d64508c1048d5a7325d8600c33c343fa64a0f"
   ubuntu-clang-ossfuzz-docker-image:
     type: string
     # solbuildpackpusher/solidity-buildpack-deps:ubuntu.clang.ossfuzz-6
@@ -30,7 +30,7 @@ parameters:
     default: "solbuildpackpusher/solidity-buildpack-deps@sha256:c57f2bfb8c15d70fe290629358dd1c73dc126e3760f443b54764797556b887d4"
   evm-version:
     type: string
-    default: london
+    default: cancun
 
 orbs:
   win: circleci/windows@2.2.0
@@ -866,7 +866,7 @@ jobs:
           name: Check spelling
           command: |
             ~/.local/bin/codespell \
-              --skip "*.enc,.git,Dockerfile*,LICENSE,codespell_whitelist.txt,codespell_ignored_lines.txt" \
+              --skip "*.enc,.git,Dockerfile*,LICENSE,codespell_whitelist.txt,codespell_ignored_lines.txt,deps" \
               --ignore-words scripts/codespell_whitelist.txt \
               --exclude-file scripts/codespell_ignored_lines.txt
       - matrix_notify_failure_unless_pr
@@ -1044,7 +1044,7 @@ jobs:
     <<: *base_ubuntu2004_xlarge
     environment:
       <<: *base_ubuntu2204_xlarge_env
-      CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DUSE_Z3_DLOPEN=ON -DUSE_CVC4=OFF -DSOLC_STATIC_STDLIBS=ON
+      CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DUSE_Z3_DLOPEN=ON -DSOLC_STATIC_STDLIBS=ON
     steps:
       - checkout
       - run_build
@@ -1104,7 +1104,7 @@ jobs:
     environment:
       <<: *base_ubuntu2204_large_env
       CMAKE_BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DCMAKE_CXX_STANDARD=20 -DUSE_CVC4=OFF
+      CMAKE_OPTIONS: -DCMAKE_CXX_STANDARD=20
       MAKEFLAGS: -j 10
     steps:
       - checkout
@@ -1273,7 +1273,7 @@ jobs:
       - run:
           name: Install runtime dependencies
           command: |
-            pacman --noconfirm -Syu --noprogressbar --needed z3
+            pacman --noconfirm -Syu --noprogressbar --needed z3 git
       - soltest
 
   t_ubu_clang_soltest: &t_ubu_clang_soltest
@@ -1438,6 +1438,14 @@ jobs:
             # TODO: temporarily set hardhat stack traces tests to use cancun hardfork
             # Remove this when hardhat switch to cancun by default: https://github.com/NomicFoundation/hardhat/issues/4851
             sed -i 's/hardfork: "shanghai",/hardfork: "cancun",/' test/internal/hardhat-network/stack-traces/execution.ts
+            # TODO: Remove these tests because they rely on specific stack sequence which has changed since
+            # Remove when hardhat properly fix a specific version for the tests: https://github.com/NomicFoundation/hardhat/issues/5443
+            rm -rf test/internal/hardhat-network/stack-traces/test-files/0_8/revert-without-message/modifiers/call-message/multiple-modifiers-require/
+            rm -rf test/internal/hardhat-network/stack-traces/test-files/0_8/revert-without-message/modifiers/create-message/multiple-modifiers-require/
+            rm -rf test/internal/hardhat-network/stack-traces/test-files/0_8/revert-without-message/revert-without-message/within-receive/between-statements/
+            rm -rf test/internal/hardhat-network/stack-traces/test-files/0_8/revert-without-message/revert-without-message/within-receive/no-other-statements/
+            rm -rf test/internal/hardhat-network/stack-traces/test-files/0_8/revert-without-message/revert-without-message/within-receive/statement-after/
+            rm -rf test/internal/hardhat-network/stack-traces/test-files/0_8/revert-without-message/revert-without-message/within-receive/statement-before/
             pnpm test
       - matrix_notify_failure_unless_pr
 
@@ -1533,6 +1541,19 @@ jobs:
       - run:
           name: Summarize reports
           command: cat reports/externalTests/all-benchmarks.json | scripts/externalTests/summarize_benchmarks.sh > reports/externalTests/summarized-benchmarks.json
+      - store_artifacts:
+          path: reports/externalTests/all-benchmarks.json
+      - store_artifacts:
+          path: reports/externalTests/summarized-benchmarks.json
+      - run:
+          name: Check CircleCI token presence; Skip remaining steps if the token is not present.
+          command: |
+            # NOTE: download_benchmarks.py requires CIRCLECI_TOKEN environment variable to be set to
+            # a valid CircleCI API token to download the benchmark artifacts.
+            if [[ -z "$CIRCLECI_TOKEN" ]]; then
+              echo "Skipping download benchmarks..."
+              circleci-agent step halt
+            fi
       - run:
           name: Download reports from base branch
           command: |
@@ -1577,10 +1598,6 @@ jobs:
                 base-branch/all-benchmarks-*.json \
                 all-benchmarks.json > diff/benchmark-diff-all-table-inplace-absolute.md
             fi
-      - store_artifacts:
-          path: reports/externalTests/all-benchmarks.json
-      - store_artifacts:
-          path: reports/externalTests/summarized-benchmarks.json
       - store_artifacts:
           path: reports/externalTests/diff/
       - store_artifacts:
@@ -1639,7 +1656,7 @@ jobs:
           shell: powershell.exe
       - run:
           name: Install LSP test dependencies
-          command: python -m pip install --user deepdiff colorama
+          command: python -m pip install --user numpy deepdiff colorama
       - run:
           name: Executing solc LSP test suite
           command: python test/lsp.py build\solc\Release\solc.exe --non-interactive

@@ -24,9 +24,7 @@
 #include <z3_version.h>
 #endif
 
-#if defined(__linux) || defined(__APPLE__)
 #include <boost/process.hpp>
-#endif
 
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view.hpp>
@@ -45,10 +43,11 @@ ModelChecker::ModelChecker(
 	ReadCallback::Callback const& _smtCallback
 ):
 	m_errorReporter(_errorReporter),
+	m_provedSafeReporter(m_provedSafeLogs),
 	m_settings(std::move(_settings)),
 	m_context(),
-	m_bmc(m_context, m_uniqueErrorReporter, m_unsupportedErrorReporter, _smtlib2Responses, _smtCallback, m_settings, _charStreamProvider),
-	m_chc(m_context, m_uniqueErrorReporter, m_unsupportedErrorReporter, _smtlib2Responses, _smtCallback, m_settings, _charStreamProvider)
+	m_bmc(m_context, m_uniqueErrorReporter, m_unsupportedErrorReporter, m_provedSafeReporter, _smtlib2Responses, _smtCallback, m_settings, _charStreamProvider),
+	m_chc(m_context, m_uniqueErrorReporter, m_unsupportedErrorReporter, m_provedSafeReporter, _smtlib2Responses, _smtCallback, m_settings, _charStreamProvider)
 {
 }
 
@@ -153,6 +152,12 @@ void ModelChecker::analyze(SourceUnit const& _source)
 
 	m_errorReporter.append(m_uniqueErrorReporter.errors());
 	m_uniqueErrorReporter.clear();
+
+	if (m_settings.showProvedSafe)
+	{
+		m_errorReporter.append(m_provedSafeReporter.errors());
+		m_provedSafeReporter.clear();
+	}
 }
 
 std::vector<std::string> ModelChecker::unhandledQueries()
@@ -163,14 +168,10 @@ std::vector<std::string> ModelChecker::unhandledQueries()
 SMTSolverChoice ModelChecker::availableSolvers()
 {
 	smtutil::SMTSolverChoice available = smtutil::SMTSolverChoice::SMTLIB2();
-#if defined(__linux) || defined(__APPLE__)
 	available.eld = !boost::process::search_path("eld").empty();
-#endif
+	available.cvc5 = !boost::process::search_path("cvc5").empty();
 #ifdef HAVE_Z3
 	available.z3 = solidity::smtutil::Z3Interface::available();
-#endif
-#ifdef HAVE_CVC4
-	available.cvc4 = true;
 #endif
 	return available;
 }
@@ -179,13 +180,13 @@ SMTSolverChoice ModelChecker::checkRequestedSolvers(SMTSolverChoice _enabled, Er
 {
 	SMTSolverChoice availableSolvers{ModelChecker::availableSolvers()};
 
-	if (_enabled.cvc4 && !availableSolvers.cvc4)
+	if (_enabled.cvc5 && !availableSolvers.cvc5)
 	{
-		_enabled.cvc4 = false;
+		_enabled.cvc5 = false;
 		_errorReporter.warning(
 			4902_error,
 			SourceLocation(),
-			"Solver CVC4 was selected for SMTChecker but it is not available."
+			"Solver cvc5 was selected for SMTChecker but it is not available."
 		);
 	}
 

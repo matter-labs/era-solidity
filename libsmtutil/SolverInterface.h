@@ -41,13 +41,13 @@ namespace solidity::smtutil
 
 struct SMTSolverChoice
 {
-	bool cvc4 = false;
+	bool cvc5 = false;
 	bool eld = false;
 	bool smtlib2 = false;
 	bool z3 = false;
 
 	static constexpr SMTSolverChoice All() noexcept { return {true, true, true, true}; }
-	static constexpr SMTSolverChoice CVC4() noexcept { return {true, false, false, false}; }
+	static constexpr SMTSolverChoice CVC5() noexcept { return {true, false, false, false}; }
 	static constexpr SMTSolverChoice ELD() noexcept { return {false, true, false, false}; }
 	static constexpr SMTSolverChoice SMTLIB2() noexcept { return {false, false, true, false}; }
 	static constexpr SMTSolverChoice Z3() noexcept { return {false, false, false, true}; }
@@ -65,7 +65,7 @@ struct SMTSolverChoice
 
 	SMTSolverChoice& operator&=(SMTSolverChoice const& _other)
 	{
-		cvc4 &= _other.cvc4;
+		cvc5 &= _other.cvc5;
 		eld &= _other.eld;
 		smtlib2 &= _other.smtlib2;
 		z3 &= _other.z3;
@@ -82,7 +82,7 @@ struct SMTSolverChoice
 
 	bool operator==(SMTSolverChoice const& _other) const noexcept
 	{
-		return cvc4 == _other.cvc4 &&
+		return cvc5 == _other.cvc5 &&
 			eld == _other.eld &&
 			smtlib2 == _other.smtlib2 &&
 			z3 == _other.z3;
@@ -90,11 +90,11 @@ struct SMTSolverChoice
 
 	bool setSolver(std::string const& _solver)
 	{
-		static std::set<std::string> const solvers{"cvc4", "eld", "smtlib2", "z3"};
+		static std::set<std::string> const solvers{"cvc5", "eld", "smtlib2", "z3"};
 		if (!solvers.count(_solver))
 			return false;
-		if (_solver == "cvc4")
-			cvc4 = true;
+		if (_solver == "cvc5")
+			cvc5 = true;
 		if (_solver == "eld")
 			eld = true;
 		else if (_solver == "smtlib2")
@@ -105,8 +105,8 @@ struct SMTSolverChoice
 	}
 
 	bool none() const noexcept { return !some(); }
-	bool some() const noexcept { return cvc4 || eld || smtlib2 || z3; }
-	bool all() const noexcept { return cvc4 && eld && smtlib2 && z3; }
+	bool some() const noexcept { return cvc5 || eld || smtlib2 || z3; }
+	bool all() const noexcept { return cvc5 && eld && smtlib2 && z3; }
 };
 
 enum class CheckResult
@@ -512,13 +512,9 @@ DEV_SIMPLE_EXCEPTION(SolverError);
 class SolverInterface
 {
 public:
-	SolverInterface(std::optional<unsigned> _queryTimeout = {}): m_queryTimeout(_queryTimeout) {}
+	SolverInterface() = default;
 
 	virtual ~SolverInterface() = default;
-	virtual void reset() = 0;
-
-	virtual void push() = 0;
-	virtual void pop() = 0;
 
 	virtual void declareVariable(std::string const& _name, SortPointer const& _sort) = 0;
 	Expression newVariable(std::string _name, SortPointer const& _sort)
@@ -529,21 +525,8 @@ public:
 		return Expression(std::move(_name), {}, _sort);
 	}
 
-	virtual void addAssertion(Expression const& _expr) = 0;
-
-	/// Checks for satisfiability, evaluates the expressions if a model
-	/// is available. Throws SMTSolverError on error.
-	virtual std::pair<CheckResult, std::vector<std::string>>
-	check(std::vector<Expression> const& _expressionsToEvaluate) = 0;
-
-	/// @returns a list of queries that the system was not able to respond to.
-	virtual std::vector<std::string> unhandledQueries() { return {}; }
-
 	/// @returns how many SMT solvers this interface has.
 	virtual size_t solvers() { return 1; }
-
-protected:
-	std::optional<unsigned> m_queryTimeout;
 };
 
 }

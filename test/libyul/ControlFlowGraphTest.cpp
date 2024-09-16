@@ -130,7 +130,6 @@ private:
 				},
 				[&](CFG::BuiltinCall const& _call) {
 					m_stream << _call.functionCall.get().functionName.name.str() << ": ";
-
 				},
 				[&](CFG::Assignment const& _assignment) {
 					m_stream << "Assignment(";
@@ -206,7 +205,7 @@ TestCase::TestResult ControlFlowGraphTest::run(std::ostream& _stream, std::strin
 
 	std::ostringstream output;
 
-	std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(*analysisInfo, *m_dialect, *object->code);
+	std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(*analysisInfo, *m_dialect, object->code()->root());
 
 	output << "digraph CFG {\nnodesep=0.7;\nnode[shape=box];\n\n";
 	ControlFlowGraphPrinter printer{output};

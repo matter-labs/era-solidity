@@ -380,12 +380,6 @@ private:
 	std::vector<T> m_contents;
 };
 
-template<typename T>
-void swap(UniqueVector<T>& _lhs, UniqueVector<T>& _rhs)
-{
-	std::swap(_lhs.contents(), _rhs.contents());
-}
-
 namespace detail
 {
 
@@ -575,7 +569,7 @@ void iterateReplacingWindow(std::vector<T>& _vector, F const& _f)
 	detail::iterateReplacingWindow(_vector, _f, std::make_index_sequence<N>{});
 }
 
-/// @returns true iff @a _str passess the hex address checksum test.
+/// @returns true iff @a _str passes the hex address checksum test.
 /// @param _strict if false, hex strings with only uppercase or only lowercase letters
 /// are considered valid.
 bool passesAddressChecksum(std::string const& _str, bool _strict);
@@ -584,8 +578,8 @@ bool passesAddressChecksum(std::string const& _str, bool _strict);
 /// @param hex strings that look like an address
 std::string getChecksummedAddress(std::string const& _addr);
 
-bool isValidHex(std::string const& _string);
-bool isValidDecimal(std::string const& _string);
+bool isValidHex(std::string_view _string);
+bool isValidDecimal(std::string_view _string);
 
 /// @returns a quoted string if all characters are printable ASCII chars,
 /// or its hex representation otherwise.
@@ -630,6 +624,16 @@ std::vector<T> make_vector(Args&&... _args)
 	result.reserve(sizeof...(_args));
 	detail::variadicEmplaceBack(result, std::forward<Args>(_args)...);
 	return result;
+}
+
+inline std::string stringOrDefault(std::string _string, std::string _defaultString = "")
+{
+	return (!_string.empty() ? std::move(_string) : std::move(_defaultString));
+}
+
+inline std::string stringOrDefault(std::string const* _string, std::string const& _defaultString = "")
+{
+	return (_string ? stringOrDefault(*_string, _defaultString) : _defaultString);
 }
 
 }

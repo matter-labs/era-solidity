@@ -79,10 +79,10 @@ public:
 
 private:
   /// Maps a yul variable name to its MemRef
-  std::map<YulString, mlir::Value> memRefMap;
+  std::map<YulName, mlir::Value> memRefMap;
 
   /// Returns the IntegerAttr for `num`
-  mlir::IntegerAttr getIntAttr(YulString num);
+  mlir::IntegerAttr getIntAttr(LiteralValue const &num);
 
   /// Returns the mlir location for the solidity source location
   mlir::Location getLoc(SourceLocation const &loc) {
@@ -110,10 +110,10 @@ private:
   mlir::Value convToBool(mlir::Value val);
 
   /// Sets the MemRef addr of yul variable
-  void setMemRef(YulString var, mlir::Value addr) { memRefMap[var] = addr; }
+  void setMemRef(YulName var, mlir::Value addr) { memRefMap[var] = addr; }
 
   /// Returns the MemRef addr of yul variable
-  mlir::Value getMemRef(YulString var);
+  mlir::Value getMemRef(YulName var);
 
   /// Returns the symbol of type `T` in the current scope
   template <typename T>
@@ -167,8 +167,8 @@ private:
 };
 
 /// Returns the llvm::APInt of `num`
-static llvm::APInt getAPInt(YulString num, unsigned width) {
-  llvm::StringRef numStr = num.str();
+static llvm::APInt getAPInt(std::string num, unsigned width) {
+  llvm::StringRef numStr = num;
   uint8_t radix = 10;
   if (numStr.consume_front("0x")) {
     radix = 16;
@@ -176,9 +176,9 @@ static llvm::APInt getAPInt(YulString num, unsigned width) {
   return llvm::APInt(width, numStr, radix);
 }
 
-mlir::IntegerAttr YulToMLIRPass::getIntAttr(YulString num) {
+mlir::IntegerAttr YulToMLIRPass::getIntAttr(LiteralValue const &num) {
   auto defTy = getDefIntTy();
-  return b.getIntegerAttr(defTy, getAPInt(num, defTy.getWidth()));
+  return b.getIntegerAttr(defTy, getAPInt(num.value().str(), defTy.getWidth()));
 }
 
 mlir::Value YulToMLIRPass::getMemRef(YulString var) {
@@ -311,8 +311,8 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       auto *objectName = std::get_if<Literal>(&call.arguments[0]);
       assert(objectName);
       assert(objectName->kind == LiteralKind::String);
-      auto objectOp =
-          lookupSymbol<mlir::sol::ObjectOp>(objectName->value.str());
+      auto objectOp = lookupSymbol<mlir::sol::ObjectOp>(
+          objectName->value.builtinStringLiteralValue());
       assert(objectOp && "NYI: References to external object");
       return b.create<mlir::sol::DataOffsetOp>(
           loc, mlir::FlatSymbolRefAttr::get(objectOp));
@@ -321,8 +321,8 @@ mlir::Value YulToMLIRPass::genExpr(FunctionCall const &call) {
       auto *objectName = std::get_if<Literal>(&call.arguments[0]);
       assert(objectName);
       assert(objectName->kind == LiteralKind::String);
-      auto objectOp =
-          lookupSymbol<mlir::sol::ObjectOp>(objectName->value.str());
+      auto objectOp = lookupSymbol<mlir::sol::ObjectOp>(
+          objectName->value.builtinStringLiteralValue());
       assert(objectOp && "NYI: References to external object");
       return b.create<mlir::sol::DataSizeOp>(
           loc, mlir::FlatSymbolRefAttr::get(objectOp));
@@ -443,7 +443,7 @@ void YulToMLIRPass::operator()(VariableDeclaration const &decl) {
   mlirgen::BuilderExt bExt(b, loc);
 
   assert(decl.variables.size() == 1 && "NYI: Multivalued assignment");
-  TypedName const &var = decl.variables[0];
+  NameWithDebugData const &var = decl.variables[0];
   auto addr = b.create<mlir::LLVM::AllocaOp>(
       getLoc(var.debugData), mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
       bExt.genI256Const(1), getDefAlign());
@@ -477,8 +477,10 @@ void YulToMLIRPass::operator()(Switch const &switchStmt) {
     // If non default block
     if (caseAST.value) {
       caseASTs.push_back(&caseAST);
-      caseVals.push_back(
-          getAPInt(caseAST.value->value, getDefIntTy().getWidth()));
+      // FIXME (libyul): Getting the literal value of a case statement AST
+      // shouldn't look this ugly!
+      caseVals.push_back(getAPInt(caseAST.value->value.value().str(),
+                                  getDefIntTy().getWidth()));
 
     } else {
       // There should only be one default case
@@ -525,7 +527,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   // Add entry block and forward input args
   mlir::Block *entryBlk = b.createBlock(&funcOp.getRegion());
   std::vector<mlir::Location> inLocs;
-  for (TypedName const &in : fn.parameters) {
+  for (NameWithDebugData const &in : fn.parameters) {
     inLocs.push_back(getLoc(in.debugData));
   }
   assert(funcOp.getFunctionType().getNumInputs() == inLocs.size());
@@ -535,7 +537,7 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   b.setInsertionPointToStart(entryBlk);
 
   assert(fn.returnVariables.size() == 1 && "NYI: multivalued return");
-  TypedName const &retVar = fn.returnVariables[0];
+  NameWithDebugData const &retVar = fn.returnVariables[0];
   setMemRef(retVar.name, b.create<mlir::LLVM::AllocaOp>(
                              getLoc(retVar.debugData),
                              mlir::LLVM::LLVMPointerType::get(getDefIntTy()),
@@ -575,12 +577,12 @@ void YulToMLIRPass::operator()(Block const &blk) {
 
 void YulToMLIRPass::lowerObj(Object const &obj) {
   // Lookup ObjectOp (should be declared by the top level object lowering)
-  currObj = lookupSymbol<mlir::sol::ObjectOp>(obj.name.str());
+  currObj = lookupSymbol<mlir::sol::ObjectOp>(obj.name);
   assert(currObj);
 
   b.setInsertionPointToStart(currObj.getBody());
   // TODO? Do we need a separate op for the `code` block?
-  operator()(*obj.code);
+  operator()(obj.code()->root());
 }
 
 void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
@@ -588,14 +590,13 @@ void YulToMLIRPass::lowerTopLevelObj(Object const &obj) {
   // that we can create symbol references to them (for builtins like dataoffset)
   //
   // TODO: Where is the source location info for Object? Do we need to track it?
-  auto topLevelObj =
-      b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), obj.name.str());
+  auto topLevelObj = b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), obj.name);
   {
     mlir::OpBuilder::InsertionGuard insertGuard(b);
     b.setInsertionPointToEnd(topLevelObj.getBody());
     for (auto const &subNode : obj.subObjects) {
       if (auto *subObj = dynamic_cast<Object const *>(subNode.get()))
-        b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), subObj->name.str());
+        b.create<mlir::sol::ObjectOp>(b.getUnknownLoc(), subObj->name);
     }
   }
 

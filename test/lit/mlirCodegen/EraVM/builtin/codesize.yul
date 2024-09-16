@@ -1,4 +1,4 @@
-// RUN: solc --yul --mlir-action=print-std-mlir --mlir-target=eravm --mmlir --mlir-print-debuginfo %s | FileCheck %s
+// RUN: solc --strict-assembly --mlir-action=print-std-mlir --mlir-target=eravm --mmlir --mlir-print-debuginfo %s | FileCheck %s
 
 object "Test" {
   code {
@@ -206,7 +206,7 @@ object "Test" {
 // CHECK-NEXT:   } loc(#loc)
 // CHECK-NEXT:   func.func private @__personality() -> i32 attributes {llvm.linkage = #llvm.linkage<external>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} loc(#loc)
 // CHECK-NEXT: } loc(#loc)
-// CHECK-NEXT: #loc1 = loc({{.*}}:4:4)
-// CHECK-NEXT: #loc2 = loc({{.*}}:4:11)
-// CHECK-NEXT: #loc3 = loc({{.*}}:4:14)
+// CHECK-NEXT: #loc1 = loc({{.*}}:0:29)
+// CHECK-NEXT: #loc2 = loc({{.*}}:0:36)
+// CHECK-NEXT: #loc3 = loc({{.*}}:0:39)
 // CHECK-EMPTY:

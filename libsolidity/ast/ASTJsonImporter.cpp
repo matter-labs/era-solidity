@@ -733,7 +733,7 @@ ASTPointer<InlineAssembly> ASTJsonImporter::createInlineAssembly(Json const& _no
 			flags->emplace_back(std::make_shared<ASTString>(flag.get<std::string>()));
 		}
 	}
-	std::shared_ptr<yul::Block> operations = std::make_shared<yul::Block>(yul::AsmJsonImporter(m_sourceNames).createBlock(member(_node, "AST")));
+	std::shared_ptr<yul::AST> operations = std::make_shared<yul::AST>(yul::AsmJsonImporter(m_sourceNames).createAST(member(_node, "AST")));
 	return createASTNode<InlineAssembly>(
 		_node,
 		nullOrASTString(_node, "documentation"),
@@ -1190,6 +1190,8 @@ VariableDeclaration::Location ASTJsonImporter::location(Json const& _node)
 		return VariableDeclaration::Location::Memory;
 	else if (storageLocStr == "calldata")
 		return VariableDeclaration::Location::CallData;
+	else if (storageLocStr == "transient")
+		return VariableDeclaration::Location::Transient;
 	else
 		astAssert(false, "Unknown location declaration");
 
