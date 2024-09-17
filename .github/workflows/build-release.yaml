@@ -139,4 +139,5 @@ jobs:
           body_path: release-changelog.txt
           tag_name: ${{ github.ref_name }}
           prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          target_commitish: ${{ github.sha }}
           files: releases/**/**
