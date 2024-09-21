@@ -529,18 +529,6 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
 void AllocaOp::print(OpAsmPrinter &p) { printAllocationOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
-// MallocOp
-//===----------------------------------------------------------------------===//
-
-ParseResult MallocOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseAllocationOp(parser, result);
-}
-
-void MallocOp::print(OpAsmPrinter &p) {
-  printAllocationOp(*this, p, getSize());
-}
-
-//===----------------------------------------------------------------------===//
 // GepOp
 //===----------------------------------------------------------------------===//
 

@@ -344,10 +344,18 @@ void SolidityToMLIRPass::genZeroedVal(mlir::sol::AllocaOp addr) {
   if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(pointeeTy)) {
     val = b.create<mlir::sol::ConstantOp>(
         loc, b.getIntegerAttr(intTy, llvm::APInt(intTy.getWidth(), 0)));
+
+  } else if (auto arrTy = mlir::dyn_cast<mlir::sol::ArrayType>(pointeeTy)) {
+    val = b.create<mlir::sol::MallocOp>(loc, arrTy, /*zeroInit=*/true,
+                                        /*size=*/mlir::Value{});
+
+  } else if (auto structTy = mlir::dyn_cast<mlir::sol::StructType>(pointeeTy)) {
+    val = b.create<mlir::sol::MallocOp>(loc, structTy, /*zeroInit=*/true,
+                                        /*size=*/mlir::Value{});
+
   } else if (auto stringTy = mlir::dyn_cast<mlir::sol::StringType>(pointeeTy)) {
-    assert(stringTy.getDataLocation() == mlir::sol::DataLocation::Memory &&
-           "NYI");
-    val = b.create<mlir::sol::MallocOp>(loc, stringTy, stringTy,
+    // TODO: Do we need to zero-init here?
+    val = b.create<mlir::sol::MallocOp>(loc, stringTy, /*zeroInit=*/false,
                                         /*size=*/mlir::Value{});
   }
   assert(val);

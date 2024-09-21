@@ -932,9 +932,9 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
     return 32;
   }
 
-  /// Generates the memory allocation and zeroing code.
-  Value genZeroedMemAlloc(Type ty, Value sizeVar, int64_t recDepth,
-                          PatternRewriter &r, Location loc) const {
+  /// Generates the memory allocation and optionally the zero initializer code.
+  Value genMemAlloc(Type ty, bool zeroInit, Value sizeVar, int64_t recDepth,
+                    PatternRewriter &r, Location loc) const {
     recDepth++;
 
     Value memPtr;
@@ -949,8 +949,8 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
       // FIXME: Round up size for byte arays.
       if (arrayTy.isDynSized()) {
         // Dynamic allocation is only performed for the outermost dimension.
-        if (recDepth == 0) {
-          assert(sizeVar);
+        if (sizeVar) {
+          assert(recDepth == 0);
           sizeInBytes =
               r.create<arith::MulIOp>(loc, sizeVar, bExt.genI256Const(32));
           memPtr = eraB.genMemAllocForDynArray(sizeVar, sizeInBytes);
@@ -980,7 +980,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
           // Generate the "unrolled" stores of offsets since the size is static.
           r.create<sol::MStoreOp>(
               loc, dataPtr,
-              genZeroedMemAlloc(eltTy, sizeVar, recDepth, r, loc));
+              genMemAlloc(eltTy, zeroInit, sizeVar, recDepth, r, loc));
           // FIXME: Is the stride always 32?
           assert(constSize.value() % 32 == 0);
           auto sizeInWords = constSize.value() / 32;
@@ -989,7 +989,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
                 loc, dataPtr, bExt.genI256Const(32 * i));
             r.create<sol::MStoreOp>(
                 loc, incrMemPtr,
-                genZeroedMemAlloc(eltTy, sizeVar, recDepth, r, loc));
+                genMemAlloc(eltTy, zeroInit, sizeVar, recDepth, r, loc));
           }
         } else {
           // Generate the loop for the stores of offsets.
@@ -999,8 +999,6 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
 
           // `size` should be a multiple of 32.
 
-          // FIXME: Make sure that the index type is lowered to i256 in the
-          // pipeline.
           r.create<scf::ForOp>(
               loc, /*lowerBound=*/bExt.genIdxConst(0),
               /*upperBound=*/bExt.genCastToIdx(sizeInBytes),
@@ -1012,12 +1010,12 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
                     loc, dataPtr, bExt.genCastToI256(indVar));
                 r.create<sol::MStoreOp>(
                     loc, incrMemPtr,
-                    genZeroedMemAlloc(eltTy, sizeVar, recDepth, r, loc));
+                    genMemAlloc(eltTy, zeroInit, sizeVar, recDepth, r, loc));
                 b.create<scf::YieldOp>(loc);
               });
         }
 
-      } else {
+      } else if (zeroInit) {
         Value callDataSz = r.create<sol::CallDataSizeOp>(loc);
         r.create<sol::CallDataCopyOp>(loc, dataPtr, callDataSz, sizeInBytes);
       }
@@ -1038,12 +1036,12 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
 
       for (auto memTy : structTy.getMemberTypes()) {
         Value initVal;
-        if (isa<sol::StructType>(memTy) || isa<sol::ArrayType>(memTy))
-          initVal = genZeroedMemAlloc(memTy, sizeVar, recDepth, r, loc);
-        else
-          initVal = bExt.genI256Const(0);
-
-        r.create<sol::MStoreOp>(loc, memPtr, initVal);
+        if (isa<sol::StructType>(memTy) || isa<sol::ArrayType>(memTy)) {
+          initVal = genMemAlloc(memTy, zeroInit, sizeVar, recDepth, r, loc);
+          r.create<sol::MStoreOp>(loc, memPtr, initVal);
+        } else if (zeroInit) {
+          r.create<sol::MStoreOp>(loc, memPtr, bExt.genI256Const(0));
+        }
       }
       // TODO: Support other types.
     } else {
@@ -1054,15 +1052,14 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
     return memPtr;
   }
 
-  Value genZeroedMemAlloc(Type ty, Value sizeVar, PatternRewriter &r,
-                          Location loc) const {
-    return genZeroedMemAlloc(ty, sizeVar, /*recDepth=*/-1, r, loc);
+  Value genMemAlloc(sol::MallocOp op, PatternRewriter &r) const {
+    return genMemAlloc(op.getType(), op.getZeroInit(), op.getSize(),
+                       /*recDepth=*/-1, r, op.getLoc());
   }
 
   LogicalResult matchAndRewrite(sol::MallocOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    Location loc = op.getLoc();
-    Value freePtr = genZeroedMemAlloc(op.getAllocType(), op.getSize(), r, loc);
+    Value freePtr = genMemAlloc(op, r);
     r.replaceOp(op, freePtr);
     return success();
   }
@@ -1357,10 +1354,9 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
         auto sizeInBytes = eraB.genLoad(adaptor.getInp(), srcDataLoc);
         auto memPtrTy =
             sol::StringType::get(r.getContext(), sol::DataLocation::Memory);
-        // TODO: Define custom builder (or remove the type-attr arg?) in
-        // sol.malloc.
         Value mallocRes =
-            r.create<sol::MallocOp>(loc, memPtrTy, memPtrTy, sizeInBytes);
+            r.create<sol::MallocOp>(loc, memPtrTy,
+                                    /*zeroInit=*/false, sizeInBytes);
         Type i256Ty = r.getIntegerType(256);
         assert(getTypeConverter()->convertType(mallocRes.getType()) == i256Ty);
         mlir::Value memAddr = getTypeConverter()->materializeSourceConversion(

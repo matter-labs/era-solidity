@@ -108,10 +108,17 @@ def Sol_AllocaOp : Sol_Op<"alloca"> {
 }
 
 def Sol_MallocOp : Sol_Op<"malloc"> {
-  let arguments = (ins TypeAttr:$alloc_type, Optional<I256>:$size);
+  // TODO: Allow any ints. Note that sol.malloc with i256 size could be in the
+  // dialect conversion.
+  let arguments = (ins UnitAttr:$zero_init, Optional<I256>:$size);
   let results = (outs Sol_AggType:$addr);
 
-  let hasCustomAssemblyFormat = 1;
+  // FIXME: Generated builders should include a version that defaults $size to
+  // {}
+
+  let assemblyFormat = [{
+    ($size^ `:` type($size))? (`zero_init` $zero_init^)? attr-dict `:` type($addr)
+  }];
 }
 
 def Sol_StateVarOp : Sol_Op<"state_var", [Symbol]> {
