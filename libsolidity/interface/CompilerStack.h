@@ -498,10 +498,7 @@ private:
 	void generateEVMFromIR(ContractDefinition const& _contract);
 
 	/// Runs the mlir pipeline as per the JobSpec.
-	bool runMlirPipeline(
-		std::vector<ContractDefinition const*> const& contracts,
-		langutil::CharStream const& stream,
-		mlirgen::JobSpec const&);
+	bool runMlirPipeline();
 
 	/// Links all the known library addresses in the available objects. Any unknown
 	/// library will still be kept as an unlinked placeholder in the objects.

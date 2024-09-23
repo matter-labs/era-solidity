@@ -725,17 +725,8 @@ bool CompilerStack::compile(State _stopAfter)
 
 	if (m_mlirGenJob.action != mlirgen::Action::Undefined)
 	{
-		std::vector<ContractDefinition const*> contracts;
-		for (Source const* source: m_sourceOrder)
-		{
-			contracts.clear();
-			for (ASTPointer<ASTNode> const& node: source->ast->nodes())
-				if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
-					if (isRequestedContract(*contract))
-						contracts.push_back(contract);
-			if (!runMlirPipeline(contracts, *source->charStream, m_mlirGenJob))
-				return false;
-		}
+		if (!runMlirPipeline())
+			return false;
 	}
 
 	for (Source const* source: m_sourceOrder)

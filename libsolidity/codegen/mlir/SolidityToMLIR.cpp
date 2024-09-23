@@ -52,15 +52,25 @@ using namespace solidity::frontend;
 
 namespace solidity::frontend {
 
+// FIXME: ASTConstVisitor + the ast accept() api is becoming a pain point in the
+// design here. We should either rewrite the usage here or completely remove the
+// dependence.
 class SolidityToMLIRPass : public ASTConstVisitor {
 public:
   explicit SolidityToMLIRPass(mlir::MLIRContext &ctx, CharStream const &stream)
-      : b(&ctx), stream(stream) {
+      : b(&ctx), stream(stream) {}
+
+  /// Lowers the free functions in the source unit.
+  void lowerFreeFuncs(SourceUnit const &);
+
+  /// Lowers the contract.
+  void lower(ContractDefinition const &);
+
+  /// Initializes (or resets) the module and the insertion-point.
+  void init() {
     mod = mlir::ModuleOp::create(b.getUnknownLoc());
     b.setInsertionPointToEnd(mod.getBody());
   }
-
-  void run(ContractDefinition const &);
 
   /// Returns the ModuleOp
   mlir::ModuleOp getModule() { return mod; }
@@ -176,7 +186,7 @@ private:
   bool visit(EmitStatement const &) override;
   bool visit(Return const &) override;
   bool visit(Block const &) override;
-  void run(FunctionDefinition const &);
+  void lower(FunctionDefinition const &);
 };
 
 } // namespace solidity::frontend
@@ -816,7 +826,7 @@ getStateMutability(FunctionDefinition const &fn) {
   }
 }
 
-void SolidityToMLIRPass::run(FunctionDefinition const &func) {
+void SolidityToMLIRPass::lower(FunctionDefinition const &func) {
   currFunc = &func;
   std::vector<mlir::Type> inpTys, outTys;
   std::vector<mlir::Location> inpLocs;
@@ -880,7 +890,7 @@ static mlir::sol::ContractKind getContractKind(ContractDefinition const &cont) {
   }
 }
 
-void SolidityToMLIRPass::run(ContractDefinition const &cont) {
+void SolidityToMLIRPass::lower(ContractDefinition const &cont) {
   currContract = &cont;
 
   // TODO: Set using ContractDefinition::receiveFunction and
@@ -902,31 +912,67 @@ void SolidityToMLIRPass::run(ContractDefinition const &cont) {
 
   // Lower functions.
   for (auto *f : cont.definedFunctions()) {
-    run(*f);
+    lower(*f);
   }
   b.setInsertionPointAfter(op);
 }
 
-bool CompilerStack::runMlirPipeline(
-    std::vector<ContractDefinition const *> const &contracts,
-    CharStream const &stream, solidity::mlirgen::JobSpec const &job) {
+void SolidityToMLIRPass::lowerFreeFuncs(SourceUnit const &srcUnit) {
+  for (auto const *func :
+       ASTNode::filteredNodes<FunctionDefinition>(srcUnit.nodes())) {
+    lower(*func);
+  }
+}
+
+bool CompilerStack::runMlirPipeline() {
+  assert(m_sourceOrder.size() == 1 && "NYI");
+
   mlir::MLIRContext ctx;
   ctx.getOrLoadDialect<mlir::sol::SolDialect>();
+  for (Source const *src : m_sourceOrder) {
+    SolidityToMLIRPass gen(ctx, *src->charStream);
 
-  SolidityToMLIRPass gen(ctx, stream);
-  for (auto *contract : contracts) {
-    gen.run(*contract);
+    // Lower requested contracts.
+    bool hasContract = false;
+    for (auto const *contr :
+         ASTNode::filteredNodes<ContractDefinition>(src->ast->nodes())) {
+      hasContract = true;
+      if (isRequestedContract(*contr)) {
+        gen.init();
+        // Lower free functions.
+        gen.lowerFreeFuncs(*src->ast);
+        gen.lower(*contr);
+
+        mlir::ModuleOp mod = gen.getModule();
+        if (failed(mlir::verify(mod))) {
+          mod.emitError("Module verification error");
+          return false;
+        }
+
+        // TODO: Support lowering multiple contracts.
+        return doJob(
+            m_mlirGenJob, mod,
+            m_contracts.at(contr->fullyQualifiedName()).mlirPipeline.bytecode);
+      }
+    }
+
+    if (!hasContract) {
+      // Then lower free functions. This is handy in testing.
+      gen.init();
+      gen.lowerFreeFuncs(*src->ast);
+
+      mlir::ModuleOp mod = gen.getModule();
+      if (failed(mlir::verify(mod))) {
+        mod.emitError("Module verification error");
+        return false;
+      }
+
+      std::string bytecode;
+      return doJob(m_mlirGenJob, mod, bytecode);
+    }
   }
-  mlir::ModuleOp mod = gen.getModule();
 
-  if (failed(mlir::verify(mod))) {
-    mod.emitError("Module verification error");
-    return false;
-  }
-
-  return doJob(
-      job, mod,
-      m_contracts.at(contracts[0]->fullyQualifiedName()).mlirPipeline.bytecode);
+  return false;
 }
 
 void solidity::mlirgen::registerMLIRCLOpts() {
