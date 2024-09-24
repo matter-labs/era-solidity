@@ -28,6 +28,7 @@
 #include "libsolutil/ErrorCodes.h"
 #include "libsolutil/FixedHash.h"
 #include "libsolutil/FunctionSelector.h"
+#include "libsolutil/Keccak256.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -1428,7 +1429,9 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
     std::vector<Type> nonIndexedArgsType;
     if (op.getSignature()) {
       auto signatureHash =
-          solidity::util::h256::Arith(*op.getSignature()).str();
+          solidity::util::h256::Arith(
+              solidity::util::keccak256(op.getSignature()->str()))
+              .str();
       indexedArgs.push_back(bExt.genI256Const(signatureHash));
     }
     unsigned argIdx = 0;
