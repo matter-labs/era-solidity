@@ -219,8 +219,9 @@ bool solidity::mlirgen::doJob(JobSpec const &job, mlir::ModuleOp mod,
           /*RequiresNullTerminator=*/0);
       LLVMMemoryBufferRef bytecode = nullptr;
       char *errMsg = nullptr;
-      if (LLVMLinkEraVM(obj, &bytecode,
-                        /*metadataPtr=*/nullptr, /*metadataSize=*/0, &errMsg))
+      if (LLVMLinkEraVM(obj, &bytecode, /*linkerSymbolNames=*/nullptr,
+                        /*linkerSymbolValues=*/nullptr, /*numLinkerSymbols=*/0,
+                        &errMsg))
         llvm_unreachable(errMsg);
 
       bytecodeInHex = llvm::toHex(llvm::unwrap(bytecode)->getBuffer(),
