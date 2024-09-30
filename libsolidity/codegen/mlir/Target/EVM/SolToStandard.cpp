@@ -155,6 +155,50 @@ evm::SolTypeConverter::SolTypeConverter() {
 
 namespace {
 
+struct ConstantOpLowering : public OpConversionPattern<sol::ConstantOp> {
+  using OpConversionPattern<sol::ConstantOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::ConstantOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    auto signlessTy =
+        r.getIntegerType(cast<IntegerType>(op.getType()).getWidth());
+    auto attr = cast<IntegerAttr>(op.getValue());
+    r.replaceOpWithNewOp<arith::ConstantOp>(
+        op, signlessTy, r.getIntegerAttr(signlessTy, attr.getValue()));
+    return success();
+  }
+};
+
+struct ExtOpLowering : public OpConversionPattern<sol::ExtOp> {
+  using OpConversionPattern<sol::ExtOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::ExtOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    auto origOutTy = cast<IntegerType>(op.getType());
+    IntegerType signlessOutTy = r.getIntegerType(origOutTy.getWidth());
+
+    if (origOutTy.isSigned())
+      r.replaceOpWithNewOp<arith::ExtSIOp>(op, signlessOutTy, adaptor.getIn());
+    else
+      r.replaceOpWithNewOp<arith::ExtUIOp>(op, signlessOutTy, adaptor.getIn());
+
+    return success();
+  }
+};
+
+struct TruncOpLowering : public OpConversionPattern<sol::TruncOp> {
+  using OpConversionPattern<sol::TruncOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::TruncOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    IntegerType signlessOutTy =
+        r.getIntegerType(cast<IntegerType>(op.getType()).getWidth());
+    r.replaceOpWithNewOp<arith::TruncIOp>(op, signlessOutTy, adaptor.getIn());
+
+    return success();
+  }
+};
+
 /// A templatized version of a conversion pattern for lowering arithmetic binary
 /// ops.
 template <typename SrcOpT, typename DstOpT>
@@ -164,6 +208,62 @@ struct ArithBinOpConvPat : public OpConversionPattern<SrcOpT> {
   LogicalResult matchAndRewrite(SrcOpT op, typename SrcOpT::Adaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     r.replaceOpWithNewOp<DstOpT>(op, adaptor.getLhs(), adaptor.getRhs());
+    return success();
+  }
+};
+
+struct CmpOpLowering : public OpConversionPattern<sol::CmpOp> {
+  using OpConversionPattern<sol::CmpOp>::OpConversionPattern;
+
+  arith::CmpIPredicate getSignlessPred(sol::CmpPredicate pred,
+                                       bool isSigned) const {
+    // Sign insensitive predicates.
+    switch (pred) {
+    case sol::CmpPredicate::eq:
+      return arith::CmpIPredicate::eq;
+    case sol::CmpPredicate::ne:
+      return arith::CmpIPredicate::ne;
+    default:
+      break;
+    }
+
+    // Sign sensitive predicates.
+    if (isSigned) {
+      switch (pred) {
+      case sol::CmpPredicate::lt:
+        return arith::CmpIPredicate::slt;
+      case sol::CmpPredicate::le:
+        return arith::CmpIPredicate::sle;
+      case sol::CmpPredicate::gt:
+        return arith::CmpIPredicate::sgt;
+      case sol::CmpPredicate::ge:
+        return arith::CmpIPredicate::sge;
+      default:
+        break;
+      }
+    } else {
+      switch (pred) {
+      case sol::CmpPredicate::lt:
+        return arith::CmpIPredicate::ult;
+      case sol::CmpPredicate::le:
+        return arith::CmpIPredicate::ule;
+      case sol::CmpPredicate::gt:
+        return arith::CmpIPredicate::ugt;
+      case sol::CmpPredicate::ge:
+        return arith::CmpIPredicate::uge;
+      default:
+        break;
+      }
+    }
+    llvm_unreachable("Invalid predicate");
+  }
+
+  LogicalResult matchAndRewrite(sol::CmpOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    arith::CmpIPredicate signlessPred = getSignlessPred(
+        op.getPredicate(), cast<IntegerType>(op.getLhs().getType()).isSigned());
+    r.replaceOpWithNewOp<arith::CmpIOp>(op, signlessPred, adaptor.getLhs(),
+                                        adaptor.getRhs());
     return success();
   }
 };
@@ -758,10 +858,11 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
 } // namespace
 
 void evm::populateArithPats(RewritePatternSet &pats, TypeConverter &tyConv) {
-  pats.add<ArithBinOpConvPat<sol::AddOp, arith::AddIOp>,
+  pats.add<ConstantOpLowering, ExtOpLowering, TruncOpLowering,
+           ArithBinOpConvPat<sol::AddOp, arith::AddIOp>,
            ArithBinOpConvPat<sol::SubOp, arith::SubIOp>,
-           ArithBinOpConvPat<sol::MulOp, arith::MulIOp>>(tyConv,
-                                                         pats.getContext());
+           ArithBinOpConvPat<sol::MulOp, arith::MulIOp>, CmpOpLowering>(
+      tyConv, pats.getContext());
 }
 
 void evm::populateMemPats(RewritePatternSet &pats, TypeConverter &tyConv) {
