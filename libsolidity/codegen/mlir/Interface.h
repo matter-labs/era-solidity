@@ -54,6 +54,7 @@ enum class Action {
 };
 
 enum class Target {
+  EVM,
   EraVM,
   Undefined,
 };

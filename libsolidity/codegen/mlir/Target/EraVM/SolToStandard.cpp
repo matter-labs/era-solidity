@@ -19,6 +19,7 @@
 // Sol dialect lowering pass for EraVM.
 //
 
+#include "libsolidity/codegen/mlir/Target/EVM/SolToStandard.h"
 #include "libsolidity/codegen/CompilerUtils.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
@@ -186,19 +187,6 @@ struct TruncOpLowering : public OpConversionPattern<sol::TruncOp> {
         r.getIntegerType(cast<IntegerType>(op.getType()).getWidth());
     r.replaceOpWithNewOp<arith::TruncIOp>(op, signlessOutTy, adaptor.getIn());
 
-    return success();
-  }
-};
-
-/// A templatized version of a conversion pattern for lowering arithmetic binary
-/// ops.
-template <typename SrcOpT, typename DstOpT>
-struct ArithBinOpConvPat : public OpConversionPattern<SrcOpT> {
-  using OpConversionPattern<SrcOpT>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(SrcOpT op, typename SrcOpT::Adaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
-    r.replaceOpWithNewOp<DstOpT>(op, adaptor.getLhs(), adaptor.getRhs());
     return success();
   }
 };
@@ -1386,31 +1374,6 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
   }
 };
 
-struct ReturnOpLowering : public OpConversionPattern<sol::ReturnOp> {
-  using OpConversionPattern<sol::ReturnOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(sol::ReturnOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
-    r.replaceOpWithNewOp<func::ReturnOp>(op, adaptor.getOperands());
-    return success();
-  }
-};
-
-struct CallOpLowering : public OpConversionPattern<sol::CallOp> {
-  using OpConversionPattern<sol::CallOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(sol::CallOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
-    SmallVector<Type> convertedResTys;
-    if (failed(getTypeConverter()->convertTypes(op.getResultTypes(),
-                                                convertedResTys)))
-      return failure();
-    r.replaceOpWithNewOp<func::CallOp>(op, op.getCallee(), convertedResTys,
-                                       adaptor.getOperands());
-    return success();
-  }
-};
-
 struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
   using OpConversionPattern<sol::EmitOp>::OpConversionPattern;
 
@@ -1475,57 +1438,6 @@ struct RequireOpLowering : public OpRewritePattern<sol::RequireOp> {
     else
       eraB.genRevert(negCond);
 
-    r.eraseOp(op);
-    return success();
-  }
-};
-
-struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
-  using OpConversionPattern<sol::FuncOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(sol::FuncOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
-    mlir::Location loc = op.getLoc();
-    eravm::Builder eraB(r, loc);
-
-    // Collect non-core attributes.
-    std::vector<NamedAttribute> attrs;
-    bool hasLinkageAttr = false;
-    for (NamedAttribute attr : op->getAttrs()) {
-      StringRef attrName = attr.getName();
-      if (attrName == "function_type" || attrName == "sym_name" ||
-          attrName.startswith("sol."))
-        continue;
-      if (attrName == "llvm.linkage")
-        hasLinkageAttr = true;
-      attrs.push_back(attr);
-    }
-
-    // Set llvm.linkage attribute to private if not explicitly specified.
-    if (!hasLinkageAttr)
-      attrs.push_back(r.getNamedAttr(
-          "llvm.linkage",
-          LLVM::LinkageAttr::get(r.getContext(), LLVM::Linkage::Private)));
-
-    // Set the personality attribute of llvm.
-    attrs.push_back(r.getNamedAttr("personality", eraB.getPersonality()));
-
-    // Add the nofree and null_pointer_is_valid attributes of llvm via the
-    // passthrough attribute.
-    std::vector<Attribute> passthroughAttrs;
-    passthroughAttrs.push_back(r.getStringAttr("nofree"));
-    passthroughAttrs.push_back(r.getStringAttr("null_pointer_is_valid"));
-    attrs.push_back(r.getNamedAttr(
-        "passthrough", ArrayAttr::get(r.getContext(), passthroughAttrs)));
-
-    // TODO: Add additional attribute for -O0 and -Oz
-
-    auto convertedFuncTy = cast<FunctionType>(
-        getTypeConverter()->convertType(op.getFunctionType()));
-    // FIXME: The location of the block arguments are lost here!
-    auto newOp =
-        r.create<func::FuncOp>(loc, op.getName(), convertedFuncTy, attrs);
-    r.inlineRegionBefore(op.getBody(), newOp.getBody(), newOp.end());
     r.eraseOp(op);
     return success();
   }
@@ -2041,129 +1953,6 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   }
 };
 
-/// The type converter for the ConvertSolToStandard pass.
-class SolTypeConverter : public TypeConverter {
-public:
-  SolTypeConverter() {
-    addConversion([](Type ty) { return ty; });
-
-    addConversion([&](IntegerType ty) -> Type {
-      // Map to signless variant.
-
-      if (ty.isSignless())
-        return ty;
-      return IntegerType::get(ty.getContext(), ty.getWidth(),
-                              IntegerType::Signless);
-    });
-
-    addConversion([&](FunctionType ty) -> Type {
-      SmallVector<Type> convertedInpTys, convertedResTys;
-      if (failed(convertTypes(ty.getInputs(), convertedInpTys)))
-        llvm_unreachable("Invalid type");
-      if (failed(convertTypes(ty.getResults(), convertedResTys)))
-        llvm_unreachable("Invalid type");
-
-      return FunctionType::get(ty.getContext(), convertedInpTys,
-                               convertedResTys);
-    });
-
-    addConversion([&](sol::ArrayType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      case sol::DataLocation::Stack: {
-        Type eltTy = convertType(ty.getEltType());
-        return LLVM::LLVMArrayType::get(eltTy, ty.getSize());
-      }
-
-      // Map to the 256 bit address in memory.
-      case sol::DataLocation::Memory:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    addConversion([&](sol::StringType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      // Map to the 256 bit address in memory.
-      case sol::DataLocation::Memory:
-      // Map to the 256 bit slot offset.
-      case sol::DataLocation::Storage:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    addConversion([&](sol::MappingType ty) -> Type {
-      // Map to the 256 bit slot offset.
-      return IntegerType::get(ty.getContext(), 256,
-                              IntegerType::SignednessSemantics::Signless);
-    });
-
-    addConversion([&](sol::StructType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      case sol::DataLocation::Memory:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    addConversion([&](sol::PointerType ty) -> Type {
-      switch (ty.getDataLocation()) {
-      case sol::DataLocation::Stack: {
-        Type eltTy = convertType(ty.getPointeeType());
-        return LLVM::LLVMPointerType::get(eltTy);
-      }
-
-      // Map to the 256 bit address in memory.
-      case sol::DataLocation::Memory:
-      // Map to the 256 bit slot offset.
-      //
-      // TODO: Can we get all storage types to be 32 byte aligned? If so, we can
-      // avoid the byte offset. Otherwise we should consider the
-      // OneToNTypeConversion to map the pointer to the slot + byte offset pair.
-      case sol::DataLocation::Storage:
-        return IntegerType::get(ty.getContext(), 256,
-                                IntegerType::SignednessSemantics::Signless);
-
-      default:
-        break;
-      }
-
-      llvm_unreachable("Unimplemented type conversion");
-    });
-
-    addSourceMaterialization([](OpBuilder &b, Type resTy, ValueRange ins,
-                                Location loc) -> Value {
-      if (ins.size() != 1)
-        return b.create<UnrealizedConversionCastOp>(loc, resTy, ins)
-            .getResult(0);
-
-      Type i256Ty = b.getIntegerType(256);
-
-      Type inpTy = ins[0].getType();
-
-      if ((sol::isRefType(inpTy) && resTy == i256Ty) ||
-          (inpTy == i256Ty && sol::isRefType(resTy)))
-        return b.create<sol::ConvCastOp>(loc, resTy, ins);
-
-      return b.create<UnrealizedConversionCastOp>(loc, resTy, ins).getResult(0);
-    });
-  }
-};
-
 /// Pass for lowering the sol dialect to the standard dialects.
 /// TODO:
 /// - Generate this using mlir-tblgen.
@@ -2204,7 +1993,7 @@ struct ConvertSolToStandard
 
   /// Converts sol dialect ops except sol.contract and sol.func + related ops.
   /// This pass also legalizes all the sol dialect types.
-  void runStage1Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
+  void runStage1Conversion(ModuleOp mod, evm::SolTypeConverter &tyConv) {
     OpBuilder b(mod.getContext());
     eravm::Builder eraB(b);
 
@@ -2231,10 +2020,8 @@ struct ConvertSolToStandard
         [&](Operation *op) { return tyConv.isLegal(op); });
 
     RewritePatternSet pats(&getContext());
-    pats.add<ConstantOpLowering, ExtOpLowering, TruncOpLowering,
-             ArithBinOpConvPat<sol::AddOp, arith::AddIOp>,
-             ArithBinOpConvPat<sol::SubOp, arith::SubIOp>,
-             ArithBinOpConvPat<sol::MulOp, arith::MulIOp>, CmpOpLowering,
+    evm::populateArithPats(pats, tyConv);
+    pats.add<ConstantOpLowering, ExtOpLowering, TruncOpLowering, CmpOpLowering,
              CAddOpLowering, CSubOpLowering, AllocaOpLowering, MallocOpLowering,
              GepOpLowering, MapOpLowering, CopyOpLowering,
              DataLocCastOpLowering, LoadOpLowering, StoreOpLowering,
@@ -2286,7 +2073,7 @@ struct ConvertSolToStandard
   }
 
   /// Converts sol.func and related ops.
-  void runStage3Conversion(ModuleOp mod, SolTypeConverter &tyConv) {
+  void runStage3Conversion(ModuleOp mod, evm::SolTypeConverter &tyConv) {
     ConversionTarget tgt(getContext());
     tgt.addLegalOp<mlir::ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
@@ -2294,8 +2081,7 @@ struct ConvertSolToStandard
     tgt.addIllegalDialect<sol::SolDialect>();
 
     RewritePatternSet pats(&getContext());
-    pats.add<FuncOpLowering, CallOpLowering, ReturnOpLowering>(tyConv,
-                                                               &getContext());
+    evm::populateFuncPats(pats, tyConv);
 
     if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
       signalPassFailure();
@@ -2310,7 +2096,7 @@ struct ConvertSolToStandard
     }
 
     ModuleOp mod = getOperation();
-    SolTypeConverter tyConv;
+    evm::SolTypeConverter tyConv;
     runStage1Conversion(mod, tyConv);
     runStage2Conversion(mod);
     runStage3Conversion(mod, tyConv);
@@ -2323,8 +2109,10 @@ protected:
   Pass::Option<solidity::mlirgen::Target> clTgt{
       *this, "target", llvm::cl::desc("Target for the sol lowering"),
       llvm::cl::init(solidity::mlirgen::Target::Undefined),
-      llvm::cl::values(clEnumValN(solidity::mlirgen::Target::EraVM, "eravm",
-                                  "EraVM target"))};
+      llvm::cl::values(
+          clEnumValN(solidity::mlirgen::Target::EVM, "evm", "EVM target"),
+          clEnumValN(solidity::mlirgen::Target::EraVM, "eravm",
+                     "EraVM target"))};
 };
 
 } // namespace

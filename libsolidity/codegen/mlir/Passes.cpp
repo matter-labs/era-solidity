@@ -23,6 +23,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm-c/Core.h"
+#include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm-c/Types.h"
@@ -38,19 +39,33 @@
 #include "llvm/Target/TargetMachine.h"
 #include <mutex>
 
+// FIXME: Define interface for targets!
+
 void solidity::mlirgen::addConversionPasses(mlir::PassManager &passMgr,
                                             Target tgt) {
-  assert(tgt == Target::EraVM);
   passMgr.addPass(mlir::sol::createConvertSolToStandardPass(tgt));
 
   // FIXME: Adding individual conversion passes for each dialects causes
   // unrealized_conversion_cast's with index types.
   //
   // FIXME: `Target` should track triple, index bitwidth and data-layout.
-  passMgr.addPass(mlir::sol::createConvertStandardToLLVMPass(
-      /*triple=*/"eravm-unknown-unknown",
-      /*indexBitwidth=*/256,
-      /*dataLayout=*/"E-p:256:256-i256:256:256-S32-a:256:256"));
+
+  switch (tgt) {
+  case Target::EVM:
+    passMgr.addPass(mlir::sol::createConvertStandardToLLVMPass(
+        /*triple=*/"evm-unknown-unknown",
+        /*indexBitwidth=*/256,
+        /*dataLayout=*/"E-p:256:256-i256:256:256-S256-a:256:256"));
+    break;
+  case Target::EraVM:
+    passMgr.addPass(mlir::sol::createConvertStandardToLLVMPass(
+        /*triple=*/"eravm-unknown-unknown",
+        /*indexBitwidth=*/256,
+        /*dataLayout=*/"E-p:256:256-i256:256:256-S32-a:256:256"));
+    break;
+  default:
+    llvm_unreachable("");
+  }
 }
 
 std::unique_ptr<llvm::TargetMachine>
@@ -58,8 +73,33 @@ solidity::mlirgen::createTargetMachine(Target tgt) {
   static std::once_flag initTargetOnceFlag;
 
   switch (tgt) {
+  case Target::EVM: {
+    // Initialize and register the target.
+    std::call_once(initTargetOnceFlag, []() {
+      LLVMInitializeEVMTarget();
+      LLVMInitializeEVMTargetInfo();
+      LLVMInitializeEVMTargetMC();
+      LLVMInitializeEVMAsmPrinter();
+    });
+
+    // Lookup llvm::Target.
+    std::string errMsg;
+    llvm::Target const *llvmTgt =
+        llvm::TargetRegistry::lookupTarget("evm", errMsg);
+    if (!llvmTgt)
+      llvm_unreachable(errMsg.c_str());
+
+    // Create and return the llvm::TargetMachine.
+    llvm::TargetOptions options;
+    return std::unique_ptr<llvm::TargetMachine>(
+        llvmTgt->createTargetMachine("evm", /*CPU=*/"", /*Features=*/"",
+                                     options, /*Reloc::Model=*/std::nullopt));
+
+    // TODO: Set code-model?
+    // tgtMach->setCodeModel(?);
+  }
   case Target::EraVM: {
-    // Initialize and register the target
+    // Initialize and register the target.
     std::call_once(initTargetOnceFlag, []() {
       LLVMInitializeEraVMTarget();
       LLVMInitializeEraVMTargetInfo();
@@ -67,14 +107,14 @@ solidity::mlirgen::createTargetMachine(Target tgt) {
       LLVMInitializeEraVMAsmPrinter();
     });
 
-    // Lookup llvm::Target
+    // Lookup llvm::Target.
     std::string errMsg;
     llvm::Target const *llvmTgt =
         llvm::TargetRegistry::lookupTarget("eravm", errMsg);
     if (!llvmTgt)
       llvm_unreachable(errMsg.c_str());
 
-    // Create and return the llvm::TargetMachine
+    // Create and return the llvm::TargetMachine.
     llvm::TargetOptions options;
     return std::unique_ptr<llvm::TargetMachine>(
         llvmTgt->createTargetMachine("eravm", /*CPU=*/"", /*Features=*/"",
@@ -93,6 +133,9 @@ void solidity::mlirgen::setTgtSpecificInfoInModule(
     Target tgt, llvm::Module &llvmMod, llvm::TargetMachine const &tgtMach) {
   std::string triple;
   switch (tgt) {
+  case Target::EVM:
+    triple = "evm-unknown-unknown";
+    break;
   case Target::EraVM:
     triple = "eravm-unknown-unknown";
     break;
@@ -100,7 +143,7 @@ void solidity::mlirgen::setTgtSpecificInfoInModule(
     llvm_unreachable("Undefined target");
   }
 
-  llvmMod.setTargetTriple(llvm::Triple::normalize("eravm-unknown-unknown"));
+  llvmMod.setTargetTriple(llvm::Triple::normalize(triple));
   llvmMod.setDataLayout(tgtMach.createDataLayout());
 }
 
