@@ -38,6 +38,11 @@ public:
 void populateArithPats(mlir::RewritePatternSet &pats,
                        mlir::TypeConverter &tyConv);
 
+/// Populates conversion patterns of sol dialect ops dealing with stack, memory
+/// and storage allocations.
+void populateMemPats(mlir::RewritePatternSet &pats,
+                     mlir::TypeConverter &tyConv);
+
 /// Populates conversion patterns of func and related ops in the sol dialect.
 void populateFuncPats(mlir::RewritePatternSet &pats,
                       mlir::TypeConverter &tyConv);

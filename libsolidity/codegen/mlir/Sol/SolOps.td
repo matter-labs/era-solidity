@@ -155,6 +155,7 @@ def Sol_GepOp : Sol_Op<"gep"> {
   }];
 }
 
+// TODO: Merge with sol.gep.
 def Sol_MapOp : Sol_Op<"map"> {
   let arguments = (ins AnyType:$mapping, AnyType:$key);
   let results = (outs AnyType:$addr);
