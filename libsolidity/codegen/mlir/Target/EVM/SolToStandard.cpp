@@ -1218,3 +1218,13 @@ void evm::populateRequirePat(RewritePatternSet &pats) {
 void evm::populateContrPat(RewritePatternSet &pats) {
   pats.add<ContractOpLowering>(pats.getContext());
 }
+
+void evm::populateStage1Pats(RewritePatternSet &pats, TypeConverter &tyConv) {
+  populateArithPats(pats, tyConv);
+  populateCheckedArithPats(pats, tyConv);
+  populateMemPats(pats, tyConv);
+  populateFuncPats(pats, tyConv);
+  populateEmitPat(pats, tyConv);
+  populateRequirePat(pats);
+  populateContrPat(pats);
+}

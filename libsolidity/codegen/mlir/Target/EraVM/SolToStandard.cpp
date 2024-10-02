@@ -15,15 +15,12 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-//
-// Sol dialect lowering pass for EraVM.
-//
-
-#include "libsolidity/codegen/mlir/Target/EVM/SolToStandard.h"
+#include "libsolidity/codegen/mlir/Target/EraVM/SolToStandard.h"
 #include "libsolidity/codegen/CompilerUtils.h"
 #include "libsolidity/codegen/mlir/Interface.h"
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
+#include "libsolidity/codegen/mlir/Target/EVM/SolToStandard.h"
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/ErrorCodes.h"
@@ -943,20 +940,20 @@ struct ConvertSolToStandard
     // llvm/func.func?)
     eraB.getOrInsertPersonality(mod);
 
-    ConversionTarget tgt(getContext());
-    tgt.addLegalOp<mlir::ModuleOp>();
-    tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
-                        arith::ArithDialect, LLVM::LLVMDialect>();
-    tgt.addIllegalOp<sol::ConstantOp, sol::ExtOp, sol::TruncOp, sol::AddOp,
-                     sol::SubOp, sol::MulOp, sol::CmpOp, sol::CAddOp,
-                     sol::CSubOp, sol::AllocaOp, sol::MallocOp, sol::AddrOfOp,
-                     sol::GepOp, sol::MapOp, sol::CopyOp, sol::DataLocCastOp,
-                     sol::LoadOp, sol::StoreOp, sol::EmitOp, sol::RequireOp,
-                     sol::ConvCastOp>();
-    tgt.addDynamicallyLegalOp<sol::FuncOp>([&](sol::FuncOp op) {
+    ConversionTarget convTgt(getContext());
+    convTgt.addLegalOp<mlir::ModuleOp>();
+    convTgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
+                            arith::ArithDialect, LLVM::LLVMDialect>();
+    convTgt.addIllegalOp<sol::ConstantOp, sol::ExtOp, sol::TruncOp, sol::AddOp,
+                         sol::SubOp, sol::MulOp, sol::CmpOp, sol::CAddOp,
+                         sol::CSubOp, sol::AllocaOp, sol::MallocOp,
+                         sol::AddrOfOp, sol::GepOp, sol::MapOp, sol::CopyOp,
+                         sol::DataLocCastOp, sol::LoadOp, sol::StoreOp,
+                         sol::EmitOp, sol::RequireOp, sol::ConvCastOp>();
+    convTgt.addDynamicallyLegalOp<sol::FuncOp>([&](sol::FuncOp op) {
       return tyConv.isSignatureLegal(op.getFunctionType());
     });
-    tgt.addDynamicallyLegalOp<sol::CallOp, sol::ReturnOp>(
+    convTgt.addDynamicallyLegalOp<sol::CallOp, sol::ReturnOp>(
         [&](Operation *op) { return tyConv.isLegal(op); });
 
     RewritePatternSet pats(&getContext());
@@ -964,12 +961,17 @@ struct ConvertSolToStandard
     populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
     pats.add<GenericTypeConversion<sol::CallOp>,
              GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());
-    evm::populateArithPats(pats, tyConv);
-    // TODO: Generate the overflow version of arith ops instead.
-    evm::populateCheckedArithPats(pats, tyConv);
-    evm::populateMemPats(pats, tyConv);
-    evm::populateEmitPat(pats, tyConv);
-    evm::populateRequirePat(pats);
+
+    switch (tgt) {
+    case solidity::mlirgen::Target::EVM:
+      evm::populateStage1Pats(pats, tyConv);
+      break;
+    case solidity::mlirgen::Target::EraVM:
+      eravm::populateStage1Pats(pats, tyConv);
+      break;
+    default:
+      llvm_unreachable("Invalid target");
+    };
 
     // Assign slots to state variables.
     mod.walk([&](sol::ContractOp contr) {
@@ -982,7 +984,7 @@ struct ConvertSolToStandard
       });
     });
 
-    if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
+    if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
       signalPassFailure();
 
     // Remove all state variables.
@@ -1058,6 +1060,7 @@ protected:
 
 } // namespace
 
+// TODO: Move this out of EraVM/
 std::unique_ptr<Pass> sol::createConvertSolToStandardPass() {
   return std::make_unique<ConvertSolToStandard>();
 }
@@ -1065,4 +1068,15 @@ std::unique_ptr<Pass> sol::createConvertSolToStandardPass() {
 std::unique_ptr<Pass>
 sol::createConvertSolToStandardPass(solidity::mlirgen::Target tgt) {
   return std::make_unique<ConvertSolToStandard>(tgt);
+}
+
+void eravm::populateStage1Pats(RewritePatternSet &pats, TypeConverter &tyConv) {
+  evm::populateArithPats(pats, tyConv);
+  // TODO: Generate the overflow version of arith ops instead.
+  evm::populateCheckedArithPats(pats, tyConv);
+  evm::populateMemPats(pats, tyConv);
+  evm::populateFuncPats(pats, tyConv);
+  evm::populateEmitPat(pats, tyConv);
+  evm::populateRequirePat(pats);
+  evm::populateContrPat(pats);
 }

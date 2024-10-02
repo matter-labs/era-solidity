@@ -60,4 +60,7 @@ void populateFuncPats(mlir::RewritePatternSet &pats,
 /// Adds the conversion pattern of sol.contract.
 void populateContrPat(mlir::RewritePatternSet &pats);
 
+void populateStage1Pats(mlir::RewritePatternSet &pats,
+                        mlir::TypeConverter &tyConv);
+
 } // namespace evm
