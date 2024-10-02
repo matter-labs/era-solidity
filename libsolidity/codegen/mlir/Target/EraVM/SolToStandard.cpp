@@ -648,75 +648,6 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
   }
 };
 
-struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
-  using OpConversionPattern<sol::EmitOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(sol::EmitOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
-    Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
-
-    // Collect the remapped indexed and non-indexed args.
-    //
-    // FIXME: How do we get `extraClassDeclaration` functions to be part of the
-    // OpAdaptor?
-    auto remappedOperands = adaptor.getOperands();
-    std::vector<Value> indexedArgs, nonIndexedArgs;
-    std::vector<Type> nonIndexedArgsType;
-    if (op.getSignature()) {
-      auto signatureHash =
-          solidity::util::h256::Arith(
-              solidity::util::keccak256(op.getSignature()->str()))
-              .str();
-      indexedArgs.push_back(bExt.genI256Const(signatureHash));
-    }
-    unsigned argIdx = 0;
-    while (argIdx < op.getIndexedArgsCount())
-      indexedArgs.push_back(remappedOperands[argIdx++]);
-    for (Value arg : op.getNonIndexedArgs()) {
-      nonIndexedArgsType.push_back(arg.getType());
-      nonIndexedArgs.push_back(remappedOperands[argIdx++]);
-    }
-
-    // Generate the tuple encoding for the non-indexed args.
-    // TODO: Are we sure we need an unbounded allocation here?
-    Value tupleStart = eraB.genFreePtr();
-    Value tupleEnd = eraB.genABITupleEncoding(nonIndexedArgsType,
-                                              nonIndexedArgs, tupleStart);
-    Value tupleSize = r.create<arith::SubIOp>(loc, tupleEnd, tupleStart);
-
-    // Generate sol.log and replace sol.emit with it.
-    r.replaceOpWithNewOp<sol::LogOp>(op, tupleStart, tupleSize, indexedArgs);
-
-    return success();
-  }
-};
-
-struct RequireOpLowering : public OpRewritePattern<sol::RequireOp> {
-  using OpRewritePattern<sol::RequireOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(sol::RequireOp op,
-                                PatternRewriter &r) const override {
-    Location loc = op.getLoc();
-
-    // Generate the revert condition.
-    mlir::Value falseVal =
-        r.create<arith::ConstantIntOp>(loc, 0, r.getI1Type());
-    mlir::Value negCond = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                                  op.getCond(), falseVal);
-    // Generate the revert.
-    eravm::Builder eraB(r, loc);
-    if (!op.getMsg().empty())
-      eraB.genRevertWithMsg(negCond, op.getMsg().str());
-    else
-      eraB.genRevert(negCond);
-
-    r.eraseOp(op);
-    return success();
-  }
-};
-
 struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   using OpRewritePattern<sol::ObjectOp>::OpRewritePattern;
 
@@ -1029,15 +960,16 @@ struct ConvertSolToStandard
         [&](Operation *op) { return tyConv.isLegal(op); });
 
     RewritePatternSet pats(&getContext());
+    pats.add<ConvCastOpLowering>(tyConv, &getContext());
+    populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
+    pats.add<GenericTypeConversion<sol::CallOp>,
+             GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());
     evm::populateArithPats(pats, tyConv);
     // TODO: Generate the overflow version of arith ops instead.
     evm::populateCheckedArithPats(pats, tyConv);
     evm::populateMemPats(pats, tyConv);
-    pats.add<ConvCastOpLowering, EmitOpLowering>(tyConv, &getContext());
-    populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
-    pats.add<GenericTypeConversion<sol::CallOp>,
-             GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());
-    pats.add<RequireOpLowering>(&getContext());
+    evm::populateEmitPat(pats, tyConv);
+    evm::populateRequirePat(pats);
 
     // Assign slots to state variables.
     mod.walk([&](sol::ContractOp contr) {

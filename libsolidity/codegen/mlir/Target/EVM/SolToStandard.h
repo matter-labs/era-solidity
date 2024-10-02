@@ -33,27 +33,31 @@ public:
   SolTypeConverter();
 };
 
-/// Populates the conversion patterns of unchecked arithmetic ops in the sol
-/// dialect.
+/// Adds the conversion patterns of unchecked arithmetic ops in the sol dialect.
 void populateArithPats(mlir::RewritePatternSet &pats,
                        mlir::TypeConverter &tyConv);
 
-/// Populates the conversion patterns of checked arithmetic ops in the sol
-/// dialect.
+/// Adds the conversion patterns of checked arithmetic ops in the sol dialect.
 void populateCheckedArithPats(mlir::RewritePatternSet &pats,
                               mlir::TypeConverter &tyConv);
 
-/// Populates the conversion patterns of sol dialect ops dealing with stack,
-/// memory and storage allocations.
+/// Adds the conversion patterns of sol dialect ops dealing with stack, memory
+/// and storage allocations.
 void populateMemPats(mlir::RewritePatternSet &pats,
                      mlir::TypeConverter &tyConv);
 
-/// Populates the conversion patterns of func and related ops in the sol
-/// dialect.
+/// Adds the conversion pattern of sol.emit.
+void populateEmitPat(mlir::RewritePatternSet &pats,
+                     mlir::TypeConverter &tyConv);
+
+/// Adds the conversion pattern of sol.require.
+void populateRequirePat(mlir::RewritePatternSet &pats);
+
+/// Adds the conversion patterns of func and related ops in the sol dialect.
 void populateFuncPats(mlir::RewritePatternSet &pats,
                       mlir::TypeConverter &tyConv);
 
-/// Populates the conversion pattern of sol.contract.
+/// Adds the conversion pattern of sol.contract.
 void populateContrPat(mlir::RewritePatternSet &pats);
 
 } // namespace evm
