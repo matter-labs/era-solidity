@@ -1177,6 +1177,11 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
 
 } // namespace
 
+// TODO: Assert that the type converter is compatible with the conversions. (We
+// could only accept SolTypeConverter instead, but do we need need to be that
+// strict?) (Also, can we do the assert at build time? If not, then only in
+// debug builds?)
+
 void evm::populateArithPats(RewritePatternSet &pats, TypeConverter &tyConv) {
   pats.add<ConstantOpLowering, ExtOpLowering, TruncOpLowering,
            ArithBinOpConvPat<sol::AddOp, arith::AddIOp>,
