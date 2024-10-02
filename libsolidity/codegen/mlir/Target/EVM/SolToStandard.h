@@ -38,6 +38,11 @@ public:
 void populateArithPats(mlir::RewritePatternSet &pats,
                        mlir::TypeConverter &tyConv);
 
+/// Populates the conversion patterns of checked arithmetic ops in the sol
+/// dialect.
+void populateCheckedArithPats(mlir::RewritePatternSet &pats,
+                              mlir::TypeConverter &tyConv);
+
 /// Populates the conversion patterns of sol dialect ops dealing with stack,
 /// memory and storage allocations.
 void populateMemPats(mlir::RewritePatternSet &pats,

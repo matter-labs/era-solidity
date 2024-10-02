@@ -147,118 +147,6 @@ struct ConvCastOpLowering : public OpConversionPattern<sol::ConvCastOp> {
   }
 };
 
-struct CAddOpLowering : public OpConversionPattern<sol::CAddOp> {
-  using OpConversionPattern<sol::CAddOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(sol::CAddOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
-    Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
-
-    auto ty = cast<IntegerType>(op.getType());
-    Value lhs = adaptor.getLhs();
-    Value rhs = adaptor.getRhs();
-
-    Value sum = r.create<arith::AddIOp>(loc, lhs, rhs);
-
-    if (ty.getWidth() == 256) {
-      // Signed 256-bit int type.
-      if (ty.isSigned()) {
-        // (Copied from the yul codegen)
-        // overflow, if x >= 0 and sum < y
-        // underflow, if x < 0 and sum >= y
-
-        auto zero = bExt.genI256Const(0);
-
-        // Generate the overflow condition.
-        auto lhsGtEqZero =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge, lhs, zero);
-        auto sumLtRhs =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, sum, rhs);
-        auto overflowCond = r.create<arith::AndIOp>(loc, lhsGtEqZero, sumLtRhs);
-
-        // Generate the underflow condition.
-        auto lhsLtZero =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, lhs, zero);
-        auto sumGtEqRhs =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge, sum, rhs);
-        auto underflowCond =
-            r.create<arith::AndIOp>(loc, lhsLtZero, sumGtEqRhs);
-
-        eraB.genPanic(solidity::util::PanicCode::UnderOverflow,
-                      r.create<arith::OrIOp>(loc, overflowCond, underflowCond));
-        // Unsigned 256-bit int type.
-      } else {
-        eraB.genPanic(
-            solidity::util::PanicCode::UnderOverflow,
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, lhs, sum));
-      }
-    } else {
-      llvm_unreachable("NYI");
-    }
-
-    r.replaceOp(op, sum);
-    return success();
-  }
-};
-
-struct CSubOpLowering : public OpConversionPattern<sol::CSubOp> {
-  using OpConversionPattern<sol::CSubOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(sol::CSubOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &r) const override {
-    Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
-
-    auto ty = cast<IntegerType>(op.getType());
-    Value lhs = adaptor.getLhs();
-    Value rhs = adaptor.getRhs();
-
-    Value diff = r.create<arith::SubIOp>(loc, lhs, rhs);
-
-    if (ty.getWidth() == 256) {
-      // Signed 256-bit int type.
-      if (ty.isSigned()) {
-        // (Copied from the yul codegen)
-        // underflow, if y >= 0 and diff > x
-        // overflow, if y < 0 and diff < x
-
-        auto zero = bExt.genI256Const(0);
-
-        // Generate the overflow condition.
-        auto rhsGtEqZero =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge, rhs, zero);
-        auto diffGtLhs =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, diff, lhs);
-        auto overflowCond =
-            r.create<arith::AndIOp>(loc, rhsGtEqZero, diffGtLhs);
-
-        // Generate the underflow condition.
-        auto rhsLtZero =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, rhs, zero);
-        auto diffLtRhs =
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, diff, lhs);
-        auto underflowCond = r.create<arith::AndIOp>(loc, rhsLtZero, diffLtRhs);
-
-        eraB.genPanic(solidity::util::PanicCode::UnderOverflow,
-                      r.create<arith::OrIOp>(loc, overflowCond, underflowCond));
-        // Unsigned 256-bit int type.
-      } else {
-        eraB.genPanic(
-            solidity::util::PanicCode::UnderOverflow,
-            r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, diff, lhs));
-      }
-    } else {
-      llvm_unreachable("NYI");
-    }
-
-    r.replaceOp(op, diff);
-    return success();
-  }
-};
-
 // TODO? Move simple builtin lowering to tblgen (`Pat` records)?
 
 struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
@@ -1142,9 +1030,10 @@ struct ConvertSolToStandard
 
     RewritePatternSet pats(&getContext());
     evm::populateArithPats(pats, tyConv);
+    // TODO: Generate the overflow version of arith ops instead.
+    evm::populateCheckedArithPats(pats, tyConv);
     evm::populateMemPats(pats, tyConv);
-    pats.add<CAddOpLowering, CSubOpLowering, ConvCastOpLowering,
-             EmitOpLowering>(tyConv, &getContext());
+    pats.add<ConvCastOpLowering, EmitOpLowering>(tyConv, &getContext());
     populateAnyFunctionOpInterfaceTypeConversionPattern(pats, tyConv);
     pats.add<GenericTypeConversion<sol::CallOp>,
              GenericTypeConversion<sol::ReturnOp>>(tyConv, &getContext());
