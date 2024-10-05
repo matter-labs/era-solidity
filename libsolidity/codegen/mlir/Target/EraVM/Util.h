@@ -138,47 +138,9 @@ public:
   void genGlobalVarsInit(mlir::ModuleOp mod,
                          std::optional<mlir::Location> locArg = std::nullopt);
 
-  /// Generates the store of string at address.
-  void genStringStore(std::string const &str, mlir::Value addr,
-                      std::optional<mlir::Location> locArg = std::nullopt);
-
-  // FIXME: Refactor ABI APIs to distinguish solidity/evm ones with eravm
-  // specfic ones.
-
   /// Generates the ABI length for the pointer `ptr`.
   mlir::Value genABILen(mlir::Value ptr,
                         std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates an assertion that the tuple size should be less than `size`.
-  void
-  genABITupleSizeAssert(mlir::TypeRange tys, mlir::Value size,
-                        std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates the tuple encoder code as per the ABI and returns the address at
-  /// the end of the tuple.
-  mlir::Value
-  genABITupleEncoding(std::string const &str, mlir::Value headStart,
-                      std::optional<mlir::Location> locArg = std::nullopt);
-  mlir::Value
-  genABITupleEncoding(mlir::TypeRange tys, mlir::ValueRange vals,
-                      mlir::Value tupleStart,
-                      std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates the tuple decoder code as per the ABI and populates the results.
-  void genABITupleDecoding(mlir::TypeRange tys, mlir::Value tupleStart,
-                           mlir::Value tupleEnd,
-                           std::vector<mlir::Value> &results, bool fromMem,
-                           std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates a revert with message.
-  void genRevertWithMsg(std::string const &msg,
-                        std::optional<mlir::Location> locArg = std::nullopt);
-  void genRevertWithMsg(mlir::Value cond, std::string const &msg,
-                        std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates a revert without message.
-  void genRevert(mlir::Value cond,
-                 std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the ABI data for an external call.
   mlir::Value genABIData(mlir::Value addr, mlir::Value size,
@@ -236,51 +198,6 @@ public:
   mlir::LLVM::LoadOp
   genCallDataPtrLoad(mlir::ModuleOp mod,
                      std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates the panic code.
-  void genPanic(solidity::util::PanicCode code, mlir::Value cond,
-                std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates the free pointer.
-  mlir::Value genFreePtr(std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates the memory allocation code.
-  mlir::Value genMemAlloc(mlir::Value size,
-                          std::optional<mlir::Location> locArg = std::nullopt);
-  mlir::Value genMemAlloc(AllocSize size,
-                          std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates the memory allocation code for dynamic array.
-  mlir::Value
-  genMemAllocForDynArray(mlir::Value sizeVar, mlir::Value sizeInBytes,
-                         std::optional<mlir::Location> locArg = std::nullopt);
-
-  //
-  // TODO? Should we work with the high level types + OpAdaptor for the APIs
-  // that work with low level integral type pointers?
-  //
-
-  /// Generates a low level integral type pointer to the address holding the
-  /// data of a dynamic allocation.
-  mlir::Value
-  genDataAddrPtr(mlir::Value addr, mlir::sol::DataLocation dataLoc,
-                 std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates a load from the low level integral type address.
-  mlir::Value genLoad(mlir::Value addr, mlir::sol::DataLocation dataLoc,
-                      std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates a store to the low level integral type address.
-  void genStore(mlir::Value val, mlir::Value addr,
-                mlir::sol::DataLocation dataLoc,
-                std::optional<mlir::Location> locArg = std::nullopt);
-
-  /// Generates a loop to copy the data. This works for low level integral type
-  /// addresses.
-  void genCopyLoop(mlir::Value srcAddr, mlir::Value dstAddr,
-                   mlir::Value sizeInWords, mlir::sol::DataLocation srcDataLoc,
-                   mlir::sol::DataLocation dstDataLoc,
-                   std::optional<mlir::Location> locArg = std::nullopt);
 };
 
 } // namespace eravm

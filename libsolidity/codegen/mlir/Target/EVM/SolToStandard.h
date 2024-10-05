@@ -43,6 +43,9 @@ void populateCheckedArithPats(mlir::RewritePatternSet &pats,
 
 /// Adds the conversion patterns of sol dialect ops dealing with stack, memory
 /// and storage allocations.
+///
+/// Stack access will have 32-byte alignment while all other access will have
+/// 1-byte alignment.
 void populateMemPats(mlir::RewritePatternSet &pats,
                      mlir::TypeConverter &tyConv);
 

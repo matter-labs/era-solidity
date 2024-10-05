@@ -18,7 +18,8 @@
 #include "libsolidity/codegen/mlir/Target/EVM/SolToStandard.h"
 #include "libsolidity/codegen/CompilerUtils.h"
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
-#include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
+#include "libsolidity/codegen/mlir/Target/EVM/Util.h"
+#include "libsolidity/codegen/mlir/Util.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/PatternMatch.h"
@@ -93,7 +94,7 @@ struct CAddOpLowering : public OpConversionPattern<sol::CAddOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     auto ty = cast<IntegerType>(op.getType());
     Value lhs = adaptor.getLhs();
@@ -125,11 +126,11 @@ struct CAddOpLowering : public OpConversionPattern<sol::CAddOp> {
         auto underflowCond =
             r.create<arith::AndIOp>(loc, lhsLtZero, sumGtEqRhs);
 
-        eraB.genPanic(solidity::util::PanicCode::UnderOverflow,
+        evmB.genPanic(solidity::util::PanicCode::UnderOverflow,
                       r.create<arith::OrIOp>(loc, overflowCond, underflowCond));
         // Unsigned 256-bit int type.
       } else {
-        eraB.genPanic(
+        evmB.genPanic(
             solidity::util::PanicCode::UnderOverflow,
             r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, lhs, sum));
       }
@@ -149,7 +150,7 @@ struct CSubOpLowering : public OpConversionPattern<sol::CSubOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     auto ty = cast<IntegerType>(op.getType());
     Value lhs = adaptor.getLhs();
@@ -181,11 +182,11 @@ struct CSubOpLowering : public OpConversionPattern<sol::CSubOp> {
             r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, diff, lhs);
         auto underflowCond = r.create<arith::AndIOp>(loc, rhsLtZero, diffLtRhs);
 
-        eraB.genPanic(solidity::util::PanicCode::UnderOverflow,
+        evmB.genPanic(solidity::util::PanicCode::UnderOverflow,
                       r.create<arith::OrIOp>(loc, overflowCond, underflowCond));
         // Unsigned 256-bit int type.
       } else {
-        eraB.genPanic(
+        evmB.genPanic(
             solidity::util::PanicCode::UnderOverflow,
             r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, diff, lhs));
       }
@@ -319,7 +320,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
 
     Value memPtr;
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     // Array type.
     if (auto arrayTy = dyn_cast<sol::ArrayType>(ty)) {
@@ -333,7 +334,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
           assert(recDepth == 0);
           sizeInBytes =
               r.create<arith::MulIOp>(loc, sizeVar, bExt.genI256Const(32));
-          memPtr = eraB.genMemAllocForDynArray(sizeVar, sizeInBytes);
+          memPtr = evmB.genMemAllocForDynArray(sizeVar, sizeInBytes);
           dataPtr = r.create<arith::AddIOp>(loc, memPtr, bExt.genI256Const(32));
         } else {
           return bExt.genI256Const(
@@ -341,7 +342,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
         }
       } else {
         sizeInBytes = bExt.genI256Const(getSize(ty));
-        memPtr = eraB.genMemAlloc(sizeInBytes, loc);
+        memPtr = evmB.genMemAlloc(sizeInBytes, loc);
         dataPtr = memPtr;
       }
       assert(sizeInBytes && dataPtr && memPtr);
@@ -403,7 +404,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
       // String type.
     } else if (auto stringTy = dyn_cast<sol::StringType>(ty)) {
       if (sizeVar)
-        memPtr = eraB.genMemAllocForDynArray(
+        memPtr = evmB.genMemAllocForDynArray(
             sizeVar, bExt.genRoundUpToMultiple<32>(sizeVar));
       else
         return bExt.genI256Const(
@@ -411,7 +412,7 @@ struct MallocOpLowering : public OpConversionPattern<sol::MallocOp> {
 
       // Struct type.
     } else if (auto structTy = dyn_cast<sol::StructType>(ty)) {
-      memPtr = eraB.genMemAlloc(getSize(ty), loc);
+      memPtr = evmB.genMemAlloc(getSize(ty), loc);
       assert(structTy.getDataLocation() == sol::DataLocation::Memory);
 
       for (auto memTy : structTy.getMemberTypes()) {
@@ -470,7 +471,7 @@ struct GepOpLowering : public OpConversionPattern<sol::GepOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     Type baseAddrTy = op.getBaseAddr().getType();
     Value remappedBaseAddr = adaptor.getBaseAddr();
@@ -480,7 +481,7 @@ struct GepOpLowering : public OpConversionPattern<sol::GepOp> {
     switch (sol::getDataLocation(baseAddrTy)) {
     case sol::DataLocation::Stack: {
       auto stkPtrTy =
-          LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Stack);
+          LLVM::LLVMPointerType::get(r.getContext(), evm::AddrSpace_Stack);
       res = r.create<LLVM::GEPOp>(loc, /*resultType=*/stkPtrTy,
                                   /*basePtrType=*/remappedBaseAddr.getType(),
                                   remappedBaseAddr, idx);
@@ -524,7 +525,7 @@ struct GepOpLowering : public OpConversionPattern<sol::GepOp> {
           // Generate `if iszero(lt(index, <arrayLen>(baseRef)))` (yul).
           auto panicCond = r.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::uge, idx, size);
-          eraB.genPanic(solidity::util::PanicCode::ArrayOutOfBounds, panicCond);
+          evmB.genPanic(solidity::util::PanicCode::ArrayOutOfBounds, panicCond);
 
           //
           // Generate the address.
@@ -626,7 +627,7 @@ struct LoadOpLowering : public OpConversionPattern<sol::LoadOp> {
 
     switch (sol::getDataLocation(op.getAddr().getType())) {
     case sol::DataLocation::Stack:
-      r.replaceOpWithNewOp<LLVM::LoadOp>(op, addr, eravm::getAlignment(addr));
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, addr, evm::getAlignment(addr));
       return success();
     case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MLoadOp>(op, addr);
@@ -653,7 +654,7 @@ struct StoreOpLowering : public OpConversionPattern<sol::StoreOp> {
     switch (sol::getDataLocation(op.getAddr().getType())) {
     case sol::DataLocation::Stack:
       r.replaceOpWithNewOp<LLVM::StoreOp>(op, val, addr,
-                                          eravm::getAlignment(addr));
+                                          evm::getAlignment(addr));
       return success();
     case sol::DataLocation::Memory:
       r.replaceOpWithNewOp<sol::MStoreOp>(op, addr, val);
@@ -676,7 +677,7 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     Type srcTy = op.getInp().getType();
     Type dstTy = op.getType();
@@ -690,10 +691,10 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
       // String type
       if (isa<sol::StringType>(srcTy)) {
         assert(isa<sol::StringType>(dstTy));
-        auto dataSlot = eraB.genDataAddrPtr(adaptor.getInp(), srcDataLoc);
+        auto dataSlot = evmB.genDataAddrPtr(adaptor.getInp(), srcDataLoc);
 
         // Generate the memory allocation.
-        auto sizeInBytes = eraB.genLoad(adaptor.getInp(), srcDataLoc);
+        auto sizeInBytes = evmB.genLoad(adaptor.getInp(), srcDataLoc);
         auto memPtrTy =
             sol::StringType::get(r.getContext(), sol::DataLocation::Memory);
         Value mallocRes =
@@ -710,7 +711,7 @@ struct DataLocCastOpLowering : public OpConversionPattern<sol::DataLocCastOp> {
         auto dataMemAddr =
             r.create<arith::AddIOp>(loc, memAddr, bExt.genI256Const(32));
         auto sizeInWords = bExt.genRoundUpToMultiple<32>(sizeInBytes);
-        eraB.genCopyLoop(dataSlot, dataMemAddr, sizeInWords, srcDataLoc,
+        evmB.genCopyLoop(dataSlot, dataMemAddr, sizeInWords, srcDataLoc,
                          dstDataLoc);
       } else {
         llvm_unreachable("NYI");
@@ -734,7 +735,7 @@ struct CopyOpLowering : public OpConversionPattern<sol::CopyOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     Type srcTy = op.getSrc().getType();
     Type dstTy = op.getDst().getType();
@@ -747,14 +748,14 @@ struct CopyOpLowering : public OpConversionPattern<sol::CopyOp> {
       assert(isa<sol::StringType>(dstTy));
 
       // Generate the size update.
-      Value srcSize = eraB.genLoad(adaptor.getSrc(), srcDataLoc);
-      eraB.genStore(srcSize, adaptor.getDst(), dstDataLoc);
+      Value srcSize = evmB.genLoad(adaptor.getSrc(), srcDataLoc);
+      evmB.genStore(srcSize, adaptor.getDst(), dstDataLoc);
 
       // Generate the copy loop.
-      Value srcDataAddr = eraB.genDataAddrPtr(adaptor.getSrc(), srcDataLoc);
-      Value dstDataAddr = eraB.genDataAddrPtr(adaptor.getDst(), dstDataLoc);
+      Value srcDataAddr = evmB.genDataAddrPtr(adaptor.getSrc(), srcDataLoc);
+      Value dstDataAddr = evmB.genDataAddrPtr(adaptor.getDst(), dstDataLoc);
       Value sizeInWords = bExt.genRoundUpToMultiple<32>(srcSize);
-      eraB.genCopyLoop(srcDataAddr, dstDataAddr, sizeInWords, srcDataLoc,
+      evmB.genCopyLoop(srcDataAddr, dstDataAddr, sizeInWords, srcDataLoc,
                        dstDataLoc);
     } else {
       llvm_unreachable("NYI");
@@ -778,11 +779,11 @@ struct RequireOpLowering : public OpRewritePattern<sol::RequireOp> {
     mlir::Value negCond = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
                                                   op.getCond(), falseVal);
     // Generate the revert.
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
     if (!op.getMsg().empty())
-      eraB.genRevertWithMsg(negCond, op.getMsg().str());
+      evmB.genRevertWithMsg(negCond, op.getMsg().str());
     else
-      eraB.genRevert(negCond);
+      evmB.genRevert(negCond);
 
     r.eraseOp(op);
     return success();
@@ -796,7 +797,7 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
                                 ConversionPatternRewriter &r) const override {
     Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     // Collect the remapped indexed and non-indexed args.
     //
@@ -822,8 +823,8 @@ struct EmitOpLowering : public OpConversionPattern<sol::EmitOp> {
 
     // Generate the tuple encoding for the non-indexed args.
     // TODO: Are we sure we need an unbounded allocation here?
-    Value tupleStart = eraB.genFreePtr();
-    Value tupleEnd = eraB.genABITupleEncoding(nonIndexedArgsType,
+    Value tupleStart = evmB.genFreePtr();
+    Value tupleEnd = evmB.genABITupleEncoding(nonIndexedArgsType,
                                               nonIndexedArgs, tupleStart);
     Value tupleSize = r.create<arith::SubIOp>(loc, tupleEnd, tupleStart);
 
@@ -865,7 +866,7 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
   LogicalResult matchAndRewrite(sol::FuncOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     // Collect non-core attributes.
     std::vector<NamedAttribute> attrs;
@@ -887,7 +888,7 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
           LLVM::LinkageAttr::get(r.getContext(), LLVM::Linkage::Private)));
 
     // Set the personality attribute of llvm.
-    attrs.push_back(r.getNamedAttr("personality", eraB.getPersonality()));
+    attrs.push_back(r.getNamedAttr("personality", evmB.getPersonality()));
 
     // Add the nofree and null_pointer_is_valid attributes of llvm via the
     // passthrough attribute.
@@ -916,12 +917,12 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
   /// Generate the call value check.
   void genCallValChk(PatternRewriter &r, Location loc) const {
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     auto callVal = r.create<sol::CallValOp>(loc);
     auto callValChk = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
                                               callVal, bExt.genI256Const(0));
-    eraB.genRevert(callValChk);
+    evmB.genRevert(callValChk);
   };
 
   /// Generate the free pointer initialization.
@@ -955,7 +956,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       return;
 
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     // Generate `if iszero(lt(calldatasize(), 4))` and set the insertion point
     // to its then block.
@@ -1031,7 +1032,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       // Decode the input parameters (if required).
       std::vector<Value> decodedArgs;
       if (!origIfcFnTy.getInputs().empty()) {
-        eraB.genABITupleDecoding(origIfcFnTy.getInputs(),
+        evmB.genABITupleDecoding(origIfcFnTy.getInputs(),
                                  /*tupleStart=*/bExt.genI256Const(4),
                                  /*tupleEnd=*/callDataSz, decodedArgs,
                                  /*fromMem=*/false);
@@ -1041,10 +1042,10 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       auto callOp = r.create<sol::CallOp>(loc, ifcFnOp, decodedArgs);
 
       // Encode the result using the ABI's tuple encoder.
-      auto tupleStart = eraB.genFreePtr();
+      auto tupleStart = evmB.genFreePtr();
       mlir::Value tupleSize;
       if (!callOp.getResultTypes().empty()) {
-        auto tupleEnd = eraB.genABITupleEncoding(
+        auto tupleEnd = evmB.genABITupleEncoding(
             origIfcFnTy.getResults(), callOp.getResults(), tupleStart);
         tupleSize = r.create<arith::SubIOp>(loc, tupleEnd, tupleStart);
       } else {
@@ -1063,7 +1064,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
                                 PatternRewriter &r) const override {
     mlir::Location loc = op.getLoc();
     solidity::mlirgen::BuilderExt bExt(r, loc);
-    eravm::Builder eraB(r, loc);
+    evm::Builder evmB(r, loc);
 
     // Generate the creation and runtime ObjectOp.
     auto creationObj = r.create<sol::ObjectOp>(loc, op.getSymName());
@@ -1110,13 +1111,13 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
       auto progSize = r.create<sol::DataSizeOp>(loc, creationObj.getName());
       auto codeSize = r.create<sol::CodeSizeOp>(loc);
       auto argSize = r.create<arith::SubIOp>(loc, codeSize, progSize);
-      Value tupleStart = eraB.genMemAlloc(argSize);
+      Value tupleStart = evmB.genMemAlloc(argSize);
       r.create<sol::CodeCopyOp>(loc, tupleStart, progSize, argSize);
       std::vector<Value> decodedArgs;
       assert(op.getCtorFnType());
       auto ctorFnTy = *op.getCtorFnType();
       if (!ctorFnTy.getInputs().empty()) {
-        eraB.genABITupleDecoding(
+        evmB.genABITupleDecoding(
             ctorFnTy.getInputs(), tupleStart,
             /*tupleEnd=*/r.create<arith::AddIOp>(loc, tupleStart, argSize),
             decodedArgs,

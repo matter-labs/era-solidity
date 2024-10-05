@@ -224,6 +224,7 @@ set(mlir_sources
 	codegen/mlir/SolidityToMLIR.cpp
 	codegen/mlir/StandardToLLVM.cpp
 	codegen/mlir/YulToMLIR.cpp
+	codegen/mlir/Target/EVM/Util.cpp
 	codegen/mlir/Target/EVM/TypeConverter.cpp
 	codegen/mlir/Target/EVM/SolToStandard.cpp
 	codegen/mlir/Target/EraVM/Util.cpp
