@@ -74,7 +74,7 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
         name, AddrSpace_Stack,
         /*alignment=*/0, LLVM::Linkage::Private, mod);
     Value globAddr = b.create<LLVM::AddressOfOp>(loc, globOp);
-    b.create<LLVM::StoreOp>(loc, bExt.genI256Const(0, locArg), globAddr,
+    b.create<LLVM::StoreOp>(loc, bExt.genI256Const(0), globAddr,
                             getAlignment(globAddr));
   };
 
@@ -95,8 +95,7 @@ void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
   Value extraABIDataAddr = b.create<LLVM::AddressOfOp>(loc, extraABIData);
   b.create<LLVM::StoreOp>(
       loc,
-      bExt.genI256ConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0)),
-                             locArg),
+      bExt.genI256ConstSplat(std::vector<llvm::APInt>(10, llvm::APInt(256, 0))),
       extraABIDataAddr);
 
   // Initialize the GlobActivePtr array.
@@ -114,9 +113,9 @@ Value eravm::Builder::genABILen(Value ptr, std::optional<Location> locArg) {
   solidity::mlirgen::BuilderExt bExt(b, loc);
 
   Value ptrToInt = b.create<LLVM::PtrToIntOp>(loc, i256Ty, ptr).getResult();
-  Value lShr = b.create<LLVM::LShrOp>(
-      loc, ptrToInt, bExt.genI256Const(eravm::BitLen_X32 * 3, locArg));
-  return b.create<LLVM::AndOp>(loc, lShr, bExt.genI256Const(UINT_MAX, locArg));
+  Value lShr = b.create<LLVM::LShrOp>(loc, ptrToInt,
+                                      bExt.genI256Const(eravm::BitLen_X32 * 3));
+  return b.create<LLVM::AndOp>(loc, lShr, bExt.genI256Const(UINT_MAX));
 }
 
 Value eravm::Builder::genABIData(Value addr, Value size,

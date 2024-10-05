@@ -397,13 +397,12 @@ void evm::Builder::genPanic(solidity::util::PanicCode code, Value cond,
 
   b.create<scf::IfOp>(
       loc, cond, /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
-        b.create<sol::MStoreOp>(loc, bExt.genI256Const(0, locArg),
-                                bExt.genI256Const(selector, locArg));
-        b.create<sol::MStoreOp>(
-            loc, bExt.genI256Const(4, locArg),
-            bExt.genI256Const(static_cast<int64_t>(code), locArg));
-        b.create<sol::RevertOp>(loc, bExt.genI256Const(0, locArg),
-                                bExt.genI256Const(24, locArg));
+        b.create<sol::MStoreOp>(loc, bExt.genI256Const(0),
+                                bExt.genI256Const(selector));
+        b.create<sol::MStoreOp>(loc, bExt.genI256Const(4),
+                                bExt.genI256Const(static_cast<int64_t>(code)));
+        b.create<sol::RevertOp>(loc, bExt.genI256Const(0),
+                                bExt.genI256Const(24));
         b.create<scf::YieldOp>(loc);
       });
 }
