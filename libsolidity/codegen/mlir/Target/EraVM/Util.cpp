@@ -55,23 +55,6 @@ unsigned eravm::getAlignment(Value ptr) {
   return getAlignment(static_cast<eravm::AddrSpace>(ty.getAddressSpace()));
 }
 
-unsigned eravm::getCallDataHeadSize(Type ty) {
-  if (auto intTy = dyn_cast<IntegerType>(ty))
-    return 32;
-
-  if (sol::hasDynamicallySizedElt(ty))
-    return 32;
-
-  llvm_unreachable("NYI: Other types");
-}
-
-unsigned eravm::getStorageByteCount(Type ty) {
-  if (isa<IntegerType>(ty) || isa<sol::MappingType>(ty) ||
-      isa<sol::StringType>(ty))
-    return 32;
-  llvm_unreachable("NYI: Other types");
-}
-
 Value eravm::Builder::genHeapPtr(Value addr, std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
 

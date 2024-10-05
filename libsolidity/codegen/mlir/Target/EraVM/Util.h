@@ -106,14 +106,9 @@ enum EntryInfo {
 
 /// Returns the alignment of `addrSpace`
 unsigned getAlignment(AddrSpace addrSpace);
+
 /// Returns the alignment of the LLVMPointerType value `ptr`
 unsigned getAlignment(mlir::Value ptr);
-
-/// EraVM version of solidity ast's Type::calldataHeadSize.
-unsigned getCallDataHeadSize(mlir::Type ty);
-
-/// EraVM version of solidity ast's Type::storageBytes().
-unsigned getStorageByteCount(mlir::Type ty);
 
 /// IR Builder for EraVM specific lowering.
 class Builder {

@@ -21,6 +21,7 @@
 #include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Target/EVM/SolToStandard.h"
+#include "libsolidity/codegen/mlir/Target/EVM/Util.h"
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "libsolutil/ErrorCodes.h"
@@ -977,7 +978,7 @@ struct ConvertSolToStandard
     mod.walk([&](sol::ContractOp contr) {
       APInt slot(256, 0);
       contr.walk([&](sol::StateVarOp stateVar) {
-        assert(eravm::getStorageByteCount(stateVar.getType()) == 32);
+        assert(evm::getStorageByteCount(stateVar.getType()) == 32);
         stateVar->setAttr(
             "slot",
             IntegerAttr::get(IntegerType::get(&getContext(), 256), slot++));

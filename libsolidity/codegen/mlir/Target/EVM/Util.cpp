@@ -43,6 +43,13 @@ unsigned evm::getCallDataHeadSize(Type ty) {
   llvm_unreachable("NYI: Other types");
 }
 
+unsigned evm::getStorageByteCount(Type ty) {
+  if (isa<IntegerType>(ty) || isa<sol::MappingType>(ty) ||
+      isa<sol::StringType>(ty))
+    return 32;
+  llvm_unreachable("NYI: Other types");
+}
+
 Value evm::Builder::genFreePtr(std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);

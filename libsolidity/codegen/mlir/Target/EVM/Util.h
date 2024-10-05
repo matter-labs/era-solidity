@@ -56,8 +56,11 @@ unsigned getAlignment(mlir::Value ptr);
 // code (where this is used) involved in sol.contract, sol.emit etc. lowering.
 // Instead it should generate a high level sol op that can have a custom
 // lowering for each target.
-/// EVM version of solidity ast's Type::calldataHeadSize.
+/// MLIR version of solidity ast's Type::calldataHeadSize.
 unsigned getCallDataHeadSize(mlir::Type ty);
+
+/// MLIR version of solidity ast's Type::storageBytes().
+unsigned getStorageByteCount(mlir::Type ty);
 
 /// IR Builder for EVM specific lowering.
 class Builder {
