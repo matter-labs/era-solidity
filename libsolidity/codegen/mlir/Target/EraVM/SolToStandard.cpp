@@ -16,10 +16,8 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include "libsolidity/codegen/mlir/Target/EraVM/SolToStandard.h"
-#include "libsolidity/codegen/mlir/Passes.h"
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Target/EVM/SolToStandard.h"
-#include "libsolidity/codegen/mlir/Target/EVM/Util.h"
 #include "libsolidity/codegen/mlir/Target/EraVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -37,7 +35,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
@@ -47,45 +44,14 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/IntrinsicsEraVM.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <climits>
 #include <set>
-#include <utility>
 #include <vector>
 
 using namespace mlir;
 
 namespace {
-
-// FIXME: The high level dialects are lowered to the llvm dialect tailored to
-// the EraVM backend in llvm. How should we perform the lowering when we support
-// other targets?
-//
-// (a) If we do a conditional lowering in this pass, the code can quickly get
-// messy
-//
-// (b) If we have a high level dialect for each target, the lowering will be,
-// for instance, solidity.object -> eravm.object -> llvm.func with eravm
-// details. Unnecessary abstractions?
-//
-// (c) I think a sensible design is to create different ModuleOp passes for each
-// target that lower high level dialects to the llvm dialect.
-//
-
-// FIXME: getGlobalOp() should be used iff we can guarantee the presence of the
-// global op. Only ContractOpLowering is following this.
-
-// FIXME: How can we break up lengthy op conversion? MallocOpLowering's helper
-// function needs to always pass around invariants like the rewriter, location
-// etc. It would be nice if they could be member variables. Do we need to create
-// helper classes for such lowering?
-
-// TODO: Document differences in the memory and storage layout like:
-// - 32 byte alignment for all types in storage (excluding the data of
-// string/bytes).
-//
-// - The simpler string layout in storage.
 
 /// Returns true if `op` is defined in a runtime context
 static bool inRuntimeContext(Operation *op) {
@@ -104,8 +70,6 @@ static bool inRuntimeContext(Operation *op) {
 
   llvm_unreachable("op has no parent FuncOp or ObjectOp");
 }
-
-// TODO? Move simple builtin lowering to tblgen (`Pat` records)?
 
 struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
   using OpRewritePattern<sol::Keccak256Op>::OpRewritePattern;

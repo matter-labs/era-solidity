@@ -30,6 +30,12 @@ using namespace mlir;
 
 namespace {
 
+// TODO: Document differences in the memory and storage layout like:
+// - 32 byte alignment for all types in storage (excluding the data of
+// string/bytes).
+//
+// - The simpler string layout in storage.
+
 struct ConstantOpLowering : public OpConversionPattern<sol::ConstantOp> {
   using OpConversionPattern<sol::ConstantOp>::OpConversionPattern;
 
