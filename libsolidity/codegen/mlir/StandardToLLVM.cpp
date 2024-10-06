@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// A pass to convert standard dialects to llvm dialect.
+// A pass to convert standard dialects to llvm dialect
 //
 
 #include "libsolidity/codegen/mlir/Passes.h"

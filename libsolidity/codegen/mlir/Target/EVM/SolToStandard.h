@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// EVM specific lowering of sol dialect.
+// EVM specific lowering of sol dialect
 //
 
 #pragma once

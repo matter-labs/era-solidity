@@ -969,25 +969,27 @@ struct ConvertSolToStandard
 
   /// Converts sol.contract and all yul dialect ops.
   void runStage2Conversion(ModuleOp mod) {
-    ConversionTarget tgt(getContext());
-    tgt.addLegalOp<ModuleOp>();
-    tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
-                        arith::ArithDialect, LLVM::LLVMDialect>();
-    tgt.addIllegalDialect<sol::SolDialect>();
-    tgt.addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp, sol::ConvCastOp>();
+    ConversionTarget convTgt(getContext());
+    convTgt.addLegalOp<ModuleOp>();
+    convTgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
+                            arith::ArithDialect, LLVM::LLVMDialect>();
+    convTgt.addIllegalDialect<sol::SolDialect>();
+    convTgt
+        .addLegalOp<sol::FuncOp, sol::CallOp, sol::ReturnOp, sol::ConvCastOp>();
 
     RewritePatternSet pats(&getContext());
-    evm::populateContrPat(pats);
-    pats.add<ObjectOpLowering, BuiltinRetOpLowering, RevertOpLowering,
-             MLoadOpLowering, MStoreOpLowering, MCopyOpLowering,
-             DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
-             CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
-             CallDataLoadOpLowering, CallDataSizeOpLowering,
-             CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
-             Keccak256OpLowering, LogOpLowering, CallerOpLowering>(
-        &getContext());
 
-    if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
+    switch (tgt) {
+    case solidity::mlirgen::Target::EVM:
+      llvm_unreachable("NYI");
+    case solidity::mlirgen::Target::EraVM:
+      eravm::populateStage2Pats(pats);
+      break;
+    default:
+      llvm_unreachable("Invalid target");
+    };
+
+    if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
       signalPassFailure();
   }
 
@@ -1055,4 +1057,16 @@ void eravm::populateStage1Pats(RewritePatternSet &pats, TypeConverter &tyConv) {
   evm::populateEmitPat(pats, tyConv);
   evm::populateRequirePat(pats);
   evm::populateContrPat(pats);
+}
+
+void eravm::populateStage2Pats(RewritePatternSet &pats) {
+  evm::populateContrPat(pats);
+  pats.add<ObjectOpLowering, BuiltinRetOpLowering, RevertOpLowering,
+           MLoadOpLowering, MStoreOpLowering, MCopyOpLowering,
+           DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
+           CodeCopyOpLowering, MemGuardOpLowering, CallValOpLowering,
+           CallDataLoadOpLowering, CallDataSizeOpLowering,
+           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
+           Keccak256OpLowering, LogOpLowering, CallerOpLowering>(
+      pats.getContext());
 }

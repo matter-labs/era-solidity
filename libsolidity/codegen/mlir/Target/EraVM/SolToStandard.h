@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 //
-// EraVM specific lowering of sol dialect.
+// EraVM specific lowering of sol dialect
 //
 
 #pragma once
@@ -27,5 +27,6 @@ namespace eravm {
 
 void populateStage1Pats(mlir::RewritePatternSet &pats,
                         mlir::TypeConverter &tyConv);
+void populateStage2Pats(mlir::RewritePatternSet &pats);
 
 } // namespace eravm
