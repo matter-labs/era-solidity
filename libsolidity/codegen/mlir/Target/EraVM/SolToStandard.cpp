@@ -234,11 +234,11 @@ struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   using OpRewritePattern<sol::CallValOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::CallValOp op,
-                                PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::IntrCallOp>(
-        op, /*resTy=*/rewriter.getIntegerType(256),
-        rewriter.getI32IntegerAttr(llvm::Intrinsic::eravm_getu128),
-        rewriter.getStringAttr("eravm.getu128"));
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, /*resTy=*/r.getIntegerType(256),
+        r.getI32IntegerAttr(llvm::Intrinsic::eravm_getu128),
+        r.getStringAttr("eravm.getu128"));
     return success();
   }
 };
@@ -247,10 +247,10 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
   using OpRewritePattern<sol::CallDataLoadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::CallDataLoadOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
-    eravm::Builder eraB(rewriter, loc);
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
 
     if (inRuntimeContext(op)) {
       // Generate the `GlobCallDataPtr` + `offset` load
@@ -258,20 +258,18 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
           eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
       unsigned callDataPtrAddrSpace =
           cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-      auto callDataOffset = rewriter.create<LLVM::GEPOp>(
+      auto callDataOffset = r.create<LLVM::GEPOp>(
           loc,
           /*resultType=*/
-          LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                     callDataPtrAddrSpace),
-          /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
-          callDataPtr, ValueRange{op.getAddr()});
-      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-          op, op.getType(), callDataOffset,
-          eravm::getAlignment(callDataOffset));
+          LLVM::LLVMPointerType::get(r.getContext(), callDataPtrAddrSpace),
+          /*basePtrType=*/r.getIntegerType(eravm::BitLen_Byte), callDataPtr,
+          ValueRange{op.getAddr()});
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, op.getType(), callDataOffset,
+                                         eravm::getAlignment(callDataOffset));
 
     } else {
-      rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
-                                                        /*width=*/256);
+      r.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
+                                                 /*width=*/256);
     }
 
     return success();
@@ -282,16 +280,16 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
   using OpRewritePattern<sol::CallDataSizeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::CallDataSizeOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
 
     if (inRuntimeContext(op)) {
-      eravm::Builder eraB(rewriter, loc);
-      rewriter.replaceOp(op, eraB.genCallDataSizeLoad(mod));
+      eravm::Builder eraB(r, loc);
+      r.replaceOp(op, eraB.genCallDataSizeLoad(mod));
     } else {
-      rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
-                                                        /*width=*/256);
+      r.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
+                                                 /*width=*/256);
     }
 
     return success();
@@ -302,17 +300,17 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
   using OpRewritePattern<sol::CallDataCopyOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::CallDataCopyOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
-    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
-    eravm::Builder eraB(rewriter, loc);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
 
-    mlir::Value src;
+    Value src;
     if (inRuntimeContext(op)) {
       src = op.getSrc();
     } else {
-      eravm::Builder eraB(rewriter, loc);
+      eravm::Builder eraB(r, loc);
       src = eraB.genCallDataSizeLoad(mod);
     }
 
@@ -321,19 +319,19 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
         eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-    auto srcGep = rewriter.create<LLVM::GEPOp>(
+    auto srcGep = r.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
         LLVM::LLVMPointerType::get(mod.getContext(), callDataPtrAddrSpace),
-        /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
-        callDataPtr, ValueRange{src});
+        /*basePtrType=*/r.getIntegerType(eravm::BitLen_Byte), callDataPtr,
+        ValueRange{src});
 
     // Generate the memcpy.
-    rewriter.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
-                                    op.getSize(),
-                                    /*isVolatile=*/false);
+    r.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
+                             op.getSize(),
+                             /*isVolatile=*/false);
 
-    rewriter.eraseOp(op);
+    r.eraseOp(op);
     return success();
   }
 };
@@ -342,15 +340,15 @@ struct SLoadOpLowering : public OpRewritePattern<sol::SLoadOp> {
   using OpRewritePattern<sol::SLoadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::SLoadOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op->getLoc();
+                                PatternRewriter &r) const override {
+    Location loc = op->getLoc();
 
-    auto storageAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), eravm::AddrSpace_Storage);
-    mlir::Value offset = rewriter.create<LLVM::IntToPtrOp>(
-        loc, storageAddrSpacePtrTy, op.getAddr());
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-        op, rewriter.getIntegerType(256), offset, eravm::getAlignment(offset));
+    auto storageAddrSpacePtrTy =
+        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Storage);
+    Value offset =
+        r.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, op.getAddr());
+    r.replaceOpWithNewOp<LLVM::LoadOp>(op, r.getIntegerType(256), offset,
+                                       eravm::getAlignment(offset));
 
     return success();
   }
@@ -360,17 +358,17 @@ struct SStoreOpLowering : public OpRewritePattern<sol::SStoreOp> {
   using OpRewritePattern<sol::SStoreOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::SStoreOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op->getLoc();
+                                PatternRewriter &r) const override {
+    Location loc = op->getLoc();
 
-    auto storageAddrSpacePtrTy = LLVM::LLVMPointerType::get(
-        rewriter.getContext(), eravm::AddrSpace_Storage);
-    mlir::Value offset = rewriter.create<LLVM::IntToPtrOp>(
-        loc, storageAddrSpacePtrTy, op.getAddr());
-    rewriter.create<LLVM::StoreOp>(loc, op.getVal(), offset,
-                                   eravm::getAlignment(offset));
+    auto storageAddrSpacePtrTy =
+        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Storage);
+    Value offset =
+        r.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, op.getAddr());
+    r.create<LLVM::StoreOp>(loc, op.getVal(), offset,
+                            eravm::getAlignment(offset));
 
-    rewriter.eraseOp(op);
+    r.eraseOp(op);
     return success();
   }
 };
@@ -379,12 +377,12 @@ struct DataOffsetOpLowering : public OpRewritePattern<sol::DataOffsetOp> {
   using OpRewritePattern<sol::DataOffsetOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::DataOffsetOp op,
-                                PatternRewriter &rewriter) const override {
+                                PatternRewriter &r) const override {
     // FIXME:
     // - Handle references to objects outside the current module.
     // - Check if the reference object is valid.
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-        op, rewriter.getIntegerAttr(rewriter.getIntegerType(256), 0));
+    r.replaceOpWithNewOp<arith::ConstantOp>(
+        op, r.getIntegerAttr(r.getIntegerType(256), 0));
     return success();
   }
 };
@@ -393,12 +391,12 @@ struct DataSizeOpLowering : public OpRewritePattern<sol::DataSizeOp> {
   using OpRewritePattern<sol::DataSizeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::DataSizeOp op,
-                                PatternRewriter &rewriter) const override {
+                                PatternRewriter &r) const override {
     // FIXME:
     // - Handle references to objects outside the current module.
     // - Check if the reference object is valid.
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-        op, rewriter.getIntegerAttr(rewriter.getIntegerType(256), 0));
+    r.replaceOpWithNewOp<arith::ConstantOp>(
+        op, r.getIntegerAttr(r.getIntegerType(256), 0));
     return success();
   }
 };
@@ -408,7 +406,7 @@ struct CodeSizeOpLowering : public OpRewritePattern<sol::CodeSizeOp> {
 
   LogicalResult matchAndRewrite(sol::CodeSizeOp op,
                                 PatternRewriter &r) const override {
-    mlir::Location loc = op->getLoc();
+    Location loc = op->getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
 
     if (inRuntimeContext(op)) {
@@ -425,11 +423,11 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
   using OpRewritePattern<sol::CodeCopyOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::CodeCopyOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op->getLoc();
+                                PatternRewriter &r) const override {
+    Location loc = op->getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
-    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
-    eravm::Builder eraB(rewriter, loc);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
 
     assert(!inRuntimeContext(op) &&
            "codecopy is not supported in runtime context");
@@ -439,19 +437,19 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
         eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-    auto srcGep = rewriter.create<LLVM::GEPOp>(
+    auto srcGep = r.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
         LLVM::LLVMPointerType::get(mod.getContext(), callDataPtrAddrSpace),
-        /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
-        callDataPtr, ValueRange{op.getSrc()});
+        /*basePtrType=*/r.getIntegerType(eravm::BitLen_Byte), callDataPtr,
+        ValueRange{op.getSrc()});
 
     // Generate the memcpy.
-    rewriter.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
-                                    op.getSize(),
-                                    /*isVolatile=*/false);
+    r.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
+                             op.getSize(),
+                             /*isVolatile=*/false);
 
-    rewriter.eraseOp(op);
+    r.eraseOp(op);
     return success();
   }
 };
@@ -460,13 +458,13 @@ struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
   using OpRewritePattern<sol::MLoadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::MLoadOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op->getLoc();
-    eravm::Builder eraB(rewriter, loc);
+                                PatternRewriter &r) const override {
+    Location loc = op->getLoc();
+    eravm::Builder eraB(r, loc);
 
-    mlir::Value addr = eraB.genHeapPtr(op.getAddr());
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, rewriter.getIntegerType(256),
-                                              addr, eravm::getAlignment(addr));
+    Value addr = eraB.genHeapPtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::LoadOp>(op, r.getIntegerType(256), addr,
+                                       eravm::getAlignment(addr));
     return success();
   }
 };
@@ -475,15 +473,15 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
   using OpRewritePattern<sol::MStoreOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::MStoreOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op->getLoc();
-    eravm::Builder eraB(rewriter, loc);
+                                PatternRewriter &r) const override {
+    Location loc = op->getLoc();
+    eravm::Builder eraB(r, loc);
 
-    mlir::Value addr = eraB.genHeapPtr(op.getAddr());
-    mlir::Value val = op.getVal();
-    rewriter.create<LLVM::StoreOp>(loc, val, addr, eravm::getAlignment(addr));
+    Value addr = eraB.genHeapPtr(op.getAddr());
+    Value val = op.getVal();
+    r.create<LLVM::StoreOp>(loc, val, addr, eravm::getAlignment(addr));
 
-    rewriter.eraseOp(op);
+    r.eraseOp(op);
     return success();
   }
 };
@@ -492,19 +490,19 @@ struct MCopyOpLowering : public OpRewritePattern<sol::MCopyOp> {
   using OpRewritePattern<sol::MCopyOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::MCopyOp op,
-                                PatternRewriter &rewriter) const override {
+                                PatternRewriter &r) const override {
     // TODO? Check m_evmVersion.hasMcopy() and legalize here?
 
-    mlir::Location loc = op->getLoc();
-    eravm::Builder eraB(rewriter, loc);
+    Location loc = op->getLoc();
+    eravm::Builder eraB(r, loc);
 
     // Generate the memmove.
     // FIXME: Add align 1 param attribute.
-    rewriter.create<LLVM::MemmoveOp>(loc, eraB.genHeapPtr(op.getDst()),
-                                     eraB.genHeapPtr(op.getSrc()), op.getSize(),
-                                     /*isVolatile=*/false);
+    r.create<LLVM::MemmoveOp>(loc, eraB.genHeapPtr(op.getDst()),
+                              eraB.genHeapPtr(op.getSrc()), op.getSize(),
+                              /*isVolatile=*/false);
 
-    rewriter.eraseOp(op);
+    r.eraseOp(op);
     return success();
   }
 };
@@ -513,9 +511,9 @@ struct MemGuardOpLowering : public OpRewritePattern<sol::MemGuardOp> {
   using OpRewritePattern<sol::MemGuardOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::MemGuardOp op,
-                                PatternRewriter &rewriter) const override {
+                                PatternRewriter &r) const override {
     auto size = op->getAttrOfType<IntegerAttr>("size");
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, size);
+    r.replaceOpWithNewOp<arith::ConstantOp>(op, size);
     return success();
   }
 };
@@ -524,17 +522,17 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
   using OpRewritePattern<sol::RevertOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(sol::RevertOp op,
-                                PatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
 
-    solidity::mlirgen::BuilderExt bExt(rewriter, loc);
-    eravm::Builder eraB(rewriter, loc);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    eravm::Builder eraB(r, loc);
 
     // Create the revert call (__revert(offset, length, RetForwardPageType)) and
     // the unreachable op
     FlatSymbolRefAttr revertFunc = eraB.getOrInsertRevert(mod);
-    rewriter.create<sol::CallOp>(
+    r.create<sol::CallOp>(
         loc, revertFunc, TypeRange{},
         ValueRange{
             op.getAddr(), op.getSize(),
@@ -543,7 +541,7 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
                                   : eravm::RetForwardPageType::UseAuxHeap)});
     bExt.createCallToUnreachableWrapper(mod);
 
-    rewriter.eraseOp(op);
+    r.eraseOp(op);
     return success();
   }
 };
@@ -553,7 +551,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
 
   LogicalResult matchAndRewrite(sol::BuiltinRetOp op,
                                 PatternRewriter &r) const override {
-    mlir::Location loc = op.getLoc();
+    Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
 
     solidity::mlirgen::BuilderExt bExt(r, loc);
@@ -632,7 +630,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
     // Track the names of the existing function in the module.
     std::set<std::string> fnNamesInMod;
     // TODO: Is there a way to run .walk for 1 level depth?
-    for (mlir::Operation &op : *mod.getBody()) {
+    for (Operation &op : *mod.getBody()) {
       if (auto fn = dyn_cast<sol::FuncOp>(&op)) {
         std::string name(fn.getName());
         assert(fnNamesInMod.count(name) == 0 &&
@@ -676,7 +674,7 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
 
   LogicalResult matchAndRewrite(sol::ObjectOp objOp,
                                 PatternRewriter &r) const override {
-    mlir::Location loc = objOp.getLoc();
+    Location loc = objOp.getLoc();
 
     auto mod = objOp->getParentOfType<ModuleOp>();
     auto i256Ty = r.getIntegerType(256);
@@ -919,7 +917,7 @@ struct ConvertSolToStandard
     eraB.getOrInsertPersonality(mod);
 
     ConversionTarget convTgt(getContext());
-    convTgt.addLegalOp<mlir::ModuleOp>();
+    convTgt.addLegalOp<ModuleOp>();
     convTgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                             arith::ArithDialect, LLVM::LLVMDialect>();
     convTgt.addIllegalOp<sol::ConstantOp, sol::ExtOp, sol::TruncOp, sol::AddOp,
@@ -972,7 +970,7 @@ struct ConvertSolToStandard
   /// Converts sol.contract and all yul dialect ops.
   void runStage2Conversion(ModuleOp mod) {
     ConversionTarget tgt(getContext());
-    tgt.addLegalOp<mlir::ModuleOp>();
+    tgt.addLegalOp<ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalDialect<sol::SolDialect>();
@@ -996,7 +994,7 @@ struct ConvertSolToStandard
   /// Converts sol.func and related ops.
   void runStage3Conversion(ModuleOp mod, evm::SolTypeConverter &tyConv) {
     ConversionTarget tgt(getContext());
-    tgt.addLegalOp<mlir::ModuleOp>();
+    tgt.addLegalOp<ModuleOp>();
     tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
                         arith::ArithDialect, LLVM::LLVMDialect>();
     tgt.addIllegalDialect<sol::SolDialect>();
