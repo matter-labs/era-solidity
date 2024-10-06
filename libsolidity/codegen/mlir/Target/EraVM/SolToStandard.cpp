@@ -147,8 +147,7 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
     eravm::Builder eraB(r, loc);
 
     // Setup arguments for the call to sha3.
-    Value offset = eraB.genHeapPtr(op.getInp0());
-    Value length = op.getInp1();
+    Value addr = eraB.genHeapPtr(op.getAddr());
 
     // FIXME: When will this
     // (`context.get_function(EraVMFunction::ZKSYNC_NEAR_CALL_ABI_EXCEPTION_HANDLER).is_some()`)
@@ -159,8 +158,9 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
     auto i256Ty = r.getIntegerType(256);
     FlatSymbolRefAttr sha3Func =
         eraB.getOrInsertSha3(op->getParentOfType<ModuleOp>());
-    r.replaceOpWithNewOp<sol::CallOp>(op, sha3Func, TypeRange{i256Ty},
-                                      ValueRange{offset, length, throwAtFail});
+    r.replaceOpWithNewOp<sol::CallOp>(
+        op, sha3Func, TypeRange{i256Ty},
+        ValueRange{addr, op.getSize(), throwAtFail});
     return success();
   }
 };
@@ -252,8 +252,6 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
     solidity::mlirgen::BuilderExt bExt(rewriter, loc);
     eravm::Builder eraB(rewriter, loc);
 
-    Value offset = op.getInp();
-
     if (inRuntimeContext(op)) {
       // Generate the `GlobCallDataPtr` + `offset` load
       LLVM::LoadOp callDataPtr =
@@ -266,7 +264,7 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
           LLVM::LLVMPointerType::get(rewriter.getContext(),
                                      callDataPtrAddrSpace),
           /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
-          callDataPtr, ValueRange{offset});
+          callDataPtr, ValueRange{op.getAddr()});
       rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
           op, op.getType(), callDataOffset,
           eravm::getAlignment(callDataOffset));
@@ -310,31 +308,30 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
     solidity::mlirgen::BuilderExt bExt(rewriter, loc);
     eravm::Builder eraB(rewriter, loc);
 
-    mlir::Value srcOffset;
+    mlir::Value src;
     if (inRuntimeContext(op)) {
-      srcOffset = op.getInp1();
+      src = op.getSrc();
     } else {
       eravm::Builder eraB(rewriter, loc);
-      srcOffset = eraB.genCallDataSizeLoad(mod);
+      src = eraB.genCallDataSizeLoad(mod);
     }
-
-    mlir::Value dst = eraB.genHeapPtr(op.getInp0());
-    mlir::Value size = op.getInp2();
 
     // Generate the source pointer.
     LLVM::LoadOp callDataPtr =
         eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-    auto src = rewriter.create<LLVM::GEPOp>(
+    auto srcGep = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
         LLVM::LLVMPointerType::get(mod.getContext(), callDataPtrAddrSpace),
         /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
-        callDataPtr, ValueRange{srcOffset});
+        callDataPtr, ValueRange{src});
 
     // Generate the memcpy.
-    rewriter.create<LLVM::MemcpyOp>(loc, dst, src, size, /*isVolatile=*/false);
+    rewriter.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
+                                    op.getSize(),
+                                    /*isVolatile=*/false);
 
     rewriter.eraseOp(op);
     return success();
@@ -348,11 +345,10 @@ struct SLoadOpLowering : public OpRewritePattern<sol::SLoadOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
 
-    mlir::Value addr = op.getInp();
     auto storageAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), eravm::AddrSpace_Storage);
-    mlir::Value offset =
-        rewriter.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, addr);
+    mlir::Value offset = rewriter.create<LLVM::IntToPtrOp>(
+        loc, storageAddrSpacePtrTy, op.getAddr());
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         op, rewriter.getIntegerType(256), offset, eravm::getAlignment(offset));
 
@@ -367,13 +363,11 @@ struct SStoreOpLowering : public OpRewritePattern<sol::SStoreOp> {
                                 PatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
 
-    mlir::Value addr = op.getInp0();
-    mlir::Value val = op.getInp1();
     auto storageAddrSpacePtrTy = LLVM::LLVMPointerType::get(
         rewriter.getContext(), eravm::AddrSpace_Storage);
-    mlir::Value offset =
-        rewriter.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, addr);
-    rewriter.create<LLVM::StoreOp>(loc, val, offset,
+    mlir::Value offset = rewriter.create<LLVM::IntToPtrOp>(
+        loc, storageAddrSpacePtrTy, op.getAddr());
+    rewriter.create<LLVM::StoreOp>(loc, op.getVal(), offset,
                                    eravm::getAlignment(offset));
 
     rewriter.eraseOp(op);
@@ -387,8 +381,8 @@ struct DataOffsetOpLowering : public OpRewritePattern<sol::DataOffsetOp> {
   LogicalResult matchAndRewrite(sol::DataOffsetOp op,
                                 PatternRewriter &rewriter) const override {
     // FIXME:
-    // - Handle references to objects outside the current module
-    // - Check if the reference object is valid
+    // - Handle references to objects outside the current module.
+    // - Check if the reference object is valid.
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(
         op, rewriter.getIntegerAttr(rewriter.getIntegerType(256), 0));
     return success();
@@ -401,8 +395,8 @@ struct DataSizeOpLowering : public OpRewritePattern<sol::DataSizeOp> {
   LogicalResult matchAndRewrite(sol::DataSizeOp op,
                                 PatternRewriter &rewriter) const override {
     // FIXME:
-    // - Handle references to objects outside the current module
-    // - Check if the reference object is valid
+    // - Handle references to objects outside the current module.
+    // - Check if the reference object is valid.
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(
         op, rewriter.getIntegerAttr(rewriter.getIntegerType(256), 0));
     return success();
@@ -440,24 +434,22 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
     assert(!inRuntimeContext(op) &&
            "codecopy is not supported in runtime context");
 
-    Value dst = eraB.genHeapPtr(op.getInp0());
-    Value srcOffset = op.getInp1();
-    Value size = op.getInp2();
-
     // Generate the source pointer
     LLVM::LoadOp callDataPtr =
         eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
     unsigned callDataPtrAddrSpace =
         cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-    auto src = rewriter.create<LLVM::GEPOp>(
+    auto srcGep = rewriter.create<LLVM::GEPOp>(
         loc,
         /*resultType=*/
         LLVM::LLVMPointerType::get(mod.getContext(), callDataPtrAddrSpace),
         /*basePtrType=*/rewriter.getIntegerType(eravm::BitLen_Byte),
-        callDataPtr, ValueRange{srcOffset});
+        callDataPtr, ValueRange{op.getSrc()});
 
     // Generate the memcpy.
-    rewriter.create<LLVM::MemcpyOp>(loc, dst, src, size, /*isVolatile=*/false);
+    rewriter.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
+                                    op.getSize(),
+                                    /*isVolatile=*/false);
 
     rewriter.eraseOp(op);
     return success();
@@ -472,7 +464,7 @@ struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
     mlir::Location loc = op->getLoc();
     eravm::Builder eraB(rewriter, loc);
 
-    mlir::Value addr = eraB.genHeapPtr(op.getInp());
+    mlir::Value addr = eraB.genHeapPtr(op.getAddr());
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, rewriter.getIntegerType(256),
                                               addr, eravm::getAlignment(addr));
     return success();
@@ -487,10 +479,9 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
     mlir::Location loc = op->getLoc();
     eravm::Builder eraB(rewriter, loc);
 
-    mlir::Value offset = eraB.genHeapPtr(op.getInp0());
-    mlir::Value val = op.getInp1();
-    rewriter.create<LLVM::StoreOp>(loc, val, offset,
-                                   eravm::getAlignment(offset));
+    mlir::Value addr = eraB.genHeapPtr(op.getAddr());
+    mlir::Value val = op.getVal();
+    rewriter.create<LLVM::StoreOp>(loc, val, addr, eravm::getAlignment(addr));
 
     rewriter.eraseOp(op);
     return success();
@@ -507,13 +498,10 @@ struct MCopyOpLowering : public OpRewritePattern<sol::MCopyOp> {
     mlir::Location loc = op->getLoc();
     eravm::Builder eraB(rewriter, loc);
 
-    Value dstAddr = eraB.genHeapPtr(op.getInp0());
-    Value srcAddr = eraB.genHeapPtr(op.getInp1());
-    Value size = op.getInp2();
-
     // Generate the memmove.
     // FIXME: Add align 1 param attribute.
-    rewriter.create<LLVM::MemmoveOp>(loc, dstAddr, srcAddr, size,
+    rewriter.create<LLVM::MemmoveOp>(loc, eraB.genHeapPtr(op.getDst()),
+                                     eraB.genHeapPtr(op.getSrc()), op.getSize(),
                                      /*isVolatile=*/false);
 
     rewriter.eraseOp(op);
@@ -526,9 +514,8 @@ struct MemGuardOpLowering : public OpRewritePattern<sol::MemGuardOp> {
 
   LogicalResult matchAndRewrite(sol::MemGuardOp op,
                                 PatternRewriter &rewriter) const override {
-    auto inp = op->getAttrOfType<IntegerAttr>("inp");
-    assert(inp);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, inp);
+    auto size = op->getAttrOfType<IntegerAttr>("size");
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, size);
     return success();
   }
 };
@@ -550,7 +537,7 @@ struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
     rewriter.create<sol::CallOp>(
         loc, revertFunc, TypeRange{},
         ValueRange{
-            op.getInp0(), op.getInp1(),
+            op.getAddr(), op.getSize(),
             bExt.genI256Const(inRuntimeContext(op)
                                   ? eravm::RetForwardPageType::UseHeap
                                   : eravm::RetForwardPageType::UseAuxHeap)});
@@ -582,7 +569,7 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
       // RetForwardPageType::UseHeap)) and the unreachable op.
       r.create<sol::CallOp>(
           loc, returnFunc, TypeRange{},
-          ValueRange{op.getInp0(), op.getInp1(),
+          ValueRange{op.getAddr(), op.getSize(),
                      bExt.genI256Const(eravm::RetForwardPageType::UseHeap)});
       bExt.createCallToUnreachableWrapper(mod);
 

@@ -469,8 +469,8 @@ def Sol_ObjectOp : Sol_Op<"object", [Symbol, SymbolTable, SingleBlock,
 }
 
 //
-// TODO? Should we auto-generate op definitions of yul builtins from
-// evmasm::InstructionInfo?
+// We could auto-generate the following evm builtin ops from
+// evmasm::InstructionInfo. But I don't think it's worth the effort.
 //
 
 def Sol_CallerOp : Sol_Op<"caller", [Pure]> {
@@ -481,34 +481,34 @@ def Sol_CallerOp : Sol_Op<"caller", [Pure]> {
 
 def Sol_BuiltinRetOp : Sol_Op<"builtin_ret"> {
   let summary = "Represents the `return` call in yul";
-  let arguments = (ins I256:$inp0, I256:$inp1);
-  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
+  let arguments = (ins I256:$addr, I256:$size);
+  let assemblyFormat = "$addr `,` $size attr-dict";
 }
 
 def Sol_RevertOp : Sol_Op<"revert"> {
   let summary = "Represents the `revert` call in yul";
-  // TODO: Support revert strings
-  let arguments = (ins I256:$inp0, I256:$inp1);
-  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
+  // TODO: Support revert strings.
+  let arguments = (ins I256:$addr, I256:$size);
+  let assemblyFormat = "$addr `,` $size attr-dict";
 }
 
 def Sol_MLoadOp : Sol_Op<"mload"> {
   let summary = "Represents the `mload` call in yul";
-  let arguments = (ins I256:$inp);
+  let arguments = (ins I256:$addr);
   let results = (outs I256:$out);
-  let assemblyFormat = "$inp attr-dict";
+  let assemblyFormat = "$addr attr-dict";
 }
 
 def Sol_MStoreOp : Sol_Op<"mstore"> {
   let summary = "Represents the `mstore` call in yul";
-  let arguments = (ins I256:$inp0, I256:$inp1);
-  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
+  let arguments = (ins I256:$addr, I256:$val);
+  let assemblyFormat = "$addr `,` $val attr-dict";
 }
 
 def Sol_MCopyOp : Sol_Op<"mcopy"> {
   let summary = "Represents the `mcopy` call in yul";
-  let arguments = (ins I256:$inp0, I256:$inp1, I256:$inp2);
-  let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
+  let arguments = (ins I256:$dst, I256:$src, I256:$size);
+  let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
 }
 
 def Sol_MSizeOp : Sol_Op<"msize", [Pure]> {
@@ -525,9 +525,9 @@ def Sol_CallValOp : Sol_Op<"callvalue", [Pure]> {
 
 def Sol_CallDataLoadOp : Sol_Op<"calldataload"> {
   let summary = "Represents the `calldataload` call in yul";
-  let arguments = (ins I256:$inp);
+  let arguments = (ins I256:$addr);
   let results = (outs I256:$out);
-  let assemblyFormat = "$inp attr-dict";
+  let assemblyFormat = "$addr attr-dict";
 }
 
 def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [Pure]> {
@@ -538,21 +538,21 @@ def Sol_CallDataSizeOp : Sol_Op<"calldatasize", [Pure]> {
 
 def Sol_CallDataCopyOp : Sol_Op<"calldatacopy", [Pure]> {
   let summary = "Represents the `calldatacopy` call in yul";
-  let arguments = (ins I256:$inp0, I256:$inp1, I256:$inp2);
-  let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
+  let arguments = (ins I256:$dst, I256:$src, I256:$size);
+  let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
 }
 
 def Sol_SLoadOp : Sol_Op<"sload"> {
   let summary = "Represents the `sload` call in yul";
-  let arguments = (ins I256:$inp);
+  let arguments = (ins I256:$addr);
   let results = (outs I256:$out);
-  let assemblyFormat = "$inp attr-dict";
+  let assemblyFormat = "$addr attr-dict";
 }
 
 def Sol_SStoreOp : Sol_Op<"sstore"> {
   let summary = "Represents the `sstore` call in yul";
-  let arguments = (ins I256:$inp0, I256:$inp1);
-  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
+  let arguments = (ins I256:$addr, I256:$val);
+  let assemblyFormat = "$addr `,` $val attr-dict";
 }
 
 // TODO: Support symbolic references to objects outside the current symbol table
@@ -561,14 +561,14 @@ def Sol_SStoreOp : Sol_Op<"sstore"> {
 
 def Sol_DataOffsetOp : Sol_Op<"dataoffset", [Pure]> {
   let summary = "Represents the `dataoffset` call in yul";
-  let arguments = (ins FlatSymbolRefAttr:$sym);
+  let arguments = (ins FlatSymbolRefAttr:$obj);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
 
 def Sol_DataSizeOp : Sol_Op<"datasize", [Pure]> {
   let summary = "Represents the `datasize` call in yul";
-  let arguments = (ins FlatSymbolRefAttr:$sym);
+  let arguments = (ins FlatSymbolRefAttr:$obj);
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";
 }
@@ -581,25 +581,25 @@ def Sol_CodeSizeOp : Sol_Op<"codesize", [Pure]> {
 
 def Sol_CodeCopyOp : Sol_Op<"codecopy"> {
   let summary = "Represents the `codecopy` call in yul";
-  let arguments = (ins I256:$inp0, I256:$inp1, I256:$inp2);
-  let assemblyFormat = "$inp0 `,` $inp1 `,` $inp2 attr-dict";
+  let arguments = (ins I256:$dst, I256:$src, I256:$size);
+  let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
 }
 
 // TODO: Is this `ConstantLike`? Adding it causes "expected ConstantLike op to
-// be foldable" assert fail (probably due to the missing let hasFolder = 1)
+// be foldable" assert fail (probably due to the missing let hasFolder = 1).
 def Sol_MemGuardOp : Sol_Op<"memoryguard", [Pure]> {
   let summary = "Represents the `memoryguard` call in yul";
-  let arguments = (ins I256Attr:$inp);
+  let arguments = (ins I256Attr:$size);
   let results = (outs I256:$out);
-  let assemblyFormat = "$inp attr-dict";
+  let assemblyFormat = "$size attr-dict";
 }
 
 def Sol_Keccak256Op : Sol_Op<"keccak256"> {
   // Note that the keccak256 yul builtin has side effects.
   let summary = "Represents the `keccak256` call in yul";
-  let arguments = (ins I256:$inp0, I256:$inp1);
+  let arguments = (ins I256:$addr, I256:$size);
   let results = (outs I256:$out);
-  let assemblyFormat = "$inp0 `,` $inp1 attr-dict";
+  let assemblyFormat = "$addr `,` $size attr-dict";
 }
 
 def Sol_LogOp : Sol_Op<"log"> {
