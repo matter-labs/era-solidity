@@ -19,6 +19,7 @@
 #include "libsolidity/codegen/CompilerUtils.h"
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Target/EVM/Util.h"
+#include "libsolidity/codegen/mlir/Target/EVM/YulToStandard.h"
 #include "libsolidity/codegen/mlir/Util.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -1235,3 +1236,5 @@ void evm::populateStage1Pats(RewritePatternSet &pats, TypeConverter &tyConv) {
   populateRequirePat(pats);
   populateContrPat(pats);
 }
+
+void evm::populateStage2Pats(RewritePatternSet &pats) { populateYulPats(pats); }

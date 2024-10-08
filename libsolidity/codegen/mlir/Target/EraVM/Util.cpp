@@ -157,9 +157,8 @@ Value eravm::Builder::genABIData(Value addr, Value size,
   mlir::Value clampedAddr = genClamp(addr, UINT32_MAX);
   mlir::Value clampedSize = genClamp(size, UINT32_MAX);
   auto gasLeft = b.create<LLVM::IntrCallOp>(
-      loc, /*resTy=*/b.getIntegerType(256),
-      b.getI32IntegerAttr(llvm::Intrinsic::eravm_gasleft),
-      b.getStringAttr("eravm.gasleft"));
+      loc, llvm::Intrinsic::eravm_gasleft, /*resTy=*/b.getIntegerType(256),
+      /*ins=*/ValueRange{}, "eravm.gasleft");
   mlir::Value clampedGas = genClamp(gasLeft, UINT32_MAX);
 
   // Generate the abi data from the address, length and gas.

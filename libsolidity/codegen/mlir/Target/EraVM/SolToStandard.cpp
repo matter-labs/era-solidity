@@ -155,10 +155,10 @@ struct CallerOpLowering : public OpRewritePattern<sol::CallerOp> {
 
   LogicalResult matchAndRewrite(sol::CallerOp op,
                                 PatternRewriter &r) const override {
-    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
-        op, /*resTy=*/r.getIntegerType(256),
-        r.getI32IntegerAttr(llvm::Intrinsic::eravm_caller),
-        r.getStringAttr("eravm.caller"));
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::eravm_caller,
+                                           /*resTy=*/r.getIntegerType(256),
+                                           /*ins=*/ValueRange{},
+                                           "eravm.caller");
 
     return success();
   }
@@ -170,9 +170,8 @@ struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   LogicalResult matchAndRewrite(sol::CallValOp op,
                                 PatternRewriter &r) const override {
     r.replaceOpWithNewOp<LLVM::IntrCallOp>(
-        op, /*resTy=*/r.getIntegerType(256),
-        r.getI32IntegerAttr(llvm::Intrinsic::eravm_getu128),
-        r.getStringAttr("eravm.getu128"));
+        op, llvm::Intrinsic::eravm_getu128, /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{}, "eravm.getu128");
     return success();
   }
 };

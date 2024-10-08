@@ -66,4 +66,6 @@ void populateContrPat(mlir::RewritePatternSet &pats);
 void populateStage1Pats(mlir::RewritePatternSet &pats,
                         mlir::TypeConverter &tyConv);
 
+void populateStage2Pats(mlir::RewritePatternSet &pats);
+
 } // namespace evm

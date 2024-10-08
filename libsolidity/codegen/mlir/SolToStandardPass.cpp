@@ -178,7 +178,8 @@ struct ConvertSolToStandard
 
     switch (tgt) {
     case solidity::mlirgen::Target::EVM:
-      llvm_unreachable("NYI");
+      evm::populateStage2Pats(pats);
+      break;
     case solidity::mlirgen::Target::EraVM:
       eravm::populateStage2Pats(pats);
       break;

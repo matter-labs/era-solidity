@@ -50,6 +50,14 @@ unsigned evm::getStorageByteCount(Type ty) {
   llvm_unreachable("NYI: Other types");
 }
 
+Value evm::Builder::genHeapPtr(Value addr, std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  auto heapAddrSpacePtrTy =
+      LLVM::LLVMPointerType::get(b.getContext(), evm::AddrSpace_Heap);
+  return b.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, addr);
+}
+
 Value evm::Builder::genFreePtr(std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
