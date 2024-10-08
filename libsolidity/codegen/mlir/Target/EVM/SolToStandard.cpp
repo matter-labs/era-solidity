@@ -1234,7 +1234,9 @@ void evm::populateStage1Pats(RewritePatternSet &pats, TypeConverter &tyConv) {
   populateFuncPats(pats, tyConv);
   populateEmitPat(pats, tyConv);
   populateRequirePat(pats);
-  populateContrPat(pats);
 }
 
-void evm::populateStage2Pats(RewritePatternSet &pats) { populateYulPats(pats); }
+void evm::populateStage2Pats(RewritePatternSet &pats) {
+  populateContrPat(pats);
+  populateYulPats(pats);
+}
