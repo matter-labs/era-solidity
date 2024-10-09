@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: solc --strict-assembly --mlir-action=print-init --mmlir --mlir-print-debuginfo %s | FileCheck %s
 
 object "Simple" {

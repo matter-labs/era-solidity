@@ -1237,6 +1237,31 @@ void CommandLineInterface::assembleYul(yul::YulStack::Language _language, yul::Y
 				DebugInfoSelection::Default()
 		);
 
+		// FIXME: Support more than 1 source units.
+		if (m_options.mlirGenJob.action != mlirgen::Action::Undefined)
+		{
+			if (!stack.parseAndAnalyze(src.first, src.second))
+			{
+				successful = false;
+				break;
+			}
+			yul::Dialect const* dialect = nullptr;
+			switch (_language)
+			{
+			case yul::YulStack::Language::Assembly:
+			case yul::YulStack::Language::StrictAssembly:
+				dialect = &yul::EVMDialect::strictAssemblyForEVMObjects(m_options.output.evmVersion);
+				break;
+			default:
+				solUnimplementedAssert(false, "Invalid yul dialect");
+			}
+			if (!mlirgen::runYulToMLIRPass(
+					*stack.parserResult(), stack.charStream(src.first), *dialect, m_options.mlirGenJob))
+				solAssert(false, "runYulToMLIRPass failed");
+			else
+				return;
+		}
+
 		if (!stack.parseAndAnalyze(src.first, src.second))
 			successful = false;
 		else
@@ -1276,27 +1301,6 @@ void CommandLineInterface::assembleYul(yul::YulStack::Language _language, yul::Y
 
 	for (auto const& src: m_fileReader.sourceUnits())
 	{
-		if (m_options.mlirGenJob.action != mlirgen::Action::Undefined)
-		{
-			auto const& yulStk = yulStacks[src.first];
-			yul::Dialect const* dialect = nullptr;
-			switch (_language)
-			{
-			case yul::YulStack::Language::Assembly:
-			case yul::YulStack::Language::StrictAssembly:
-				dialect = &yul::EVMDialect::strictAssemblyForEVMObjects(m_options.output.evmVersion);
-				break;
-			default:
-				solUnimplementedAssert(false, "Invalid yul dialect");
-			}
-			if (!mlirgen::runYulToMLIRPass(
-					*yulStk.parserResult(), yulStk.charStream(src.first), *dialect, m_options.mlirGenJob))
-			{
-				successful = false;
-			}
-			continue;
-		}
-
 		solAssert(_targetMachine == yul::YulStack::Machine::EVM);
 		std::string machine = "EVM";
 		sout() << std::endl << "======= " << src.first << " (" << machine << ") =======" << std::endl;
