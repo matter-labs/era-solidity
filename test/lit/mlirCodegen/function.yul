@@ -1,4 +1,3 @@
-// XFAIL: *
 // RUN: solc --strict-assembly --mlir-action=print-init --mmlir --mlir-print-debuginfo %s | FileCheck %s
 
 object "Simple" {
@@ -37,14 +36,14 @@ object "Simple" {
 // CHECK-NEXT:   } loc(#loc)
 // CHECK-NEXT: } loc(#loc)
 // CHECK-NEXT: #loc = loc(unknown)
-// CHECK-NEXT: #loc1 = loc({{.*}}:0:38)
-// CHECK-NEXT: #loc2 = loc({{.*}}:0:42)
-// CHECK-NEXT: #loc3 = loc({{.*}}:0:31)
-// CHECK-NEXT: #loc4 = loc({{.*}}:4:8)
-// CHECK-NEXT: #loc5 = loc({{.*}}:6:2)
-// CHECK-NEXT: #loc6 = loc({{.*}}:6:23)
-// CHECK-NEXT: #loc7 = loc({{.*}}:6:18)
-// CHECK-NEXT: #loc8 = loc({{.*}}:2:11)
-// CHECK-NEXT: #loc9 = loc({{.*}}:2:15)
-// CHECK-NEXT: #loc10 = loc({{.*}}:2:4)
+// CHECK-NEXT: #loc1 = loc({{.*}}:4:11)
+// CHECK-NEXT: #loc2 = loc({{.*}}:4:15)
+// CHECK-NEXT: #loc3 = loc({{.*}}:4:4)
+// CHECK-NEXT: #loc4 = loc({{.*}}:8:6)
+// CHECK-NEXT: #loc5 = loc({{.*}}:8:23)
+// CHECK-NEXT: #loc6 = loc({{.*}}:9:13)
+// CHECK-NEXT: #loc7 = loc({{.*}}:9:8)
+// CHECK-NEXT: #loc8 = loc({{.*}}:11:13)
+// CHECK-NEXT: #loc9 = loc({{.*}}:11:17)
+// CHECK-NEXT: #loc10 = loc({{.*}}:11:6)
 // CHECK-EMPTY:

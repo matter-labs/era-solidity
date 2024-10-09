@@ -524,6 +524,9 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   auto funcOp = lookupSymbol<mlir::sol::FuncOp>(fn.name.str());
   assert(funcOp);
 
+  // Restore the insertion point after lowering the function definition.
+  mlir::OpBuilder::InsertionGuard insertGuard(b);
+
   // Add entry block and forward input args
   mlir::Block *entryBlk = b.createBlock(&funcOp.getRegion());
   std::vector<mlir::Location> inLocs;
@@ -532,9 +535,6 @@ void YulToMLIRPass::operator()(FunctionDefinition const &fn) {
   }
   assert(funcOp.getFunctionType().getNumInputs() == inLocs.size());
   entryBlk->addArguments(funcOp.getFunctionType().getInputs(), inLocs);
-
-  mlir::OpBuilder::InsertionGuard insertGuard(b);
-  b.setInsertionPointToStart(entryBlk);
 
   assert(fn.returnVariables.size() == 1 && "NYI: multivalued return");
   NameWithDebugData const &retVar = fn.returnVariables[0];
