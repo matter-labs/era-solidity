@@ -727,6 +727,8 @@ bool CompilerStack::compile(State _stopAfter)
 	{
 		if (!runMlirPipeline())
 			return false;
+		m_stackState = CompilationSuccessful;
+		return true;
 	}
 
 	for (Source const* source: m_sourceOrder)
