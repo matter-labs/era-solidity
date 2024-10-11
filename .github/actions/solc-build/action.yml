@@ -35,8 +35,6 @@ runs:
         tar xzf "${BOOST_FILENAME}.tar.gz" && cd ${BOOST_FILENAME}
         if [ ${RUNNER_OS} = macOS ]; then
           if [ ${RUNNER_ARCH} = X64 ]; then
-            whoami
-            echo ${HOME}
             ./bootstrap.sh --prefix=${PWD}/boost --with-python-version=2.7
           else
             ./bootstrap.sh --prefix=${PWD}/boost
