@@ -159,7 +159,7 @@ Value eravm::Builder::genABIData(Value addr, Value size,
   auto gasLeft = b.create<LLVM::IntrCallOp>(
       loc, llvm::Intrinsic::eravm_gasleft, /*resTy=*/b.getIntegerType(256),
       /*ins=*/ValueRange{}, "eravm.gasleft");
-  mlir::Value clampedGas = genClamp(gasLeft, UINT32_MAX);
+  mlir::Value clampedGas = genClamp(gasLeft.getRes(), UINT32_MAX);
 
   // Generate the abi data from the address, length and gas.
   auto shiftedAddr = b.create<arith::ShLIOp>(

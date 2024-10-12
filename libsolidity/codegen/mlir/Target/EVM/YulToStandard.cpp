@@ -44,8 +44,48 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
   }
 };
 
+struct LogOpLowering : public OpRewritePattern<sol::LogOp> {
+  using OpRewritePattern<sol::LogOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::LogOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    std::vector<Value> ins{evmB.genHeapPtr(op.getAddr()), op.getSize()};
+    for (Value topic : op.getTopics())
+      ins.push_back(topic);
+
+    switch (op.getTopics().size()) {
+    case 0:
+      r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_log0,
+                                             /*resTy=*/Type{}, ins, "evm.log0");
+      break;
+    case 1:
+      r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_log1,
+                                             /*resTy=*/Type{}, ins, "evm.log1");
+      break;
+    case 2:
+      r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_log2,
+                                             /*resTy=*/Type{}, ins, "evm.log2");
+      break;
+    case 3:
+      r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_log3,
+                                             /*resTy=*/Type{}, ins, "evm.log3");
+      break;
+    case 4:
+      r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_log3,
+                                             /*resTy=*/Type{}, ins, "evm.log4");
+      break;
+    default:
+      llvm_unreachable("Invalid log op");
+    }
+
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
-  pats.add<Keccak256OpLowering>(pats.getContext());
+  pats.add<Keccak256OpLowering, LogOpLowering>(pats.getContext());
 }
