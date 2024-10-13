@@ -186,6 +186,7 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
     eravm::Builder eraB(r, loc);
 
     if (inRuntimeContext(op)) {
+      // TODO: Move the following to genCallDataPtr in the builder.
       // Generate the `GlobCallDataPtr` + `offset` load
       LLVM::LoadOp callDataPtr =
           eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());

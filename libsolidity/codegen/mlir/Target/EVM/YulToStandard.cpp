@@ -110,9 +110,25 @@ struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
   }
 };
 
+struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
+  using OpRewritePattern<sol::CallDataLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallDataLoadOp op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    evm::Builder evmB(r, loc);
+
+    Value ptr = evmB.genCallDataPtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::LoadOp>(op, op.getType(), ptr,
+                                       evm::getAlignment(ptr));
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
   pats.add<Keccak256OpLowering, LogOpLowering, CallerOpLowering,
-           CallValOpLowering>(pats.getContext());
+           CallValOpLowering, CallDataLoadOpLowering>(pats.getContext());
 }

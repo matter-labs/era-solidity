@@ -125,7 +125,7 @@ public:
   explicit Builder(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc) {}
 
-  /// Generates a pointer to the heap address space.
+  /// Generates a pointer to the address in the heap address space.
   mlir::Value genHeapPtr(mlir::Value addr,
                          std::optional<mlir::Location> locArg = std::nullopt);
 

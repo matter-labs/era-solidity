@@ -77,9 +77,14 @@ public:
   explicit Builder(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc) {}
 
-  /// Generates a pointer to the heap address space.
+  /// Generates a pointer to the address in the heap address space.
   mlir::Value genHeapPtr(mlir::Value addr,
                          std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a pointer to the address in the calldata address space.
+  mlir::Value
+  genCallDataPtr(mlir::Value addr,
+                 std::optional<mlir::Location> locArg = std::nullopt);
 
   //
   // The following APIs are used in the stage1 lowering.

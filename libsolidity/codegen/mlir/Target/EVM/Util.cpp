@@ -58,6 +58,14 @@ Value evm::Builder::genHeapPtr(Value addr, std::optional<Location> locArg) {
   return b.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, addr);
 }
 
+Value evm::Builder::genCallDataPtr(Value addr, std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  auto callDataAddrSpacePtrTy =
+      LLVM::LLVMPointerType::get(b.getContext(), evm::AddrSpace_CallData);
+  return b.create<LLVM::IntToPtrOp>(loc, callDataAddrSpacePtrTy, addr);
+}
+
 Value evm::Builder::genFreePtr(std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
