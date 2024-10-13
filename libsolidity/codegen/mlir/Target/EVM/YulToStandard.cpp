@@ -126,9 +126,23 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
   }
 };
 
+struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
+  using OpRewritePattern<sol::CallDataSizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallDataSizeOp op,
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_calldatasize,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{}, "evm.calldatasize");
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
   pats.add<Keccak256OpLowering, LogOpLowering, CallerOpLowering,
-           CallValOpLowering, CallDataLoadOpLowering>(pats.getContext());
+           CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering>(
+      pats.getContext());
 }
