@@ -139,10 +139,26 @@ struct CallDataSizeOpLowering : public OpRewritePattern<sol::CallDataSizeOp> {
   }
 };
 
+struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
+  using OpRewritePattern<sol::CallDataCopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallDataCopyOp op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    evm::Builder evmB(r, loc);
+
+    r.replaceOpWithNewOp<LLVM::MemcpyOp>(
+        op, /*dst=*/evmB.genHeapPtr(op.getDst()),
+        /*src=*/evmB.genCallDataPtr(op.getSrc()), op.getSize(),
+        /*isVolatile=*/false);
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
   pats.add<Keccak256OpLowering, LogOpLowering, CallerOpLowering,
-           CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering>(
-      pats.getContext());
+           CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
+           CallDataCopyOpLowering>(pats.getContext());
 }
