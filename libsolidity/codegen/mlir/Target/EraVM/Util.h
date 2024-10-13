@@ -125,9 +125,14 @@ public:
   explicit Builder(mlir::OpBuilder &b, mlir::Location loc)
       : b(b), defLoc(loc) {}
 
-  /// Generates a pointer to the address in the heap address space.
+  /// Generates a pointer to the address in the heap.
   mlir::Value genHeapPtr(mlir::Value addr,
                          std::optional<mlir::Location> locArg = std::nullopt);
+
+  /// Generates a pointer to the address in the calldata.
+  mlir::Value
+  genCallDataPtr(mlir::Value addr, mlir::ModuleOp mod,
+                 std::optional<mlir::Location> locArg = std::nullopt);
 
   /// Generates the initialization of global variables for EraVM.
   void genGlobalVarsInit(mlir::ModuleOp mod,

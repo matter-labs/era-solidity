@@ -63,6 +63,26 @@ Value eravm::Builder::genHeapPtr(Value addr, std::optional<Location> locArg) {
   return b.create<LLVM::IntToPtrOp>(loc, heapAddrSpacePtrTy, addr);
 }
 
+Value eravm::Builder::genCallDataPtr(Value addr, ModuleOp mod,
+                                     std::optional<Location> locArg) {
+  assert(cast<IntegerType>(addr.getType()).getWidth() == 256);
+
+  Location loc = locArg ? *locArg : defLoc;
+
+  LLVM::AddressOfOp callDataPtrAddr = genCallDataPtrAddr(mod, loc);
+  auto callDataPtr = b.create<LLVM::LoadOp>(
+      loc, callDataPtrAddr, eravm::getAlignment(callDataPtrAddr));
+
+  unsigned callDataPtrAddrSpace =
+      cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
+
+  return b.create<LLVM::GEPOp>(
+      loc,
+      /*resultType=*/
+      LLVM::LLVMPointerType::get(b.getContext(), callDataPtrAddrSpace),
+      /*basePtrType=*/b.getIntegerType(eravm::BitLen_Byte), callDataPtr, addr);
+}
+
 void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
                                        std::optional<Location> locArg) {
 

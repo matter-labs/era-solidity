@@ -182,24 +182,13 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
   LogicalResult matchAndRewrite(sol::CallDataLoadOp op,
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
     if (inRuntimeContext(op)) {
-      // TODO: Move the following to genCallDataPtr in the builder.
-      // Generate the `GlobCallDataPtr` + `offset` load
-      LLVM::LoadOp callDataPtr =
-          eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
-      unsigned callDataPtrAddrSpace =
-          cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-      auto callDataOffset = r.create<LLVM::GEPOp>(
-          loc,
-          /*resultType=*/
-          LLVM::LLVMPointerType::get(r.getContext(), callDataPtrAddrSpace),
-          /*basePtrType=*/r.getIntegerType(eravm::BitLen_Byte), callDataPtr,
-          ValueRange{op.getAddr()});
-      r.replaceOpWithNewOp<LLVM::LoadOp>(op, op.getType(), callDataOffset,
-                                         eravm::getAlignment(callDataOffset));
+      Value ptr =
+          eraB.genCallDataPtr(op.getAddr(), op->getParentOfType<ModuleOp>());
+      r.replaceOpWithNewOp<LLVM::LoadOp>(op, op.getType(), ptr,
+                                         eravm::getAlignment(ptr));
 
     } else {
       r.replaceOpWithNewOp<arith::ConstantIntOp>(op, /*value=*/0,
@@ -237,7 +226,7 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
+
     eravm::Builder eraB(r, loc);
 
     Value src;
@@ -248,21 +237,8 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
       src = eraB.genCallDataSizeLoad(mod);
     }
 
-    // Generate the source pointer.
-    LLVM::LoadOp callDataPtr =
-        eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
-    unsigned callDataPtrAddrSpace =
-        cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-    auto srcGep = r.create<LLVM::GEPOp>(
-        loc,
-        /*resultType=*/
-        LLVM::LLVMPointerType::get(mod.getContext(), callDataPtrAddrSpace),
-        /*basePtrType=*/r.getIntegerType(eravm::BitLen_Byte), callDataPtr,
-        ValueRange{src});
-
-    // Generate the memcpy.
-    r.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
-                             op.getSize(),
+    r.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()),
+                             eraB.genCallDataPtr(src, mod), op.getSize(),
                              /*isVolatile=*/false);
 
     r.eraseOp(op);
@@ -359,29 +335,16 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
   LogicalResult matchAndRewrite(sol::CodeCopyOp op,
                                 PatternRewriter &r) const override {
     Location loc = op->getLoc();
-    auto mod = op->getParentOfType<ModuleOp>();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
     eravm::Builder eraB(r, loc);
 
     assert(!inRuntimeContext(op) &&
            "codecopy is not supported in runtime context");
 
-    // Generate the source pointer
-    LLVM::LoadOp callDataPtr =
-        eraB.genCallDataPtrLoad(op->getParentOfType<ModuleOp>());
-    unsigned callDataPtrAddrSpace =
-        cast<LLVM::LLVMPointerType>(callDataPtr.getType()).getAddressSpace();
-    auto srcGep = r.create<LLVM::GEPOp>(
-        loc,
-        /*resultType=*/
-        LLVM::LLVMPointerType::get(mod.getContext(), callDataPtrAddrSpace),
-        /*basePtrType=*/r.getIntegerType(eravm::BitLen_Byte), callDataPtr,
-        ValueRange{op.getSrc()});
-
-    // Generate the memcpy.
-    r.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()), srcGep,
-                             op.getSize(),
-                             /*isVolatile=*/false);
+    r.create<LLVM::MemcpyOp>(
+        loc, eraB.genHeapPtr(op.getDst()),
+        eraB.genCallDataPtr(op.getSrc(), op->getParentOfType<ModuleOp>()),
+        op.getSize(),
+        /*isVolatile=*/false);
 
     r.eraseOp(op);
     return success();

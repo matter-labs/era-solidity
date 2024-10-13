@@ -44,10 +44,10 @@ contract C {
 // CHECK-EMPTY:
 // CHECK-NEXT: 4:                                                ; preds = %3, %0
 // CHECK-NEXT:   %5 = load i256, ptr addrspace(1) inttoptr (i256 64 to ptr addrspace(1)), align 1
-// CHECK-NEXT:   %6 = load ptr addrspace(3), ptr @ptr_calldata, align 32
-// CHECK-NEXT:   %7 = getelementptr i8, ptr addrspace(3) %6, i256 0
-// CHECK-NEXT:   %8 = inttoptr i256 %5 to ptr addrspace(1)
-// CHECK-NEXT:   call void @llvm.memcpy.p1.p3.i256(ptr addrspace(1) %8, ptr addrspace(3) %7, i256 0, i1 false)
+// CHECK-NEXT:   %6 = inttoptr i256 %5 to ptr addrspace(1)
+// CHECK-NEXT:   %7 = load ptr addrspace(3), ptr @ptr_calldata, align 32
+// CHECK-NEXT:   %8 = getelementptr i8, ptr addrspace(3) %7, i256 0
+// CHECK-NEXT:   call void @llvm.memcpy.p1.p3.i256(ptr addrspace(1) %6, ptr addrspace(3) %8, i256 0, i1 false)
 // CHECK-NEXT:   store i256 32, ptr addrspace(2) inttoptr (i256 256 to ptr addrspace(2)), align 1
 // CHECK-NEXT:   store i256 0, ptr addrspace(2) inttoptr (i256 288 to ptr addrspace(2)), align 1
 // CHECK-NEXT:   call void @__return(i256 256, i256 64, i256 2)
