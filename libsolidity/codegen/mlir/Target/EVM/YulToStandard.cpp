@@ -97,9 +97,22 @@ struct CallerOpLowering : public OpRewritePattern<sol::CallerOp> {
   }
 };
 
+struct CallValOpLowering : public OpRewritePattern<sol::CallValOp> {
+  using OpRewritePattern<sol::CallValOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::CallValOp op,
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_callvalue,
+                                           /*resTy=*/r.getIntegerType(256),
+                                           /*ins=*/ValueRange{},
+                                           "evm.callvalue");
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
-  pats.add<Keccak256OpLowering, LogOpLowering, CallerOpLowering>(
-      pats.getContext());
+  pats.add<Keccak256OpLowering, LogOpLowering, CallerOpLowering,
+           CallValOpLowering>(pats.getContext());
 }
