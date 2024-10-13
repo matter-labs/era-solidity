@@ -226,22 +226,17 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
                                 PatternRewriter &r) const override {
     Location loc = op.getLoc();
     auto mod = op->getParentOfType<ModuleOp>();
-
     eravm::Builder eraB(r, loc);
 
-    Value src;
-    if (inRuntimeContext(op)) {
-      src = op.getSrc();
-    } else {
-      eravm::Builder eraB(r, loc);
-      src = eraB.genCallDataSizeLoad(mod);
-    }
+    Value src = inRuntimeContext(op) ? op.getSrc()
+                                     : eraB.genCallDataSizeLoad(mod).getRes();
 
-    r.create<LLVM::MemcpyOp>(loc, eraB.genHeapPtr(op.getDst()),
-                             eraB.genCallDataPtr(src, mod), op.getSize(),
+    r.create<LLVM::MemcpyOp>(loc, /*dst=*/eraB.genHeapPtr(op.getDst()),
+                             /*src=*/eraB.genCallDataPtr(src, mod),
+                             op.getSize(),
                              /*isVolatile=*/false);
-
     r.eraseOp(op);
+
     return success();
   }
 };
@@ -341,7 +336,8 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
            "codecopy is not supported in runtime context");
 
     r.create<LLVM::MemcpyOp>(
-        loc, eraB.genHeapPtr(op.getDst()),
+        loc, /*dst=*/eraB.genHeapPtr(op.getDst()),
+        /*src=*/
         eraB.genCallDataPtr(op.getSrc(), op->getParentOfType<ModuleOp>()),
         op.getSize(),
         /*isVolatile=*/false);
