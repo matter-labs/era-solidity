@@ -30,9 +30,7 @@ struct Keccak256OpLowering : public OpRewritePattern<sol::Keccak256Op> {
 
   LogicalResult matchAndRewrite(sol::Keccak256Op op,
                                 PatternRewriter &r) const override {
-    Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
-    evm::Builder evmB(r, loc);
+    evm::Builder evmB(r, op.getLoc());
 
     r.replaceOpWithNewOp<LLVM::IntrCallOp>(
         op, llvm::Intrinsic::evm_sha3,
@@ -115,9 +113,7 @@ struct CallDataLoadOpLowering : public OpRewritePattern<sol::CallDataLoadOp> {
 
   LogicalResult matchAndRewrite(sol::CallDataLoadOp op,
                                 PatternRewriter &r) const override {
-    Location loc = op.getLoc();
-    solidity::mlirgen::BuilderExt bExt(r, loc);
-    evm::Builder evmB(r, loc);
+    evm::Builder evmB(r, op.getLoc());
 
     Value ptr = evmB.genCallDataPtr(op.getAddr());
     r.replaceOpWithNewOp<LLVM::LoadOp>(op, op.getType(), ptr,
