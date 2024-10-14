@@ -65,7 +65,7 @@ std::pair<std::shared_ptr<AST const>, std::shared_ptr<AsmAnalysisInfo>> parse(st
 	);
 	if (stack.parseAndAnalyze("--INPUT--", _source))
 	{
-		yulAssert(stack.errors().empty(), "Parsed successfully but had errors.");
+		yulAssert(!Error::hasErrorsWarningsOrInfos(stack.errors()), "Parsed successfully but had errors.");
 		return make_pair(stack.parserResult()->code(), stack.parserResult()->analysisInfo);
 	}
 	else
@@ -87,7 +87,7 @@ void interpret(std::string const& _source, bool _inspect, bool _disableExternalC
 	state.maxTraceSize = 10000;
 	try
 	{
-		Dialect const& dialect(EVMDialect::strictAssemblyForEVMObjects(langutil::EVMVersion{}));
+		Dialect const& dialect(EVMDialect::strictAssemblyForEVMObjects(langutil::EVMVersion{}, std::nullopt));
 
 		if (_inspect)
 			InspectedInterpreter::run(std::make_shared<Inspector>(_source, state), state, dialect, ast->root(), _disableExternalCalls, /*disableMemoryTracing=*/false);

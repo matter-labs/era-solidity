@@ -91,7 +91,7 @@ public:
 		try
 		{
 			auto ast = yul::Parser(errorReporter, m_dialect).parse(_charStream);
-			if (!m_astRoot || !errorReporter.errors().empty())
+			if (!m_astRoot || errorReporter.hasErrors())
 			{
 				std::cerr << "Error parsing source." << std::endl;
 				printErrors(_charStream, errors);
@@ -104,7 +104,7 @@ public:
 				errorReporter,
 				m_dialect
 			);
-			if (!analyzer.analyze(*m_astRoot) || !errorReporter.errors().empty())
+			if (!analyzer.analyze(*m_astRoot) || errorReporter.hasErrors())
 			{
 				std::cerr << "Error analyzing source." << std::endl;
 				printErrors(_charStream, errors);
@@ -242,7 +242,7 @@ public:
 
 private:
 	std::shared_ptr<yul::Block> m_astRoot;
-	Dialect const& m_dialect{EVMDialect::strictAssemblyForEVMObjects(EVMVersion{})};
+	Dialect const& m_dialect{EVMDialect::strictAssemblyForEVMObjects(EVMVersion{}, std::nullopt)};
 	std::unique_ptr<AsmAnalysisInfo> m_analysisInfo;
 	std::set<YulName> const m_reservedIdentifiers = {};
 	NameDispenser m_nameDispenser{m_dialect, m_reservedIdentifiers};

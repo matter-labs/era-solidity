@@ -152,21 +152,6 @@ Json formatErrorWithException(
 	return error;
 }
 
-std::map<std::string, std::set<std::string>> requestedContractNames(Json const& _outputSelection)
-{
-	std::map<std::string, std::set<std::string>> contracts;
-	for (auto const& [sourceName, _]: _outputSelection.items())
-	{
-		std::string key = (sourceName == "*") ? "" : sourceName;
-		for (auto const& [contractName, _]: _outputSelection[sourceName].items())
-		{
-			std::string value = (contractName == "*") ? "" : contractName;
-			contracts[key].insert(value);
-		}
-	}
-	return contracts;
-}
-
 /// Returns true iff @a _hash (hex with 0x prefix) is the Keccak256 hash of the binary data in @a _content.
 bool hashMatchesContent(std::string const& _hash, std::string const& _content)
 {
@@ -300,26 +285,45 @@ bool isEvmBytecodeRequested(Json const& _outputSelection)
 	return false;
 }
 
-/// @returns The IR output selection for CompilerStack, based on outputs requested in the JSON.
+/// @returns The set of selected contracts, along with their compiler pipeline configuration, based
+/// on outputs requested in the JSON. Translates wildcards to the ones understood by CompilerStack.
 /// Note that as an exception, '*' does not yet match "ir", "irAst", "irOptimized" or "irOptimizedAst".
-CompilerStack::IROutputSelection irOutputSelection(Json const& _outputSelection)
+CompilerStack::ContractSelection pipelineConfig(
+	Json const& _jsonOutputSelection
+)
 {
-	if (!_outputSelection.is_object())
-		return CompilerStack::IROutputSelection::None;
+	if (!_jsonOutputSelection.is_object())
+		return {};
 
-	CompilerStack::IROutputSelection selection = CompilerStack::IROutputSelection::None;
-	for (auto const& fileRequests: _outputSelection)
-		for (auto const& requests: fileRequests)
-			for (auto const& request: requests)
+	CompilerStack::ContractSelection contractSelection;
+	for (auto const& [sourceUnitName, jsonOutputSelectionForSource]: _jsonOutputSelection.items())
+	{
+		solAssert(jsonOutputSelectionForSource.is_object());
+		for (auto const& [contractName, jsonOutputSelectionForContract]: jsonOutputSelectionForSource.items())
+		{
+			solAssert(jsonOutputSelectionForContract.is_array());
+			CompilerStack::PipelineConfig pipelineForContract;
+			for (Json const& request: jsonOutputSelectionForContract)
 			{
-				if (request == "irOptimized" || request == "irOptimizedAst" || request == "yulCFGJson")
-					return CompilerStack::IROutputSelection::UnoptimizedAndOptimized;
-
-				if (request == "ir" || request == "irAst")
-					selection = CompilerStack::IROutputSelection::UnoptimizedOnly;
+				solAssert(request.is_string());
+				pipelineForContract.irOptimization =
+					pipelineForContract.irOptimization ||
+					request == "irOptimized" ||
+					request == "irOptimizedAst" ||
+					request == "yulCFGJson";
+				pipelineForContract.irCodegen =
+					pipelineForContract.irCodegen ||
+					pipelineForContract.irOptimization ||
+					request == "ir" ||
+					request == "irAst";
+				pipelineForContract.bytecode = isEvmBytecodeRequested(_jsonOutputSelection);
 			}
-
-	return selection;
+			std::string key = (sourceUnitName == "*") ? "" : sourceUnitName;
+			std::string value = (contractName == "*") ? "" : contractName;
+			contractSelection[key][value] = pipelineForContract;
+		}
+	}
+	return contractSelection;
 }
 
 Json formatLinkReferences(std::map<size_t, std::string> const& linkReferences)
@@ -351,7 +355,7 @@ Json formatLinkReferences(std::map<size_t, std::string> const& linkReferences)
 	return ret;
 }
 
-Json formatImmutableReferences(std::map<u256, std::pair<std::string, std::vector<size_t>>> const& _immutableReferences)
+Json formatImmutableReferences(std::map<u256, evmasm::LinkerObject::ImmutableRefs> const& _immutableReferences)
 {
 	Json ret = Json::object();
 
@@ -1213,7 +1217,7 @@ Json StandardCompiler::importEVMAssembly(StandardCompiler::InputsAndSettings _in
 	if (!isBinaryRequested(_inputsAndSettings.outputSelection))
 		return Json::object();
 
-	evmasm::EVMAssemblyStack stack(_inputsAndSettings.evmVersion);
+	evmasm::EVMAssemblyStack stack(_inputsAndSettings.evmVersion, _inputsAndSettings.eofVersion);
 	std::string const& sourceName = _inputsAndSettings.jsonSources.begin()->first; // result of structured binding can only be used within lambda from C++20 on.
 	Json const& sourceJson = _inputsAndSettings.jsonSources.begin()->second;
 	try
@@ -1330,11 +1334,9 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 	compilerStack.useMetadataLiteralSources(_inputsAndSettings.metadataLiteralSources);
 	compilerStack.setMetadataFormat(_inputsAndSettings.metadataFormat);
 	compilerStack.setMetadataHash(_inputsAndSettings.metadataHash);
-	compilerStack.setRequestedContractNames(requestedContractNames(_inputsAndSettings.outputSelection));
+	compilerStack.selectContracts(pipelineConfig(_inputsAndSettings.outputSelection));
 	compilerStack.setModelCheckerSettings(_inputsAndSettings.modelCheckerSettings);
 
-	compilerStack.enableEvmBytecodeGeneration(isEvmBytecodeRequested(_inputsAndSettings.outputSelection));
-	compilerStack.requestIROutputs(irOutputSelection(_inputsAndSettings.outputSelection));
 	// FIXME: We should have settings for the target, optimization level etc.
 	if (_inputsAndSettings.viaMLIR)
 		compilerStack.setMLIRGenJobSpec({mlirgen::Action::GenObj, mlirgen::Target::EraVM, '3'});
@@ -1446,7 +1448,7 @@ Json StandardCompiler::compileSolidity(StandardCompiler::InputsAndSettings _inpu
 	Json output;
 
 	if (errors.size() > 0)
-	output["errors"] = std::move(errors);
+		output["errors"] = std::move(errors);
 
 	if (!compilerStack.unhandledSMTLib2Queries().empty())
 		for (std::string const& query: compilerStack.unhandledSMTLib2Queries())
@@ -1642,14 +1644,7 @@ Json StandardCompiler::compileYul(InputsAndSettings _inputsAndSettings)
 
 	// Inconsistent state - stop here to receive error reports from users
 	if (!stack.parseAndAnalyze(sourceName, sourceContents) && !stack.hasErrors())
-	{
-		output["errors"].emplace_back(formatError(
-			Error::Type::InternalCompilerError,
-			"general",
-			"No error reported, but compilation failed."
-		));
-		return output;
-	}
+		solAssert(false, "No error reported, but parsing/analysis failed.");
 
 	for (auto const& error: stack.errors())
 	{

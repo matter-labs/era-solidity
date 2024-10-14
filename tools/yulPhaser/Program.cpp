@@ -68,7 +68,8 @@ Program::Program(Program const& program):
 std::variant<Program, ErrorList> Program::load(CharStream& _sourceCode)
 {
 	// ASSUMPTION: parseSource() rewinds the stream on its own
-	Dialect const& dialect = EVMDialect::strictAssemblyForEVMObjects(EVMVersion{});
+	// TODO: Add support for EOF
+	Dialect const& dialect = EVMDialect::strictAssemblyForEVMObjects(EVMVersion{}, std::nullopt);
 
 	std::variant<std::unique_ptr<AST>, ErrorList> astOrErrors = parseObject(dialect, _sourceCode);
 	if (std::holds_alternative<ErrorList>(astOrErrors))
@@ -122,7 +123,7 @@ std::variant<std::unique_ptr<AST>, ErrorList> Program::parseObject(Dialect const
 
 	ObjectParser parser(errorReporter, _dialect);
 	std::shared_ptr<Object> object = parser.parse(scanner, false);
-	if (object == nullptr || !errorReporter.errors().empty())
+	if (object == nullptr || errorReporter.hasErrors())
 		// NOTE: It's possible to get errors even if the returned object is non-null.
 		// For example when there are errors in a nested object.
 		return errors;
@@ -165,7 +166,7 @@ std::variant<std::unique_ptr<AsmAnalysisInfo>, ErrorList> Program::analyzeAST(Di
 	if (!analysisSuccessful)
 		return errors;
 
-	assert(errorReporter.errors().empty());
+	assert(!errorReporter.hasErrors());
 	return std::variant<std::unique_ptr<AsmAnalysisInfo>, ErrorList>(std::move(analysisInfo));
 }
 

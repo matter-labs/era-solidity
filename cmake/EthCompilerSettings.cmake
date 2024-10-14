@@ -276,16 +276,6 @@ if(UNIX AND NOT APPLE)
 	option(USE_Z3_DLOPEN "Dynamically load the Z3 SMT solver instead of linking against it." OFF)
 endif()
 
-if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
-	option(USE_LD_GOLD "Use GNU gold linker" ON)
-	if (USE_LD_GOLD)
-		execute_process(COMMAND ${CMAKE_CXX_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
-		if ("${LD_VERSION}" MATCHES "GNU gold")
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fuse-ld=gold")
-		endif ()
-	endif ()
-endif ()
-
 # Parallel link jobs (Copied from llvm-17)
 set(SOLC_PARALLEL_LINK_JOBS "" CACHE STRING
 	"Define the maximum number of concurrent link jobs (Ninja only).")

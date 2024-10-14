@@ -57,14 +57,14 @@ bool YulStack::parse(std::string const& _sourceName, std::string const& _source)
 	{
 		m_charStream = std::make_unique<CharStream>(_source, _sourceName);
 		std::shared_ptr<Scanner> scanner = std::make_shared<Scanner>(*m_charStream);
-		m_parserResult = ObjectParser(m_errorReporter, languageToDialect(m_language, m_evmVersion)).parse(scanner, false);
+		m_parserResult = ObjectParser(m_errorReporter, languageToDialect(m_language, m_evmVersion, m_eofVersion)).parse(scanner, false);
 	}
 	catch (UnimplementedFeatureError const& _error)
 	{
 		reportUnimplementedFeatureError(_error);
 	}
 
-	if (m_errorReporter.errors().empty())
+	if (!m_errorReporter.hasErrors())
 		m_stackState = Parsed;
 
 	return m_stackState == Parsed;
@@ -94,7 +94,7 @@ void YulStack::optimize()
 	{
 		if (
 			!m_optimiserSettings.runYulOptimiser &&
-			yul::MSizeFinder::containsMSize(languageToDialect(m_language, m_evmVersion), *m_parserResult)
+			yul::MSizeFinder::containsMSize(languageToDialect(m_language, m_evmVersion, m_eofVersion), *m_parserResult)
 		)
 			return;
 
@@ -130,6 +130,7 @@ void YulStack::optimize()
 			ObjectOptimizer::Settings{
 				m_language,
 				m_evmVersion,
+				m_eofVersion,
 				optimizeStackAllocation,
 				yulOptimiserSteps,
 				yulOptimiserCleanupSteps,
@@ -163,7 +164,7 @@ bool YulStack::analyzeParsed(Object& _object)
 	AsmAnalyzer analyzer(
 		*_object.analysisInfo,
 		m_errorReporter,
-		languageToDialect(m_language, m_evmVersion),
+		languageToDialect(m_language, m_evmVersion, m_eofVersion),
 		{},
 		_object.qualifiedDataNames()
 	);
@@ -196,7 +197,7 @@ void YulStack::compileEVM(AbstractAssembly& _assembly, bool _optimize) const
 	{
 		case Language::Assembly:
 		case Language::StrictAssembly:
-			dialect = &EVMDialect::strictAssemblyForEVMObjects(m_evmVersion);
+			dialect = &EVMDialect::strictAssemblyForEVMObjects(m_evmVersion, m_eofVersion);
 			break;
 		default:
 			yulAssert(false, "Invalid language.");
@@ -211,12 +212,20 @@ void YulStack::reparse()
 	yulAssert(m_parserResult);
 	yulAssert(m_charStream);
 
-	// NOTE: Without passing in _soliditySourceProvider, printed debug info will not include code
-	// snippets, but it does not matter - we'll still get the same AST after we parse it. Snippets
-	// are not stored in the AST and the other info that is (location, AST ID, etc) will still be present.
-	std::string source = print(nullptr /* _soliditySourceProvider */);
+	// NOTE: it is important for the source printed here to exactly match what the compiler will
+	// eventually output to the user. In particular, debug info must be exactly the same.
+	// Otherwise source locations will be off.
+	std::string source = print();
 
-	YulStack cleanStack(m_evmVersion, m_eofVersion, m_language, m_optimiserSettings, m_debugInfoSelection, m_objectOptimizer);
+	YulStack cleanStack(
+		m_evmVersion,
+		m_eofVersion,
+		m_language,
+		m_optimiserSettings,
+		m_debugInfoSelection,
+		m_soliditySourceProvider,
+		m_objectOptimizer
+	);
 	bool reanalysisSuccessful = cleanStack.parseAndAnalyze(m_charStream->name(), source);
 	yulAssert(
 		reanalysisSuccessful,
@@ -262,22 +271,25 @@ YulStack::assembleWithDeployed(std::optional<std::string_view> _deployName)
 		creationObject.bytecode = std::make_shared<evmasm::LinkerObject>(creationAssembly->assemble());
 		yulAssert(creationObject.bytecode->immutableReferences.empty(), "Leftover immutables.");
 		creationObject.assembly = creationAssembly;
-		creationObject.sourceMappings = std::make_unique<std::string>(
-			evmasm::AssemblyItem::computeSourceMapping(
-				creationAssembly->items(),
+		creationObject.sourceMappings = std::make_unique<std::string>();
+		for (auto const& codeSection: creationAssembly->codeSections())
+		{
+			*creationObject.sourceMappings += evmasm::AssemblyItem::computeSourceMapping(
+				codeSection.items,
 				{{m_charStream->name(), 0}}
-			)
-		);
+			);
+		}
 
 		if (deployedAssembly)
 		{
 			deployedObject.bytecode = std::make_shared<evmasm::LinkerObject>(deployedAssembly->assemble());
 			deployedObject.assembly = deployedAssembly;
+			solAssert(deployedAssembly->codeSections().size() == 1);
 			deployedObject.sourceMappings = std::make_unique<std::string>(
 				evmasm::AssemblyItem::computeSourceMapping(
-					deployedAssembly->items(),
+					deployedAssembly->codeSections().front().items,
 					{{m_charStream->name(), 0}}
-				)
+					)
 			);
 		}
 	}
@@ -305,7 +317,7 @@ YulStack::assembleEVMWithDeployed(std::optional<std::string_view> _deployName)
 	// it with the minimal steps required to avoid "stack too deep".
 	bool optimize = m_optimiserSettings.optimizeStackAllocation || (
 		!m_optimiserSettings.runYulOptimiser &&
-		!yul::MSizeFinder::containsMSize(languageToDialect(m_language, m_evmVersion), *m_parserResult)
+		!yul::MSizeFinder::containsMSize(languageToDialect(m_language, m_evmVersion, m_eofVersion), *m_parserResult)
 	);
 	try
 	{
@@ -345,16 +357,14 @@ YulStack::assembleEVMWithDeployed(std::optional<std::string_view> _deployName)
 	return {std::make_shared<evmasm::Assembly>(assembly), {}};
 }
 
-std::string YulStack::print(
-	CharStreamProvider const* _soliditySourceProvider
-) const
+std::string YulStack::print() const
 {
 	yulAssert(m_stackState >= Parsed);
 	yulAssert(m_parserResult, "");
 	yulAssert(m_parserResult->hasCode(), "");
 	return m_parserResult->toString(
 		m_debugInfoSelection,
-		_soliditySourceProvider
+		m_soliditySourceProvider
 	) + "\n";
 }
 
@@ -376,7 +386,7 @@ Json YulStack::cfgJson() const
 		// NOTE: The block Ids are reset for each object
 		std::unique_ptr<ControlFlow> controlFlow = SSAControlFlowGraphBuilder::build(
 			*_object.analysisInfo.get(),
-			languageToDialect(m_language, m_evmVersion),
+			languageToDialect(m_language, m_evmVersion, m_eofVersion),
 			_object.code()->root()
 		);
 		YulControlFlowGraphExporter exporter(*controlFlow);
