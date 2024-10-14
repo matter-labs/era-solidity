@@ -155,10 +155,39 @@ struct CallDataCopyOpLowering : public OpRewritePattern<sol::CallDataCopyOp> {
   }
 };
 
+struct SLoadOpLowering : public OpRewritePattern<sol::SLoadOp> {
+  using OpRewritePattern<sol::SLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::SLoadOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op->getLoc());
+
+    Value ptr = evmB.genStoragePtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::LoadOp>(op, r.getIntegerType(256), ptr,
+                                       evm::getAlignment(ptr));
+    return success();
+  }
+};
+
+struct SStoreOpLowering : public OpRewritePattern<sol::SStoreOp> {
+  using OpRewritePattern<sol::SStoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::SStoreOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op->getLoc());
+
+    Value ptr = evmB.genStoragePtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::StoreOp>(op, op.getVal(), ptr,
+                                        evm::getAlignment(ptr));
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
   pats.add<Keccak256OpLowering, LogOpLowering, CallerOpLowering,
            CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
-           CallDataCopyOpLowering>(pats.getContext());
+           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering>(
+      pats.getContext());
 }

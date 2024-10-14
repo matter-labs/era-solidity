@@ -83,6 +83,15 @@ Value eravm::Builder::genCallDataPtr(Value addr, ModuleOp mod,
       /*basePtrType=*/b.getIntegerType(eravm::BitLen_Byte), callDataPtr, addr);
 }
 
+Value eravm::Builder::genStoragePtr(Value addr,
+                                    std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  auto storageAddrSpacePtrTy =
+      LLVM::LLVMPointerType::get(b.getContext(), eravm::AddrSpace_Storage);
+  return b.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, addr);
+}
+
 void eravm::Builder::genGlobalVarsInit(ModuleOp mod,
                                        std::optional<Location> locArg) {
 

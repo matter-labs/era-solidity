@@ -134,6 +134,11 @@ public:
   genCallDataPtr(mlir::Value addr, mlir::ModuleOp mod,
                  std::optional<mlir::Location> locArg = std::nullopt);
 
+  /// Generates a pointer to the address in the storage.
+  mlir::Value
+  genStoragePtr(mlir::Value addr,
+                std::optional<mlir::Location> locArg = std::nullopt);
+
   /// Generates the initialization of global variables for EraVM.
   void genGlobalVarsInit(mlir::ModuleOp mod,
                          std::optional<mlir::Location> locArg = std::nullopt);

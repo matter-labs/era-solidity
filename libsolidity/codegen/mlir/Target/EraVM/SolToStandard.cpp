@@ -246,15 +246,11 @@ struct SLoadOpLowering : public OpRewritePattern<sol::SLoadOp> {
 
   LogicalResult matchAndRewrite(sol::SLoadOp op,
                                 PatternRewriter &r) const override {
-    Location loc = op->getLoc();
+    eravm::Builder eraB(r, op->getLoc());
 
-    auto storageAddrSpacePtrTy =
-        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Storage);
-    Value offset =
-        r.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, op.getAddr());
-    r.replaceOpWithNewOp<LLVM::LoadOp>(op, r.getIntegerType(256), offset,
-                                       eravm::getAlignment(offset));
-
+    Value ptr = eraB.genStoragePtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::LoadOp>(op, r.getIntegerType(256), ptr,
+                                       eravm::getAlignment(ptr));
     return success();
   }
 };
@@ -264,16 +260,11 @@ struct SStoreOpLowering : public OpRewritePattern<sol::SStoreOp> {
 
   LogicalResult matchAndRewrite(sol::SStoreOp op,
                                 PatternRewriter &r) const override {
-    Location loc = op->getLoc();
+    eravm::Builder eraB(r, op->getLoc());
 
-    auto storageAddrSpacePtrTy =
-        LLVM::LLVMPointerType::get(r.getContext(), eravm::AddrSpace_Storage);
-    Value offset =
-        r.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, op.getAddr());
-    r.create<LLVM::StoreOp>(loc, op.getVal(), offset,
-                            eravm::getAlignment(offset));
-
-    r.eraseOp(op);
+    Value ptr = eraB.genStoragePtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::StoreOp>(op, op.getVal(), ptr,
+                                        eravm::getAlignment(ptr));
     return success();
   }
 };

@@ -86,6 +86,11 @@ public:
   genCallDataPtr(mlir::Value addr,
                  std::optional<mlir::Location> locArg = std::nullopt);
 
+  /// Generates a pointer to the address in the storage.
+  mlir::Value
+  genStoragePtr(mlir::Value addr,
+                std::optional<mlir::Location> locArg = std::nullopt);
+
   //
   // The following APIs are used in the stage1 lowering.
   //
