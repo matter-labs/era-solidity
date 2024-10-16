@@ -41,8 +41,8 @@ runs:
         else
           ./bootstrap.sh --prefix=/boost
         fi
-        ./b2 link=static runtime-link=static -j${PARALLEL}
-        ./b2 install -j${PARALLEL}
+        ./b2 link=static runtime-link=static --without-python -j${PARALLEL}
+        ./b2 --without-python install -j${PARALLEL}
 
     - name: Build solc
       shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
