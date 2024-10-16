@@ -39,10 +39,10 @@ runs:
             ./bootstrap.sh --prefix=${PWD}/boost
           fi
         else
-          ./bootstrap.sh --prefix=/boost
+          ./bootstrap.sh --prefix=/boost --with-toolset=gcc
         fi
-        ./b2 link=static runtime-link=static --without-python -j${PARALLEL}
-        ./b2 --without-python install -j${PARALLEL}
+        ./b2 toolset=gcc link=static runtime-link=static -j${PARALLEL} --prefix=/boost variant=release threading=multi address-model=64 --with-filesystem --with-system --with-program_options --with-test
+        ./b2 install -j${PARALLEL}
 
     - name: Build solc
       shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
