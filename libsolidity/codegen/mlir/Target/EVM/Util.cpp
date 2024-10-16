@@ -74,6 +74,14 @@ Value evm::Builder::genStoragePtr(Value addr, std::optional<Location> locArg) {
   return b.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, addr);
 }
 
+Value evm::Builder::genCodePtr(Value addr, std::optional<Location> locArg) {
+  Location loc = locArg ? *locArg : defLoc;
+
+  auto storageAddrSpacePtrTy =
+      LLVM::LLVMPointerType::get(b.getContext(), evm::AddrSpace_Code);
+  return b.create<LLVM::IntToPtrOp>(loc, storageAddrSpacePtrTy, addr);
+}
+
 Value evm::Builder::genFreePtr(std::optional<Location> locArg) {
   Location loc = locArg ? *locArg : defLoc;
   solidity::mlirgen::BuilderExt bExt(b, loc);
