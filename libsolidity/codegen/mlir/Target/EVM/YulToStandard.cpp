@@ -232,6 +232,34 @@ struct CodeCopyOpLowering : public OpRewritePattern<sol::CodeCopyOp> {
   }
 };
 
+struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
+  using OpRewritePattern<sol::MLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::MLoadOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op->getLoc());
+
+    Value addr = evmB.genHeapPtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::LoadOp>(op, r.getIntegerType(256), addr,
+                                       evm::getAlignment(addr));
+    return success();
+  }
+};
+
+struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
+  using OpRewritePattern<sol::MStoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::MStoreOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder eraB(r, op->getLoc());
+
+    Value addr = eraB.genHeapPtr(op.getAddr());
+    r.replaceOpWithNewOp<LLVM::StoreOp>(op, op.getVal(), addr,
+                                        evm::getAlignment(addr));
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
@@ -239,5 +267,6 @@ void evm::populateYulPats(RewritePatternSet &pats) {
            CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
            CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
-           CodeCopyOpLowering>(pats.getContext());
+           CodeCopyOpLowering, MLoadOpLowering, MStoreOpLowering>(
+      pats.getContext());
 }

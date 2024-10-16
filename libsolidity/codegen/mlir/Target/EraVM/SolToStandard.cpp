@@ -343,8 +343,7 @@ struct MLoadOpLowering : public OpRewritePattern<sol::MLoadOp> {
 
   LogicalResult matchAndRewrite(sol::MLoadOp op,
                                 PatternRewriter &r) const override {
-    Location loc = op->getLoc();
-    eravm::Builder eraB(r, loc);
+    eravm::Builder eraB(r, op->getLoc());
 
     Value addr = eraB.genHeapPtr(op.getAddr());
     r.replaceOpWithNewOp<LLVM::LoadOp>(op, r.getIntegerType(256), addr,
