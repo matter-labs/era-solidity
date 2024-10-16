@@ -260,6 +260,17 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
   }
 };
 
+struct MemGuardOpLowering : public OpRewritePattern<sol::MemGuardOp> {
+  using OpRewritePattern<sol::MemGuardOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::MemGuardOp op,
+                                PatternRewriter &r) const override {
+    auto size = op->getAttrOfType<IntegerAttr>("size");
+    r.replaceOpWithNewOp<arith::ConstantOp>(op, size);
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
@@ -267,6 +278,6 @@ void evm::populateYulPats(RewritePatternSet &pats) {
            CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
            CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
-           CodeCopyOpLowering, MLoadOpLowering, MStoreOpLowering>(
-      pats.getContext());
+           CodeCopyOpLowering, MLoadOpLowering, MStoreOpLowering,
+           MemGuardOpLowering>(pats.getContext());
 }
