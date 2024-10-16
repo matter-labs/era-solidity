@@ -357,14 +357,11 @@ struct MStoreOpLowering : public OpRewritePattern<sol::MStoreOp> {
 
   LogicalResult matchAndRewrite(sol::MStoreOp op,
                                 PatternRewriter &r) const override {
-    Location loc = op->getLoc();
-    eravm::Builder eraB(r, loc);
+    eravm::Builder eraB(r, op->getLoc());
 
     Value addr = eraB.genHeapPtr(op.getAddr());
-    Value val = op.getVal();
-    r.create<LLVM::StoreOp>(loc, val, addr, eravm::getAlignment(addr));
-
-    r.eraseOp(op);
+    r.replaceOpWithNewOp<LLVM::StoreOp>(op, op.getVal(), addr,
+                                        eravm::getAlignment(addr));
     return success();
   }
 };
