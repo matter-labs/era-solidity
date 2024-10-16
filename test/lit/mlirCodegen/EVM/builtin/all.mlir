@@ -27,19 +27,11 @@ module {
     sol.return %ret : i256
   }
 
-  sol.func @calldataload(%addr: i256) -> i256 {
-    %ret = sol.calldataload %addr
-    sol.return %ret : i256
-  }
-
-  sol.func @calldatasize() -> i256 {
-    %ret = sol.calldatasize
-    sol.return %ret : i256
-  }
-
-  sol.func @calldatacopy(%dst: i256, %src: i256, %size: i256) {
+  sol.func @calldata(%dst: i256, %src: i256) -> i256 {
+    %size = sol.calldatasize
     sol.calldatacopy %dst, %src, %size
-    sol.return
+    %ret = sol.calldataload %src
+    sol.return %ret : i256
   }
 
   sol.func @storage(%addr: i256, %val: i256) -> i256 {
@@ -104,20 +96,14 @@ module {
 // CHECK-NEXT:     %0 = "llvm.intrcall"() <{id = 3215 : i32, name = "evm.callvalue"}> : () -> i256
 // CHECK-NEXT:     return %0 : i256
 // CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @calldataload(%arg0: i256) -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} {
-// CHECK-NEXT:     %0 = llvm.inttoptr %arg0 : i256 to !llvm.ptr<2>
-// CHECK-NEXT:     %1 = llvm.load %0 {alignment = 1 : i64} : !llvm.ptr<2> -> i256
-// CHECK-NEXT:     return %1 : i256
-// CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @calldatasize() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} {
+// CHECK-NEXT:   func.func @calldata(%arg0: i256, %arg1: i256) -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} {
 // CHECK-NEXT:     %0 = "llvm.intrcall"() <{id = 3213 : i32, name = "evm.calldatasize"}> : () -> i256
-// CHECK-NEXT:     return %0 : i256
-// CHECK-NEXT:   }
-// CHECK-NEXT:   func.func @calldatacopy(%arg0: i256, %arg1: i256, %arg2: i256) attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} {
-// CHECK-NEXT:     %0 = llvm.inttoptr %arg0 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:     %1 = llvm.inttoptr %arg1 : i256 to !llvm.ptr<2>
-// CHECK-NEXT:     "llvm.intr.memcpy"(%0, %1, %arg2) <{isVolatile = false}> : (!llvm.ptr<1>, !llvm.ptr<2>, i256) -> ()
-// CHECK-NEXT:     return
+// CHECK-NEXT:     %1 = llvm.inttoptr %arg0 : i256 to !llvm.ptr<1>
+// CHECK-NEXT:     %2 = llvm.inttoptr %arg1 : i256 to !llvm.ptr<2>
+// CHECK-NEXT:     "llvm.intr.memcpy"(%1, %2, %0) <{isVolatile = false}> : (!llvm.ptr<1>, !llvm.ptr<2>, i256) -> ()
+// CHECK-NEXT:     %3 = llvm.inttoptr %arg1 : i256 to !llvm.ptr<2>
+// CHECK-NEXT:     %4 = llvm.load %3 {alignment = 1 : i64} : !llvm.ptr<2> -> i256
+// CHECK-NEXT:     return %4 : i256
 // CHECK-NEXT:   }
 // CHECK-NEXT:   func.func @storage(%arg0: i256, %arg1: i256) -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} {
 // CHECK-NEXT:     %0 = llvm.inttoptr %arg0 : i256 to !llvm.ptr<5>
