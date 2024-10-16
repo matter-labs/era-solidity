@@ -71,7 +71,7 @@ struct LogOpLowering : public OpRewritePattern<sol::LogOp> {
                                              /*resTy=*/Type{}, ins, "evm.log3");
       break;
     case 4:
-      r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_log3,
+      r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_log4,
                                              /*resTy=*/Type{}, ins, "evm.log4");
       break;
     default:

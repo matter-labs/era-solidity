@@ -72,7 +72,7 @@ module {
 // CHECK-NEXT:     %3 = llvm.inttoptr %arg0 : i256 to !llvm.ptr<1>
 // CHECK-NEXT:     "llvm.intrcall"(%3, %arg1, %arg2, %arg3, %arg4) <{id = 3237 : i32, name = "evm.log3"}> : (!llvm.ptr<1>, i256, i256, i256, i256) -> ()
 // CHECK-NEXT:     %4 = llvm.inttoptr %arg0 : i256 to !llvm.ptr<1>
-// CHECK-NEXT:     "llvm.intrcall"(%4, %arg1, %arg2, %arg3, %arg4, %arg5) <{id = 3237 : i32, name = "evm.log4"}> : (!llvm.ptr<1>, i256, i256, i256, i256, i256) -> ()
+// CHECK-NEXT:     "llvm.intrcall"(%4, %arg1, %arg2, %arg3, %arg4, %arg5) <{id = 3238 : i32, name = "evm.log4"}> : (!llvm.ptr<1>, i256, i256, i256, i256, i256) -> ()
 // CHECK-NEXT:     return
 // CHECK-NEXT:   }
 // CHECK-NEXT:   func.func @caller() -> i256 attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"], personality = @__personality} {
