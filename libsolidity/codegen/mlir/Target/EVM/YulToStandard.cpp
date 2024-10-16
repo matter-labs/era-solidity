@@ -179,11 +179,24 @@ struct SStoreOpLowering : public OpRewritePattern<sol::SStoreOp> {
   }
 };
 
+struct DataOffsetOpLowering : public OpRewritePattern<sol::DataOffsetOp> {
+  using OpRewritePattern<sol::DataOffsetOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::DataOffsetOp op,
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_dataoffset,
+        /*resTy=*/r.getIntegerType(256),
+        /*metadata=*/r.getStrArrayAttr(op.getObj()), "evm.dataoffset");
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
   pats.add<Keccak256OpLowering, LogOpLowering, CallerOpLowering,
            CallValOpLowering, CallDataLoadOpLowering, CallDataSizeOpLowering,
-           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering>(
-      pats.getContext());
+           CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
+           DataOffsetOpLowering>(pats.getContext());
 }
