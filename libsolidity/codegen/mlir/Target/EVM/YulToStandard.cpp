@@ -271,6 +271,44 @@ struct MemGuardOpLowering : public OpRewritePattern<sol::MemGuardOp> {
   }
 };
 
+struct RevertOpLowering : public OpRewritePattern<sol::RevertOp> {
+  using OpRewritePattern<sol::RevertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::RevertOp op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    evm::Builder evmB(r, loc);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_revert,
+        /*resTy=*/Type{},
+        /*ins=*/ValueRange{evmB.genHeapPtr(op.getAddr()), op.getSize()},
+        "evm.revert");
+    bExt.createCallToUnreachableWrapper(op->getParentOfType<ModuleOp>());
+    return success();
+  }
+};
+
+struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
+  using OpRewritePattern<sol::BuiltinRetOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(sol::BuiltinRetOp op,
+                                PatternRewriter &r) const override {
+    Location loc = op.getLoc();
+    evm::Builder evmB(r, loc);
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_return,
+        /*resTy=*/Type{},
+        /*ins=*/ValueRange{evmB.genHeapPtr(op.getAddr()), op.getSize()},
+        "evm.return");
+    bExt.createCallToUnreachableWrapper(op->getParentOfType<ModuleOp>());
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
@@ -279,5 +317,6 @@ void evm::populateYulPats(RewritePatternSet &pats) {
            CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
            CodeCopyOpLowering, MLoadOpLowering, MStoreOpLowering,
-           MemGuardOpLowering>(pats.getContext());
+           MemGuardOpLowering, RevertOpLowering, BuiltinRetOpLowering>(
+      pats.getContext());
 }
