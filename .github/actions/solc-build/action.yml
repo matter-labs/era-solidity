@@ -26,8 +26,8 @@ runs:
     - name: Install Boost (MacOS and Linux)
       shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
       env:
-        BOOST_DOWNLOAD_URL: "https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source"
-        BOOST_FILENAME: "boost_1_77_0"
+        BOOST_DOWNLOAD_URL: "https://boostorg.jfrog.io/artifactory/main/release/1.74.0/source"
+        BOOST_FILENAME: "boost_1_74_0"
       run: |
         [ ${RUNNER_OS} = macOS ] && PARALLEL=$(sysctl -n hw.ncpu) || PARALLEL=$(nproc)
         curl -L -o ${BOOST_FILENAME}.tar.gz "${BOOST_DOWNLOAD_URL}/${BOOST_FILENAME}.tar.gz"
@@ -39,10 +39,9 @@ runs:
             ./bootstrap.sh --prefix=${PWD}/boost
           fi
         else
-          ./bootstrap.sh --prefix=/boost --with-toolset=gcc
+          ./bootstrap.sh --prefix=/boost
         fi
-        ./b2 toolset=gcc link=static runtime-link=static -j${PARALLEL} --prefix=/boost variant=release threading=multi address-model=64 --with-filesystem --with-system --with-program_options --with-test
-        ./b2 install -j${PARALLEL}
+        ./b2 link=static runtime-link=static variant=release threading=multi address-model=64 --with-filesystem --with-system --with-program_options --with-test -j${PARALLEL} install
 
     - name: Build solc
       shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
@@ -56,13 +55,13 @@ runs:
         if [ ${RUNNER_OS} == macOS ]; then
           export BOOST_ROOT=${PWD}/boost
         else
-          export BOOST_ROOT=/boost
+          export BOOST_ROOT=/boost/lib/cmake/Boost-1.74.0
         fi
         if [ ${RUNNER_OS} = Linux ]; then
           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
         fi
         if [ ${RUNNER_OS} = Windows ]; then
-           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-fuse-ld=lld -DUSE_LD_GOLD=OFF"
+           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-fuse-ld=lld -DUSE_LD_GOLD=OFF -DBoost_COMPILER=mgw14"
            export LDFLAGS='-lbcrypt -lwsock32 -static'
         fi
         cmake .. \
