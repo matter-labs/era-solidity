@@ -61,7 +61,7 @@ runs:
           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
         fi
         if [ ${RUNNER_OS} = Windows ]; then
-           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DUSE_LD_GOLD=OFF -DBoost_COMPILER=mgw14"
+           COMPILER_FLAGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DUSE_LD_GOLD=OFF -DBoost_COMPILER=mgw14 -DBoost_ROOT=/boost/lib/cmake/Boost-1.74.0"
            export LDFLAGS='-lbcrypt -lwsock32 -static'
         fi
         cmake .. \
