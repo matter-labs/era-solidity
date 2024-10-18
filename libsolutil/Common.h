@@ -42,6 +42,7 @@
 
 #include <boost/version.hpp>
 
+#include <cstdint>
 #include <map>
 #include <utility>
 #include <vector>
