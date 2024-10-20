@@ -19,6 +19,7 @@
 #include "libsolidity/codegen/mlir/Sol/SolOps.h"
 #include "libsolidity/codegen/mlir/Target/EVM/Util.h"
 #include "libsolidity/codegen/mlir/Util.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/IntrinsicsEVM.h"
 
 using namespace mlir;
@@ -309,6 +310,61 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
   }
 };
 
+struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
+  using OpRewritePattern<sol::ObjectOp>::OpRewritePattern;
+
+  // "Moves" the sol.object to the module.
+  void moveObjToMod(sol::ObjectOp obj, ModuleOp mod, PatternRewriter &r) const {
+    Location loc = obj.getLoc();
+    OpBuilder::InsertionGuard insertGuard(r);
+
+    // Generate the entry function.
+    Block *modBlk = mod.getBody();
+    r.setInsertionPointToEnd(modBlk);
+    auto entryFn =
+        r.create<sol::FuncOp>(loc, "__entry", r.getFunctionType({}, {}));
+    Block *entryFnBlk = r.createBlock(&entryFn.getBody());
+
+    // The entry code is all ops in the object that are neither a function nor
+    // an object.
+    //
+    // Move the entry code to the entry function and everything else to the
+    // module.
+    for (auto &op : llvm::make_early_inc_range(*obj.getBody())) {
+      if (isa<sol::FuncOp>(op) || isa<sol::ObjectOp>(op))
+        op.moveBefore(modBlk, modBlk->end());
+      else
+        op.moveBefore(entryFnBlk, entryFnBlk->end());
+    }
+
+    // Generate an unreachable op as a terminator in the entry function block.
+    r.setInsertionPointToEnd(entryFnBlk);
+    r.create<LLVM::UnreachableOp>(loc);
+  }
+
+  LogicalResult matchAndRewrite(sol::ObjectOp obj,
+                                PatternRewriter &r) const override {
+    Location loc = obj.getLoc();
+
+    StringRef objName = obj.getSymName();
+
+    // Is this a runtime object?
+    // FIXME: Is there a better way to check this?
+    if (objName.endswith("_deployed")) {
+      auto runtimeMod = r.create<ModuleOp>(loc, objName);
+      moveObjToMod(obj, runtimeMod, r);
+
+    } else {
+      auto creationMod = obj->getParentOfType<ModuleOp>();
+      assert(creationMod);
+      moveObjToMod(obj, creationMod, r);
+    }
+
+    r.eraseOp(obj);
+    return success();
+  }
+};
+
 } // namespace
 
 void evm::populateYulPats(RewritePatternSet &pats) {
@@ -317,6 +373,6 @@ void evm::populateYulPats(RewritePatternSet &pats) {
            CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
            DataOffsetOpLowering, DataSizeOpLowering, CodeSizeOpLowering,
            CodeCopyOpLowering, MLoadOpLowering, MStoreOpLowering,
-           MemGuardOpLowering, RevertOpLowering, BuiltinRetOpLowering>(
-      pats.getContext());
+           MemGuardOpLowering, RevertOpLowering, BuiltinRetOpLowering,
+           ObjectOpLowering>(pats.getContext());
 }
