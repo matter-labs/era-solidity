@@ -94,10 +94,10 @@ jobs:
 
       - name: Prepare Windows env
         if: runner.os == 'Windows'
-        uses: matter-labs/era-compiler-ci/.github/actions/prepare-msys@aba-solc-support
+        uses: matter-labs/era-compiler-ci/.github/actions/prepare-msys@v1
 
       - name: Building the Solidity compiler
-        uses: matter-labs/era-compiler-ci/.github/actions/build-solc@aba-solc-support
+        uses: matter-labs/era-compiler-ci/.github/actions/build-solc@v1
         with:
           release-suffix: ${{ matrix.release-suffix }}
           zksync-version: ${{ needs.setup.outputs.zksync-version }}
