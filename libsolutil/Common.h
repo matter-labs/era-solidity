@@ -45,6 +45,7 @@
 #error "Unsupported Boost version. At least 1.65 required."
 #endif
 
+#include <cstdint>
 #include <map>
 #include <utility>
 #include <vector>

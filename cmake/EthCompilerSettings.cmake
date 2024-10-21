@@ -53,9 +53,6 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 	add_compile_options(-Wsign-conversion)
 	add_compile_options(-Wconversion)
 
-	eth_add_cxx_compiler_flag_if_supported(
-		$<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
-	)
 	eth_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
 	eth_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
 	eth_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
@@ -149,7 +146,7 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 	endif()
 
 # The major alternative compiler to GCC/Clang is Microsoft's Visual C++ compiler, only available on Windows.
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "Windows") # FIXME: This breaks the MSVC build
+if (DEFINED MSVC) # FIXME: This breaks the MSVC build
 	# Remove NDEBUG from RELWITHDEBINFO (to enable asserts)
 	# CMAKE_CXX_FLAGS_RELWITHDEBINFO for GCC/Clang does not include NDEBUG
 	string(REPLACE "/DNDEBUG" " " CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
