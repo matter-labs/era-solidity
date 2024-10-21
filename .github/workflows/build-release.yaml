@@ -71,13 +71,16 @@ jobs:
             runner: [self-hosted, macOS, ARM64]
             release-suffix: macosx-arm64
           - name: "Linux x86"
-            runner: matterlabs-ci-runner
+            runner: matterlabs-ci-runner-high-performance
             image: matterlabs/llvm_runner:ubuntu20-llvm17-latest
             release-suffix: linux-amd64
           - name: "Linux ARM64"
             runner: matterlabs-ci-runner-arm
             image: matterlabs/llvm_runner:ubuntu20-llvm17-latest
             release-suffix: linux-arm64
+          - name: Windows
+            runner: windows-2019-github-hosted-64core
+            release-suffix: windows-amd64
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.image || '' }}
@@ -89,89 +92,22 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Prepare Windows env
+        if: runner.os == 'Windows'
+        uses: matter-labs/era-compiler-ci/.github/actions/prepare-msys@v1
+
       - name: Building the Solidity compiler
-        uses: ./.github/actions/solc-build
+        uses: matter-labs/era-compiler-ci/.github/actions/build-solc@v1
         with:
           release-suffix: ${{ matrix.release-suffix }}
           zksync-version: ${{ needs.setup.outputs.zksync-version }}
           solc-version: ${{ needs.setup.outputs.solc-version }}
-
-  build-windows:
-    name: Windows
-    needs: setup
-    if: needs.setup.outputs.skip-windows == 'false'
-    runs-on: windows-2019-github-hosted-64core
-    steps:
-
-      - name: Checkout source
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "15.0.7"
-
-      - name: Prepare environment
-        run: |
-          git config --global user.email "runner@github.com"
-          git fetch --all
-          # try to apply win patch
-          git cherry-pick 860226e25dca397b5afd70680530963712aff050 || git cherry-pick --abort
-          # latest llvm for MSVC
-          git clone -q --depth=1 --branch=main https://github.com/zufuliu/llvm-utils.git c:\projects\llvm-utils
-          Invoke-Item "c:\projects\llvm-utils\VS2017\install.bat"
-          clang --version
-
-
-      - name: Install windows Deps
-        run: |
-          if ( -not (Test-Path "deps\boost") ) {
-            New-Item -ItemType Directory -Force -Path "deps"
-
-            Invoke-WebRequest -URI "https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-windows-x86_64.zip" -OutFile cmake.zip
-
-            tar -xf cmake.zip
-            mv cmake-3.27.1-windows-x86_64 "deps\cmake"
-
-            # and serving it a page that requires JavaScript.
-            Invoke-WebRequest -URI "https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.zip" -OutFile boost.zip
-
-            tar -xf boost.zip
-            cd boost_1_77_0
-            .\bootstrap.bat --with-toolset=clang
-            .\b2 -j4 -d0 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" link=static runtime-link=static variant=release threading=multi address-model=64 --prefix="..\deps\boost" --with-filesystem --with-system --with-program_options --with-test --with-regex --with-thread install
-            if ( -not $? ) { throw "Error building boost." }
-            cd ..
-          }
-
-      - name: Building the Solidity compiler
-        run: |
-          $env:path += ";deps\cmake\bin\"
-          $env:CXXFLAGS="-Wno-narrowing -Qunused-arguments -Wno-everything -DBOOST_REGEX_NO_LIB -D_REGEX_MAX_STACK_COUNT=200000L -DJSON_USE_INT64_DOUBLE_CONVERSION -std=c++17 -stdlib=libc++"
-          mkdir build
-          cd build
-          $boost_dir=(Resolve-Path ..\deps\boost\lib\cmake\Boost-*)
-          cmake .. -D SOL_VERSION_ZKSYNC="${{ needs.setup.outputs.zksync-version }}" -D USE_Z3="OFF" -DBoost_DIR="$boost_dir\" -DBoost_USE_STATIC_RUNTIME=1 -DBoost_USE_STATIC_LIBS=1 -DBoost_COMPILER=clang15 -T LLVM_v142 -DPEDANTIC=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-          cmake --build . -j 32 --target install --config Release
-
-      - name: Prepare binary file name
-        run: |
-          mkdir -p releases\windows-amd64
-          ls .\build\solc\Release\
-          .\build\solc\Release\solc.exe --version
-          mv .\build\solc\Release\solc.exe releases\windows-amd64\solc-windows-amd64-${{ needs.setup.outputs.solc-version }}-${{ needs.setup.outputs.zksync-version }}.exe
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: release-windows-amd64
-          path: releases
+          boost-version: 1.77.0
 
   release:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [build, build-windows]
+    needs: build
     steps:
 
       - name: Checkout
