@@ -89,7 +89,7 @@ jobs:
           solc-version: ${{ steps.project_version.outputs.solc-version }}
           zksync-version: 1.0.${{ github.run_id }}
           build-type: ${{ matrix.type }}
-          boost-version: 1.74.0
+          boost-version: 1.83.0
 
       - name: Building the Solidity compiler
         if: matrix.type == 'reference'
@@ -98,7 +98,7 @@ jobs:
           solc-version: ${{ steps.project_version.outputs.solc-version }}
           zksync-version: 1.0.${{ github.run_id }}
           build-type: ${{ matrix.type }}
-          boost-version: 1.74.0
+          boost-version: 1.83.0
 
   # Integration tests workflow call from the era-compiler-ci repository
   # This is a common part of the integration tests workflow for all repositories
