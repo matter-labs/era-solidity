@@ -44,6 +44,7 @@
 
 #include <liblangutil/UndefMacros.h>
 
+#include <cstdint>
 #include <iosfwd>
 #include <string>
 #include <tuple>
