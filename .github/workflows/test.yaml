@@ -84,19 +84,21 @@ jobs:
 
       - name: Building the Solidity compiler
         if: matrix.type == 'candidate'
-        uses: ./.github/actions/solc-build
+        uses: matter-labs/era-compiler-ci/.github/actions/build-solc@v1
         with:
           solc-version: ${{ steps.project_version.outputs.solc-version }}
           zksync-version: 1.0.${{ github.run_id }}
           build-type: ${{ matrix.type }}
+          boost-version: 1.77.0
 
       - name: Building the Solidity compiler
         if: matrix.type == 'reference'
-        uses: matter-labs/era-solidity/.github/actions/solc-build@latest-ci
+        uses: matter-labs/era-compiler-ci/.github/actions/build-solc@v1
         with:
           solc-version: ${{ steps.project_version.outputs.solc-version }}
           zksync-version: 1.0.${{ github.run_id }}
           build-type: ${{ matrix.type }}
+          boost-version: 1.77.0
 
   # Integration tests workflow call from the era-compiler-ci repository
   # This is a common part of the integration tests workflow for all repositories
