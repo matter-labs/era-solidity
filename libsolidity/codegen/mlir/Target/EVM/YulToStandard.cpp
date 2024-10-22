@@ -316,14 +316,15 @@ struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   // "Moves" the sol.object to the module.
   void moveObjToMod(sol::ObjectOp obj, ModuleOp mod, PatternRewriter &r) const {
     Location loc = obj.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
     OpBuilder::InsertionGuard insertGuard(r);
 
     // Generate the entry function.
-    Block *modBlk = mod.getBody();
-    r.setInsertionPointToEnd(modBlk);
-    auto entryFn =
-        r.create<sol::FuncOp>(loc, "__entry", r.getFunctionType({}, {}));
+    sol::FuncOp entryFn = bExt.getOrInsertFuncOp(
+        "__entry", r.getFunctionType({}, {}), LLVM::Linkage::External, mod);
     Block *entryFnBlk = r.createBlock(&entryFn.getBody());
+
+    Block *modBlk = mod.getBody();
 
     // The entry code is all ops in the object that are neither a function nor
     // an object.

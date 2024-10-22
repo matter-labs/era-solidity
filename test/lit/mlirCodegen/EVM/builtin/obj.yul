@@ -16,7 +16,7 @@ object "Test" {
 // CHECK-NEXT:   func.func private @".unreachable"() attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"]} {
 // CHECK-NEXT:     llvm.unreachable loc(#loc1)
 // CHECK-NEXT:   } loc(#loc)
-// CHECK-NEXT:   func.func @__entry() attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"]} {
+// CHECK-NEXT:   func.func private @__entry() attributes {llvm.linkage = #llvm.linkage<external>, passthrough = ["nofree", "null_pointer_is_valid"]} {
 // CHECK-NEXT:     %c10_i256 = arith.constant 10 : i256 loc(#loc2)
 // CHECK-NEXT:     %c11_i256 = arith.constant 11 : i256 loc(#loc3)
 // CHECK-NEXT:     %0 = llvm.inttoptr %c10_i256 : i256 to !llvm.ptr<1> loc(#loc1)
@@ -28,7 +28,7 @@ object "Test" {
 // CHECK-NEXT:     func.func private @".unreachable"() attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"]} {
 // CHECK-NEXT:       llvm.unreachable loc(#loc4)
 // CHECK-NEXT:     } loc(#loc)
-// CHECK-NEXT:     func.func @__entry() attributes {llvm.linkage = #llvm.linkage<private>, passthrough = ["nofree", "null_pointer_is_valid"]} {
+// CHECK-NEXT:     func.func private @__entry() attributes {llvm.linkage = #llvm.linkage<external>, passthrough = ["nofree", "null_pointer_is_valid"]} {
 // CHECK-NEXT:       %c20_i256 = arith.constant 20 : i256 loc(#loc5)
 // CHECK-NEXT:       %c21_i256 = arith.constant 21 : i256 loc(#loc6)
 // CHECK-NEXT:       %0 = llvm.inttoptr %c20_i256 : i256 to !llvm.ptr<1> loc(#loc4)
