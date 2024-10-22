@@ -29,4 +29,8 @@ void populateStage1Pats(mlir::RewritePatternSet &pats,
                         mlir::TypeConverter &tyConv);
 void populateStage2Pats(mlir::RewritePatternSet &pats);
 
+/// Adds the conversion patterns of func and related ops in the sol dialect.
+void populateFuncPats(mlir::RewritePatternSet &pats,
+                      mlir::TypeConverter &tyConv);
+
 } // namespace eravm

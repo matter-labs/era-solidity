@@ -183,13 +183,6 @@ public:
   /// Generates a revert without message.
   void genRevert(mlir::Value cond,
                  std::optional<mlir::Location> locArg = std::nullopt);
-
-  //
-  // TODO: Move the following APIs somewhere else.
-  //
-
-  /// Returns an existing personality function symbol.
-  mlir::FlatSymbolRefAttr getPersonality();
 };
 
 } // namespace evm

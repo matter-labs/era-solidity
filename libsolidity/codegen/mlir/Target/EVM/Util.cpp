@@ -484,7 +484,3 @@ void evm::Builder::genRevertWithMsg(Value cond, std::string const &msg,
   b.setInsertionPointToStart(&ifOp.getThenRegion().front());
   genRevertWithMsg(msg);
 }
-
-FlatSymbolRefAttr evm::Builder::getPersonality() {
-  return FlatSymbolRefAttr::get(b.getContext(), "__personality");
-}

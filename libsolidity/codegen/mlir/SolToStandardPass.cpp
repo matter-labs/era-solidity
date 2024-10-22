@@ -105,13 +105,16 @@ struct ConvertSolToStandard
   /// This pass also legalizes all the sol dialect types.
   void runStage1Conversion(ModuleOp mod, evm::SolTypeConverter &tyConv) {
     OpBuilder b(mod.getContext());
-    eravm::Builder eraB(b);
 
     // FIXME: DialectConversion complains "pattern was already applied" if we do
     // this in the sol.func lowering (might work if we generate a llvm/func.func
     // op instead? Should we switch all such external functions to
-    // llvm/func.func?)
-    eraB.getOrInsertPersonality(mod);
+    // llvm/func.func? (dealing with sol.func and func.func has been a major
+    // pain point!)).
+    if (tgt == solidity::mlirgen::Target::EraVM) {
+      eravm::Builder eraB(b);
+      eraB.getOrInsertPersonality(mod);
+    }
 
     ConversionTarget convTgt(getContext());
     convTgt.addLegalOp<ModuleOp>();
@@ -193,16 +196,25 @@ struct ConvertSolToStandard
 
   /// Converts sol.func and related ops.
   void runStage3Conversion(ModuleOp mod, evm::SolTypeConverter &tyConv) {
-    ConversionTarget tgt(getContext());
-    tgt.addLegalOp<ModuleOp>();
-    tgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
-                        arith::ArithDialect, LLVM::LLVMDialect>();
-    tgt.addIllegalDialect<sol::SolDialect>();
+    ConversionTarget convTgt(getContext());
+    convTgt.addLegalOp<ModuleOp>();
+    convTgt.addLegalDialect<sol::SolDialect, func::FuncDialect, scf::SCFDialect,
+                            arith::ArithDialect, LLVM::LLVMDialect>();
+    convTgt.addIllegalDialect<sol::SolDialect>();
 
     RewritePatternSet pats(&getContext());
-    evm::populateFuncPats(pats, tyConv);
+    switch (tgt) {
+    case solidity::mlirgen::Target::EVM:
+      evm::populateFuncPats(pats, tyConv);
+      break;
+    case solidity::mlirgen::Target::EraVM:
+      eravm::populateFuncPats(pats, tyConv);
+      break;
+    default:
+      llvm_unreachable("Invalid target");
+    };
 
-    if (failed(applyPartialConversion(mod, tgt, std::move(pats))))
+    if (failed(applyPartialConversion(mod, convTgt, std::move(pats))))
       signalPassFailure();
   }
 

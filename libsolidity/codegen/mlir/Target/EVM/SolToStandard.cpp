@@ -872,9 +872,6 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
 
   LogicalResult matchAndRewrite(sol::FuncOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &r) const override {
-    mlir::Location loc = op.getLoc();
-    evm::Builder evmB(r, loc);
-
     // Collect non-core attributes.
     std::vector<NamedAttribute> attrs;
     bool hasLinkageAttr = false;
@@ -894,9 +891,6 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
           "llvm.linkage",
           LLVM::LinkageAttr::get(r.getContext(), LLVM::Linkage::Private)));
 
-    // Set the personality attribute of llvm.
-    attrs.push_back(r.getNamedAttr("personality", evmB.getPersonality()));
-
     // Add the nofree and null_pointer_is_valid attributes of llvm via the
     // passthrough attribute.
     std::vector<Attribute> passthroughAttrs;
@@ -910,8 +904,8 @@ struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
     auto convertedFuncTy = cast<FunctionType>(
         getTypeConverter()->convertType(op.getFunctionType()));
     // FIXME: The location of the block arguments are lost here!
-    auto newOp =
-        r.create<func::FuncOp>(loc, op.getName(), convertedFuncTy, attrs);
+    auto newOp = r.create<func::FuncOp>(op.getLoc(), op.getName(),
+                                        convertedFuncTy, attrs);
     r.inlineRegionBefore(op.getBody(), newOp.getBody(), newOp.end());
     r.eraseOp(op);
     return success();
@@ -1231,7 +1225,6 @@ void evm::populateStage1Pats(RewritePatternSet &pats, TypeConverter &tyConv) {
   populateArithPats(pats, tyConv);
   populateCheckedArithPats(pats, tyConv);
   populateMemPats(pats, tyConv);
-  populateFuncPats(pats, tyConv);
   populateEmitPat(pats, tyConv);
   populateRequirePat(pats);
 }

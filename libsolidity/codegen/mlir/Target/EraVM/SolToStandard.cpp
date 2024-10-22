@@ -501,6 +501,57 @@ struct BuiltinRetOpLowering : public OpRewritePattern<sol::BuiltinRetOp> {
   }
 };
 
+struct FuncOpLowering : public OpConversionPattern<sol::FuncOp> {
+  using OpConversionPattern<sol::FuncOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(sol::FuncOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    mlir::Location loc = op.getLoc();
+    eravm::Builder eraB(r, loc);
+
+    // Collect non-core attributes.
+    std::vector<NamedAttribute> attrs;
+    bool hasLinkageAttr = false;
+    for (NamedAttribute attr : op->getAttrs()) {
+      StringRef attrName = attr.getName();
+      if (attrName == "function_type" || attrName == "sym_name" ||
+          attrName.startswith("sol."))
+        continue;
+      if (attrName == "llvm.linkage")
+        hasLinkageAttr = true;
+      attrs.push_back(attr);
+    }
+
+    // Set llvm.linkage attribute to private if not explicitly specified.
+    if (!hasLinkageAttr)
+      attrs.push_back(r.getNamedAttr(
+          "llvm.linkage",
+          LLVM::LinkageAttr::get(r.getContext(), LLVM::Linkage::Private)));
+
+    // Set the personality attribute of llvm.
+    attrs.push_back(r.getNamedAttr("personality", eraB.getPersonality()));
+
+    // Add the nofree and null_pointer_is_valid attributes of llvm via the
+    // passthrough attribute.
+    std::vector<Attribute> passthroughAttrs;
+    passthroughAttrs.push_back(r.getStringAttr("nofree"));
+    passthroughAttrs.push_back(r.getStringAttr("null_pointer_is_valid"));
+    attrs.push_back(r.getNamedAttr(
+        "passthrough", ArrayAttr::get(r.getContext(), passthroughAttrs)));
+
+    // TODO: Add additional attribute for -O0 and -Oz
+
+    auto convertedFuncTy = cast<FunctionType>(
+        getTypeConverter()->convertType(op.getFunctionType()));
+    // FIXME: The location of the block arguments are lost here!
+    auto newOp =
+        r.create<func::FuncOp>(loc, op.getName(), convertedFuncTy, attrs);
+    r.inlineRegionBefore(op.getBody(), newOp.getBody(), newOp.end());
+    r.eraseOp(op);
+    return success();
+  }
+};
+
 struct ObjectOpLowering : public OpRewritePattern<sol::ObjectOp> {
   using OpRewritePattern<sol::ObjectOp>::OpRewritePattern;
 
@@ -753,7 +804,6 @@ void eravm::populateStage1Pats(RewritePatternSet &pats, TypeConverter &tyConv) {
   // TODO: Generate the overflow version of arith ops instead.
   evm::populateCheckedArithPats(pats, tyConv);
   evm::populateMemPats(pats, tyConv);
-  evm::populateFuncPats(pats, tyConv);
   evm::populateEmitPat(pats, tyConv);
   evm::populateRequirePat(pats);
 }
@@ -768,4 +818,12 @@ void eravm::populateStage2Pats(RewritePatternSet &pats) {
            CallDataCopyOpLowering, SLoadOpLowering, SStoreOpLowering,
            Keccak256OpLowering, LogOpLowering, CallerOpLowering>(
       pats.getContext());
+}
+
+void eravm::populateFuncPats(RewritePatternSet &pats, TypeConverter &tyConv) {
+  evm::populateFuncPats(pats, tyConv);
+
+  // Override the evm version.
+  // FIXME: This behaviour is undocumented afaik.
+  pats.add<FuncOpLowering>(tyConv, pats.getContext());
 }

@@ -67,12 +67,16 @@ struct ConvertStandardToLLVM
     opts.dataLayout = llvm::DataLayout(dataLayout);
     LLVMTypeConverter tyConv(&getContext(), opts);
 
-    // Set the llvm target triple and data-layout.
+    // Set the llvm target triple and data-layout for all the module ops (A
+    // child module, for instance, represents the runtime context in the ir for
+    // evm).
     ModuleOp mod = getOperation();
-    mod->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
-                 StringAttr::get(&getContext(), triple));
-    mod->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
-                 StringAttr::get(&getContext(), dataLayout));
+    mod.walk([&](ModuleOp mod) {
+      mod->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
+                   StringAttr::get(&getContext(), triple));
+      mod->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
+                   StringAttr::get(&getContext(), dataLayout));
+    });
 
     // Populate patterns.
     RewritePatternSet pats(&getContext());
