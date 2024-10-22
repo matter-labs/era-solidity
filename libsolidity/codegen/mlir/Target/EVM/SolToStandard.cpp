@@ -1137,7 +1137,7 @@ struct ContractOpLowering : public OpRewritePattern<sol::ContractOp> {
     // TODO: Generate the setimmutable's.
 
     // Generate the return for the creation context.
-    r.create<sol::BuiltinRetOp>(loc, freePtr, runtimeObjOffset);
+    r.create<sol::BuiltinRetOp>(loc, freePtr, runtimeObjSize);
 
     //
     // Runtime context
