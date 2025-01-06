@@ -30,6 +30,9 @@
 
 #include <memory>
 #include <string>
+#include <ostream>
+#include <tuple>
+#include <limits>
 
 namespace solidity::langutil
 {
