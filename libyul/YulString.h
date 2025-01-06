@@ -22,6 +22,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <cstdint>
+
 #include <unordered_map>
 #include <memory>
 #include <vector>
