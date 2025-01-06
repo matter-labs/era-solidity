@@ -24,6 +24,7 @@
 
 #include <libdevcore/Common.h>
 
+#include <cstdint>
 #include <vector>
 #include <stack>
 

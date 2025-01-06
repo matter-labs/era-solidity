@@ -30,6 +30,7 @@
 #include <string>
 #include <ostream>
 #include <tuple>
+#include <limits>
 
 namespace langutil
 {
