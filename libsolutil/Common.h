@@ -47,6 +47,7 @@
 
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include <cstdint>
 #include <map>
 #include <utility>
 #include <vector>
