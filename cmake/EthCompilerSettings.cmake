@@ -129,7 +129,7 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 	endif()
 
 # The major alternative compiler to GCC/Clang is Microsoft's Visual C++ compiler, only available on Windows.
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "Windows") # FIXME: This breaks the MSVC build
+if (DEFINED MSVC) # FIXME: This breaks the MSVC build
 
     add_compile_options(/MP)						# enable parallel compilation
 	add_compile_options(/EHsc)						# specify Exception Handling Model in msvc
