@@ -19,8 +19,8 @@ Some third-party code has its [own licensing terms](cmake/templates/license.h.in
 
 - [Website](https://zksync.io/)
 - [GitHub](https://github.com/matter-labs)
-- [Twitter](https://twitter.com/zksync)
-- [Twitter for Devs](https://twitter.com/ZKsyncDevs)
+- [X (formerly Twitter)](https://x.com/zksync)
+- [X (Twitter) for Devs](https://x.com/ZKsyncDevs)
 - [Discord](https://join.zksync.dev/)
 
 ## Disclaimer
