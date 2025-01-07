@@ -24,6 +24,7 @@
 
 #include <libsolutil/Common.h>
 
+#include <cstdint>
 #include <vector>
 #include <stack>
 
