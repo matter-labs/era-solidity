@@ -82,20 +82,16 @@ jobs:
           SOLC_VERSION=$(grep 'PROJECT_VERSION' CMakeLists.txt | grep -oP '(\d+\.\d+\.\d+)')
           echo "solc-version=${SOLC_VERSION}" | tee -a "${GITHUB_OUTPUT}"
 
-      - name: Building the Solidity compiler
-        if: matrix.type == 'candidate'
-        uses: ./.github/actions/solc-build
-        with:
-          solc-version: ${{ steps.project_version.outputs.solc-version }}
-          zksync-version: 1.0.${{ github.run_id }}
-          build-type: ${{ matrix.type }}
+      - name: Prepare Windows env
+        if: runner.os == 'Windows'
+        uses: matter-labs/era-compiler-ci/.github/actions/prepare-msys@v1
 
       - name: Building the Solidity compiler
-        if: matrix.type == 'reference'
-        uses: matter-labs/era-solidity/.github/actions/solc-build@latest-ci
+        uses: matter-labs/era-compiler-ci/.github/actions/build-solc@v1
         with:
-          solc-version: ${{ steps.project_version.outputs.solc-version }}
           zksync-version: 1.0.${{ github.run_id }}
+          solc-version: ${{ steps.project_version.outputs.solc-version }}
+          boost-version: 1.74.0
           build-type: ${{ matrix.type }}
 
   # Integration tests workflow call from the era-compiler-ci repository
