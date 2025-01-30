@@ -29,11 +29,77 @@
 
 #include <iostream>
 
+#include <fstream>
+#include <libsolc/libsolc.h>
+#include <sstream>
+
 using namespace solidity;
+using namespace solidity::frontend;
 
 
 int main(int argc, char** argv)
 {
+	const char* src = R"(
+{
+  "language": "Yul",
+  "sources": {
+    "Test.yul": {
+      "urls": [
+        "Test.yul"
+      ]
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "evm"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": false
+    }
+  }
+}
+)";
+	CStyleReadFileCallback callback{
+		[](void* _context, char const* _kind, char const* _path, char** o_contents, char** o_error)
+		{
+			assert(_context == nullptr);
+			assert(std::string(_kind) == ReadCallback::kindString(ReadCallback::Kind::ReadFile));
+
+			// The client has to find the file (so, --base-path, --include-path etc. handling should be done by the
+			// client).  solc cmdline uses UniversalCallback (the default import callback), but I don't see any way to
+			// use that in libsolc's C interface.
+
+			// For demonstration:
+			if (std::string(_path) == "Test.yul")
+			{
+				// Read the file.
+				std::ifstream fs("/home/abinavpp/tst/run/Test.yul");
+				std::stringstream ss;
+				ss << fs.rdbuf();
+				std::string content = ss.str();
+
+				// Copy its contents.
+				*o_contents = solidity_alloc(content.length());
+				std::memcpy(*o_contents, content.c_str(), content.length());
+				*o_error = nullptr;
+			}
+			else
+			{
+				*o_error = nullptr;
+				*o_contents = nullptr;
+			}
+		}};
+
+	std::cout << solidity_compile(src, callback, nullptr) << "\n";
+	exit(12);
+
 	try
 	{
 		solidity::frontend::CommandLineInterface cli(std::cin, std::cout, std::cerr);

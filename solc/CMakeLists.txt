@@ -10,7 +10,7 @@ target_link_libraries(solcli PUBLIC solidity Boost::boost Boost::program_options
 set(sources main.cpp)
 
 add_executable(solc ${sources})
-target_link_libraries(solc PRIVATE solcli)
+target_link_libraries(solc PRIVATE solcli libsolc)
 
 include(GNUInstallDirs)
 install(TARGETS solc DESTINATION "${CMAKE_INSTALL_BINDIR}")
