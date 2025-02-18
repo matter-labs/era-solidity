@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -62,6 +63,12 @@ char const* solidity_license() SOLC_NOEXCEPT;
 /// The pointer returned must NOT be freed by the caller.
 char const* solidity_version() SOLC_NOEXCEPT;
 
+/// Returns the compiler version (extended).
+///
+/// @returns A pointer to the string. The pointer returned must be freed by the caller using solidity_free() or
+/// solidity_reset().
+char const* solidity_version_extended() SOLC_NOEXCEPT;
+
 /// Allocates a chunk of memory of @p _size bytes.
 ///
 /// Use this function inside callbacks to allocate data that is to be passed to
@@ -89,6 +96,28 @@ void solidity_free(char* _data) SOLC_NOEXCEPT;
 ///
 /// @returns A pointer to the result. The pointer returned must be freed by the caller using solidity_free() or solidity_reset().
 char* solidity_compile(char const* _input, CStyleReadFileCallback _readCallback, void* _readContext) SOLC_NOEXCEPT;
+
+/// Like solidity_compile, but uses the default callback.
+///
+/// @param _input The input JSON to process.
+/// @param _basePath Base path in the callback.
+/// @param _numIncludePaths Number of include paths.
+/// @param _includePaths Include paths in the callback.
+/// @param _numAllowedDirectories Number of allowed directories.
+/// @param _allowedDirectories Allowed directories in the callback.
+/// @param _errMsg Output error message, if any (nullptr if none), from the path configuration. The pointer must be
+/// freed by the caller using solidity_free() or solidity_reset().
+///
+/// @returns A pointer to the result. The pointer returned must be freed by the caller using solidity_free() or
+/// solidity_reset().
+char* solidity_compile_default_callback(
+	char const* _input,
+	char const* _basePath,
+	uint64_t _numIncludePaths,
+	char const* const* _includePaths,
+	uint64_t _numAllowedDirectories,
+	char const* const* _allowedDirectories,
+	char** _errMsg) SOLC_NOEXCEPT;
 
 /// Frees up any allocated memory.
 ///
