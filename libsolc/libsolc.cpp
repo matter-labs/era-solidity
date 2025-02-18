@@ -21,8 +21,12 @@
  * Public compiler API.
  */
 
+#include <boost/filesystem/path.hpp>
 #include <libsolc/libsolc.h>
+#include <libsolidity/interface/FileReader.h>
+#include <libsolidity/interface/SMTSolverCommand.h>
 #include <libsolidity/interface/StandardCompiler.h>
+#include <libsolidity/interface/UniversalCallback.h>
 #include <libsolidity/interface/Version.h>
 #include <libyul/YulName.h>
 
@@ -111,6 +115,72 @@ std::string compile(std::string _input, CStyleReadFileCallback _readCallback, vo
 	return compiler.compile(std::move(_input));
 }
 
+std::string compile(
+	std::string _input,
+	char const* _basePath,
+	uint64_t _numIncludePaths,
+	char const* const* _includePaths,
+	uint64_t _numAllowedDirectories,
+	char const* const* _allowedDirectories,
+	char** _errMsg)
+{
+	frontend::SMTSolverCommand solverCommand;
+	frontend::FileReader fileReader;
+
+	*_errMsg = nullptr;
+
+	if (!_basePath)
+	{
+		if (_numIncludePaths)
+		{
+			*_errMsg = solidityAllocations.emplace_back("--include-path option requires a non-empty base path.").data();
+			return "";
+		}
+	}
+	else
+	{
+		boost::filesystem::path basePath(_basePath);
+		if (basePath.empty() && _numIncludePaths)
+		{
+			*_errMsg = solidityAllocations.emplace_back("--include-path option requires a non-empty base path.").data();
+			return "";
+		}
+		if (!boost::filesystem::exists(basePath))
+		{
+			*_errMsg
+				= solidityAllocations.emplace_back("Base path does not exist: \"" + basePath.string() + '"').data();
+			return "";
+		}
+		if (!boost::filesystem::is_directory(basePath))
+		{
+			*_errMsg
+				= solidityAllocations.emplace_back("Base path is not a directory: \"" + basePath.string() + '"').data();
+			return "";
+		}
+		fileReader.setBasePath(_basePath);
+	}
+	for (uint64_t i = 0; i < _numIncludePaths; ++i)
+	{
+		boost::filesystem::path includePath(_includePaths[i]);
+		if (includePath.empty())
+		{
+			*_errMsg = solidityAllocations.emplace_back("Empty values are not allowed in --include-path.").data();
+			return "";
+		}
+		fileReader.addIncludePath(includePath);
+	}
+	for (uint64_t i = 0; i < _numAllowedDirectories; ++i)
+	{
+		boost::filesystem::path allowDirectory(_allowedDirectories[i]);
+		if (!allowDirectory.empty())
+			fileReader.allowDirectory(allowDirectory);
+	}
+
+	frontend::UniversalCallback universalCallback(&fileReader, solverCommand);
+
+	StandardCompiler compiler(universalCallback.callback());
+	return compiler.compile(std::move(_input));
+}
 }
 
 extern "C"
@@ -126,9 +196,36 @@ extern char const* solidity_version() noexcept
 	return frontend::VersionString.c_str();
 }
 
+extern char const* solidity_version_extended() noexcept
+{
+	std::string s;
+	s.reserve(150);
+	s += "solc, the LLVM Solidity compiler commandline interface\n";
+	s += "Version: " + solidity::frontend::VersionString + "\nLLVM: ";
+	s += solidity::frontend::ZKsyncVersionString;
+	s += "\n";
+	solidityAllocations.push_back(s);
+	return solidityAllocations.back().data();
+}
+
 extern char* solidity_compile(char const* _input, CStyleReadFileCallback _readCallback, void* _readContext) noexcept
 {
 	return solidityAllocations.emplace_back(compile(_input, _readCallback, _readContext)).data();
+}
+
+extern char* solidity_compile_default_callback(
+	char const* _input,
+	char const* _basePath,
+	uint64_t _numIncludePaths,
+	char const* const* _includePaths,
+	uint64_t _numAllowedDirectories,
+	char const* const* _allowedDirectories,
+	char** _errMsg) noexcept
+{
+	return solidityAllocations
+		.emplace_back(compile(
+			_input, _basePath, _numIncludePaths, _includePaths, _numAllowedDirectories, _allowedDirectories, _errMsg))
+		.data();
 }
 
 extern char* solidity_alloc(size_t _size) noexcept
