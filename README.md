@@ -1,4 +1,4 @@
-[![Build](https://github.com/matter-labs/era-solidity/actions/workflows/build-release.yaml/badge.svg)](https://github.com/matter-labs/era-solidity/actions)
+[![Build release](https://github.com/matter-labs/era-solidity/actions/workflows/build-release.yaml/badge.svg)](https://github.com/matter-labs/era-solidity/actions)
 
 # ZKsync Era: Solidity Compiler
 
