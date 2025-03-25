@@ -126,17 +126,20 @@ Json ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 
 	set<CallableDeclaration const*> reachableCycleFuncs, reachableFuncs;
 
-	for (FunctionDefinition const* fn: _contract.definedFunctions())
+	for (ContractDefinition const* contr: _contract.annotation().linearizedBaseContracts)
 	{
-		if (fn->isConstructor() && creationCallGraph.set())
+		for (FunctionDefinition const* fn: contr->definedFunctions())
 		{
-			reachableCycleFuncs += (*creationCallGraph)->getReachableCycleFuncs(fn);
-			reachableFuncs += (*creationCallGraph)->getReachableFuncs(fn);
-		}
-		else if (runtimeCallGraph.set())
-		{
-			reachableCycleFuncs += (*runtimeCallGraph)->getReachableCycleFuncs(fn);
-			reachableFuncs += (*runtimeCallGraph)->getReachableFuncs(fn);
+			if (fn->isConstructor() && creationCallGraph.set())
+			{
+				reachableCycleFuncs += (*creationCallGraph)->getReachableCycleFuncs(fn);
+				reachableFuncs += (*creationCallGraph)->getReachableFuncs(fn);
+			}
+			else if (runtimeCallGraph.set())
+			{
+				reachableCycleFuncs += (*runtimeCallGraph)->getReachableCycleFuncs(fn);
+				reachableFuncs += (*runtimeCallGraph)->getReachableFuncs(fn);
+			}
 		}
 	}
 
