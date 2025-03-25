@@ -1,3 +1,9 @@
+### 1.0.2 - ZKsync Legacy Edition (2025-04-01)
+
+Bugfixes:
+* Fixed reporting of recursive functions in base contracts
+
+
 ### 1.0.1 - ZKsync Legacy Edition (2024-05-31)
 
 Bugfixes:
