@@ -1,0 +1,23 @@
+name: Tests and benchmarks
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      compiler_tester_reference_branch:
+        description: "compiler-tester branch to use as a benchmark reference"
+        required: false
+        default: "main"
+      compiler_tester_candidate_branch:
+        description: "compiler-tester branch to use as a benchmark candidate"
+        required: false
+        default: "era-solidity-test"
+
+jobs:
+
+  tests-and-benchmarks:
+    uses: matter-labs/era-compiler-ci/.github/workflows/solc-test.yml@solc-latest
+    secrets: inherit
+    with:
+      compiler_tester_reference_branch: ${{ inputs.compiler_tester_reference_branch }}
+      compiler_tester_candidate_branch: ${{ inputs.compiler_tester_candidate_branch }}
