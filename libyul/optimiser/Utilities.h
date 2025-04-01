@@ -22,6 +22,8 @@
 
 #include <libyul/ASTDataForward.h>
 
+#include <cstdint>
+
 namespace dev
 {
 namespace yul
