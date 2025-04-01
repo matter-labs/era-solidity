@@ -24,6 +24,8 @@
 #include <vector>
 #include <tuple>
 
+#include <cstdint>
+
 namespace dev
 {
 using bytes = std::vector<uint8_t>;
