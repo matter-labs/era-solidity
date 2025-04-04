@@ -26,6 +26,8 @@
 #include <cstddef>
 #include <vector>
 
+#include <cstddef>
+
 namespace solidity::phaser
 {
 
