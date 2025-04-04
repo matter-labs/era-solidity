@@ -27,6 +27,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <cstdint>
 
 namespace yul
 {
