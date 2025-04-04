@@ -22,6 +22,7 @@
 
 #include <libdevcore/Common.h>
 #include <libyul/AsmDataForward.h>
+#include <cstdint>
 
 namespace yul
 {
