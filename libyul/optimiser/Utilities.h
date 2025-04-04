@@ -21,6 +21,7 @@
 #pragma once
 
 #include <libyul/AsmDataForward.h>
+#include <cstdint>
 
 namespace yul
 {
