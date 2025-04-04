@@ -34,6 +34,7 @@
 	#include <unistd.h>
 #endif
 
+#include <fstream>
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
