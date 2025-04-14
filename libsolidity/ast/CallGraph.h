@@ -82,6 +82,9 @@ struct CallGraph
 	/// Returns functions reachable (including the ones from indirect calls) from @a _src.
 	std::set<CallableDeclaration const*> getReachableFuncs(CallableDeclaration const* _src) const;
 
+	/// Returns all the functions in the call graph.
+	std::set<CallableDeclaration const*> getFuncs() const;
+
 private:
 	/// Populates @a _funcs with the functions reachable (including the ones from indirect calls) from @a _src.
 	void getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const;

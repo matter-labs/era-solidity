@@ -157,6 +157,21 @@ std::set<CallableDeclaration const*> CallGraph::getReachableFuncs(CallableDeclar
 	return funcs;
 }
 
+std::set<CallableDeclaration const*> CallGraph::getFuncs() const
+{
+	std::set<CallableDeclaration const*> funcs;
+	for (auto edge: edges)
+	{
+		Node src = edge.first;
+		if (auto srcFn = std::get_if<CallableDeclaration const*>(&src))
+			funcs.insert(*srcFn);
+		for (Node dst: edge.second)
+			if (auto dstFn = std::get_if<CallableDeclaration const*>(&dst))
+				funcs.insert(*dstFn);
+	}
+	return funcs;
+}
+
 std::set<CallableDeclaration const*> CallGraph::getReachableCycleFuncs(CallableDeclaration const* _src) const
 {
 	std::set<CallableDeclaration const*> funcs;

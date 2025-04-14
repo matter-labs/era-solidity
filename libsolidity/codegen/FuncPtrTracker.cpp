@@ -22,6 +22,66 @@ using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
 
+void LibraryDependencyTracker::run()
+{
+	std::vector<ContractDefinition const*> worklist;
+	std::set<ContractDefinition const*> visited;
+
+	for (ContractDefinition const* base: m_contract.annotation().linearizedBaseContracts)
+		worklist.push_back(base);
+
+	while (!worklist.empty())
+	{
+		ContractDefinition const* current = worklist.back();
+		worklist.pop_back();
+
+		if (visited.contains(current))
+			continue;
+
+		visited.insert(current);
+		trackDeps(*current);
+
+		for (ContractDefinition const* lib: libraryDependencies)
+		{
+			if (!visited.contains(lib))
+				worklist.push_back(lib);
+		}
+	}
+}
+
+void LibraryDependencyTracker::trackDeps(ContractDefinition const& _contract)
+{
+	_contract.accept(*this);
+
+	for (UsingForDirective const* usingFor: _contract.usingForDirectives())
+	{
+		for (ASTPointer<IdentifierPath> idPath: usingFor->functionsOrLibrary())
+		{
+			Declaration const* decl = idPath->annotation().referencedDeclaration;
+			solAssert(decl);
+			if (auto* func = dynamic_cast<FunctionDefinition const*>(decl))
+			{
+				solAssert(func->scope());
+				auto* lib = dynamic_cast<ContractDefinition const*>(func->scope());
+				if (lib && lib->isLibrary())
+					libraryDependencies.insert(lib);
+			}
+			else if (auto lib = dynamic_cast<ContractDefinition const*>(decl))
+				libraryDependencies.insert(lib);
+			else
+				solAssert(false);
+		}
+	}
+}
+
+void LibraryDependencyTracker::endVisit(Identifier const& _identifier)
+{
+	Declaration const* declaration = _identifier.annotation().referencedDeclaration;
+	auto const* contr = dynamic_cast<ContractDefinition const*>(declaration);
+	if (contr && contr->isLibrary())
+		libraryDependencies.insert(contr);
+}
+
 void FuncPtrTracker::endVisit(Identifier const& _identifier)
 {
 	Declaration const* declaration = _identifier.annotation().referencedDeclaration;
