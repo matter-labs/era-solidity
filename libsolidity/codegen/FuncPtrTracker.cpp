@@ -18,68 +18,33 @@
 
 #include <libsolidity/codegen/FuncPtrTracker.h>
 
+#include <libsolidity/ast/CallGraph.h>
+
 using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
 
-void LibraryDependencyTracker::run()
+void FuncPtrTracker::run()
 {
-	std::vector<ContractDefinition const*> worklist;
-	std::set<ContractDefinition const*> visited;
-
 	for (ContractDefinition const* base: m_contract.annotation().linearizedBaseContracts)
-		worklist.push_back(base);
+		base->accept(*this);
 
-	while (!worklist.empty())
-	{
-		ContractDefinition const* current = worklist.back();
-		worklist.pop_back();
-
-		if (visited.contains(current))
-			continue;
-
-		visited.insert(current);
-		trackDeps(*current);
-
-		for (ContractDefinition const* lib: libraryDependencies)
-		{
-			if (!visited.contains(lib))
-				worklist.push_back(lib);
-		}
-	}
+	// The call graph based visitor should track all the relevant indirect function references in the dependent
+	// libraries that the above visitor missed. Note that the call graph visitor alone will miss indirect function
+	// references in state variables.
+	ContractDefinitionAnnotation const& contrAnnotation = m_contract.annotation();
+	solAssert(contrAnnotation.creationCallGraph.set() && contrAnnotation.deployedCallGraph.set());
+	std::set<CallableDeclaration const*> reachableFuncs = (*contrAnnotation.creationCallGraph)->getFuncs();
+	reachableFuncs += (*contrAnnotation.deployedCallGraph)->getFuncs();
+	for (auto* func: reachableFuncs)
+		func->accept(*this);
 }
 
-void LibraryDependencyTracker::trackDeps(ContractDefinition const& _contract)
+void FuncPtrTracker::trackIfIndirect(Expression const& _expression, FunctionDefinition const& _referencedFunction)
 {
-	_contract.accept(*this);
-
-	for (UsingForDirective const* usingFor: _contract.usingForDirectives())
-	{
-		for (ASTPointer<IdentifierPath> idPath: usingFor->functionsOrLibrary())
-		{
-			Declaration const* decl = idPath->annotation().referencedDeclaration;
-			solAssert(decl);
-			if (auto* func = dynamic_cast<FunctionDefinition const*>(decl))
-			{
-				solAssert(func->scope());
-				auto* lib = dynamic_cast<ContractDefinition const*>(func->scope());
-				if (lib && lib->isLibrary())
-					libraryDependencies.insert(lib);
-			}
-			else if (auto lib = dynamic_cast<ContractDefinition const*>(decl))
-				libraryDependencies.insert(lib);
-			else
-				solAssert(false);
-		}
-	}
-}
-
-void LibraryDependencyTracker::endVisit(Identifier const& _identifier)
-{
-	Declaration const* declaration = _identifier.annotation().referencedDeclaration;
-	auto const* contr = dynamic_cast<ContractDefinition const*>(declaration);
-	if (contr && contr->isLibrary())
-		libraryDependencies.insert(contr);
+	if (_expression.annotation().calledDirectly)
+		return;
+	m_contract.annotation().intFuncPtrRefs.insert(&_referencedFunction);
 }
 
 void FuncPtrTracker::endVisit(Identifier const& _identifier)
@@ -94,9 +59,7 @@ void FuncPtrTracker::endVisit(Identifier const& _identifier)
 
 	solAssert(resolvedFunctionDef.functionType(true));
 	solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);
-	if (_identifier.annotation().calledDirectly)
-		return;
-	m_contract.annotation().intFuncPtrRefs.insert(&resolvedFunctionDef);
+	trackIfIndirect(_identifier, resolvedFunctionDef);
 }
 
 void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
@@ -107,8 +70,7 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 	{
 		solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static);
 		if (memberFunctionType->kind() == FunctionType::Kind::Internal)
-			m_contract.annotation().intFuncPtrRefs.insert(
-				&dynamic_cast<FunctionDefinition const&>(memberFunctionType->declaration()));
+			trackIfIndirect(_memberAccess, dynamic_cast<FunctionDefinition const&>(memberFunctionType->declaration()));
 	}
 
 	Type::Category objectCategory = _memberAccess.expression().annotation().type->category();
@@ -133,13 +95,13 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 
 				solAssert(resolvedFunctionDef.functionType(true));
 				solAssert(resolvedFunctionDef.functionType(true)->kind() == FunctionType::Kind::Internal);
-				m_contract.annotation().intFuncPtrRefs.insert(&resolvedFunctionDef);
+				trackIfIndirect(_memberAccess, resolvedFunctionDef);
 			}
 			else if (memberFunctionType && memberFunctionType->kind() == FunctionType::Kind::Internal)
 			{
 				if (auto const* function
 					= dynamic_cast<FunctionDefinition const*>(_memberAccess.annotation().referencedDeclaration))
-					m_contract.annotation().intFuncPtrRefs.insert(function);
+					trackIfIndirect(_memberAccess, *function);
 			}
 		}
 		break;
@@ -156,7 +118,7 @@ void FuncPtrTracker::endVisit(MemberAccess const& _memberAccess)
 			solAssert(funType->kind() == FunctionType::Kind::Internal);
 			solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static);
 
-			m_contract.annotation().intFuncPtrRefs.insert(function);
+			trackIfIndirect(_memberAccess, *function);
 		}
 		break;
 	}

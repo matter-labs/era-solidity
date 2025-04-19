@@ -59,12 +59,38 @@ class CycleFinder
 		if (m_processed.count(_callable))
 			return;
 
-		auto directCallees = m_callGraph.edges.find(_callable);
-		auto indirectCallees = m_callGraph.indirectEdges.find(_callable);
-		// Is _callable a leaf node?
-		if (directCallees == m_callGraph.edges.end() && indirectCallees == m_callGraph.indirectEdges.end())
+		auto callees = m_callGraph.edges.find(_callable);
+		// A leaf node?
+		if (callees == m_callGraph.edges.end())
 		{
-			solAssert(m_processing.count(_callable) == 0, "");
+			m_processed.insert(_callable);
+			return;
+		}
+
+
+		std::set<CallableDeclaration const*> allPossibleCallees;
+		for (auto callee: callees->second)
+		{
+			if (auto calleeFn = std::get_if<CallableDeclaration const*>(&callee))
+			{
+				allPossibleCallees.insert(*calleeFn);
+				continue;
+			}
+			auto specialNode = std::get<CallGraph::SpecialNode>(callee);
+			if (specialNode == CallGraph::SpecialNode::InternalDispatch)
+			{
+				auto dispatchNode = m_callGraph.edges.find(specialNode);
+				if (dispatchNode == m_callGraph.edges.end())
+					continue;
+				for (auto indirectCallee: dispatchNode->second)
+					if (auto indirectCalleeFn = std::get_if<CallableDeclaration const*>(&indirectCallee))
+						allPossibleCallees.insert(*indirectCalleeFn);
+			}
+		}
+
+		// A leaf node?
+		if (allPossibleCallees.empty())
+		{
 			m_processed.insert(_callable);
 			return;
 		}
@@ -72,18 +98,8 @@ class CycleFinder
 		m_processing.insert(_callable);
 		_path.push_back(_callable);
 
-		// Traverse all the direct and indirect callees
-		std::set<CallGraph::Node, CallGraph::CompareByID> callees;
-		if (directCallees != m_callGraph.edges.end())
-			callees.insert(directCallees->second.begin(), directCallees->second.end());
-		if (indirectCallees != m_callGraph.indirectEdges.end())
-			callees.insert(indirectCallees->second.begin(), indirectCallees->second.end());
-		for (auto const& calleeVariant: callees)
+		for (auto callee: allPossibleCallees)
 		{
-			if (!std::holds_alternative<CallableDeclaration const*>(calleeVariant))
-				continue;
-			auto* callee = std::get<CallableDeclaration const*>(calleeVariant);
-
 			if (m_processing.count(callee))
 			{
 				// Extract the cycle
