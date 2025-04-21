@@ -138,41 +138,6 @@ public:
 	}
 };
 
-void CallGraph::getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
-{
-	if (_funcs.count(_src))
-		return;
-	_funcs.insert(_src);
-
-	auto directCallees = edges.find(_src);
-	auto indirectCallees = indirectEdges.find(_src);
-	// Is _src a leaf node?
-	if (directCallees == edges.end() && indirectCallees == indirectEdges.end())
-		return;
-
-	// Traverse all the direct and indirect callees
-	std::set<CallGraph::Node, CallGraph::CompareByID> callees;
-	if (directCallees != edges.end())
-		callees.insert(directCallees->second.begin(), directCallees->second.end());
-	if (indirectCallees != indirectEdges.end())
-		callees.insert(indirectCallees->second.begin(), indirectCallees->second.end());
-
-	for (auto const& calleeVariant: callees)
-	{
-		if (!std::holds_alternative<CallableDeclaration const*>(calleeVariant))
-			continue;
-		auto* callee = std::get<CallableDeclaration const*>(calleeVariant);
-		getReachableFuncs(callee, _funcs);
-	}
-}
-
-std::set<CallableDeclaration const*> CallGraph::getReachableFuncs(CallableDeclaration const* _src) const
-{
-	std::set<CallableDeclaration const*> funcs;
-	getReachableFuncs(_src, funcs);
-	return funcs;
-}
-
 std::set<CallableDeclaration const*> CallGraph::getFuncs() const
 {
 	std::set<CallableDeclaration const*> funcs;
