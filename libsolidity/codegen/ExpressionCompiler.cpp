@@ -645,17 +645,19 @@ void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
 	std::vector<TagInfo> tagInfos;
 
 	ContractDefinitionAnnotation& contrAnnotation = m_context.mostDerivedContract().annotation();
+	std::set<CallableDeclaration const*> reachableCreationFunctions = (*contrAnnotation.creationCallGraph)->getFuncs();
+	std::set<CallableDeclaration const*> reachableRuntimeFunctions = (*contrAnnotation.deployedCallGraph)->getFuncs();
 	for (auto* intFuncPtrRef: contrAnnotation.intFuncPtrRefs)
 	{
 		// Skip unreachable functions.
 		if (m_context.runtimeContext())
 		{
-			if (!(*contrAnnotation.creationCallGraph)->getFuncs().contains(intFuncPtrRef))
+			if (!reachableCreationFunctions.contains(intFuncPtrRef))
 				continue;
 		}
 		else
 		{
-			if (!(*contrAnnotation.deployedCallGraph)->getFuncs().contains(intFuncPtrRef))
+			if (!reachableRuntimeFunctions.contains(intFuncPtrRef))
 				continue;
 		}
 		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
