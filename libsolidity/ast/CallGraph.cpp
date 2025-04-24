@@ -59,12 +59,38 @@ class CycleFinder
 		if (m_processed.count(_callable))
 			return;
 
-		auto directCallees = m_callGraph.edges.find(_callable);
-		auto indirectCallees = m_callGraph.indirectEdges.find(_callable);
-		// Is _callable a leaf node?
-		if (directCallees == m_callGraph.edges.end() && indirectCallees == m_callGraph.indirectEdges.end())
+		auto callees = m_callGraph.edges.find(_callable);
+		// A leaf node?
+		if (callees == m_callGraph.edges.end())
 		{
-			solAssert(m_processing.count(_callable) == 0, "");
+			m_processed.insert(_callable);
+			return;
+		}
+
+
+		std::set<CallableDeclaration const*> allPossibleCallees;
+		for (auto callee: callees->second)
+		{
+			if (auto calleeFn = std::get_if<CallableDeclaration const*>(&callee))
+			{
+				allPossibleCallees.insert(*calleeFn);
+				continue;
+			}
+			auto specialNode = std::get<CallGraph::SpecialNode>(callee);
+			if (specialNode == CallGraph::SpecialNode::InternalDispatch)
+			{
+				auto dispatchNode = m_callGraph.edges.find(specialNode);
+				if (dispatchNode == m_callGraph.edges.end())
+					continue;
+				for (auto indirectCallee: dispatchNode->second)
+					if (auto indirectCalleeFn = std::get_if<CallableDeclaration const*>(&indirectCallee))
+						allPossibleCallees.insert(*indirectCalleeFn);
+			}
+		}
+
+		// A leaf node?
+		if (allPossibleCallees.empty())
+		{
 			m_processed.insert(_callable);
 			return;
 		}
@@ -72,18 +98,8 @@ class CycleFinder
 		m_processing.insert(_callable);
 		_path.push_back(_callable);
 
-		// Traverse all the direct and indirect callees
-		std::set<CallGraph::Node, CallGraph::CompareByID> callees;
-		if (directCallees != m_callGraph.edges.end())
-			callees.insert(directCallees->second.begin(), directCallees->second.end());
-		if (indirectCallees != m_callGraph.indirectEdges.end())
-			callees.insert(indirectCallees->second.begin(), indirectCallees->second.end());
-		for (auto const& calleeVariant: callees)
+		for (auto callee: allPossibleCallees)
 		{
-			if (!std::holds_alternative<CallableDeclaration const*>(calleeVariant))
-				continue;
-			auto* callee = std::get<CallableDeclaration const*>(calleeVariant);
-
 			if (m_processing.count(callee))
 			{
 				// Extract the cycle
@@ -122,38 +138,18 @@ public:
 	}
 };
 
-void CallGraph::getReachableFuncs(CallableDeclaration const* _src, std::set<CallableDeclaration const*>& _funcs) const
-{
-	if (_funcs.count(_src))
-		return;
-	_funcs.insert(_src);
-
-	auto directCallees = edges.find(_src);
-	auto indirectCallees = indirectEdges.find(_src);
-	// Is _src a leaf node?
-	if (directCallees == edges.end() && indirectCallees == indirectEdges.end())
-		return;
-
-	// Traverse all the direct and indirect callees
-	std::set<CallGraph::Node, CallGraph::CompareByID> callees;
-	if (directCallees != edges.end())
-		callees.insert(directCallees->second.begin(), directCallees->second.end());
-	if (indirectCallees != indirectEdges.end())
-		callees.insert(indirectCallees->second.begin(), indirectCallees->second.end());
-
-	for (auto const& calleeVariant: callees)
-	{
-		if (!std::holds_alternative<CallableDeclaration const*>(calleeVariant))
-			continue;
-		auto* callee = std::get<CallableDeclaration const*>(calleeVariant);
-		getReachableFuncs(callee, _funcs);
-	}
-}
-
-std::set<CallableDeclaration const*> CallGraph::getReachableFuncs(CallableDeclaration const* _src) const
+std::set<CallableDeclaration const*> CallGraph::getFuncs() const
 {
 	std::set<CallableDeclaration const*> funcs;
-	getReachableFuncs(_src, funcs);
+	for (auto edge: edges)
+	{
+		Node src = edge.first;
+		if (auto srcFn = std::get_if<CallableDeclaration const*>(&src))
+			funcs.insert(*srcFn);
+		for (Node dst: edge.second)
+			if (auto dstFn = std::get_if<CallableDeclaration const*>(&dst))
+				funcs.insert(*dstFn);
+	}
 	return funcs;
 }
 
