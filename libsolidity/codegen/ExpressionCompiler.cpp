@@ -30,6 +30,7 @@
 
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTUtils.h>
+#include <libsolidity/ast/CallGraph.h>
 #include <libsolidity/ast/TypeProvider.h>
 
 #include <libevmasm/GasMeter.h>
@@ -643,8 +644,22 @@ void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
 	};
 	std::vector<TagInfo> tagInfos;
 
-	for (auto* intFuncPtrRef: m_context.mostDerivedContract().annotation().intFuncPtrRefs)
+	ContractDefinitionAnnotation& contrAnnotation = m_context.mostDerivedContract().annotation();
+	std::set<CallableDeclaration const*> reachableCreationFunctions = (*contrAnnotation.creationCallGraph)->getFuncs();
+	std::set<CallableDeclaration const*> reachableRuntimeFunctions = (*contrAnnotation.deployedCallGraph)->getFuncs();
+	for (auto* intFuncPtrRef: contrAnnotation.intFuncPtrRefs)
 	{
+		// Skip unreachable functions.
+		if (m_context.runtimeContext())
+		{
+			if (!reachableCreationFunctions.contains(intFuncPtrRef))
+				continue;
+		}
+		else
+		{
+			if (!reachableRuntimeFunctions.contains(intFuncPtrRef))
+				continue;
+		}
 		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
 		// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
 		solAssert(intFuncPtrRefType, "");

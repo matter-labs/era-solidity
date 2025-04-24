@@ -608,8 +608,8 @@ bool CompilerStack::analyzeLegacy(bool _noErrorsSoFar)
 	// Create & assign callgraphs and check for contract dependency cycles
 	if (noErrors)
 	{
-		populateFuncPtrRefs();
 		createAndAssignCallGraphs();
+		populateFuncPtrRefs();
 		annotateInternalFunctionIDs();
 		findAndReportCyclicContractDependencies();
 	}

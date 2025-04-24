@@ -123,24 +123,13 @@ Json ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 	// Get reachable functions from the call-graphs; And get cycles in the call-graphs
 	auto& creationCallGraph = _contract.annotation().creationCallGraph;
 	auto& runtimeCallGraph = _contract.annotation().deployedCallGraph;
-
 	set<CallableDeclaration const*> reachableCycleFuncs, reachableFuncs;
-
-	for (ContractDefinition const* contr: _contract.annotation().linearizedBaseContracts)
+	reachableFuncs = (*creationCallGraph)->getFuncs();
+	reachableFuncs += (*runtimeCallGraph)->getFuncs();
+	for (auto fn: reachableFuncs)
 	{
-		for (FunctionDefinition const* fn: contr->definedFunctions())
-		{
-			if (fn->isConstructor() && creationCallGraph.set())
-			{
-				reachableCycleFuncs += (*creationCallGraph)->getReachableCycleFuncs(fn);
-				reachableFuncs += (*creationCallGraph)->getReachableFuncs(fn);
-			}
-			else if (runtimeCallGraph.set())
-			{
-				reachableCycleFuncs += (*runtimeCallGraph)->getReachableCycleFuncs(fn);
-				reachableFuncs += (*runtimeCallGraph)->getReachableFuncs(fn);
-			}
-		}
+		reachableCycleFuncs += (*creationCallGraph)->getReachableCycleFuncs(fn);
+		reachableCycleFuncs += (*runtimeCallGraph)->getReachableCycleFuncs(fn);
 	}
 
 	// Record recursions in inline assembly
