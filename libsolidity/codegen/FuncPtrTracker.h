@@ -22,7 +22,6 @@
 #pragma once
 
 #include <libsolidity/ast/ASTVisitor.h>
-#include <libsolidity/codegen/CompilerContext.h>
 
 namespace solidity::frontend
 {
@@ -37,17 +36,12 @@ class FuncPtrTracker: private ASTConstVisitor
 public:
 	FuncPtrTracker(ContractDefinition const& _contract): m_contract(_contract) {}
 
-	void run()
-	{
-		for (ContractDefinition const* base: m_contract.annotation().linearizedBaseContracts)
-		{
-			base->accept(*this);
-		}
-	}
+	void run();
 
 private:
 	ContractDefinition const& m_contract;
 
+	void trackIfIndirect(Expression const& _expression, FunctionDefinition const& _referencedFunction);
 	void endVisit(Identifier const& _identifier);
 	void endVisit(MemberAccess const& _memberAccess);
 };
