@@ -502,8 +502,8 @@ bool CompilerStack::analyze()
 		// Create & assign callgraphs and check for contract dependency cycles
 		if (noErrors)
 		{
-			populateFuncPtrRefs();
 			createAndAssignCallGraphs();
+			populateFuncPtrRefs();
 			findAndReportCyclicContractDependencies();
 		}
 
