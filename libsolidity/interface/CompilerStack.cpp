@@ -270,11 +270,6 @@ bool CompilerStack::analyze()
 
 		if (noErrors)
 		{
-			populateFuncPtrRefs();
-		}
-
-		if (noErrors)
-		{
 			for (Source const* source: m_sourceOrder)
 				if (source->ast)
 					for (ASTPointer<ASTNode> const& node: source->ast->nodes())
@@ -294,6 +289,7 @@ bool CompilerStack::analyze()
 								)
 							);
 						}
+			populateFuncPtrRefs();
 		}
 
 		if (noErrors)
