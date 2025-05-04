@@ -1,2 +1,0 @@
-// ----
-// cachedObjects: 0
