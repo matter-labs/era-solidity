@@ -108,6 +108,10 @@ public:
 	/// immutable @a _variable during contract creation.
 	size_t immutableMemoryOffset(VariableDeclaration const& _variable) const;
 	size_t immutableMemoryOffsetRelative(VariableDeclaration const& _variable) const;
+	/// @returns the spill area size.
+	size_t spillAreaSize() const;
+	/// Sets the spill area size.
+	void setSpillAreaSize(size_t);
 	/// @returns the reserved memory and resets it to mark it as used.
 	/// Intended to be used only once for initializing the free memory pointer
 	/// to after the area used for immutables.
@@ -192,6 +196,9 @@ private:
 	/// This map is empty in the legacy runtime context and may be not empty in EOF runtime context.
 	std::map<VariableDeclaration const*, size_t> m_immutableVariables;
 	std::optional<size_t> m_libraryAddressImmutableOffset;
+	/// Size of the spill area in bytes. Configurable via settings.  This region is placed immediately after
+	/// CompilerUtils::generalPurposeMemoryStart, and is reserved by the backend for spilling stack slots to memory.
+	size_t m_spillAreaSize = 0;
 	/// Total amount of reserved memory. Reserved memory is used to store
 	/// immutable variables during contract creation.
 	std::optional<size_t> m_reservedMemory = {0};

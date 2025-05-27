@@ -144,6 +144,16 @@ struct OptimiserSettings
 	/// This specifies an estimate on how often each opcode in this assembly will be executed,
 	/// i.e. use a small value to optimise for size and a large value to optimise for runtime gas usage.
 	size_t expectedExecutionsPerDeployment = 200;
+	struct SpillAreaSize
+	{
+		size_t creation = 0;
+		size_t runtime = 0;
+		bool operator==(SpillAreaSize const&) const = default;
+		bool operator!=(SpillAreaSize const&) const = default;
+	};
+	/// Maps the fully qualified name of a contract to its creation and runtime spill area size (in bytes) . This is
+	/// reserved by the backend for spilling stack slots to memory.
+	std::map<std::string, SpillAreaSize> spillAreaSize;
 };
 
 }

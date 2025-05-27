@@ -129,6 +129,15 @@ void ContractCompiler::initializeContext(
 	std::map<ContractDefinition const*, std::shared_ptr<Compiler const>> const& _otherCompilers
 )
 {
+	auto spillAreaSizeFound = m_optimiserSettings.spillAreaSize.find(_contract.fullyQualifiedName());
+	if (spillAreaSizeFound != m_optimiserSettings.spillAreaSize.end())
+	{
+		// Non-null m_runtimeCompiler implies creation context.
+		size_t spillAreaSize
+			= m_runtimeCompiler ? spillAreaSizeFound->second.creation : spillAreaSizeFound->second.runtime;
+		m_context.setSpillAreaSize(spillAreaSize);
+	}
+
 	m_context.setUseABICoderV2(*_contract.sourceUnit().annotation().useABICoderV2);
 	m_context.setOtherCompilers(_otherCompilers);
 	m_context.setMostDerivedContract(_contract);

@@ -442,7 +442,7 @@ std::optional<Json> checkModelCheckerSettingsKeys(Json const& _input)
 
 std::optional<Json> checkOptimizerKeys(Json const& _input)
 {
-	static std::set<std::string> keys{"details", "enabled", "runs"};
+	static std::set<std::string> keys{"details", "enabled", "runs", "spillAreaSize"};
 	return checkKeys(_input, keys, "settings.optimizer");
 }
 
@@ -522,6 +522,34 @@ std::optional<Json> checkMetadataKeys(Json const& _input)
 	return checkKeys(_input, keys, "settings.metadata");
 }
 
+std::optional<Json> checkAndSetSpillAreaSize(Json const& _spillAreaSizeObj, OptimiserSettings& _settings)
+{
+	if (!_spillAreaSizeObj.empty() && !_spillAreaSizeObj.is_object())
+		return formatFatalError(Error::Type::JSONError, "\"settings.optimizer.spillAreaSize\" must be an object");
+
+	for (auto const& [contractName, contractVal]: _spillAreaSizeObj.items())
+	{
+		if (auto result
+			= checkKeys(contractVal, {"creation", "runtime"}, "settings.optimizer.spillAreaSize" + contractName))
+			return *result;
+
+		if (!contractVal["creation"].is_number_unsigned())
+			return formatFatalError(
+				Error::Type::JSONError,
+				"\"settings.optimizer.spillAreaSize" + contractName + ".creation\" must be an unsigned number");
+		if (!contractVal["runtime"].is_number_unsigned())
+			return formatFatalError(
+				Error::Type::JSONError,
+				"\"settings.optimizer.spillAreaSize" + contractName + ".runtime\" must be an unsigned number");
+
+		auto& spillAreaSize = _settings.spillAreaSize[contractName];
+		spillAreaSize.creation = ((contractVal["creation"].get<size_t>() + 31) / 32) * 32;
+		spillAreaSize.runtime = ((contractVal["runtime"].get<size_t>() + 31) / 32) * 32;
+	}
+
+	return std::nullopt;
+}
+
 std::optional<Json> checkOutputSelection(Json const& _outputSelection)
 {
 	if (!_outputSelection.empty() && !_outputSelection.is_object())
@@ -587,6 +615,10 @@ std::variant<OptimiserSettings, Json> parseOptimizerSettings(std::string_view co
 			return formatFatalError(Error::Type::JSONError, "The \"runs\" setting must be an unsigned number.");
 		settings.expectedExecutionsPerDeployment = _jsonInput["runs"].get<size_t>();
 	}
+
+	if (_jsonInput.contains("spillAreaSize"))
+		if (auto jsonError = checkAndSetSpillAreaSize(_jsonInput["spillAreaSize"], settings))
+			return *jsonError;
 
 	if (_jsonInput.contains("details"))
 	{

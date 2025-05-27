@@ -92,6 +92,12 @@ public:
 	/// @returns a list of slot names referring to the stack slots of an immutable variable.
 	static std::vector<std::string> immutableVariableSlotNames(VariableDeclaration const& _variable);
 
+	/// @returns the spill area size.
+	size_t spillAreaSize() const;
+
+	/// Sets the spill area size.
+	void setSpillAreaSize(size_t s);
+
 	/// @returns the reserved memory and resets it to mark it as used.
 	size_t reservedMemory();
 
@@ -397,6 +403,9 @@ private:
 	std::map<Declaration const*, std::pair<u256, unsigned>> m_stateVariables;
 	/// Memory offsets reserved for the values of immutable variables during contract creation.
 	std::map<VariableDeclaration const*, size_t> m_immutableVariables;
+	/// Size of the spill area in bytes. Configurable via settings.  This region is placed immediately after
+	/// CompilerUtils::generalPurposeMemoryStart, and is reserved by the backend for spilling stack slots to memory.
+	size_t m_spillAreaSize = 0;
 	/// Total amount of reserved memory. Reserved memory is used to store immutable variables during contract creation.
 	/// This has to be finalized before initialiseFreeMemoryPointer() is called. That function
 	/// will reset the optional to verify that.

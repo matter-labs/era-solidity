@@ -53,9 +53,10 @@ static_assert(CompilerUtils::generalPurposeMemoryStart >= CompilerUtils::zeroPoi
 
 void CompilerUtils::initialiseFreeMemoryPointer()
 {
+	size_t spillAreaSize = m_context.spillAreaSize();
 	size_t reservedMemory = m_context.reservedMemory();
-	solAssert(bigint(generalPurposeMemoryStart) + bigint(reservedMemory) < bigint(1) << 63);
-	m_context << (u256(generalPurposeMemoryStart) + reservedMemory);
+	solAssert(bigint(generalPurposeMemoryStart) + bigint(spillAreaSize) + bigint(reservedMemory) < bigint(1) << 63);
+	m_context << (u256(generalPurposeMemoryStart) + spillAreaSize + reservedMemory);
 	storeFreeMemoryPointer();
 }
 

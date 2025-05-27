@@ -94,7 +94,7 @@ void IRGenerationContext::registerImmutableVariable(VariableDeclaration const& _
 		"Only immutable variables of value type are supported."
 	);
 	solAssert(m_reservedMemory.has_value(), "Reserved memory has already been reset.");
-	m_immutableVariables[&_variable] = CompilerUtils::generalPurposeMemoryStart + *m_reservedMemory;
+	m_immutableVariables[&_variable] = CompilerUtils::generalPurposeMemoryStart + spillAreaSize() + *m_reservedMemory;
 	solAssert(_variable.annotation().type->memoryHeadSize() == 32, "Memory writes might overlap.");
 	*m_reservedMemory += _variable.annotation().type->memoryHeadSize();
 }
@@ -111,9 +111,13 @@ size_t IRGenerationContext::immutableMemoryOffset(VariableDeclaration const& _va
 size_t IRGenerationContext::immutableMemoryOffsetRelative(VariableDeclaration const& _variable) const
 {
 	auto const absoluteOffset = immutableMemoryOffset(_variable);
-	solAssert(absoluteOffset >= CompilerUtils::generalPurposeMemoryStart);
-	return absoluteOffset - CompilerUtils::generalPurposeMemoryStart;
+	solAssert(absoluteOffset >= CompilerUtils::generalPurposeMemoryStart + spillAreaSize());
+	return absoluteOffset - (CompilerUtils::generalPurposeMemoryStart + spillAreaSize());
 }
+
+size_t IRGenerationContext::spillAreaSize() const { return m_spillAreaSize; }
+
+void IRGenerationContext::setSpillAreaSize(size_t s) { m_spillAreaSize = s; }
 
 size_t IRGenerationContext::reservedMemorySize() const
 {
@@ -126,7 +130,7 @@ void IRGenerationContext::registerLibraryAddressImmutable()
 	solAssert(m_executionContext != ExecutionContext::Deployed);
 	solAssert(m_reservedMemory.has_value(), "Reserved memory has already been reset.");
 	solAssert(!m_libraryAddressImmutableOffset.has_value());
-	m_libraryAddressImmutableOffset = CompilerUtils::generalPurposeMemoryStart + *m_reservedMemory;
+	m_libraryAddressImmutableOffset = CompilerUtils::generalPurposeMemoryStart + spillAreaSize() + *m_reservedMemory;
 	*m_reservedMemory += 32;
 }
 
@@ -139,8 +143,8 @@ size_t IRGenerationContext::libraryAddressImmutableOffset() const
 size_t IRGenerationContext::libraryAddressImmutableOffsetRelative() const
 {
 	solAssert(m_libraryAddressImmutableOffset.has_value());
-	solAssert(m_libraryAddressImmutableOffset >= CompilerUtils::generalPurposeMemoryStart);
-	return *m_libraryAddressImmutableOffset - CompilerUtils::generalPurposeMemoryStart;
+	solAssert(m_libraryAddressImmutableOffset >= CompilerUtils::generalPurposeMemoryStart + spillAreaSize());
+	return *m_libraryAddressImmutableOffset - (CompilerUtils::generalPurposeMemoryStart + spillAreaSize());
 }
 
 size_t IRGenerationContext::reservedMemory()
