@@ -27,27 +27,31 @@ using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
 
-class InlineAsmRecursiveFuncRecorder: public ASTConstVisitor
+class FuncFinder: public yul::ASTWalker
 {
 public:
-	void run() { m_func.accept(*this); }
+	using ASTWalker::operator();
 
-	InlineAsmRecursiveFuncRecorder(
-		CallableDeclaration const& _func,
-		CompilerContext const& _context,
-		CompilerContext const& _runtimeContext,
-		Json& _recFuncs)
-		: m_func(_func), m_context(_context), m_runtimeContext(_runtimeContext), m_recFuncs(_recFuncs)
+	vector<yul::FunctionDefinition const*> funcs;
+	void operator()(yul::FunctionDefinition const& _func) { funcs.push_back(&_func); }
+};
+
+class InlineAsmFuncRecorder: public ASTConstVisitor
+{
+public:
+	void run(CallableDeclaration const& _func) { _func.accept(*this); }
+
+	InlineAsmFuncRecorder(CompilerContext const& _context, CompilerContext const& _runtimeContext, Json& _funcs)
+		: m_context(_context), m_runtimeContext(_runtimeContext), m_funcs(_funcs)
 	{
 	}
 
 private:
-	CallableDeclaration const& m_func;
 	CompilerContext const& m_context;
 	CompilerContext const& m_runtimeContext;
-	Json& m_recFuncs;
+	Json& m_funcs;
 
-	// Record recursions in @_asm for the extra metadata
+	// Record functions in @_asm for the extra metadata
 	void record(InlineAssembly const& _p_asm, CompilerContext const& _context)
 	{
 		auto findRes = _context.findInlineAsmContextMapping(&_p_asm);
@@ -55,28 +59,20 @@ private:
 			return;
 		yul::CodeTransformContext const& yulContext = *findRes;
 
-		set<yul::FunctionHandle> recFuncs;
+		FuncFinder funcFinder;
 		if (_p_asm.annotation().optimizedOperations)
-		{
-			yul::Block const& code = _p_asm.annotation().optimizedOperations->root();
-			recFuncs = yul::CallGraphGenerator::callGraph(code).recursiveFunctions();
-		}
+			funcFinder(_p_asm.annotation().optimizedOperations->root());
 		else
+			funcFinder(_p_asm.operations().root());
+		for (auto fn: funcFinder.funcs)
 		{
-			recFuncs = yul::CallGraphGenerator::callGraph(_p_asm.operations().root()).recursiveFunctions();
-		}
-		for (auto recFunc: recFuncs)
-		{
-			auto findIt = yulContext.functionInfoMap.find(recFunc);
+			auto findIt = yulContext.functionInfoMap.find(fn->name);
 			if (findIt == yulContext.functionInfoMap.end())
 				continue;
 			for (auto& func: findIt->second)
 			{
 				Json record = Json::object();
-				if (auto* builtin = std::get_if<yul::YulString>(&recFunc))
-					record["name"] = builtin->str();
-				else
-					solAssert(false, "Invalid callgraph");
+				record["name"] = fn->name.str();
 				if (_context.runtimeContext())
 					record["creationTag"] = Json(static_cast<Json::number_integer_t>(func.label));
 				else
@@ -84,7 +80,7 @@ private:
 				record["totalParamSize"] = Json(static_cast<Json::number_integer_t>(func.ast->parameters.size()));
 				record["totalRetParamSize"]
 					= Json(static_cast<Json::number_integer_t>(func.ast->returnVariables.size()));
-				m_recFuncs.push_back(record);
+				m_funcs.push_back(record);
 			}
 		}
 	}
@@ -99,7 +95,7 @@ private:
 Json ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 {
 	// Set "recursiveFunctions"
-	Json recFuncs = Json::array();
+	Json funcs = Json::array();
 
 	// Record recursions in low level calls
 	auto recordRecursiveLowLevelFuncs = [&](CompilerContext const& _context)
@@ -114,35 +110,29 @@ Json ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 				func["runtimeTag"] = fn.tag;
 			func["totalParamSize"] = fn.ins;
 			func["totalRetParamSize"] = fn.outs;
-			recFuncs.push_back(func);
+			funcs.push_back(func);
 		}
 	};
 	recordRecursiveLowLevelFuncs(m_context);
 	recordRecursiveLowLevelFuncs(m_runtimeContext);
 
-	// Get reachable functions from the call-graphs; And get cycles in the call-graphs
+	// Get reachable functions from the call-graphs
 	auto& creationCallGraph = _contract.annotation().creationCallGraph;
 	auto& runtimeCallGraph = _contract.annotation().deployedCallGraph;
-	set<CallableDeclaration const*> reachableCycleFuncs, reachableFuncs;
+	set<CallableDeclaration const*> reachableFuncs;
 	reachableFuncs = (*creationCallGraph)->getFuncs();
 	reachableFuncs += (*runtimeCallGraph)->getFuncs();
-	for (auto fn: reachableFuncs)
-	{
-		reachableCycleFuncs += (*creationCallGraph)->getReachableCycleFuncs(fn);
-		reachableCycleFuncs += (*runtimeCallGraph)->getReachableCycleFuncs(fn);
-	}
 
-	// Record recursions in inline assembly
+	// Record functions in inline assembly
 	for (auto* fn: reachableFuncs)
 	{
-		InlineAsmRecursiveFuncRecorder inAsmRecorder{*fn, m_context, m_runtimeContext, recFuncs};
-		inAsmRecorder.run();
+		InlineAsmFuncRecorder recorder{m_context, m_runtimeContext, funcs};
+		recorder.run(*fn);
 	}
 
-	// Record recursions in the solidity source
-	auto recordRecursiveSolFuncs = [&](CompilerContext const& _context)
+	auto recordFuncs = [&](CompilerContext const& _context)
 	{
-		for (auto* fn: reachableCycleFuncs)
+		for (auto* fn: reachableFuncs)
 		{
 			evmasm::AssemblyItem const& tag = _context.functionEntryLabelIfExists(*fn);
 			if (tag == evmasm::AssemblyItem(evmasm::UndefinedItem))
@@ -166,13 +156,13 @@ Json ExtraMetadataRecorder::run(ContractDefinition const& _contract)
 				totalRetParamSize += param->type()->sizeOnStack();
 			func["totalRetParamSize"] = totalRetParamSize;
 
-			recFuncs.push_back(func);
+			funcs.push_back(func);
 		}
 	};
-	recordRecursiveSolFuncs(m_context);
-	recordRecursiveSolFuncs(m_runtimeContext);
+	recordFuncs(m_context);
+	recordFuncs(m_runtimeContext);
 
-	if (!recFuncs.empty())
-		m_metadata["recursiveFunctions"] = recFuncs;
+	if (!funcs.empty())
+		m_metadata["recursiveFunctions"] = funcs;
 	return m_metadata;
 }

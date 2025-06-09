@@ -37,7 +37,8 @@ class ExtraMetadataRecorder
 	CompilerContext const& m_runtimeContext;
 	/// The root JSON value of the metadata
 	/// Current mappings:
-	/// - "recursiveFunctions": array of functions involved in recursion
+	/// - "recursiveFunctions": tracks the name, tag, size of ins and outs all reachable user defined functions. This is
+	/// a misnomer for historical (zksolc/solx developement) reasons.
 	Json m_metadata;
 
 public:
