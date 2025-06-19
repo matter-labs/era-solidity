@@ -382,6 +382,16 @@ CompilerContext& CompilerContext::appendConditionalRevert(bool _forwardReturnDat
 	return *this;
 }
 
+void CompilerContext::appendDupX(size_t _depth)
+{
+	m_asm->appendDupX(_depth);
+}
+
+void CompilerContext::appendSwapX(size_t _depth)
+{
+	m_asm->appendSwapX(_depth);
+}
+
 void CompilerContext::resetVisitedNodes(ASTNode const* _node)
 {
 	std::stack<ASTNode const*> newStack;
@@ -431,17 +441,11 @@ void CompilerContext::appendInlineAssembly(
 		size_t stackDiff = static_cast<size_t>(_assembly.stackHeight()) - startStackHeight + stackDepth;
 		if (_context == yul::IdentifierContext::LValue)
 			stackDiff -= 1;
-		if (stackDiff < 1 || stackDiff > 16)
-			BOOST_THROW_EXCEPTION(
-				StackTooDeepError() <<
-				errinfo_sourceLocation(nativeLocationOf(_identifier)) <<
-				util::errinfo_comment(util::stackTooDeepString)
-			);
 		if (_context == yul::IdentifierContext::RValue)
-			_assembly.appendInstruction(dupInstruction(static_cast<unsigned>(stackDiff)));
+			_assembly.appendDupX(static_cast<unsigned>(stackDiff));
 		else
 		{
-			_assembly.appendInstruction(swapInstruction(static_cast<unsigned>(stackDiff)));
+			_assembly.appendSwapX(static_cast<unsigned>(stackDiff));
 			_assembly.appendInstruction(Instruction::POP);
 		}
 	};

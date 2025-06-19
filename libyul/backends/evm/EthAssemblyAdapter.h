@@ -77,6 +77,9 @@ public:
 	void appendSwapN(size_t _depth) override;
 	void appendDupN(size_t _depth) override;
 
+	void appendSwapX(size_t _depth) override;
+	void appendDupX(size_t _depth) override;
+
 	void markAsInvalid() override;
 
 	langutil::EVMVersion evmVersion() const override;

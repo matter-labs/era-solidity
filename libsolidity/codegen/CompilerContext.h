@@ -239,6 +239,8 @@ public:
 	evmasm::AssemblyItem addSubroutine(evmasm::AssemblyPointer const& _assembly) { return m_asm->appendSubroutine(_assembly); }
 	/// Pushes the size of the subroutine.
 	void pushSubroutineSize(size_t _subRoutine) { m_asm->pushSubroutineSize(_subRoutine); }
+	void appendDupX(size_t _number);
+	void appendSwapX(size_t _number);
 	/// Pushes the offset of the subroutine.
 	void pushSubroutineOffset(size_t _subRoutine) { m_asm->pushSubroutineOffset(_subRoutine); }
 	/// Pushes the size of the final program
@@ -264,6 +266,13 @@ public:
 	/// Append elements to the current instruction list and adjust @a m_stackOffset.
 	CompilerContext& operator<<(evmasm::AssemblyItem const& _item) { m_asm->append(_item); return *this; }
 	CompilerContext& operator<<(evmasm::Instruction _instruction) { m_asm->append(_instruction); return *this; }
+	CompilerContext& operator<<(std::pair<evmasm::Instruction, std::optional<uint64_t>> _i)
+	{
+		if (_i.second)
+			m_asm->append(evmasm::AssemblyItem(u256(*_i.second)));
+		m_asm->append(_i.first);
+		return *this;
+	}
 	CompilerContext& operator<<(u256 const& _value) { m_asm->append(_value); return *this; }
 	CompilerContext& operator<<(bytes const& _data) { m_asm->append(_data); return *this; }
 

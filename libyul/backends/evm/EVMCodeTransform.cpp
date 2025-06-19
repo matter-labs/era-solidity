@@ -179,14 +179,12 @@ void CodeTransform::operator()(VariableDeclaration const& _varDecl)
 			bool foundUnusedSlot = false;
 			for (auto it = m_unusedStackSlots.begin(); it != m_unusedStackSlots.end(); ++it)
 			{
-				if (m_assembly.stackHeight() - *it > 17)
-					continue;
 				foundUnusedSlot = true;
 				auto slot = static_cast<size_t>(*it);
 				m_unusedStackSlots.erase(it);
 				m_context->variableStackHeights[&var] = slot;
 				if (size_t heightDiff = variableHeightDiff(var, varName, true))
-					m_assembly.appendInstruction(evmasm::swapInstruction(static_cast<unsigned>(heightDiff - 1)));
+					m_assembly.appendSwapX(static_cast<unsigned>(heightDiff - 1));
 				m_assembly.appendInstruction(evmasm::Instruction::POP);
 				break;
 			}
@@ -274,7 +272,7 @@ void CodeTransform::operator()(Identifier const& _identifier)
 			// TODO: opportunity for optimization: Do not DUP if this is the last reference
 			// to the top most element of the stack
 			if (size_t heightDiff = variableHeightDiff(_var, _identifier.name, false))
-				m_assembly.appendInstruction(evmasm::dupInstruction(static_cast<unsigned>(heightDiff)));
+				m_assembly.appendDupX(static_cast<unsigned>(heightDiff));
 			else
 				// Store something to balance the stack
 				m_assembly.appendConstant(u256(0));
@@ -328,7 +326,7 @@ void CodeTransform::operator()(Switch const& _switch)
 			AbstractAssembly::LabelID bodyLabel = m_assembly.newLabelId();
 			caseBodies[&c] = bodyLabel;
 			yulAssert(m_assembly.stackHeight() == expressionHeight + 1, "");
-			m_assembly.appendInstruction(evmasm::dupInstruction(2));
+			m_assembly.appendInstruction(evmasm::legacyDupInstruction(2));
 			m_assembly.appendInstruction(evmasm::Instruction::EQ);
 			m_assembly.appendJumpToIf(bodyLabel);
 		}
@@ -454,21 +452,6 @@ void CodeTransform::operator()(FunctionDefinition const& _function)
 				&std::get<Scope::Variable>(virtualFunctionScope->identifiers.at(returnVariable.name))
 			)) = static_cast<int>(n);
 
-		if (stackLayout.size() > 17)
-		{
-			StackTooDeepError error(
-				_function.name,
-				YulName{},
-				static_cast<int>(stackLayout.size()) - 17,
-				"The function " +
-				_function.name.str() +
-				" has " +
-				std::to_string(stackLayout.size() - 17) +
-				" parameters or return variables too many to fit the stack size."
-			);
-			stackError(std::move(error), m_assembly.stackHeight() - static_cast<int>(_function.parameters.size()));
-		}
-		else
 		{
 			while (!stackLayout.empty() && stackLayout.back() != static_cast<int>(stackLayout.size() - 1))
 				if (stackLayout.back() < 0)
@@ -478,7 +461,7 @@ void CodeTransform::operator()(FunctionDefinition const& _function)
 				}
 				else
 				{
-					m_assembly.appendInstruction(evmasm::swapInstruction(static_cast<unsigned>(stackLayout.size()) - static_cast<unsigned>(stackLayout.back()) - 1u));
+					m_assembly.appendSwapX(static_cast<unsigned>(stackLayout.size()) - static_cast<unsigned>(stackLayout.back()) - 1u);
 					std::swap(stackLayout[static_cast<size_t>(stackLayout.back())], stackLayout.back());
 				}
 			for (size_t i = 0; i < stackLayout.size(); ++i)
@@ -761,7 +744,7 @@ void CodeTransform::generateAssignment(Identifier const& _variableName)
 	{
 		Scope::Variable const& _var = std::get<Scope::Variable>(*var);
 		if (size_t heightDiff = variableHeightDiff(_var, _variableName.name, true))
-			m_assembly.appendInstruction(evmasm::swapInstruction(static_cast<unsigned>(heightDiff - 1)));
+			m_assembly.appendSwapX(static_cast<unsigned>(heightDiff - 1));
 		m_assembly.appendInstruction(evmasm::Instruction::POP);
 		decreaseReference(_variableName.name, _var);
 	}
@@ -777,25 +760,10 @@ void CodeTransform::generateAssignment(Identifier const& _variableName)
 
 size_t CodeTransform::variableHeightDiff(Scope::Variable const& _var, YulName _varName, bool _forSwap)
 {
+	(void) _varName;
 	yulAssert(m_context->variableStackHeights.count(&_var), "");
 	size_t heightDiff = static_cast<size_t>(m_assembly.stackHeight()) - m_context->variableStackHeights[&_var];
 	yulAssert(heightDiff > (_forSwap ? 1 : 0), "Negative stack difference for variable.");
-	size_t limit = _forSwap ? 17 : 16;
-	if (heightDiff > limit)
-	{
-		m_stackErrors.emplace_back(
-			_varName,
-			heightDiff - limit,
-			"Variable " +
-			_varName.str() +
-			" is " +
-			std::to_string(heightDiff - limit) +
-			" slot(s) too deep inside the stack. " +
-			stackTooDeepString
-		);
-		m_assembly.markAsInvalid();
-		return _forSwap ? 2 : 1;
-	}
 	return heightDiff;
 }
 

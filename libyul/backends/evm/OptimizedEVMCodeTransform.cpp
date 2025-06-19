@@ -397,24 +397,12 @@ void OptimizedEVMCodeTransform::createStackLayout(langutil::DebugData::ConstPtr 
 
 void OptimizedEVMCodeTransform::appendSwap(size_t _depth)
 {
-	if (_depth <= 16)
-		m_assembly.appendInstruction(evmasm::swapInstruction(static_cast<unsigned>(_depth)));
-	else
-	{
-		yulAssert(_depth <= m_reachableStackDepth);
-		m_assembly.appendSwapN(_depth);
-	}
+	m_assembly.appendSwapX(static_cast<unsigned>(_depth));
 }
 
 void OptimizedEVMCodeTransform::appendDup(size_t _depth)
 {
-	if (_depth <= 16)
-		m_assembly.appendInstruction(evmasm::dupInstruction(static_cast<unsigned>(_depth)));
-	else
-	{
-		yulAssert(_depth <= m_reachableStackDepth);
-		m_assembly.appendDupN(_depth);
-	}
+	m_assembly.appendDupX(static_cast<unsigned>(_depth));
 }
 
 void OptimizedEVMCodeTransform::operator()(CFG::BasicBlock const& _block)

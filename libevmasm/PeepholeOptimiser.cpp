@@ -170,7 +170,7 @@ struct OpReturnRevert: SimplePeepholeOptimizerMethod<OpReturnRevert>
 		if (
 			(_returnRevert == Instruction::RETURN || _returnRevert == Instruction::REVERT) &&
 			_push.type() == Push &&
-			(_pushOrDup.type() == Push || _pushOrDup == dupInstruction(1))
+			(_pushOrDup.type() == Push || _pushOrDup == legacyDupInstruction(1))
 		)
 			if (
 				(_op.type() == Operation && !instructionInfo(_op.instruction(), langutil::EVMVersion()).sideEffects) ||

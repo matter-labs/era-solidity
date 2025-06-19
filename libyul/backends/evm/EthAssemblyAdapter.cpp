@@ -242,6 +242,15 @@ void EthAssemblyAdapter::appendDupN(size_t _depth)
 	m_assembly.appendDupN(_depth);
 }
 
+void EthAssemblyAdapter::appendSwapX(size_t _depth)
+{
+	m_assembly.appendSwapX(_depth);
+}
+
+void EthAssemblyAdapter::appendDupX(size_t _depth)
+{
+	m_assembly.appendDupX(_depth);
+}
 
 void EthAssemblyAdapter::markAsInvalid()
 {

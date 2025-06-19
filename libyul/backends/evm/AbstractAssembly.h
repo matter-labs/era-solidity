@@ -156,6 +156,9 @@ public:
 	/// @arg _depth ranges from 1 to 256.
 	virtual void appendDupN(size_t _depth) = 0;
 
+	virtual void appendSwapX(size_t _depth) = 0;
+	virtual void appendDupX(size_t _depth) = 0;
+
 	/// Mark this assembly as invalid. Any attempt to request bytecode from it should throw.
 	virtual void markAsInvalid() = 0;
 

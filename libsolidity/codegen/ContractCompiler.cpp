@@ -682,12 +682,6 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
 	for (size_t i = 0; i < c_returnValuesSize; ++i)
 		stackLayout.push_back(static_cast<int>(i));
 
-	if (stackLayout.size() > 17)
-		BOOST_THROW_EXCEPTION(
-			StackTooDeepError() <<
-			errinfo_sourceLocation(_function.location()) <<
-			util::errinfo_comment(util::stackTooDeepString)
-		);
 	while (!stackLayout.empty() && stackLayout.back() != static_cast<int>(stackLayout.size() - 1))
 		if (stackLayout.back() < 0)
 		{
@@ -696,7 +690,7 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
 		}
 		else
 		{
-			m_context << swapInstruction(static_cast<unsigned>(stackLayout.size()) - static_cast<unsigned>(stackLayout.back()) - 1u);
+			m_context.appendSwapX(static_cast<unsigned>(stackLayout.size()) - static_cast<unsigned>(stackLayout.back()) - 1u);
 			std::swap(stackLayout[static_cast<size_t>(stackLayout.back())], stackLayout.back());
 		}
 	for (size_t i = 0; i < stackLayout.size(); ++i)
@@ -866,13 +860,7 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 					}
 					else
 						solAssert(variable->type()->sizeOnStack() == 1, "");
-					if (stackDiff < 1 || stackDiff > 16)
-						BOOST_THROW_EXCEPTION(
-							StackTooDeepError() <<
-							errinfo_sourceLocation(_inlineAssembly.location()) <<
-							util::errinfo_comment(util::stackTooDeepString)
-						);
-					_assembly.appendInstruction(dupInstruction(stackDiff));
+					_assembly.appendDupX(stackDiff);
 				}
 				else
 					solAssert(false, "");
@@ -940,13 +928,7 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 			else
 				solAssert(suffix.empty(), "");
 
-			if (stackDiff > 16 || stackDiff < 1)
-				BOOST_THROW_EXCEPTION(
-					StackTooDeepError() <<
-					errinfo_sourceLocation(_inlineAssembly.location()) <<
-					util::errinfo_comment(util::stackTooDeepString)
-				);
-			_assembly.appendInstruction(swapInstruction(stackDiff));
+			_assembly.appendSwapX(stackDiff);
 			_assembly.appendInstruction(Instruction::POP);
 		}
 	};

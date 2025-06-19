@@ -782,6 +782,30 @@ AssemblyItem Assembly::newDupN(size_t _depth) const
 	return AssemblyItem::dupN(_depth);
 }
 
+void Assembly::appendSwapX(size_t _depth)
+{
+	solAssert(_depth > 0);
+	if (_depth <= 16)
+	{
+		append(evmasm::legacySwapInstruction(static_cast<unsigned>(_depth)));
+		return;
+	}
+	append(evmasm::AssemblyItem(u256(_depth)));
+	append(evmasm::AssemblyItem(evmasm::Instruction::SWAPX));
+}
+
+void Assembly::appendDupX(size_t _depth)
+{
+	solAssert(_depth > 0);
+	if (_depth <= 16)
+	{
+		append(evmasm::legacyDupInstruction(static_cast<unsigned>(_depth)));
+		return;
+	}
+	append(evmasm::AssemblyItem(u256(_depth)));
+	append(evmasm::AssemblyItem(evmasm::Instruction::DUPX));
+}
+
 Assembly& Assembly::optimise(OptimiserSettings const& _settings)
 {
 	(void) _settings;

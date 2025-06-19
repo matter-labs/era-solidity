@@ -92,6 +92,8 @@ public:
 	void appendReturnContract(ContainerID) override;
 	void appendSwapN(size_t) override {}
 	void appendDupN(size_t) override;
+	void appendSwapX(size_t) override {}
+	void appendDupX(size_t) override { m_stackHeight++; }
 
 	void markAsInvalid() override {}
 

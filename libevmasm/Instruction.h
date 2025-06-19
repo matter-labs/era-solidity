@@ -192,6 +192,8 @@ enum class Instruction: uint8_t
 	JUMPF = 0xe5,             ///< jump to a code section of EOF container without adding a new return stack frame.
 	DUPN = 0xe6,              ///< copies a value at the stack depth given as immediate argument to the top of the stack
 	SWAPN = 0xe7,             ///< swaps the highest value with a value at a stack depth given as immediate argument
+	DUPX = 0xe8,
+	SWAPX = 0xe9,
 	EOFCREATE = 0xec,         ///< create a new account with associated container code.
 	RETURNCONTRACT = 0xee,    ///< return container to be deployed with axiliary data filled in.
 	CREATE = 0xf0,            ///< create a new account with associated code
@@ -260,17 +262,33 @@ inline Instruction pushInstruction(unsigned _number)
 }
 
 /// @returns the DUP<_number> instruction
-inline Instruction dupInstruction(unsigned _number)
+inline Instruction legacyDupInstruction(unsigned _number)
 {
 	solAssert(1 <= _number && _number <= 16);
 	return Instruction(unsigned(Instruction::DUP1) + _number - 1);
 }
 
+inline std::pair<Instruction, std::optional<uint64_t>> dupInstruction(unsigned _number)
+{
+	solAssert(_number > 0);
+	if (_number <= 16)
+		return std::make_pair(Instruction(unsigned(Instruction::DUP1) + _number - 1), std::nullopt);
+	return std::make_pair(Instruction(Instruction::DUPX), _number);
+}
+
 /// @returns the SWAP<_number> instruction
-inline Instruction swapInstruction(unsigned _number)
+inline Instruction legacySwapInstruction(unsigned _number)
 {
 	solAssert(1 <= _number && _number <= 16);
 	return Instruction(unsigned(Instruction::SWAP1) + _number - 1);
+}
+
+inline std::pair<Instruction, std::optional<uint64_t>> swapInstruction(unsigned _number)
+{
+	solAssert(_number > 0);
+	if (_number <= 16)
+		return std::make_pair(Instruction(unsigned(Instruction::SWAP1) + _number - 1), std::nullopt);
+	return std::make_pair(Instruction(Instruction::SWAPX), _number);
 }
 
 /// @returns the LOG<_number> instruction
