@@ -382,14 +382,14 @@ CompilerContext& CompilerContext::appendConditionalRevert(bool _forwardReturnDat
 	return *this;
 }
 
-void CompilerContext::appendDupX(size_t _depth)
+void CompilerContext::appendDupX(size_t _number)
 {
-	m_asm->appendDupX(_depth);
+	m_asm->appendDupX(_number);
 }
 
-void CompilerContext::appendSwapX(size_t _depth)
+void CompilerContext::appendSwapX(size_t _number)
 {
-	m_asm->appendSwapX(_depth);
+	m_asm->appendSwapX(_number);
 }
 
 void CompilerContext::resetVisitedNodes(ASTNode const* _node)

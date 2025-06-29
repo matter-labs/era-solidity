@@ -106,8 +106,8 @@ public:
 	void appendAuxDataLoadN(uint16_t _offset) { append(newAuxDataLoadN(_offset));}
 	void appendSwapN(size_t _depth) { append(newSwapN(_depth)); }
 	void appendDupN(size_t _depth) { append(newDupN(_depth)); }
-	void appendSwapX(size_t _depth);
-	void appendDupX(size_t _depth);
+	void appendSwapX(size_t _number);
+	void appendDupX(size_t _number);
 
 	void appendVerbatim(bytes _data, size_t _arguments, size_t _returnVariables)
 	{
