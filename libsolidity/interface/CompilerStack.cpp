@@ -37,6 +37,7 @@
 #include <libsolidity/analysis/NameAndTypeResolver.h>
 #include <libsolidity/analysis/PostTypeChecker.h>
 #include <libsolidity/analysis/PostTypeContractLevelChecker.h>
+#include <libsolidity/analysis/SpillAreaSafetyChecker.h>
 #include <libsolidity/analysis/StaticAnalyzer.h>
 #include <libsolidity/analysis/SyntaxChecker.h>
 #include <libsolidity/analysis/Scoper.h>
@@ -583,6 +584,11 @@ bool CompilerStack::analyzeLegacy(bool _noErrorsSoFar)
 	TypeChecker typeChecker(m_evmVersion, m_eofVersion, m_errorReporter);
 	for (Source const* source: m_sourceOrder)
 		if (source->ast && !typeChecker.checkTypeRequirements(*source->ast))
+			noErrors = false;
+
+	SpillAreaSafetyChecker spillAreaSafetyChecker(m_optimiserSettings, m_errorReporter);
+	for (Source const* source: m_sourceOrder)
+		if (source->ast && !spillAreaSafetyChecker.check(*source->ast))
 			noErrors = false;
 
 	if (noErrors)
