@@ -63,6 +63,7 @@ bool SpillAreaSafetyChecker::visit(InlineAssembly const& _inlineAsm)
 			5726_error,
 			_inlineAsm.location(),
 			"memory-unsafe assembly is not supported when spilling is enabled due to stack-too-deep. Make the "
-			"assembly memory-safe to fix this.");
+			"assembly memory-safe to fix this. See "
+			"https://docs.soliditylang.org/en/latest/assembly.html#memory-safety");
 	return true;
 }
