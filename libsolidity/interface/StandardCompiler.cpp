@@ -620,6 +620,9 @@ std::variant<OptimiserSettings, Json> parseOptimizerSettings(std::string_view co
 		if (auto jsonError = checkAndSetSpillAreaSize(_jsonInput["spillAreaSize"], settings))
 			return *jsonError;
 
+	settings.runYulOptimiser = false;
+	settings.optimizeStackAllocation = false;
+
 	if (_jsonInput.contains("details"))
 	{
 		Json const& details = _jsonInput["details"];
@@ -639,8 +642,6 @@ std::variant<OptimiserSettings, Json> parseOptimizerSettings(std::string_view co
 		if (auto error = checkOptimizerDetail(details, "cse", settings.runCSE))
 			return *error;
 		if (auto error = checkOptimizerDetail(details, "constantOptimizer", settings.runConstantOptimiser))
-			return *error;
-		if (auto error = checkOptimizerDetail(details, "yul", settings.runYulOptimiser))
 			return *error;
 		if (auto error = checkOptimizerDetail(details, "simpleCounterForLoopUncheckedIncrement", settings.simpleCounterForLoopUncheckedIncrement))
 			return *error;
@@ -953,6 +954,8 @@ std::variant<StandardCompiler::InputsAndSettings, Json> StandardCompiler::parseI
 		ret.optimiserSettings = OptimiserSettings::none();
 	else
 		ret.optimiserSettings = OptimiserSettings::minimal();
+
+	solAssert(!(ret.optimiserSettings.runYulOptimiser || ret.optimiserSettings.optimizeStackAllocation));
 
 	Json const& jsonLibraries = settings.value("libraries", Json::object());
 	if (!jsonLibraries.is_object())
