@@ -62,8 +62,15 @@ bool SpillAreaSafetyChecker::visit(InlineAssembly const& _inlineAsm)
 		m_errorReporter.typeError(
 			5726_error,
 			_inlineAsm.location(),
-			"memory-unsafe assembly is not supported when spilling is enabled due to stack-too-deep. Make the "
-			"assembly memory-safe to fix this. See "
-			"https://docs.soliditylang.org/en/latest/assembly.html#memory-safety");
+			"This contract cannot be compiled due to a stack-too-deep error that can be automatically "
+			"fixed by allocation of additional heap memory. The allocation cannot be performed safely "
+			"in the presence of memory-unsafe assembly blocks. "
+			"To successfully compile this contract, please check if this assembly block is memory-safe "
+			"according to the requirements at "
+			"https://docs.soliditylang.org/en/latest/assembly.html#memory-safety, "
+			"and then mark it with a memory-safe tag. "
+			"Alternatively, if you feel confident, you may convert this error to a warning by "
+			"setting the EVM_DISABLE_MEMORY_SAFE_ASM_CHECK environment variable. Please be aware "
+			"of the memory corruption risks described at the link above.");
 	return true;
 }
