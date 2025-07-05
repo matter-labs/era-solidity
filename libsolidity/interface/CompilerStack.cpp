@@ -586,10 +586,12 @@ bool CompilerStack::analyzeLegacy(bool _noErrorsSoFar)
 		if (source->ast && !typeChecker.checkTypeRequirements(*source->ast))
 			noErrors = false;
 
-	SpillAreaSafetyChecker spillAreaSafetyChecker(m_optimiserSettings, m_errorReporter);
-	for (Source const* source: m_sourceOrder)
-		if (source->ast && !spillAreaSafetyChecker.check(*source->ast))
-			noErrors = false;
+	if (!std::getenv("EVM_DISABLE_MEMORY_SAFE_ASM_CHECK")) {
+		SpillAreaSafetyChecker spillAreaSafetyChecker(m_optimiserSettings, m_errorReporter);
+		for (Source const* source: m_sourceOrder)
+			if (source->ast && !spillAreaSafetyChecker.check(*source->ast))
+				noErrors = false;
+	}
 
 	if (noErrors)
 	{
