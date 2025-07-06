@@ -62,15 +62,14 @@ bool SpillAreaSafetyChecker::visit(InlineAssembly const& _inlineAsm)
 		m_errorReporter.typeError(
 			5726_error,
 			_inlineAsm.location(),
-			"This contract cannot be compiled due to a stack-too-deep error that can be automatically "
-			"fixed by allocation of additional heap memory. The allocation cannot be performed safely "
-			"in the presence of memory-unsafe assembly blocks. "
-			"To successfully compile this contract, please check if this assembly block is memory-safe "
-			"according to the requirements at "
-			"https://docs.soliditylang.org/en/latest/assembly.html#memory-safety, "
-			"and then mark it with a memory-safe tag. "
-			"Alternatively, if you feel confident, you may convert this error to a warning by "
-			"setting the EVM_DISABLE_MEMORY_SAFE_ASM_CHECK environment variable. Please be aware "
-			"of the memory corruption risks described at the link above.");
+			"This contract cannot be compiled due to a combination of a memory-unsafe assembly block and a stack-too-deep error. "
+			"The compiler can automatically fix the stack-too-deep error, but only in the absence of memory-unsafe assembly.\n"
+			"To successfully compile this contract, please check if this assembly block is memory-safe according to the requirements at \n\n"
+			"    https://docs.soliditylang.org/en/latest/assembly.html#memory-safety\n\n"
+			"and then mark it with a memory-safe tag.\n\n"
+			"Alternatively, if you feel confident, you may suppress this error project-wide by "
+			"setting the EVM_DISABLE_MEMORY_SAFE_ASM_CHECK environment variable:\n\n"
+			"    EVM_DISABLE_MEMORY_SAFE_ASM_CHECK=1 <your build command>\n\n"
+			"Please be aware of the memory corruption risks described at the link above!");
 	return true;
 }
