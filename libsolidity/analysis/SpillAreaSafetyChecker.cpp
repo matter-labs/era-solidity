@@ -69,10 +69,10 @@ bool SpillAreaSafetyChecker::visit(InlineAssembly const& _inlineAsm)
 			"To successfully compile this contract, please check if this assembly block is memory-safe according to "
 			"the requirements at \n\n"
 			"    https://docs.soliditylang.org/en/latest/assembly.html#memory-safety\n\n"
-			"and then mark it with a memory-safe tag.\n\n"
+			"and then mark it with a memory-safe tag.\n"
 			"Alternatively, if you feel confident, you may suppress this error project-wide by "
 			"setting the EVM_DISABLE_MEMORY_SAFE_ASM_CHECK environment variable:\n\n"
 			"    EVM_DISABLE_MEMORY_SAFE_ASM_CHECK=1 <your build command>\n\n"
-			"Please be aware of the memory corruption risks described at the link above!");
+			"Please be aware of the memory corruption risks described at the link above!\n");
 	return true;
 }
