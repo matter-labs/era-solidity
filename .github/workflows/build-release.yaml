@@ -10,5 +10,5 @@ on:
 jobs:
 
   build-release:
-    uses: matter-labs/era-compiler-ci/.github/workflows/solc-build-release.yml@solc-latest
+    uses: matter-labs/era-compiler-ci/.github/workflows/solc-build-release.yml@aba-solc-test-mode-fix
     secrets: inherit
