@@ -56,7 +56,7 @@ void CompilerUtils::initialiseFreeMemoryPointer()
 	size_t spillAreaSize = m_context.spillAreaSize();
 	size_t reservedMemory = m_context.reservedMemory();
 	solAssert(bigint(generalPurposeMemoryStart) + bigint(spillAreaSize) + bigint(reservedMemory) < bigint(1) << 63);
-	m_context << (u256(generalPurposeMemoryStart) + spillAreaSize + reservedMemory);
+	m_context << (u256(generalPurposeMemoryStart) + spillAreaSize + reservedMemory) << Instruction::MEMORYGUARD;
 	storeFreeMemoryPointer();
 }
 
