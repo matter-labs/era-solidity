@@ -36,23 +36,16 @@ struct OptimiserSettings;
 namespace solidity::frontend
 {
 
-class SpillAreaSafetyChecker: ASTConstVisitor
+class UnsafeAsmChecker: ASTConstVisitor
 {
 public:
-	SpillAreaSafetyChecker(OptimiserSettings const& _optConf, langutil::ErrorReporter& _errorReporter)
-		: m_optimiserSettings(_optConf), m_errorReporter(_errorReporter)
-	{
-	}
+	UnsafeAsmChecker(langutil::ErrorReporter& _errorReporter): m_errorReporter(_errorReporter) {}
 
 	bool check(SourceUnit const& _source);
 
 private:
-	size_t m_spillAreaSize = 0;
-
-	OptimiserSettings const& m_optimiserSettings;
 	langutil::ErrorReporter& m_errorReporter;
 
-	bool visit(ContractDefinition const& _contr);
 	bool visit(InlineAssembly const& _inlineAsm);
 };
 

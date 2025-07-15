@@ -37,7 +37,7 @@
 #include <libsolidity/analysis/NameAndTypeResolver.h>
 #include <libsolidity/analysis/PostTypeChecker.h>
 #include <libsolidity/analysis/PostTypeContractLevelChecker.h>
-#include <libsolidity/analysis/SpillAreaSafetyChecker.h>
+#include <libsolidity/analysis/UnsafeAsmChecker.h>
 #include <libsolidity/analysis/StaticAnalyzer.h>
 #include <libsolidity/analysis/SyntaxChecker.h>
 #include <libsolidity/analysis/Scoper.h>
@@ -586,13 +586,10 @@ bool CompilerStack::analyzeLegacy(bool _noErrorsSoFar)
 		if (source->ast && !typeChecker.checkTypeRequirements(*source->ast))
 			noErrors = false;
 
-	if (!std::getenv("EVM_DISABLE_MEMORY_SAFE_ASM_CHECK"))
-	{
-		SpillAreaSafetyChecker spillAreaSafetyChecker(m_optimiserSettings, m_errorReporter);
-		for (Source const* source: m_sourceOrder)
-			if (source->ast && !spillAreaSafetyChecker.check(*source->ast))
-				noErrors = false;
-	}
+	UnsafeAsmChecker spillAreaSafetyChecker(m_errorReporter);
+	for (Source const* source: m_sourceOrder)
+		if (source->ast && !spillAreaSafetyChecker.check(*source->ast))
+			noErrors = false;
 
 	if (noErrors)
 	{

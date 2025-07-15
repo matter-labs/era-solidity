@@ -16,7 +16,7 @@
 */
 // SPDX-License-Identifier: GPL-3.0
 
-#include <libsolidity/analysis/SpillAreaSafetyChecker.h>
+#include <libsolidity/analysis/UnsafeAsmChecker.h>
 
 #include <liblangutil/ErrorReporter.h>
 
@@ -29,37 +29,16 @@ using namespace solidity::util;
 using namespace solidity::langutil;
 using namespace solidity::frontend;
 
-bool SpillAreaSafetyChecker::check(SourceUnit const& _source)
+bool UnsafeAsmChecker::check(SourceUnit const& _source)
 {
-	// Don't bother walking the ast if the spill area sizes are zero.
-	bool foundNonEmptySpillArea = false;
-	for (auto i: m_optimiserSettings.spillAreaSize)
-		foundNonEmptySpillArea |= i.second.creation + i.second.runtime > 0;
-	if (!foundNonEmptySpillArea)
-		return true;
-
 	_source.accept(*this);
 	return !langutil::Error::containsErrors(m_errorReporter.errors());
 }
 
-bool SpillAreaSafetyChecker::visit(ContractDefinition const& _contr)
+bool UnsafeAsmChecker::visit(InlineAssembly const& _inlineAsm)
 {
-	// Reset spill area size.
-	m_spillAreaSize = 0;
-
-	auto found = m_optimiserSettings.spillAreaSize.find(_contr.fullyQualifiedName());
-	if (found != m_optimiserSettings.spillAreaSize.end())
-		// Consider both creation and runtime spill area size since the inline-asm might be reachable from both.
-		m_spillAreaSize = found->second.creation + found->second.runtime;
-	return true;
-}
-
-bool SpillAreaSafetyChecker::visit(InlineAssembly const& _inlineAsm)
-{
-	if (m_spillAreaSize == 0)
-		return true;
 	if (*_inlineAsm.annotation().hasMemoryEffects && !_inlineAsm.annotation().markedMemorySafe)
-		m_errorReporter.typeError(
+		m_errorReporter.warning(
 			5726_error,
 			_inlineAsm.location(),
 			"This contract cannot be compiled due to a combination of a memory-unsafe assembly block and a "

@@ -38,8 +38,8 @@ set(sources
 	analysis/ReferencesResolver.h
 	analysis/Scoper.cpp
 	analysis/Scoper.h
-	analysis/SpillAreaSafetyChecker.cpp
-	analysis/SpillAreaSafetyChecker.h
+	analysis/UnsafeAsmChecker.cpp
+	analysis/UnsafeAsmChecker.h
 	analysis/StaticAnalyzer.cpp
 	analysis/StaticAnalyzer.h
 	analysis/SyntaxChecker.cpp
