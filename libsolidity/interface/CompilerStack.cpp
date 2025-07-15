@@ -586,9 +586,9 @@ bool CompilerStack::analyzeLegacy(bool _noErrorsSoFar)
 		if (source->ast && !typeChecker.checkTypeRequirements(*source->ast))
 			noErrors = false;
 
-	UnsafeAsmChecker spillAreaSafetyChecker(m_errorReporter);
+	UnsafeAsmChecker unsafeAsmChecker(m_errorReporter);
 	for (Source const* source: m_sourceOrder)
-		if (source->ast && !spillAreaSafetyChecker.check(*source->ast))
+		if (source->ast && !unsafeAsmChecker.check(*source->ast))
 			noErrors = false;
 
 	if (noErrors)
