@@ -29,7 +29,7 @@ if (WIN32)
 	option(Boost_USE_STATIC_RUNTIME "Link Boost against static C++ runtime libraries" ON)
 endif()
 
-set(BOOST_COMPONENTS "filesystem;unit_test_framework;program_options;system")
+set(BOOST_COMPONENTS "filesystem;unit_test_framework;program_options")
 
 # CMake >= 3.30 should not use the vendored boost
 if(POLICY CMP0167)
@@ -50,6 +50,7 @@ else()
 		if(POLICY CMP0167)
 			cmake_policy(SET CMP0167 OLD)
 		endif()
+		list(APPEND BOOST_COMPONENTS system)
 		find_package(Boost 1.67.0 QUIET REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 	endif()
 endif()
