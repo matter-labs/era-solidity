@@ -648,12 +648,7 @@ void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
 			if (!reachableRuntimeFunctions.contains(intFuncPtrRef))
 				continue;
 		}
-		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
-		// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
-		solAssert(intFuncPtrRefType, "");
-		if (!intFuncPtrRefType->hasEqualParameterTypes(_funcType) || !intFuncPtrRefType->hasEqualReturnTypes(_funcType)
-			|| !intFuncPtrRef->isImplemented())
-			continue;
+		(void) _funcType;
 
 		// The loaded function pointer
 		m_context << Instruction::DUP1;
