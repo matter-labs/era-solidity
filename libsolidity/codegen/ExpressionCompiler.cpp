@@ -651,9 +651,10 @@ void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
 		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
 		// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
 		solAssert(intFuncPtrRefType, "");
-		if (!(intFuncPtrRefType->parameterTypes().size() == _funcType.parameterTypes().size()
-			  && intFuncPtrRefType->returnParameterTypes().size() == _funcType.returnParameterTypes().size()
-			  && intFuncPtrRef->isImplemented()))
+		if (!intFuncPtrRefType->hasEqualParameterTypes(_funcType) || !intFuncPtrRefType->hasEqualReturnTypes(_funcType)
+			|| !intFuncPtrRef->isImplemented()
+			|| !(intFuncPtrRefType->parameterTypes().size() == _funcType.parameterTypes().size()
+			  && intFuncPtrRefType->returnParameterTypes().size() == _funcType.returnParameterTypes().size()))
 			continue;
 
 		// The loaded function pointer
