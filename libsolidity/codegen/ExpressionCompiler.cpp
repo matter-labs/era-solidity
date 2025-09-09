@@ -648,11 +648,8 @@ void ExpressionCompiler::generateSelector(FunctionType const& _funcType)
 			if (!reachableRuntimeFunctions.contains(intFuncPtrRef))
 				continue;
 		}
-		FunctionType const* intFuncPtrRefType = intFuncPtrRef->functionType(true);
-		// ContractDefinitionAnnotation::intFuncPtrRefs should only contain refs to internal functions
-		solAssert(intFuncPtrRefType, "");
-		if (!(intFuncPtrRefType->parameterTypes().size() == _funcType.parameterTypes().size()
-			  && intFuncPtrRefType->returnParameterTypes().size() == _funcType.returnParameterTypes().size()
+		if (!(intFuncPtrRef->parameters().size() == _funcType.parameterTypesIncludingSelf().size()
+			  && intFuncPtrRef->returnParameters().size() == _funcType.returnParameterTypes().size()
 			  && intFuncPtrRef->isImplemented()))
 			continue;
 
