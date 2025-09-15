@@ -715,6 +715,8 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
 
 bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 {
+	if (*_inlineAssembly.annotation().hasMemoryEffects && !_inlineAssembly.annotation().markedMemorySafe)
+		m_context << Instruction::UNSAFEASM;
 	unsigned startStackHeight = m_context.stackHeight();
 	yul::ExternalIdentifierAccess::CodeGenerator identifierAccessCodeGen = [&](
 		yul::Identifier const& _identifier,

@@ -2288,7 +2288,10 @@ bool IRGeneratorForStatements::visit(InlineAssembly const& _inlineAsm)
 {
 	setLocation(_inlineAsm);
 	if (*_inlineAsm.annotation().hasMemoryEffects && !_inlineAsm.annotation().markedMemorySafe)
+	{
+		appendCode() << "unsafeasm()\n";
 		m_context.setMemoryUnsafeInlineAssemblySeen();
+	}
 	CopyTranslate bodyCopier{m_context, _inlineAsm.annotation().externalReferences};
 
 	yul::Statement modified = bodyCopier(_inlineAsm.operations().root());

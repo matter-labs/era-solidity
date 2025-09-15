@@ -185,6 +185,7 @@ enum class Instruction: uint8_t
 
 	DATALOADN = 0xd1,         ///< load data from EOF data section
 	MEMORYGUARD = 0xd2,
+	UNSAFEASM = 0xd3,
 
 	RJUMP = 0xe0,             ///< relative jump
 	RJUMPI = 0xe1,            ///< conditional relative jump
