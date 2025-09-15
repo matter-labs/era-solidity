@@ -41,17 +41,14 @@ bool UnsafeAsmChecker::visit(InlineAssembly const& _inlineAsm)
 		m_errorReporter.warning(
 			5726_error,
 			_inlineAsm.location(),
-			"This contract cannot be compiled safely due to a combination of a memory-unsafe assembly block and a "
-			"stack-too-deep error. "
-			"The compiler can automatically fix the stack-too-deep error, but only in the absence of memory-unsafe "
-			"assembly.\n"
-			"To get rid of this error, please check if this assembly block is memory-safe according to "
-			"the requirements at \n\n"
+			"Performance of this contract can be compromised due to the presence of this memory-unsafe assembly block.\n"
+			"Such assembly blocks hinder many compiler optimizations and also prevent the allocation of a spill area on heap\n"
+			"that is required to offload the stack and resolve potential stack-too-deep errors.\n\n"
+			"Please check if this assembly block is memory-safe according to the requirements at \n\n"
 			"    https://docs.soliditylang.org/en/latest/assembly.html#memory-safety\n\n"
 			"and then mark it with a memory-safe tag.\n"
-			"Alternatively, if you feel confident, you may convert this error into a warning project-wide by "
-			"setting the EVM_DISABLE_MEMORY_SAFE_ASM_CHECK environment variable:\n\n"
-			"    EVM_DISABLE_MEMORY_SAFE_ASM_CHECK=1 <your build command>\n\n"
-			"Please be aware of the memory corruption risks described at the link above!\n");
+			"Beware of the memory corruption risks described at the link above!\n\n"
+			"Overall, using assembly for the sake of performance is now obsolete, as solx can optimize inefficient code with\n"
+			"its powerful LLVM-based infrastructure.");
 	return true;
 }
