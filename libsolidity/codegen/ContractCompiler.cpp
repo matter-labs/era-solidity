@@ -212,20 +212,22 @@ size_t ContractCompiler::packIntoContractCreator(ContractDefinition const& _cont
 	if (immutables.empty())
 		m_context << Instruction::DUP1;
 	m_context.pushSubroutineOffset(m_context.runtimeSub());
-	m_context << u256(0) << Instruction::CODECOPY;
+	CompilerUtils(m_context).fetchFreeMemoryPointer();
+	m_context << Instruction::CODECOPY;
 	// Assign immutable values from stack in reversed order.
 	for (auto const& immutable: immutables | ranges::views::reverse)
 	{
 		auto slotNames = m_context.immutableVariableSlotNames(*immutable);
 		for (auto&& slotName: slotNames | ranges::views::reverse)
 		{
-			m_context << u256(0);
+			CompilerUtils(m_context).fetchFreeMemoryPointer();
 			m_context.appendImmutableAssignment(slotName);
 		}
 	}
 	if (!immutables.empty())
 		m_context.pushSubroutineSize(m_context.runtimeSub());
-	m_context << u256(0) << Instruction::RETURN;
+	CompilerUtils(m_context).fetchFreeMemoryPointer();
+	m_context << Instruction::RETURN;
 
 	return m_context.runtimeSub();
 }
@@ -249,7 +251,8 @@ size_t ContractCompiler::deployLibrary(ContractDefinition const& _contract)
 		{
 			// If code starts at 11, an mstore(0) writes to the full PUSH20 plus data
 			// without the need for a shift.
-			let codepos := 11
+			let memPtr := mload(64)
+			let codepos := add(memPtr, 11)
 			codecopy(codepos, subOffset, subSize)
 			// Check that the first opcode is a PUSH20
 			if iszero(eq(0x73, byte(0, mload(codepos)))) {
@@ -257,7 +260,7 @@ size_t ContractCompiler::deployLibrary(ContractDefinition const& _contract)
 				mstore(4, <panicCode>)
 				revert(0, 0x24)
 			}
-			mstore(0, address())
+			mstore(memPtr, address())
 			mstore8(codepos, 0x73)
 			return(codepos, subSize)
 		}
@@ -1175,8 +1178,9 @@ void ContractCompiler::handleCatch(std::vector<ASTPointer<TryCatchClause>> const
 		// re-throw
 		if (m_context.evmVersion().supportsReturndata())
 			m_context.appendInlineAssembly(R"({
-				returndatacopy(0, 0, returndatasize())
-				revert(0, returndatasize())
+				let memPtr := mload(64)
+				returndatacopy(memPtr, 0, returndatasize())
+				revert(memPtr, returndatasize())
 			})");
 		else
 			// Since both returndata and revert are >=byzantium, this should be unreachable.
