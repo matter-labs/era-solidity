@@ -283,6 +283,17 @@ void YulToMLIRPass::populateBuiltinGenMap() {
   defSimpleBuiltinGen<arith::ShRUIOp, /*reverseArgs=*/true>("shr");
   defCmpBuiltinGen<arith::CmpIPredicate::ult>("lt");
   defCmpBuiltinGen<arith::CmpIPredicate::slt>("slt");
+  defCmpBuiltinGen<arith::CmpIPredicate::ugt>("gt");
+  defCmpBuiltinGen<arith::CmpIPredicate::sgt>("sgt");
+  defCmpBuiltinGen<arith::CmpIPredicate::eq>("eq");
+  builtinGenMap["not"] = [&](std::vector<Expression> const &args,
+                             mlir::Location loc) {
+    mlir::SmallVector<mlir::Value, 1> resVals;
+    mlirgen::BuilderExt bExt(b, loc);
+    resVals.push_back(b.create<mlir::arith::XOrIOp>(loc, genDefTyExpr(args[0]),
+                                                    bExt.genI256Const(-1)));
+    return resVals;
+  };
   builtinGenMap["iszero"] = [&](std::vector<Expression> const &args,
                                 mlir::Location loc) {
     mlir::SmallVector<mlir::Value, 2> resVals;
