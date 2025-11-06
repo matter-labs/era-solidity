@@ -360,6 +360,20 @@ def Yul_ExpOp : Yul_Op<"exp", [Pure]> {
   let assemblyFormat = "$base `,` $exp attr-dict";
 }
 
+def Yul_AddModOp : Yul_Op<"addmod", [Pure]> {
+  let summary = "Represents the `addmod` call in yul";
+  let arguments = (ins I256:$x, I256:$y, I256:$mod);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$x `,` $y `,` $mod attr-dict";
+}
+
+def Yul_MulModOp : Yul_Op<"mulmod", [Pure]> {
+  let summary = "Represents the `mulmod` call in yul";
+  let arguments = (ins I256:$x, I256:$y, I256:$mod);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$x `,` $y `,` $mod attr-dict";
+}
+
 def Yul_LogOp : Yul_Op<"log"> {
   let summary = "Represents the `log*` calls in yul";
   let arguments = (ins I256:$addr, I256:$size, Variadic<I256>:$topics);

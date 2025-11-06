@@ -313,6 +313,8 @@ void YulToMLIRPass::populateBuiltinGenMap() {
         bExt.genI256Const(0)));
     return resVals;
   };
+  defSimpleBuiltinGen<AddModOp>("addmod");
+  defSimpleBuiltinGen<MulModOp>("mulmod");
   defSimpleBuiltinGen<MLoadOp>("mload");
   defSimpleBuiltinGenNoRet<LoadImmutableOp>("loadimmutable");
   defSimpleBuiltinGenNoRet<MStoreOp>("mstore");

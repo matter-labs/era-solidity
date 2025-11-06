@@ -186,6 +186,38 @@ struct ExpOpLowering : public OpRewritePattern<yul::ExpOp> {
   }
 };
 
+struct AddModOpLowering : public OpRewritePattern<yul::AddModOp> {
+  using OpRewritePattern<yul::AddModOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::AddModOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_addmod,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getX(), op.getY(), op.getMod()}, "evm.addmod");
+
+    return success();
+  }
+};
+
+struct MulModOpLowering : public OpRewritePattern<yul::MulModOp> {
+  using OpRewritePattern<yul::MulModOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::MulModOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_mulmod,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getX(), op.getY(), op.getMod()}, "evm.mulmod");
+
+    return success();
+  }
+};
+
 struct LogOpLowering : public OpRewritePattern<yul::LogOp> {
   using OpRewritePattern<yul::LogOp>::OpRewritePattern;
 
@@ -851,6 +883,8 @@ struct ObjectOpLowering : public OpRewritePattern<yul::ObjectOp> {
 void evm::populateYulPats(RewritePatternSet &pats) {
   pats.add<
       // clang-format off
+      AddModOpLowering,
+      MulModOpLowering,
       UpdFreePtrOpLowering,
       Keccak256OpLowering,
       DivOpLowering,
