@@ -381,6 +381,13 @@ def Yul_LogOp : Yul_Op<"log"> {
   let assemblyFormat = "$addr `,` $size oilist(`topics` `(` $topics `)` ) attr-dict";
 }
 
+def Yul_SignExtendOp : Yul_Op<"signextend", [Pure]> {
+  let summary = "Represents the `signextend` call in yul";
+  let arguments = (ins I256:$val, I256:$off);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$val `,` $off attr-dict";
+}
+
 def Yul_SetImmutableOp : Yul_Op<"setimmutable"> {
   let summary = "Represents the `setimmutable` call in yul";
   let arguments = (ins I256:$addr, StrAttr:$name, I256:$val);

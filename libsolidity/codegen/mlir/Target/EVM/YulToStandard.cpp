@@ -218,6 +218,22 @@ struct MulModOpLowering : public OpRewritePattern<yul::MulModOp> {
   }
 };
 
+struct SignExtendOpLowering : public OpRewritePattern<yul::SignExtendOp> {
+  using OpRewritePattern<yul::SignExtendOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::SignExtendOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_signextend,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getVal(), op.getOff()}, "evm.signextend");
+
+    return success();
+  }
+};
+
 struct LogOpLowering : public OpRewritePattern<yul::LogOp> {
   using OpRewritePattern<yul::LogOp>::OpRewritePattern;
 
@@ -895,6 +911,7 @@ void evm::populateYulPats(RewritePatternSet &pats) {
       ShrOpLowering,
       SarOpLowering,
       ExpOpLowering,
+      SignExtendOpLowering,
       LogOpLowering,
       AddressOpLowering,
       CallerOpLowering,

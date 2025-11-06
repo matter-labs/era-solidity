@@ -315,6 +315,7 @@ void YulToMLIRPass::populateBuiltinGenMap() {
   };
   defSimpleBuiltinGen<AddModOp>("addmod");
   defSimpleBuiltinGen<MulModOp>("mulmod");
+  defSimpleBuiltinGen<SignExtendOp>("signextend");
   defSimpleBuiltinGen<MLoadOp>("mload");
   defSimpleBuiltinGenNoRet<LoadImmutableOp>("loadimmutable");
   defSimpleBuiltinGenNoRet<MStoreOp>("mstore");
