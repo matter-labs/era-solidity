@@ -280,7 +280,17 @@ void YulToMLIRPass::populateBuiltinGenMap() {
   using namespace mlir::yul;
   defSimpleBuiltinGen<arith::AddIOp>("add");
   defSimpleBuiltinGen<arith::SubIOp>("sub");
-  defSimpleBuiltinGen<arith::ShRUIOp, /*reverseArgs=*/true>("shr");
+  defSimpleBuiltinGen<arith::MulIOp>("mul");
+  defSimpleBuiltinGen<arith::AndIOp>("and");
+  defSimpleBuiltinGen<arith::OrIOp>("or");
+  defSimpleBuiltinGen<arith::XOrIOp>("xor");
+  defSimpleBuiltinGen<DivOp>("div");
+  defSimpleBuiltinGen<SDivOp>("sdiv");
+  defSimpleBuiltinGen<ModOp>("mod");
+  defSimpleBuiltinGen<SModOp>("smod");
+  defSimpleBuiltinGen<ShrOp, /*reverseArgs=*/true>("shr");
+  defSimpleBuiltinGen<ShlOp, /*reverseArgs=*/true>("shl");
+  defSimpleBuiltinGen<SarOp, /*reverseArgs=*/true>("sar");
   defCmpBuiltinGen<arith::CmpIPredicate::ult>("lt");
   defCmpBuiltinGen<arith::CmpIPredicate::slt>("slt");
   defCmpBuiltinGen<arith::CmpIPredicate::ugt>("gt");
@@ -330,6 +340,7 @@ void YulToMLIRPass::populateBuiltinGenMap() {
   defSimpleBuiltinGenNoRet<RevertOp>("revert");
   defSimpleBuiltinGenNoRet<StopOp>("stop");
   defSimpleBuiltinGen<Keccak256Op>("keccak256");
+  defSimpleBuiltinGen<ExpOp>("exp");
   defSimpleBuiltinGen<CallValOp>("callvalue");
   defSimpleBuiltinGen<AddressOp>("address");
   defSimpleBuiltinGen<CallerOp>("caller");

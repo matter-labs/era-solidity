@@ -304,6 +304,62 @@ def Yul_Keccak256Op : Yul_Op<"keccak256"> {
   let assemblyFormat = "$addr `,` $size attr-dict";
 }
 
+def Yul_DivOp : Yul_Op<"div", [Pure]> {
+  let summary = "Represents the `div` call in yul";
+  let arguments = (ins I256:$dividend, I256:$divisor);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$dividend `,` $divisor attr-dict";
+}
+
+def Yul_SDivOp : Yul_Op<"sdiv", [Pure]> {
+  let summary = "Represents the `sdiv` call in yul";
+  let arguments = (ins I256:$dividend, I256:$divisor);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$dividend `,` $divisor attr-dict";
+}
+
+def Yul_ModOp : Yul_Op<"mod", [Pure]> {
+  let summary = "Represents the `mod` call in yul";
+  let arguments = (ins I256:$value, I256:$mod);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$value `,` $mod attr-dict";
+}
+
+def Yul_SModOp : Yul_Op<"smod", [Pure]> {
+  let summary = "Represents the `smod` call in yul";
+  let arguments = (ins I256:$value, I256:$mod);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$value `,` $mod attr-dict";
+}
+
+def Yul_ShlOp : Yul_Op<"shl", [Pure]> {
+  let summary = "Represents the `shl` call in yul";
+  let arguments = (ins I256:$shift, I256:$val);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$shift `,` $val attr-dict";
+}
+
+def Yul_ShrOp : Yul_Op<"shr", [Pure]> {
+  let summary = "Represents the `shr` call in yul";
+  let arguments = (ins I256:$shift, I256:$val);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$shift `,` $val attr-dict";
+}
+
+def Yul_SarOp : Yul_Op<"sar", [Pure]> {
+  let summary = "Represents the `sar` call in yul";
+  let arguments = (ins I256:$shift, I256:$val);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$shift `,` $val attr-dict";
+}
+
+def Yul_ExpOp : Yul_Op<"exp", [Pure]> {
+  let summary = "Represents the `exp` call in yul";
+  let arguments = (ins I256:$base, I256:$exp);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$base `,` $exp attr-dict";
+}
+
 def Yul_LogOp : Yul_Op<"log"> {
   let summary = "Represents the `log*` calls in yul";
   let arguments = (ins I256:$addr, I256:$size, Variadic<I256>:$topics);

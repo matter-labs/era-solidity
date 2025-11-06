@@ -58,6 +58,134 @@ struct Keccak256OpLowering : public OpRewritePattern<yul::Keccak256Op> {
   }
 };
 
+struct DivOpLowering : public OpRewritePattern<yul::DivOp> {
+  using OpRewritePattern<yul::DivOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::DivOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_div,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getDividend(), op.getDivisor()}, "evm.div");
+
+    return success();
+  }
+};
+
+struct SDivOpLowering : public OpRewritePattern<yul::SDivOp> {
+  using OpRewritePattern<yul::SDivOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::SDivOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_sdiv,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getDividend(), op.getDivisor()}, "evm.sdiv");
+
+    return success();
+  }
+};
+
+struct ModOpLowering : public OpRewritePattern<yul::ModOp> {
+  using OpRewritePattern<yul::ModOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::ModOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_mod,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getValue(), op.getMod()}, "evm.mod");
+
+    return success();
+  }
+};
+
+struct SModOpLowering : public OpRewritePattern<yul::SModOp> {
+  using OpRewritePattern<yul::SModOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::SModOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_smod,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getValue(), op.getMod()}, "evm.smod");
+
+    return success();
+  }
+};
+
+struct ShlOpLowering : public OpRewritePattern<yul::ShlOp> {
+  using OpRewritePattern<yul::ShlOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::ShlOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_shl,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getShift(), op.getVal()}, "evm.shl");
+
+    return success();
+  }
+};
+
+struct ShrOpLowering : public OpRewritePattern<yul::ShrOp> {
+  using OpRewritePattern<yul::ShrOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::ShrOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_shr,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getShift(), op.getVal()}, "evm.shr");
+
+    return success();
+  }
+};
+
+struct SarOpLowering : public OpRewritePattern<yul::SarOp> {
+  using OpRewritePattern<yul::SarOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::SarOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_sar,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getShift(), op.getVal()}, "evm.sar");
+
+    return success();
+  }
+};
+
+struct ExpOpLowering : public OpRewritePattern<yul::ExpOp> {
+  using OpRewritePattern<yul::ExpOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::ExpOp op,
+                                PatternRewriter &r) const override {
+    evm::Builder evmB(r, op.getLoc());
+
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(
+        op, llvm::Intrinsic::evm_exp,
+        /*resTy=*/r.getIntegerType(256),
+        /*ins=*/ValueRange{op.getBase(), op.getExp()}, "evm.exp");
+
+    return success();
+  }
+};
+
 struct LogOpLowering : public OpRewritePattern<yul::LogOp> {
   using OpRewritePattern<yul::LogOp>::OpRewritePattern;
 
@@ -725,6 +853,14 @@ void evm::populateYulPats(RewritePatternSet &pats) {
       // clang-format off
       UpdFreePtrOpLowering,
       Keccak256OpLowering,
+      DivOpLowering,
+      SDivOpLowering,
+      ModOpLowering,
+      SModOpLowering,
+      ShlOpLowering,
+      ShrOpLowering,
+      SarOpLowering,
+      ExpOpLowering,
       LogOpLowering,
       AddressOpLowering,
       CallerOpLowering,
