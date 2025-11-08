@@ -78,10 +78,34 @@ def Yul_AddressOp : Yul_Op<"address", [Pure]> {
   let assemblyFormat = "attr-dict";
 }
 
+def Yul_BalanceOp : Yul_Op<"balance"> {
+  let summary = "Represents the `balance` call in yul";
+  let arguments = (ins I256:$addr);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$addr attr-dict";
+}
+
+def Yul_SelfBalanceOp : Yul_Op<"selfbalance"> {
+  let summary = "Represents the `selfbalance` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
 def Yul_CallOp : Yul_Op<"call"> {
   let summary = "Represents the `call` call in yul";
   let arguments = (ins I256:$gas, I256:$address, I256:$value, I256:$inpOffset,
                        I256:$inpSize, I256:$outOffset, I256:$outSize);
+  let results = (outs I256:$status);
+  let assemblyFormat = [{
+    $gas `,` $address `,` $value `,` $inpOffset `,` $inpSize `,` $outOffset `,`
+    $outSize attr-dict
+  }];
+}
+
+def Yul_CallCodeOp : Yul_Op<"callcode"> {
+  let summary = "Represents the `callcode` call in yul";
+  let arguments = (ins I256:$gas, I256:$address, I256:$value, I256:$inpOffset,
+      I256:$inpSize, I256:$outOffset, I256:$outSize);
   let results = (outs I256:$status);
   let assemblyFormat = [{
     $gas `,` $address `,` $value `,` $inpOffset `,` $inpSize `,` $outOffset `,`
@@ -260,6 +284,12 @@ def Yul_CodeCopyOp : Yul_Op<"codecopy"> {
   let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
 }
 
+def Yul_ExtCodeCopyOp : Yul_Op<"extcodecopy"> {
+  let summary = "Represents the `extcodecopy` call in yul";
+  let arguments = (ins I256:$addr, I256:$dst, I256:$src, I256:$size);
+  let assemblyFormat = "$addr `,` $dst `,` $src `,` $size attr-dict";
+}
+
 def Yul_ExtCodeSizeOp : Yul_Op<"extcodesize", [Pure]> {
   let summary = "Represents the `extcodesize` call in yul";
   let arguments = (ins I256:$addr);
@@ -267,10 +297,11 @@ def Yul_ExtCodeSizeOp : Yul_Op<"extcodesize", [Pure]> {
   let assemblyFormat = "$addr attr-dict";
 }
 
-def Yul_ExtCodeCopyOp : Yul_Op<"extcodecopy"> {
-  let summary = "Represents the `extcodecopy` call in yul";
-  let arguments = (ins I256:$addr, I256:$dst, I256:$src, I256:$size);
-  let assemblyFormat = "$addr `,` $dst `,` $src `,` $size attr-dict";
+def Yul_ExtCodeHashOp : Yul_Op<"extcodehash"> {
+  let summary = "Represents the `extcodehash` call in yul";
+  let arguments = (ins I256:$addr);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$addr attr-dict";
 }
 
 def Yul_CreateOp : Yul_Op<"create"> {
@@ -285,6 +316,80 @@ def Yul_Create2Op : Yul_Op<"create2"> {
   let arguments = (ins I256:$val, I256:$addr, I256:$size, I256:$salt);
   let results = (outs I256:$out);
   let assemblyFormat = "$val `,` $addr `,` $size `,` $salt attr-dict";
+}
+
+def Yul_ChainIdOp : Yul_Op<"chainid"> {
+  let summary = "Represents the `chainid` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_BaseFeeOp : Yul_Op<"basefee"> {
+  let summary = "Represents the `basefee` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_BlobBaseFeeOp : Yul_Op<"blobbasefee"> {
+  let summary = "Represents the `blobbasefee` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_OriginOp : Yul_Op<"origin"> {
+  let summary = "Represents the `origin` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_GasPriceOp : Yul_Op<"gasprice"> {
+  let summary = "Represents the `gasprice` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_BlockHashOp : Yul_Op<"blockhash"> {
+  let summary = "Represents the `blockhash` call in yul";
+  let arguments = (ins I256:$block);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$block attr-dict";
+}
+
+def Yul_BlobHashOp : Yul_Op<"blobhash"> {
+  let summary = "Represents the `blobhash` call in yul";
+  let arguments = (ins I256:$Idx);
+  let results = (outs I256:$out);
+  let assemblyFormat = "$Idx attr-dict";
+}
+
+def Yul_CoinBaseOp : Yul_Op<"coinbase"> {
+  let summary = "Represents the `coinbase` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_TimeStampOp : Yul_Op<"timestamp"> {
+  let summary = "Represents the `timestamp` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_NumberOp : Yul_Op<"number"> {
+  let summary = "Represents the `number` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_PrevrandaoOp : Yul_Op<"prevrandao"> {
+  let summary = "Represents the `prevrandao` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
+}
+
+def Yul_GasLimitOp : Yul_Op<"gaslimit"> {
+  let summary = "Represents the `gaslimit` call in yul";
+  let results = (outs I256:$out);
+  let assemblyFormat = "attr-dict";
 }
 
 // TODO: Is this `ConstantLike`? Adding it causes "expected ConstantLike op to
