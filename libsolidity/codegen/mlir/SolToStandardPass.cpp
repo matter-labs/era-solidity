@@ -139,6 +139,7 @@ struct ConvertSolToStandard
         sol::CSubOp,
         sol::CMulOp,
         sol::CDivOp,
+        sol::ExpOp,
         sol::AllocaOp,
         sol::MallocOp,
         sol::ArrayLitOp,

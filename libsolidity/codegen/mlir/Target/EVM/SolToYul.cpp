@@ -113,8 +113,8 @@ struct BytesCastOpLowering : public OpConversionPattern<sol::BytesCastOp> {
   }
 };
 
-/// A templatized version of a conversion pattern for lowering add, sub and mul
-/// ops.
+/// A templatized version of a conversion pattern for lowering add, sub, mul
+/// and exp ops.
 template <typename SrcOpT, typename DstOpT>
 struct ArithBinOpLowering : public OpConversionPattern<SrcOpT> {
   using OpConversionPattern<SrcOpT>::OpConversionPattern;
@@ -2213,6 +2213,7 @@ void evm::populateArithPats(RewritePatternSet &pats, TypeConverter &tyConv) {
            ArithBinOpLowering<sol::AddOp, arith::AddIOp>,
            ArithBinOpLowering<sol::SubOp, arith::SubIOp>,
            ArithBinOpLowering<sol::MulOp, arith::MulIOp>,
+           ArithBinOpLowering<sol::ExpOp, yul::ExpOp>,
            DivOrModOpLowering<sol::DivOp, arith::DivSIOp, arith::DivUIOp>,
            DivOrModOpLowering<sol::ModOp, arith::RemSIOp, arith::RemUIOp>,
            CmpOpLowering>(tyConv, pats.getContext());

@@ -619,6 +619,10 @@ mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
       return b.create<mlir::sol::CDivOp>(loc, lhs, rhs);
   case Token::Mod:
     return b.create<mlir::sol::ModOp>(loc, lhs, rhs);
+  case Token::Exp:
+    if (inUnchecked)
+      return b.create<mlir::sol::ExpOp>(loc, lhs, rhs);
+    break;
   case Token::Equal:
     return b.create<mlir::sol::CmpOp>(loc, mlir::sol::CmpPredicate::eq, lhs,
                                       rhs);
