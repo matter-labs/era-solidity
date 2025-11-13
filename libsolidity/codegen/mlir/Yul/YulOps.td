@@ -185,7 +185,7 @@ def Yul_MCopyOp : Yul_Op<"mcopy"> {
   let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
 }
 
-def Yul_MSizeOp : Yul_Op<"msize", [Pure]> {
+def Yul_MSizeOp : Yul_Op<"msize"> {
   let summary = "Represents the `msize` call in yul";
   let results = (outs I256:$out);
   let assemblyFormat = "attr-dict";

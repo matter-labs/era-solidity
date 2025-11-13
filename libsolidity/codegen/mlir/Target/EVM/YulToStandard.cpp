@@ -773,6 +773,18 @@ struct MLoadOpLowering : public OpRewritePattern<yul::MLoadOp> {
   }
 };
 
+struct MSizeOpLowering : public OpRewritePattern<yul::MSizeOp> {
+  using OpRewritePattern<yul::MSizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(yul::MSizeOp op,
+                                PatternRewriter &r) const override {
+    r.replaceOpWithNewOp<LLVM::IntrCallOp>(op, llvm::Intrinsic::evm_msize,
+                                           /*resTy=*/r.getIntegerType(256),
+                                           /*ins=*/ValueRange{}, "evm.msize");
+    return success();
+  }
+};
+
 struct LoadImmutable2OpLowering
     : public OpRewritePattern<yul::LoadImmutableOp> {
   using OpRewritePattern<yul::LoadImmutableOp>::OpRewritePattern;
@@ -1163,6 +1175,7 @@ void evm::populateYulPats(RewritePatternSet &pats) {
       CreateOpLowering,
       Create2OpLowering,
       MLoadOpLowering,
+      MSizeOpLowering,
       LoadImmutableOpLowering,
       LoadImmutable2OpLowering,
       LinkerSymbolOpLowering,
