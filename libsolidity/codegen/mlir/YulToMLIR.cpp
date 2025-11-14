@@ -313,6 +313,10 @@ void YulToMLIRPass::populateBuiltinGenMap() {
         bExt.genI256Const(0)));
     return resVals;
   };
+  builtinGenMap["pop"] = [&](std::vector<Expression> const &args,
+                             mlir::Location loc) {
+    return mlir::SmallVector<mlir::Value>{genDefTyExpr(args[0])};
+  };
   defSimpleBuiltinGen<AddModOp>("addmod");
   defSimpleBuiltinGen<MulModOp>("mulmod");
   defSimpleBuiltinGen<SignExtendOp>("signextend");
