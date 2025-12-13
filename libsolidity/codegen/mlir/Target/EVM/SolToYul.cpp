@@ -198,6 +198,400 @@ struct ExpOpLowering : public OpConversionPattern<sol::ExpOp> {
   }
 };
 
+struct CExpOpLowering : public OpConversionPattern<sol::CExpOp> {
+  using OpConversionPattern<sol::CExpOp>::OpConversionPattern;
+
+  // The genExpHelper function implements the following YUL helper function.
+  //
+  //   function checked_exp_helper(power, base, exponent, max) -> power, base {
+  //     for { } gt(exponent, 1) {}
+  //     {
+  //       if gt(base, div(max, base)) { panic_error_0x11() }
+  //       if and(exponent, 1)
+  //       {
+  //         power := mul(power, base)
+  //       }
+  //       base := mul(base, base)
+  //       exponent := shift_right_1_unsigned(exponent)
+  //     }
+  //  }
+
+  std::pair<Value, Value> genExpHelper(ConversionPatternRewriter &r,
+                                       Location loc, Value initPow,
+                                       Value initBase, Value initExp,
+                                       Value maxPow) const {
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    evm::Builder evmB(r, loc);
+
+    Value one = bExt.genI256Const(1);
+    ValueRange whileInitVals{initPow, initBase, initExp};
+    TypeRange whileArgTypes(whileInitVals);
+    SmallVector<Location> whileBbArgLocs(whileInitVals.size(), loc);
+
+    // Produces power, base
+    auto whileOp = r.create<scf::WhileOp>(loc, whileArgTypes, whileInitVals);
+    // Condition region
+    {
+      Block *beforeBlock = &whileOp.getBefore().emplaceBlock();
+      whileOp.getBefore().addArguments(whileArgTypes, whileBbArgLocs);
+      r.setInsertionPointToStart(beforeBlock);
+      Value curPow = beforeBlock->getArgument(0);
+      Value curBase = beforeBlock->getArgument(1);
+      Value curExp = beforeBlock->getArgument(2);
+
+      Value cmp =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, curExp, one);
+      r.create<scf::ConditionOp>(loc, cmp, ValueRange{curPow, curBase, curExp});
+    }
+
+    // Body region
+    {
+      Block *afterBlock = &whileOp.getAfter().emplaceBlock();
+      whileOp.getAfter().addArguments(whileArgTypes, whileBbArgLocs);
+      r.setInsertionPointToStart(afterBlock);
+      Value curPow = afterBlock->getArgument(0);
+      Value curBase = afterBlock->getArgument(1);
+      Value curExp = afterBlock->getArgument(2);
+      {
+        Value tmpDiv = r.create<yul::DivOp>(loc, maxPow, curBase);
+        Value panicCond = r.create<arith::CmpIOp>(
+            loc, arith::CmpIPredicate::ugt, curBase, tmpDiv);
+        evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+      }
+      Value lsb = r.create<arith::AndIOp>(loc, curExp, one);
+      Value zero = bExt.genI256Const(0);
+      Value expIsOdd =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, lsb, zero);
+      auto ifExpIsOdd = r.create<scf::IfOp>(loc, r.getIntegerType(256),
+                                            expIsOdd, /*withElseRegion=*/true);
+      // If-Then
+      r.setInsertionPointToStart(&ifExpIsOdd.getThenRegion().front());
+      Value newPow = r.create<arith::MulIOp>(loc, curPow, curBase);
+      r.create<scf::YieldOp>(loc, newPow);
+
+      // If-else
+      r.setInsertionPointToStart(&ifExpIsOdd.getElseRegion().front());
+      r.create<scf::YieldOp>(loc, curPow);
+
+      r.setInsertionPointToEnd(afterBlock);
+      Value newBase = r.create<arith::MulIOp>(loc, curBase, curBase);
+      Value newExp = r.create<yul::ShrOp>(loc, one, curExp);
+      r.create<scf::YieldOp>(
+          loc, ValueRange{ifExpIsOdd.getResult(0), newBase, newExp});
+    }
+
+    return {whileOp.getResult(0), whileOp.getResult(1)};
+  }
+
+  // Below is the implementation of unsigned exponentiation based on the
+  // following YUL algorithm.
+  //
+  //   function checked_exp_unsigned(base, exponent, max) -> power {
+  //     if iszero(exponent) { power := 1 leave }
+  //     if iszero(base) { power := 0 leave }
+  //     switch base
+  //     case 1 { power := 1 leave }
+  //     case 2
+  //     {
+  //       if gt(exponent, 255) { panic_error_0x11() }
+  //       power := exp(2, exponent)
+  //       if gt(power, max) { panic_error_0x11() }
+  //       leave
+  //     }
+  //     if or(and(lt(base, 11), lt(exponent, 78)),
+  //           and(lt(base, 307), lt(exponent, 32)))
+  //     {
+  //       power := exp(base, exponent)
+  //       if gt(power, max) { panic_error_0x11() }
+  //       leave
+  //     }
+  //     power, base := checked_exp_helper(1, base, exponent, max)
+  //     if gt(power, div(max, base)) { panic_error_0x11() }
+  //     power := mul(power, base)
+  //   }
+
+  Value expUnsigned(sol::CExpOp op, OpAdaptor adaptor,
+                    ConversionPatternRewriter &r) const {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    evm::Builder evmB(r, loc);
+
+    auto ty = cast<IntegerType>(op.getType());
+    Value max = bExt.genI256Const(llvm::APInt::getMaxValue(ty.getWidth()), loc);
+
+    Value base = bExt.genIntCast(256, ty.isSigned(), adaptor.getLhs());
+    Value exp = bExt.genIntCast(256, ty.isSigned(), adaptor.getRhs());
+    auto zero = bExt.genI256Const(0);
+    auto one = bExt.genI256Const(1);
+
+    auto expEqZero =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, exp, zero);
+    auto baseEqOne =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, base, one);
+    auto powOneCond = r.create<arith::OrIOp>(loc, expEqZero, baseEqOne);
+
+    // If 1 begin
+    auto ifExpEqZero =
+        r.create<scf::IfOp>(loc, r.getIntegerType(256), powOneCond, true);
+    // If 1 then
+    r.setInsertionPointToStart(&ifExpEqZero.getThenRegion().front());
+    r.create<scf::YieldOp>(loc, one);
+
+    // If 1 else
+    r.setInsertionPointToStart(&ifExpEqZero.getElseRegion().front());
+    auto baseEqZero =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, base, zero);
+
+    // If 2 begin
+    auto ifBaseEqZero =
+        r.create<scf::IfOp>(loc, r.getIntegerType(256), baseEqZero, true);
+    // If 2 then
+    r.setInsertionPointToStart(&ifBaseEqZero.getThenRegion().front());
+    r.create<scf::YieldOp>(loc, zero);
+
+    // If 2 else
+    r.setInsertionPointToStart(&ifBaseEqZero.getElseRegion().front());
+    Value two = bExt.genI256Const(2);
+    auto baseEqTwo =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, base, two);
+
+    // If 3 begin
+    auto ifBaseEqTwo =
+        r.create<scf::IfOp>(loc, r.getIntegerType(256), baseEqTwo, true);
+    // If 3 then
+    r.setInsertionPointToStart(&ifBaseEqTwo.getThenRegion().front());
+    {
+      auto expGt255 = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt,
+                                              exp, bExt.genI256Const(255));
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, expGt255);
+      Value tmpPow = r.create<yul::ExpOp>(loc, two, exp);
+      auto panicCond =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, tmpPow, max);
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+      r.create<scf::YieldOp>(loc, tmpPow);
+    }
+    // If 3 else
+    r.setInsertionPointToStart(&ifBaseEqTwo.getElseRegion().front());
+    auto baseLT11 = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                            base, bExt.genI256Const(11));
+    auto baseLT307 = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                             base, bExt.genI256Const(307));
+    auto expLT78 = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, exp,
+                                           bExt.genI256Const(78));
+    auto expLT32 = r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, exp,
+                                           bExt.genI256Const(32));
+
+    auto viaExpBuitinCond = r.create<arith::OrIOp>(
+        loc, r.create<arith::AndIOp>(loc, baseLT11, expLT78),
+        r.create<arith::AndIOp>(loc, baseLT307, expLT32));
+    // If 4 begin
+    auto ifViaExpBuitinCond =
+        r.create<scf::IfOp>(loc, r.getIntegerType(256), viaExpBuitinCond, true);
+    // If 4 then
+    r.setInsertionPointToStart(&ifViaExpBuitinCond.getThenRegion().front());
+    {
+      Value tmpPow = r.create<yul::ExpOp>(loc, base, exp);
+      Value panicCond =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, tmpPow, max);
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+      r.create<scf::YieldOp>(loc, tmpPow);
+    }
+    // If 4 else
+    r.setInsertionPointToStart(&ifViaExpBuitinCond.getElseRegion().front());
+    Value initPow = bExt.genI256Const(1);
+    auto [pow2, base2] = genExpHelper(r, loc, initPow, base, exp, max);
+
+    {
+      r.setInsertionPointToEnd(&ifViaExpBuitinCond.getElseRegion().front());
+      Value tmpDiv = r.create<yul::DivOp>(loc, max, base2);
+      Value panicCond =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, pow2, tmpDiv);
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+      Value res = r.create<arith::MulIOp>(loc, base2, pow2);
+      r.create<scf::YieldOp>(loc, res);
+    }
+    // If 4 end
+    r.setInsertionPointToEnd(&ifBaseEqTwo.getElseRegion().front());
+    r.create<scf::YieldOp>(loc, ifViaExpBuitinCond.getResult(0));
+
+    // If 3 end
+    r.setInsertionPointToEnd(&ifBaseEqZero.getElseRegion().front());
+    r.create<scf::YieldOp>(loc, ifBaseEqTwo.getResult(0));
+    // If 2 end
+
+    r.setInsertionPointToEnd(&ifExpEqZero.getElseRegion().front());
+    r.create<scf::YieldOp>(loc, ifBaseEqZero.getResult(0));
+    // If 1 end
+
+    r.setInsertionPointAfter(ifExpEqZero);
+
+    return bExt.genIntCast(ty.getWidth(), ty.isSigned(),
+                           ifExpEqZero.getResult(0));
+  }
+
+  // Below is the implementation of signed exponentiation based on the
+  // following YUL algorithm.
+  //
+  //   function checked_exp_signed(base, exponent, min, max) -> power {
+  //     switch exponent
+  //     case 0 { power := 1 leave }
+  //     case 1 { power := base leave }
+  //     if iszero(base) { power := 0 leave }
+  //
+  //     power := 1
+  //     switch sgt(base, 0)
+  //     case 1 { if gt(base, div(max, base)) { panic_error_0x11() } }
+  //     case 0 { if slt(base, sdiv(max, base)) { panic_error_0x11() } }
+  //     if and(exponent, 1)
+  //     {
+  //       power := base
+  //     }
+  //     base := mul(base, base)
+  //     exponent := shift_right_1_unsigned(exponent)
+  //
+  //     power, base := checked_exp_helper(power, base, exponent, max)
+  //
+  //     if and(sgt(power, 0), gt(power, div(max, base))) { panic_error_0x11() }
+  //     if and(slt(power, 0), slt(power, sdiv(min, base))) { panic_error_0x11()
+  //     } power := mul(power, base)
+  //  }
+
+  Value expSigned(sol::CExpOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &r) const {
+    Location loc = op.getLoc();
+    solidity::mlirgen::BuilderExt bExt(r, loc);
+    evm::Builder evmB(r, loc);
+
+    auto ty = cast<IntegerType>(op.getType());
+    Value max = bExt.genI256Const(
+        llvm::APInt::getSignedMaxValue(ty.getWidth()).sext(256), loc);
+    Value min = bExt.genI256Const(
+        llvm::APInt::getSignedMinValue(ty.getWidth()).sext(256), loc);
+
+    Value base = bExt.genIntCast(256, ty.isSigned(), adaptor.getLhs());
+    Value exp = bExt.genIntCast(256, ty.isSigned(), adaptor.getRhs());
+    auto zero = bExt.genI256Const(0);
+    auto one = bExt.genI256Const(1);
+
+    auto expEqZero =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, exp, zero);
+
+    // If 1 begin
+    auto ifExpEqZero =
+        r.create<scf::IfOp>(loc, r.getIntegerType(256), expEqZero, true);
+    // If 1 then
+    r.setInsertionPointToStart(&ifExpEqZero.getThenRegion().front());
+    r.create<scf::YieldOp>(loc, one);
+
+    // If 1 else
+    r.setInsertionPointToStart(&ifExpEqZero.getElseRegion().front());
+    auto baseEqZero =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, base, zero);
+
+    // If 2 begin
+    auto ifBaseEqZero =
+        r.create<scf::IfOp>(loc, r.getIntegerType(256), baseEqZero, true);
+    // If 2 then
+    r.setInsertionPointToStart(&ifBaseEqZero.getThenRegion().front());
+    r.create<scf::YieldOp>(loc, zero);
+
+    // If 2 else
+    r.setInsertionPointToStart(&ifBaseEqZero.getElseRegion().front());
+    auto expEqOne =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, exp, one);
+
+    // If 3 begin
+    auto ifExpEqOne =
+        r.create<scf::IfOp>(loc, r.getIntegerType(256), expEqOne, true);
+    // If 3 then
+    r.setInsertionPointToStart(&ifExpEqOne.getThenRegion().front());
+    r.create<scf::YieldOp>(loc, base);
+
+    // If 3 else
+    r.setInsertionPointToStart(&ifExpEqOne.getElseRegion().front());
+    auto baseSgtZero =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, base, zero);
+
+    // If 4 begin
+    auto ifBaseSgtZero = r.create<scf::IfOp>(loc, baseSgtZero, true);
+    // If 4 then
+    r.setInsertionPointToStart(&ifBaseSgtZero.getThenRegion().front());
+    {
+      Value tmpDiv = r.create<yul::DivOp>(loc, max, base);
+      Value panicCond =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, base, tmpDiv);
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+    }
+    // If 4 else
+    r.setInsertionPointToStart(&ifBaseSgtZero.getElseRegion().front());
+    {
+      Value tmpDiv = r.create<yul::SDivOp>(loc, max, base);
+      Value panicCond =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, base, tmpDiv);
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+    }
+    // If 4 end
+    r.setInsertionPointAfter(ifBaseSgtZero);
+
+    Value lsb = r.create<arith::AndIOp>(loc, exp, one);
+    Value expIsOdd =
+        r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, lsb, zero);
+    Value pow2 =
+        r.create<arith::SelectOp>(loc, expIsOdd, base, one).getResult();
+    Value base2 = r.create<arith::MulIOp>(loc, base, base);
+    Value exp2 = r.create<yul::ShrOp>(loc, one, exp);
+    auto [pow3, base3] = genExpHelper(r, loc, pow2, base2, exp2, max);
+
+    r.setInsertionPointToEnd(&ifExpEqOne.getElseRegion().front());
+
+    {
+      Value div = r.create<yul::DivOp>(loc, max, base3);
+      Value cmp =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, pow3, div);
+      Value cmp2 =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, pow3, zero);
+      Value panicCond = r.create<arith::AndIOp>(loc, cmp, cmp2);
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+    }
+    {
+      Value div = r.create<yul::SDivOp>(loc, min, base3);
+      Value cmp =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, pow3, div);
+      Value cmp2 =
+          r.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, pow3, zero);
+      Value panicCond = r.create<arith::AndIOp>(loc, cmp, cmp2);
+      evmB.genPanic(solidity::util::PanicCode::UnderOverflow, panicCond);
+    }
+
+    Value pow4 = r.create<arith::MulIOp>(loc, pow3, base3);
+    r.create<scf::YieldOp>(loc, pow4);
+    // If 3 (ifExpEqOne) end
+
+    r.setInsertionPointToEnd(&ifBaseEqZero.getElseRegion().front());
+    r.create<scf::YieldOp>(loc, ifExpEqOne.getResult(0));
+    // If 2 (ifBaseEqZero) end
+
+    r.setInsertionPointToEnd(&ifExpEqZero.getElseRegion().front());
+    r.create<scf::YieldOp>(loc, ifBaseEqZero.getResult(0));
+    // If 1 (ifExpEqZero) end
+
+    r.setInsertionPointAfter(ifExpEqZero);
+
+    return bExt.genIntCast(ty.getWidth(), ty.isSigned(),
+                           ifExpEqZero.getResult(0));
+  }
+
+  LogicalResult matchAndRewrite(sol::CExpOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &r) const override {
+    auto ty = cast<IntegerType>(op.getType());
+    Value res =
+        ty.isSigned() ? expSigned(op, adaptor, r) : expUnsigned(op, adaptor, r);
+    r.replaceOp(op, res);
+
+    return success();
+  }
+};
+
 template <bool isLeftShift>
 static Value genYulShiftOp(ConversionPatternRewriter &r, Location loc,
                            Value val, Value shiftVal, bool isSigned) {
@@ -2345,8 +2739,8 @@ void evm::populateArithPats(RewritePatternSet &pats, TypeConverter &tyConv) {
 
 void evm::populateCheckedArithPats(RewritePatternSet &pats,
                                    TypeConverter &tyConv) {
-  pats.add<CAddOpLowering, CSubOpLowering, CMulOpLowering, CDivOpLowering>(
-      tyConv, pats.getContext());
+  pats.add<CAddOpLowering, CSubOpLowering, CMulOpLowering, CDivOpLowering,
+           CExpOpLowering>(tyConv, pats.getContext());
 }
 
 void evm::populateMemPats(RewritePatternSet &pats, TypeConverter &tyConv) {

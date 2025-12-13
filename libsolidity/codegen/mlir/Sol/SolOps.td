@@ -104,6 +104,7 @@ def Sol_CAddOp : Sol_IntArithOp<"cadd", [Commutative]>;
 def Sol_CSubOp : Sol_IntArithOp<"csub">;
 def Sol_CMulOp : Sol_IntArithOp<"cmul", [Commutative]>;
 def Sol_CDivOp : Sol_IntArithOp<"cdiv">;
+def Sol_CExpOp : Sol_IntArithOp<"cexp">;
 
 def Sol_AddOp : Sol_UncheckedIntArithOp<"add", [Commutative]> {
   // TODO: folder, canonicalizer

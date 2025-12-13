@@ -630,6 +630,8 @@ mlir::Value SolidityToMLIRPass::genBinExpr(Token op, mlir::Value lhs,
   case Token::Exp:
     if (inUnchecked)
       return b.create<mlir::sol::ExpOp>(loc, lhs, rhs);
+    else
+      return b.create<mlir::sol::CExpOp>(loc, lhs, rhs);
     break;
   case Token::BitAnd:
     return b.create<mlir::sol::AndOp>(loc, lhs, rhs);
